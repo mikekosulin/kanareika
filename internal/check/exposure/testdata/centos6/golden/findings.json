@@ -1,0 +1,65 @@
+[
+ {
+  "org": "acme",
+  "host": "host-08",
+  "group": "prod_edge",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "listen-public-8429",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Close vmagent :8429 to the outside",
+  "url": "",
+  "target": "tcp *:8429 vmagent",
+  "msg": "net.close",
+  "args": {
+   "service": "vmagent",
+   "port": 8429
+  }
+ },
+ {
+  "org": "acme",
+  "host": "host-08",
+  "group": "prod_edge",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "listen-public-9100",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Close node_exporter :9100 to the outside",
+  "url": "",
+  "target": "tcp :::9100 node_exporter",
+  "msg": "net.close",
+  "args": {
+   "service": "node_exporter",
+   "port": 9100
+  }
+ },
+ {
+  "org": "acme",
+  "host": "host-08",
+  "group": "prod_edge",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "no-firewall",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Enable a firewall: public IP without inbound filtering",
+  "url": "",
+  "target": "iptables INPUT policy: ACCEPT",
+  "msg": "net.no_firewall",
+  "args": {}
+ }
+]

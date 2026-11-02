@@ -1,0 +1,1 @@
+synthetic-denied: health: 1 issues, no access to denied.dmesg, denied.journal

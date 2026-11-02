@@ -1,0 +1,11 @@
+{
+ "host": {
+  "org": "acme",
+  "name": "synthetic-empty",
+  "group": "synthetic",
+  "exposure": 1,
+  "address": "10.77.0.13",
+  "user": "root",
+  "privilege": "none"
+ }
+}

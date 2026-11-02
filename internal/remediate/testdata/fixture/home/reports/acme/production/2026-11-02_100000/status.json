@@ -1,0 +1,1 @@
+{"state": "running", "started": "2026-11-02T10:00:00+00:00", "updated": "2026-11-02T10:05:00+00:00", "hosts": ["app-01", "k8s-01", "mongo-01", "swm-01", "sww-01", "sww-02", "web-01", "web-02"], "counts": {"P1": 0}}

@@ -1,0 +1,34 @@
+{
+ "denied": [],
+ "dmesg": {
+  "classes": {},
+  "tail": []
+ },
+ "journal": {
+  "errors_7d": 1,
+  "top": [
+   [
+    "entries --",
+    1
+   ]
+  ],
+  "tail": [
+   "-- No entries --"
+  ]
+ },
+ "failed_units": [],
+ "disks": [],
+ "inodes": [],
+ "readonly_mounts": [],
+ "ntp_synced": "unknown",
+ "time": {
+  "timezone": "Europe/Berlin",
+  "synced": "yes",
+  "service": "systemd-timesyncd",
+  "service_active": true,
+  "source": "192.0.2.10",
+  "stratum": null,
+  "offset_s": 1.234567,
+  "skew_s": 0.25
+ }
+}

@@ -1,0 +1,23 @@
+[
+ {
+  "org": "acme",
+  "host": "synthetic-denied",
+  "group": "synthetic",
+  "exposure": 3,
+  "module": "exposure",
+  "kind": "inventory",
+  "id": "exposure-limited",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "INFO",
+  "title": "cannot read: denied.procs (needs root or sudo)",
+  "url": "",
+  "target": "",
+  "msg": "health.limited",
+  "args": {
+   "what": "denied.procs"
+  }
+ }
+]

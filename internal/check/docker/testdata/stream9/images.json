@@ -1,0 +1,48 @@
+[
+    {
+        "Id": "sha256:9ccd61f5581606da88f7ed06568bbd1661750b4b0f91047de62b9a7713707b6e",
+        "RepoTags": [
+            "certbot/certbot:latest"
+        ],
+        "RepoDigests": [
+            "certbot/certbot@sha256:34ee91d2f43008eb78a007d22f23ed4b2eaa9a454cb27ca2c042b49527a695b4"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-07-16T05:11:31.711334821Z",
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 190655695,
+        "GraphDriver": {
+            "Data": {
+                "LowerDir": "/var/lib/docker/overlay2/0efbd023cbad3e2699b7e816cba1e200e56ac9f24796d147a41eb4f384fc6d76/diff:/var/lib/docker/overlay2/0eb1ab1f35e8663b4aca346da725b441bf5646773703f49465744ba47f035fca/diff:/var/lib/docker/overlay2/0f2546599749ee9f3ce9d99d45ec91a503ff34e27fa6833264d7ecf8a45c3245/diff:/var/lib/docker/overlay2/b39033817a559cdf25f5a12f168365678b51d834806af1dd07f4f1a8f88145e4/diff:/var/lib/docker/overlay2/656b9d0798d972e50487eacce40552c1340857cfe83ee98d7fbf912eef68411b/diff:/var/lib/docker/overlay2/efbc8a7663506194b6f72997a735d3067825e1ccc52f40504c5420126b73230f/diff:/var/lib/docker/overlay2/b723bb65fea35aaae57ffb1487f37861029b4674bccb51f306e775b800595d3b/diff:/var/lib/docker/overlay2/6e1226d1365d112191c6c714c7db059aeb53c2a65c247ceeac0f743763632612/diff:/var/lib/docker/overlay2/bd392fac110feb40b25c14d6c1b7a4bf73dcbfcb1f0a175a11dd1402394be6fc/diff:/var/lib/docker/overlay2/f05b951bc17ceb8f3f0801a7f0f7c9a46d9fad1a9182577ae336c144f12fa7e3/diff",
+                "MergedDir": "/var/lib/docker/overlay2/ea5ce5c10fdcb9e66442608e8675e9fb3fa9499170b61b5435263212b834ce6b/merged",
+                "UpperDir": "/var/lib/docker/overlay2/ea5ce5c10fdcb9e66442608e8675e9fb3fa9499170b61b5435263212b834ce6b/diff",
+                "WorkDir": "/var/lib/docker/overlay2/ea5ce5c10fdcb9e66442608e8675e9fb3fa9499170b61b5435263212b834ce6b/work"
+            },
+            "Name": "overlay2"
+        }
+    },
+    {
+        "Id": "sha256:f466af83e2ccfb448cbcbc8f17071ed65d2a43a499174c08104cdce2c936c7c5",
+        "RepoTags": [
+            "registry.gitlab.com/acme-team/alice/dave/server:latest"
+        ],
+        "RepoDigests": [
+            "registry.gitlab.com/acme-team/alice/dave/server@sha256:6a5fc08dbc80912e53e130e82f7be138eaa101c249e3c4a92ecbd4bdcb2ec71d"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-10-28T23:31:24.96412977Z",
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 396456054,
+        "GraphDriver": {
+            "Data": {
+                "LowerDir": "/var/lib/docker/overlay2/44cce3d0c679cd70519c82f5e8a0546376fe8cf2fe4bfaffa08be951910ec5d2/diff:/var/lib/docker/overlay2/f5a9343fe410171a046545cfa73c250689f82b4416a0cd386a6cb698df7c4879/diff:/var/lib/docker/overlay2/fe44bf30073b65be9191281eb69a99d460fef0bc16954ca353831e36d91d4384/diff:/var/lib/docker/overlay2/d26a860b0c647821bfd27e87dbc69c7262124fc889693c8f0729eb38dd2826ec/diff:/var/lib/docker/overlay2/b99b8727faf3f72b6599060d414a0a46cbde90af3531514e6c85de94a1795a8b/diff:/var/lib/docker/overlay2/83866b48d85dec33e0e0362daab7538025ee29604ac18783e1a2f58b87730b17/diff:/var/lib/docker/overlay2/55e531fba90c0f458be81b88bdfcd9fd4d91fbcdcb9501ca19b33950d341ed04/diff:/var/lib/docker/overlay2/bcad5e0f6d13c0a15effa79c786a158aa99ac509dfc46517a505b7ba0d29aa90/diff:/var/lib/docker/overlay2/70a4b44ba08ce602a671fa85e6c0c9ed2c214a877d5700f385fc3cdeade1c2e4/diff:/var/lib/docker/overlay2/57f4abc9ddb6e3c1d4472df3ce2883605da72d8de658398f2cf0d3f6d246c684/diff:/var/lib/docker/overlay2/715f2a463905386d4210e9ca5f2c09b18b69f58518f8899ed15f84182ea89558/diff:/var/lib/docker/overlay2/bf0456fb31f705bab7d963f25c8c8c6da1ed08f567e625ce0fe6c016307ad70a/diff",
+                "MergedDir": "/var/lib/docker/overlay2/7e5c484c1ccf336fce974bd1a4d7a2eb2fc9148c426ad65b08e58dca6da61119/merged",
+                "UpperDir": "/var/lib/docker/overlay2/7e5c484c1ccf336fce974bd1a4d7a2eb2fc9148c426ad65b08e58dca6da61119/diff",
+                "WorkDir": "/var/lib/docker/overlay2/7e5c484c1ccf336fce974bd1a4d7a2eb2fc9148c426ad65b08e58dca6da61119/work"
+            },
+            "Name": "overlay2"
+        }
+    }
+]

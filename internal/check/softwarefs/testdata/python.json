@@ -1,0 +1,1673 @@
+{
+"cases": [
+{
+"name": "host-08",
+"runs": [
+{
+"host": {
+"name": "host-08"
+},
+"cfg": {
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null": {
+"file": "host-08.tar"
+}
+},
+"trivy": {
+"trivy-fs.json": {
+"file": "trivy-fs-host-08.json.gz"
+}
+},
+"results": [
+{
+"findings": [],
+"error": null
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/host-08/": "dir",
+"hosts/host-08/software_fs.files.txt": "2f7f86524b08726ccaddeb08e52ed58a7bef680072b1870ef5530b6e20db1f6a",
+"hosts/host-08/trivy-fs.json.gz": "e1feadd352a659312836462f065034c61a83b5a56c840691524777f6b681966d"
+},
+"logs": [
+"host-08: software_fs: 1 files"
+],
+"calls": [
+[
+"stream",
+"host-08",
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null",
+1073741824,
+1800
+]
+],
+"trivy_calls": [
+{
+"args": [
+"fs",
+"--scanners",
+"vuln",
+"$OUT/hosts/host-08/software_fs"
+],
+"output": "$OUT/hosts/host-08/trivy-fs.json",
+"timeout": 3600,
+"target": {
+"$OUT/hosts/host-08/software_fs": {
+"opt/": "dir",
+"opt/rh/": "dir",
+"opt/rh/rh-python36/": "dir",
+"opt/rh/rh-python36/root/": "dir",
+"opt/rh/rh-python36/root/usr/": "dir",
+"opt/rh/rh-python36/root/usr/share/": "dir",
+"opt/rh/rh-python36/root/usr/share/doc/": "dir",
+"opt/rh/rh-python36/root/usr/share/doc/rh-python36-python-setuptools-36.5.0/": "dir",
+"opt/rh/rh-python36/root/usr/share/doc/rh-python36-python-setuptools-36.5.0/docs/": "dir",
+"opt/rh/rh-python36/root/usr/share/doc/rh-python36-python-setuptools-36.5.0/docs/requirements.txt": "b91a6cee7621d774e5237d35ee222a00f47fe81ea7b49a1ed9cf4493d67b886f"
+}
+}
+}
+]
+},
+{
+"name": "synth",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null": {
+"file": "synth-ok.tar"
+}
+},
+"trivy": {
+"trivy-fs.json": {
+"file": "trivy-fs-synth.json.gz"
+}
+},
+"results": [
+{
+"findings": [
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2026-33671",
+"pkg": "picomatch",
+"pkg_path": null,
+"installed": "2.3.1",
+"fixed": "4.0.4, 3.0.2, 2.3.2",
+"status": "fixed",
+"severity": "HIGH",
+"title": "picomatch: Picomatch: Regular Expression Denial of Service via crafted extglob patterns",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33671",
+"target": "/home/deploy/app/yarn.lock",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2026-33672",
+"pkg": "picomatch",
+"pkg_path": null,
+"installed": "2.3.1",
+"fixed": "4.0.4, 3.0.2, 2.3.2",
+"status": "fixed",
+"severity": "MEDIUM",
+"title": "picomatch: Picomatch: Data integrity compromised via method injection with crafted POSIX bracket expressions",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33672",
+"target": "/home/deploy/app/yarn.lock",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+"preauth": true,
+"rce": false
+},
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2099-0001",
+"pkg": "org.example:lib",
+"pkg_path": "opt/app/lib/x.jar",
+"installed": "1.0",
+"fixed": "1.1",
+"status": "fixed",
+"severity": "HIGH",
+"title": "picomatch: Picomatch: Regular Expression Denial of Service via crafted extglob patterns",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33671",
+"target": "/opt/app/lib/x.jar",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2099-0002",
+"pkg": "org.example:abs",
+"pkg_path": "$OUT/hosts/h1/software_fs/opt/app/lib/x.jar",
+"installed": "2.3.1",
+"fixed": "4.0.4, 3.0.2, 2.3.2",
+"status": "fixed",
+"severity": "MEDIUM",
+"title": "picomatch: Picomatch: Data integrity compromised via method injection with crafted POSIX bracket expressions",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33672",
+"target": "/opt/app/lib/x.jar",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+"preauth": true,
+"rce": false
+},
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2099-0003",
+"pkg": "golang.org/x/net",
+"pkg_path": null,
+"installed": "2.3.1",
+"fixed": "4.0.4, 3.0.2, 2.3.2",
+"status": "fixed",
+"severity": "MEDIUM",
+"title": "picomatch: Picomatch: Data integrity compromised via method injection with crafted POSIX bracket expressions",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33672",
+"target": "/srv/app/go.mod",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+"preauth": true,
+"rce": false
+}
+],
+"error": null
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir",
+"hosts/h1/software_fs.files.txt": "826cc65c93063bb9d44349dd4912fb425b5bbd7f878434272b0495e5f763c367",
+"hosts/h1/trivy-fs.json.gz": "848fa879366f4b6473254058a1faf5d42e8b4338c69eb10960996c36f35b5f97"
+},
+"logs": [
+"h1: software_fs: 8 files"
+],
+"calls": [
+[
+"stream",
+"h1",
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null",
+1073741824,
+1800
+]
+],
+"trivy_calls": [
+{
+"args": [
+"fs",
+"--scanners",
+"vuln",
+"$OUT/hosts/h1/software_fs"
+],
+"output": "$OUT/hosts/h1/trivy-fs.json",
+"timeout": 3600,
+"target": {
+"$OUT/hosts/h1/software_fs": {
+"home/": "dir",
+"home/deploy/": "dir",
+"home/deploy/app/": "dir",
+"home/deploy/app/yarn.lock": "b75ee05c80095fa74f5301f6798b0cc41b111da69bd23fe67308ecbed24f9f1f",
+"opt/": "dir",
+"opt/app/": "dir",
+"opt/app/lib/": "dir",
+"opt/app/lib/x.jar": "773532d2bc1a7ae88f64aa2a7bcf97312c37d3de4fe216c3e93d891a45c11cf3",
+"srv/": "dir",
+"srv/app/": "dir",
+"srv/app/dir-link": "-> ../app",
+"srv/app/dot.lock": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+"srv/app/go.mod": "fc4a3fdfa1b8230e721b7eaada825923cc3b4219dee283230bcec3f6be74c274",
+"srv/app/hard.txt": "590febb45b974a5e6ffe4c8170c3c032d9e79fe7784e5c76add8353e970b6c2a",
+"srv/app/req-link.txt": "-> requirements.txt",
+"srv/app/requirements.txt": "590febb45b974a5e6ffe4c8170c3c032d9e79fe7784e5c76add8353e970b6c2a",
+"srv/app/ünï code.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+}
+}
+}
+]
+},
+{
+"name": "gzip",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null": {
+"file": "synth-gz.tar"
+}
+},
+"trivy": {
+"trivy-fs.json": {
+"file": "trivy-fs-synth.json.gz"
+}
+},
+"results": [
+{
+"findings": [
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2026-33671",
+"pkg": "picomatch",
+"pkg_path": null,
+"installed": "2.3.1",
+"fixed": "4.0.4, 3.0.2, 2.3.2",
+"status": "fixed",
+"severity": "HIGH",
+"title": "picomatch: Picomatch: Regular Expression Denial of Service via crafted extglob patterns",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33671",
+"target": "/home/deploy/app/yarn.lock",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2026-33672",
+"pkg": "picomatch",
+"pkg_path": null,
+"installed": "2.3.1",
+"fixed": "4.0.4, 3.0.2, 2.3.2",
+"status": "fixed",
+"severity": "MEDIUM",
+"title": "picomatch: Picomatch: Data integrity compromised via method injection with crafted POSIX bracket expressions",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33672",
+"target": "/home/deploy/app/yarn.lock",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+"preauth": true,
+"rce": false
+},
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2099-0001",
+"pkg": "org.example:lib",
+"pkg_path": "opt/app/lib/x.jar",
+"installed": "1.0",
+"fixed": "1.1",
+"status": "fixed",
+"severity": "HIGH",
+"title": "picomatch: Picomatch: Regular Expression Denial of Service via crafted extglob patterns",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33671",
+"target": "/opt/app/lib/x.jar",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2099-0002",
+"pkg": "org.example:abs",
+"pkg_path": "$OUT/hosts/h1/software_fs/opt/app/lib/x.jar",
+"installed": "2.3.1",
+"fixed": "4.0.4, 3.0.2, 2.3.2",
+"status": "fixed",
+"severity": "MEDIUM",
+"title": "picomatch: Picomatch: Data integrity compromised via method injection with crafted POSIX bracket expressions",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33672",
+"target": "/opt/app/lib/x.jar",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+"preauth": true,
+"rce": false
+},
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2099-0003",
+"pkg": "golang.org/x/net",
+"pkg_path": null,
+"installed": "2.3.1",
+"fixed": "4.0.4, 3.0.2, 2.3.2",
+"status": "fixed",
+"severity": "MEDIUM",
+"title": "picomatch: Picomatch: Data integrity compromised via method injection with crafted POSIX bracket expressions",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33672",
+"target": "/srv/app/go.mod",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+"preauth": true,
+"rce": false
+}
+],
+"error": null
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir",
+"hosts/h1/software_fs.files.txt": "75efde33b3070ede5e1c4ea39aa711b5cb38922d3d9a0767e6c1437c1d6f247e",
+"hosts/h1/trivy-fs.json.gz": "848fa879366f4b6473254058a1faf5d42e8b4338c69eb10960996c36f35b5f97"
+},
+"logs": [
+"h1: software_fs: 1 files"
+],
+"calls": [
+[
+"stream",
+"h1",
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null",
+1073741824,
+1800
+]
+],
+"trivy_calls": [
+{
+"args": [
+"fs",
+"--scanners",
+"vuln",
+"$OUT/hosts/h1/software_fs"
+],
+"output": "$OUT/hosts/h1/trivy-fs.json",
+"timeout": 3600,
+"target": {
+"$OUT/hosts/h1/software_fs": {
+"opt/": "dir",
+"opt/a/": "dir",
+"opt/a/package-lock.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+}
+}
+}
+]
+},
+{
+"name": "nothing-found",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null": {
+"text": ""
+}
+},
+"trivy": {
+"trivy-fs.json": {
+"file": "trivy-fs-synth.json.gz"
+}
+},
+"results": [
+{
+"findings": [],
+"error": null
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir"
+},
+"logs": [],
+"calls": [
+[
+"stream",
+"h1",
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null",
+1073741824,
+1800
+]
+],
+"trivy_calls": []
+},
+{
+"name": "no-paths",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"enabled": true,
+"paths": [],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {},
+"trivy": {},
+"results": [
+{
+"findings": [],
+"error": null
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir"
+},
+"logs": [],
+"calls": [],
+"trivy_calls": []
+},
+{
+"name": "no-patterns",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {},
+"trivy": {},
+"results": [
+{
+"findings": [],
+"error": null
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir"
+},
+"logs": [],
+"calls": [],
+"trivy_calls": []
+},
+{
+"name": "stream-fails",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null": {
+"err": "h1: exit 255: Connection closed"
+}
+},
+"trivy": {},
+"results": [
+{
+"findings": null,
+"error": "h1: exit 255: Connection closed"
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir"
+},
+"logs": [],
+"calls": [
+[
+"stream",
+"h1",
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null",
+1073741824,
+1800
+]
+],
+"trivy_calls": []
+},
+{
+"name": "too-big",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"paths": [
+"/opt"
+],
+"patterns": [
+"*.jar"
+],
+"max_total_mb": 0
+},
+"facts": {}
+}
+],
+"stream": {
+"find /opt -xdev -type f \\( -name '*.jar' \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null": {
+"file": "synth-ok.tar"
+}
+},
+"trivy": {},
+"results": [
+{
+"findings": null,
+"error": "h1: output exceeds 0 MB, aborted"
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir"
+},
+"logs": [],
+"calls": [
+[
+"stream",
+"h1",
+"find /opt -xdev -type f \\( -name '*.jar' \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null",
+0,
+1800
+]
+],
+"trivy_calls": []
+},
+{
+"name": "outside",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null": {
+"file": "synth-outside.tar"
+}
+},
+"trivy": {
+"trivy-fs.json": {
+"file": "trivy-fs-synth.json.gz"
+}
+},
+"results": [
+{
+"findings": null,
+"error": "'../evil.jar' would be extracted to '$OUT/hosts/h1/evil.jar', which is outside the destination"
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir"
+},
+"logs": [],
+"calls": [
+[
+"stream",
+"h1",
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null",
+1073741824,
+1800
+]
+],
+"trivy_calls": []
+},
+{
+"name": "device",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null": {
+"file": "synth-device.tar"
+}
+},
+"trivy": {
+"trivy-fs.json": {
+"file": "trivy-fs-synth.json.gz"
+}
+},
+"results": [
+{
+"findings": null,
+"error": "'opt/dev' is a special file"
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir"
+},
+"logs": [],
+"calls": [
+[
+"stream",
+"h1",
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null",
+1073741824,
+1800
+]
+],
+"trivy_calls": []
+},
+{
+"name": "abs-link",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null": {
+"file": "synth-abslink.tar"
+}
+},
+"trivy": {
+"trivy-fs.json": {
+"file": "trivy-fs-synth.json.gz"
+}
+},
+"results": [
+{
+"findings": null,
+"error": "'opt/passwd.jar' is a link to an absolute path"
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir"
+},
+"logs": [],
+"calls": [
+[
+"stream",
+"h1",
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null",
+1073741824,
+1800
+]
+],
+"trivy_calls": []
+},
+{
+"name": "link-outside",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null": {
+"file": "synth-linkout.tar"
+}
+},
+"trivy": {
+"trivy-fs.json": {
+"file": "trivy-fs-synth.json.gz"
+}
+},
+"results": [
+{
+"findings": null,
+"error": "'opt/up.jar' would link to '$OUT/hosts/h1/x', which is outside the destination"
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir"
+},
+"logs": [],
+"calls": [
+[
+"stream",
+"h1",
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null",
+1073741824,
+1800
+]
+],
+"trivy_calls": []
+},
+{
+"name": "hard-outside",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null": {
+"file": "synth-hardout.tar"
+}
+},
+"trivy": {
+"trivy-fs.json": {
+"file": "trivy-fs-synth.json.gz"
+}
+},
+"results": [
+{
+"findings": null,
+"error": "'opt/h.jar' would link to '$OUT/hosts/h1/h', which is outside the destination"
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir"
+},
+"logs": [],
+"calls": [
+[
+"stream",
+"h1",
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null",
+1073741824,
+1800
+]
+],
+"trivy_calls": []
+},
+{
+"name": "dotdot-inside",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null": {
+"file": "synth-dotdot-inside.tar"
+}
+},
+"trivy": {
+"trivy-fs.json": {
+"file": "trivy-fs-synth.json.gz"
+}
+},
+"results": [
+{
+"findings": [
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2026-33671",
+"pkg": "picomatch",
+"pkg_path": null,
+"installed": "2.3.1",
+"fixed": "4.0.4, 3.0.2, 2.3.2",
+"status": "fixed",
+"severity": "HIGH",
+"title": "picomatch: Picomatch: Regular Expression Denial of Service via crafted extglob patterns",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33671",
+"target": "/home/deploy/app/yarn.lock",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2026-33672",
+"pkg": "picomatch",
+"pkg_path": null,
+"installed": "2.3.1",
+"fixed": "4.0.4, 3.0.2, 2.3.2",
+"status": "fixed",
+"severity": "MEDIUM",
+"title": "picomatch: Picomatch: Data integrity compromised via method injection with crafted POSIX bracket expressions",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33672",
+"target": "/home/deploy/app/yarn.lock",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+"preauth": true,
+"rce": false
+},
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2099-0001",
+"pkg": "org.example:lib",
+"pkg_path": "opt/app/lib/x.jar",
+"installed": "1.0",
+"fixed": "1.1",
+"status": "fixed",
+"severity": "HIGH",
+"title": "picomatch: Picomatch: Regular Expression Denial of Service via crafted extglob patterns",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33671",
+"target": "/opt/app/lib/x.jar",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2099-0002",
+"pkg": "org.example:abs",
+"pkg_path": "$OUT/hosts/h1/software_fs/opt/app/lib/x.jar",
+"installed": "2.3.1",
+"fixed": "4.0.4, 3.0.2, 2.3.2",
+"status": "fixed",
+"severity": "MEDIUM",
+"title": "picomatch: Picomatch: Data integrity compromised via method injection with crafted POSIX bracket expressions",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33672",
+"target": "/opt/app/lib/x.jar",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+"preauth": true,
+"rce": false
+},
+{
+"org": "acme",
+"host": "h1",
+"group": "g",
+"exposure": 2,
+"module": "software_fs",
+"kind": "vuln",
+"id": "CVE-2099-0003",
+"pkg": "golang.org/x/net",
+"pkg_path": null,
+"installed": "2.3.1",
+"fixed": "4.0.4, 3.0.2, 2.3.2",
+"status": "fixed",
+"severity": "MEDIUM",
+"title": "picomatch: Picomatch: Data integrity compromised via method injection with crafted POSIX bracket expressions",
+"url": "https://avd.aquasec.com/nvd/cve-2026-33672",
+"target": "/srv/app/go.mod",
+"vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+"preauth": true,
+"rce": false
+}
+],
+"error": null
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir",
+"hosts/h1/software_fs.files.txt": "57edf9fc1a5d840f6a62f6fbedb97170b1fa05c454c5a958630ae893e84a9cb4",
+"hosts/h1/trivy-fs.json.gz": "848fa879366f4b6473254058a1faf5d42e8b4338c69eb10960996c36f35b5f97"
+},
+"logs": [
+"h1: software_fs: 1 files"
+],
+"calls": [
+[
+"stream",
+"h1",
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null",
+1073741824,
+1800
+]
+],
+"trivy_calls": [
+{
+"args": [
+"fs",
+"--scanners",
+"vuln",
+"$OUT/hosts/h1/software_fs"
+],
+"output": "$OUT/hosts/h1/trivy-fs.json",
+"timeout": 3600,
+"target": {
+"$OUT/hosts/h1/software_fs": {
+"opt/": "dir",
+"opt/in.jar": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+}
+}
+}
+]
+},
+{
+"name": "trivy-fails",
+"runs": [
+{
+"host": {
+"name": "h1"
+},
+"cfg": {
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"facts": {}
+}
+],
+"stream": {
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null": {
+"file": "synth-ok.tar"
+}
+},
+"trivy": {
+"trivy-fs.json": {
+"err": "trivy fs: FATAL scan error"
+}
+},
+"results": [
+{
+"findings": null,
+"error": "trivy fs: FATAL scan error"
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/h1/": "dir",
+"hosts/h1/software_fs.files.txt": "826cc65c93063bb9d44349dd4912fb425b5bbd7f878434272b0495e5f763c367"
+},
+"logs": [],
+"calls": [
+[
+"stream",
+"h1",
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null",
+1073741824,
+1800
+]
+],
+"trivy_calls": [
+{
+"args": [
+"fs",
+"--scanners",
+"vuln",
+"$OUT/hosts/h1/software_fs"
+],
+"output": "$OUT/hosts/h1/trivy-fs.json",
+"timeout": 3600,
+"target": {
+"$OUT/hosts/h1/software_fs": {
+"home/": "dir",
+"home/deploy/": "dir",
+"home/deploy/app/": "dir",
+"home/deploy/app/yarn.lock": "b75ee05c80095fa74f5301f6798b0cc41b111da69bd23fe67308ecbed24f9f1f",
+"opt/": "dir",
+"opt/app/": "dir",
+"opt/app/lib/": "dir",
+"opt/app/lib/x.jar": "773532d2bc1a7ae88f64aa2a7bcf97312c37d3de4fe216c3e93d891a45c11cf3",
+"srv/": "dir",
+"srv/app/": "dir",
+"srv/app/dir-link": "-> ../app",
+"srv/app/dot.lock": "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+"srv/app/go.mod": "fc4a3fdfa1b8230e721b7eaada825923cc3b4219dee283230bcec3f6be74c274",
+"srv/app/hard.txt": "590febb45b974a5e6ffe4c8170c3c032d9e79fe7784e5c76add8353e970b6c2a",
+"srv/app/req-link.txt": "-> requirements.txt",
+"srv/app/requirements.txt": "590febb45b974a5e6ffe4c8170c3c032d9e79fe7784e5c76add8353e970b6c2a",
+"srv/app/ünï code.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+}
+}
+}
+]
+}
+],
+"commands": [
+[
+{
+"enabled": true,
+"paths": [
+"/opt",
+"/srv",
+"/usr/local",
+"/home"
+],
+"exclude": [
+"/var/lib/docker",
+"/var/lib/containerd",
+"/proc",
+"/sys",
+"/dev",
+"/run",
+"/tmp"
+],
+"patterns": [
+"*.jar",
+"*.war",
+"*.ear",
+"package-lock.json",
+"yarn.lock",
+"pnpm-lock.yaml",
+"composer.lock",
+"Gemfile.lock",
+"Pipfile.lock",
+"poetry.lock",
+"requirements*.txt",
+"go.mod",
+"Cargo.lock",
+"*.deps.json",
+"packages.lock.json"
+],
+"max_file_mb": 100,
+"max_total_mb": 1024
+},
+"find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null"
+],
+[
+{
+"paths": [
+"/opt/my app"
+],
+"exclude": [
+"/var/lib/docker"
+],
+"patterns": [
+"*.jar"
+],
+"max_file_mb": 1
+},
+"find '/opt/my app' -xdev \\( -path /var/lib/docker \\) -prune -o -type f \\( -name '*.jar' \\) -size -1024k -print 2>/dev/null | tar -cf - -T - 2>/dev/null"
+],
+[
+{
+"paths": [
+"/a'b",
+"/c d",
+"/ö"
+],
+"patterns": [
+"x"
+]
+},
+"find '/a'\"'\"'b' '/c d' '/ö' -xdev -type f \\( -name x \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null"
+],
+[
+{
+"paths": [
+"/opt"
+],
+"patterns": [
+"*.jar",
+"a b"
+],
+"exclude": []
+},
+"find /opt -xdev -type f \\( -name '*.jar' -o -name 'a b' \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null"
+],
+[
+{
+"paths": [],
+"patterns": []
+},
+"find  -xdev -type f \\(  \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null"
+],
+[
+{
+"paths": [
+"/x"
+],
+"patterns": [
+"y"
+],
+"max_file_mb": 2.5
+},
+"find /x -xdev -type f \\( -name y \\) -size -2048k -print 2>/dev/null | tar -cf - -T - 2>/dev/null"
+],
+[
+{
+"paths": [
+"/x"
+],
+"patterns": [
+"y"
+],
+"max_file_mb": "3"
+},
+"find /x -xdev -type f \\( -name y \\) -size -3072k -print 2>/dev/null | tar -cf - -T - 2>/dev/null"
+]
+],
+"default_cmd": "find /opt /srv /usr/local /home -xdev \\( -path /var/lib/docker -o -path /var/lib/containerd -o -path /proc -o -path /sys -o -path /dev -o -path /run -o -path /tmp \\) -prune -o -type f \\( -name '*.jar' -o -name '*.war' -o -name '*.ear' -o -name package-lock.json -o -name yarn.lock -o -name pnpm-lock.yaml -o -name composer.lock -o -name Gemfile.lock -o -name Pipfile.lock -o -name poetry.lock -o -name 'requirements*.txt' -o -name go.mod -o -name Cargo.lock -o -name '*.deps.json' -o -name packages.lock.json \\) -size -102400k -print 2>/dev/null | tar -cf - -T - 2>/dev/null"
+}

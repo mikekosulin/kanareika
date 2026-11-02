@@ -1,0 +1,39 @@
+{
+ "org": "acme",
+ "env": "production",
+ "run_id": "2026-11-02_100000",
+ "trivy_version": "0.58.0",
+ "started": "2026-11-02_100000",
+ "finished": "2026-11-02_100000Z",
+ "selection": {
+  "groups": [],
+  "hosts": [],
+  "modules": []
+ },
+ "modules": [
+  "access",
+  "docker",
+  "health",
+  "os_packages",
+  "network_external"
+ ],
+ "hosts_scanned": [
+  "web-01",
+  "db-01",
+  "app-01",
+  "dead-01"
+ ],
+ "hosts_ok": 4,
+ "hosts_failed": {},
+ "module_errors": {
+  "db-01": [
+   "health: timeout"
+  ]
+ },
+ "feeds_updated": "2026-11-01",
+ "note": {
+  "free": [
+   "form"
+  ]
+ }
+}

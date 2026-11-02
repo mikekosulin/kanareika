@@ -1,0 +1,88 @@
+{
+ "org": "acme",
+ "env": "production",
+ "run_id": "current",
+ "selection": {},
+ "sources": {
+  "app-01": {
+   "_facts": "2026-11-01_100000",
+   "os_packages": "2026-11-02_090000",
+   "access": "2026-11-01_100000"
+  },
+  "k8s-01": {
+   "_facts": "2026-11-01_100000",
+   "os_packages": "2026-11-01_100000",
+   "access": "2026-11-01_100000"
+  },
+  "swm-01": {
+   "_facts": "2026-11-01_100000",
+   "os_packages": "2026-11-01_100000",
+   "access": "2026-11-01_100000"
+  },
+  "sww-01": {
+   "_facts": "2026-11-01_100000",
+   "os_packages": "2026-11-01_100000",
+   "access": "2026-11-01_100000"
+  },
+  "sww-02": {
+   "_facts": "2026-11-01_100000",
+   "os_packages": "2026-11-01_100000",
+   "access": "2026-11-01_100000"
+  },
+  "web-01": {
+   "_facts": "2026-11-01_100000",
+   "os_packages": "2026-11-01_100000",
+   "access": "2026-11-01_100000"
+  },
+  "web-02": {
+   "_facts": "2026-11-01_100000",
+   "os_packages": "2026-11-01_100000",
+   "access": "2026-11-01_100000"
+  }
+ },
+ "hosts_scanned": [
+  "app-01",
+  "k8s-01",
+  "mongo-01",
+  "swm-01",
+  "sww-01",
+  "sww-02",
+  "web-01",
+  "web-02"
+ ],
+ "hosts_failed": {
+  "mongo-01": "connect: timeout"
+ },
+ "module_errors": {
+  "sww-02": [
+   "health: timeout after 60s"
+  ]
+ },
+ "modules": [
+  "access",
+  "exposure",
+  "health",
+  "os_packages"
+ ],
+ "last_run": "2026-11-02_090000",
+ "finished": "2026-11-02T09:20:00+00:00",
+ "started": "2026-11-01T10:00:00+00:00",
+ "trivy_version": "0.75.0",
+ "feeds_updated": "2026-11-01T09:00:00+00:00",
+ "hosts_ok": 7,
+ "counts": {
+  "P1": 4,
+  "P2": 22,
+  "P3": 14,
+  "P4": 3,
+  "accepted": 0,
+  "backported": 1
+ },
+ "plan_counts": {
+  "P1": 3,
+  "P2": 10,
+  "P3": 9,
+  "P4": 2,
+  "cves": 27
+ }
+}

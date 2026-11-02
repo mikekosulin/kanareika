@@ -1,0 +1,85 @@
+# Finding priority: rules are checked top to bottom, the first match wins.
+# Conditions in `when` are ANDed. Available conditions:
+#   kev: true|false            — CVE is in the CISA KEV catalog (make feeds)
+#   epss_gte: 0.0..1.0         — EPSS exploitation probability
+#   severity: [CRITICAL, ...]  — severity from Trivy
+#   exposure: [1, 2, 3]        — 1 perimeter, 2 neighbours, 3 internal (orgs/<org>.yml)
+#   fixable: true|false        — a fixed version exists
+#   kind: [vuln, misconfig, exposure, health]
+#   kernel: true|false         — a package of the running kernel
+#   preauth: true|false        — exploitable over the network, no account, no user interaction (CVSS AV:N/PR:N/UI:N)
+#   rce: true|false            — leads to code execution (by CWE and description)
+#   id: [os-eol, ...]          — specific checks
+rules:
+  - priority: P1                # unauthenticated remote code execution on a reachable host
+    when:
+      preauth: true
+      rce: true
+      exposure: [1, 2]
+      fixable: true
+  - priority: P1
+    when:
+      kev: true
+      exposure: [1, 2]
+  - priority: P1
+    when:
+      severity: [CRITICAL]
+      exposure: [1]
+      fixable: true
+  - priority: P1                # end-of-life OS on the perimeter
+    when:
+      id: [os-eol]
+      exposure: [1]
+  - priority: P2                # end-of-life OS inside
+    when:
+      id: [os-eol]
+  - priority: P2                # pre-auth RCE inside the perimeter — next patch cycle too
+    when:
+      preauth: true
+      rce: true
+      fixable: true
+  - priority: P2                # running kernel: HIGH/CRITICAL with a fix — always the next patch cycle
+    when:
+      kernel: true
+      severity: [CRITICAL, HIGH]
+      fixable: true
+  - priority: P2
+    when:
+      kev: true
+  - priority: P2
+    when:
+      epss_gte: 0.3
+      exposure: [1, 2]
+  - priority: P2
+    when:
+      severity: [CRITICAL, HIGH]
+      exposure: [1, 2]
+      fixable: true
+  - priority: P2
+    when:
+      kind: [misconfig, exposure, health]
+      severity: [CRITICAL, HIGH]
+      exposure: [1]
+  - priority: P2                # health: disk/filesystem/hardware HIGH — fix quickly on any host
+    when:
+      kind: [health]
+      severity: [CRITICAL, HIGH]
+  - priority: P3
+    when:
+      severity: [CRITICAL, HIGH]
+  - priority: P3
+    when:
+      kind: [misconfig, exposure, health]
+      severity: [MEDIUM, HIGH, CRITICAL]
+  - priority: P4                # no conditions: everything else
+
+# days to fix, counted from the scan date
+sla_days:
+  P1: 7
+  P2: 30
+  P3: 90
+  P4: 180
+
+feeds:
+  kev_url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+  epss_url: https://epss.empiricalsecurity.com/epss_scores-current.csv.gz

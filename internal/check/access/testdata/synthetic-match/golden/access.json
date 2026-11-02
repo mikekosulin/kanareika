@@ -1,0 +1,79 @@
+{
+ "sshd": {
+  "passwordauthentication": "no",
+  "challengeresponseauthentication": "yes",
+  "usepam": "no",
+  "permitrootlogin": "prohibit-password"
+ },
+ "sshd_source": "sshd -T",
+ "password_auth": false,
+ "password_auth_match_users": [
+  "deploy",
+  "ops"
+ ],
+ "users_with_password": [],
+ "login_users": [
+  "deploy",
+  "ops",
+  "root"
+ ],
+ "uid0": [
+  "root"
+ ],
+ "keys": [],
+ "logins": {
+  "period": [
+   "2026-01-04T10:00:00",
+   "2025-01-06T13:00:00"
+  ],
+  "accepted": [
+   {
+    "user": "root",
+    "ip": "10.77.0.14",
+    "method": "publickey",
+    "count": 2,
+    "first": "2026-01-04T10:00:00",
+    "last": "2025-01-06T13:00:00"
+   }
+  ],
+  "failed_total": 1,
+  "failed_ips": 1,
+  "failed_top_ips": [
+   [
+    "10.77.0.15",
+    1
+   ]
+  ],
+  "failed_top_users": [
+   [
+    "root",
+    1
+   ]
+  ],
+  "invalid_users": 0,
+  "failed_last": "2025-12-31T10:00:00",
+  "failed_daily": {
+   "2025-12-31": 1
+  },
+  "accepted_daily": {
+   "2025-01-06": 1,
+   "2026-01-04": 1
+  },
+  "attackers": [
+   {
+    "ip": "10.77.0.15",
+    "n": 1,
+    "first": "2025-12-31T10:00:00",
+    "last": "2025-12-31T10:00:00",
+    "users": [
+     [
+      "root",
+      1
+     ]
+    ]
+   }
+  ]
+ },
+ "last": [],
+ "denied": []
+}

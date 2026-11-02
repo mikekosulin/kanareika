@@ -1,0 +1,12 @@
+{
+ "host": {
+  "org": "acme",
+  "name": "synthetic-files",
+  "group": "synthetic",
+  "exposure": 2,
+  "address": "10.77.0.13",
+  "user": "deploy",
+  "privilege": "none"
+ },
+ "now": "2026-01-05T12:00:00"
+}

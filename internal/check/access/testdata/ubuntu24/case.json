@@ -1,0 +1,12 @@
+{
+ "host": {
+  "org": "acme",
+  "name": "host-11",
+  "group": "prod_edge",
+  "exposure": 1,
+  "address": "100.21.0.6",
+  "user": "root",
+  "privilege": "none"
+ },
+ "now": "2026-11-02T00:00:00"
+}

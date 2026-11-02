@@ -1,0 +1,104 @@
+
+@@time@@
+1793577263.239022707
+Timezone=UTC
+LocalRTC=no
+CanNTP=yes
+NTP=yes
+NTPSynchronized=yes
+TimeUSec=Sun 2026-11-01 23:54:23 UTC
+RTCTimeUSec=Sun 2026-11-01 23:54:23 UTC
+               Local time: Sun 2026-11-01 23:54:23 UTC
+           Universal time: Sun 2026-11-01 23:54:23 UTC
+                 RTC time: Sun 2026-11-01 23:54:23
+                Time zone: UTC (UTC, +0000)
+System clock synchronized: yes
+              NTP service: active
+          RTC in local TZ: no
+/usr/share/zoneinfo/UTC
+UTC+0000
+
+@@dmesg@@
+[Sun Nov  1 22:43:21 2026] Booted with the nomodeset parameter. Only the system framebuffer will be available
+[Sun Nov  1 22:43:21 2026] acpi PNP0A03:00: fail to add MMCONFIG information, can't access extended configuration space under this bridge
+[Sun Nov  1 22:43:23 2026] Warning: Deprecated Driver is detected: qla4xxx will not be maintained in a future major release and may be disabled
+[Sun Nov  1 22:43:23 2026] Warning: Deprecated Driver is detected: qla4xxx_module_init will not be maintained in a future major release and may be disabled
+[Sun Nov  1 22:43:23 2026] Warning: Deprecated Driver is detected: cnic will not be maintained in a future major release and may be disabled
+[Sun Nov  1 22:43:23 2026] Warning: Deprecated Driver is detected: cnic_init will not be maintained in a future major release and may be disabled
+[Sun Nov  1 22:43:23 2026] Warning: Deprecated Driver is detected: bnx2i will not be maintained in a future major release and may be disabled
+[Sun Nov  1 22:43:23 2026] Warning: Deprecated Driver is detected: bnx2i_mod_init will not be maintained in a future major release and may be disabled
+[Sun Nov  1 22:43:24 2026] sd 0:0:0:0: Power-on or device reset occurred
+[Sun Nov  1 22:43:25 2026] SELinux: https://github.com/SELinuxProject/selinux-kernel/wiki/DEPRECATE-runtime-disable
+[Sun Nov  1 22:43:25 2026] SELinux: Runtime disable is not supported, use selinux=0 on the kernel cmdline.
+[Sun Nov  1 22:43:26 2026] virtio_gpu virtio0: probe with driver virtio_gpu failed with error -22
+[Sun Nov  1 22:43:29 2026] block sda: the capability attribute has been deprecated.
+[Sun Nov  1 22:43:30 2026] Warning: Deprecated Driver is detected: ip_tables will not be maintained in a future major release and may be disabled
+[Sun Nov  1 22:43:30 2026] Warning: Deprecated Driver is detected: ip_tables_init will not be maintained in a future major release and may be disabled
+[Sun Nov  1 22:43:30 2026] Warning: Deprecated Driver is detected: ip_set will not be maintained in a future major release and may be disabled
+[Sun Nov  1 22:43:30 2026] Warning: Deprecated Driver is detected: ip_set_init will not be maintained in a future major release and may be disabled
+[Sun Nov  1 22:43:30 2026] Warning: Deprecated Driver is detected: ip6_tables will not be maintained in a future major release and may be disabled
+[Sun Nov  1 22:43:30 2026] Warning: Deprecated Driver is detected: ip6_tables_init will not be maintained in a future major release and may be disabled
+
+@@journal@@
+2026-11-01T22:43:23+0000 localhost kernel: Warning: Deprecated Driver is detected: qla4xxx will not be maintained in a future major release and may be disabled
+2026-11-01T22:43:23+0000 localhost kernel: Warning: Deprecated Driver is detected: qla4xxx_module_init will not be maintained in a future major release and may be disabled
+2026-11-01T22:43:23+0000 localhost kernel: Warning: Deprecated Driver is detected: cnic will not be maintained in a future major release and may be disabled
+2026-11-01T22:43:23+0000 localhost kernel: Warning: Deprecated Driver is detected: cnic_init will not be maintained in a future major release and may be disabled
+2026-11-01T22:43:23+0000 localhost kernel: Warning: Deprecated Driver is detected: bnx2i will not be maintained in a future major release and may be disabled
+2026-11-01T22:43:23+0000 localhost kernel: Warning: Deprecated Driver is detected: bnx2i_mod_init will not be maintained in a future major release and may be disabled
+2026-11-01T22:43:26+0000 host-15 kernel: SELinux: https://github.com/SELinuxProject/selinux-kernel/wiki/DEPRECATE-runtime-disable
+2026-11-01T22:43:26+0000 host-15 kernel: SELinux: Runtime disable is not supported, use selinux=0 on the kernel cmdline.
+2026-11-01T22:43:26+0000 host-15 kernel: virtio_gpu virtio0: probe with driver virtio_gpu failed with error -22
+2026-11-01T22:43:29+0000 host-15 kernel: Warning: Deprecated Driver is detected: ip_tables will not be maintained in a future major release and may be disabled
+2026-11-01T22:43:29+0000 host-15 kernel: Warning: Deprecated Driver is detected: ip_tables_init will not be maintained in a future major release and may be disabled
+2026-11-01T22:43:30+0000 host-15 kernel: Warning: Deprecated Driver is detected: ip_set will not be maintained in a future major release and may be disabled
+2026-11-01T22:43:30+0000 host-15 kernel: Warning: Deprecated Driver is detected: ip_set_init will not be maintained in a future major release and may be disabled
+2026-11-01T22:43:30+0000 host-15 kernel: Warning: Deprecated Driver is detected: ip6_tables will not be maintained in a future major release and may be disabled
+2026-11-01T22:43:30+0000 host-15 kernel: Warning: Deprecated Driver is detected: ip6_tables_init will not be maintained in a future major release and may be disabled
+
+@@failed_units@@
+
+@@df@@
+Filesystem     Type 1024-blocks    Used Available Capacity Mounted on
+/dev/sda1      ext4    12304316 7411032   4360580      63% /
+
+@@dfi@@
+Filesystem     Inodes  IUsed  IFree IUse% Mounted on
+/dev/sda1      774144 120483 653661   16% /
+
+@@mem@@
+               total        used        free      shared  buff/cache   available
+Mem:            3654        1332        1485           9        1064        2322
+Swap:              0           0           0
+
+@@load@@
+0.01 0.00 0.00 1/339 30752
+4
+
+@@ro@@
+
+@@ntp@@
+yes
+
+@@timesvc@@
+chronyd active
+
+@@chrony@@
+Reference ID    : BC5D10AC (188.93.16.172)
+Stratum         : 4
+Ref time (UTC)  : Sun Nov 01 23:53:31 2026
+System time     : 0.000008757 seconds fast of NTP time
+Last offset     : +0.000014837 seconds
+RMS offset      : 0.000014799 seconds
+Frequency       : 96.401 ppm slow
+Residual freq   : +0.007 ppm
+Skew            : 0.131 ppm
+Root delay      : 0.019771101 seconds
+Root dispersion : 0.000375807 seconds
+Update interval : 129.4 seconds
+Leap status     : Normal
+^* 188.93.16.172                 3   7   377    51  +5437ns[  +20us] +/-   10ms
+
+@@ntpq@@
+
+@@timesyncd@@

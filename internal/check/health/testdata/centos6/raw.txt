@@ -1,0 +1,50 @@
+
+@@time@@
+1793577263.068747042
+UTC+0000
+
+@@dmesg@@
+dmesg: invalid option -- 'T'
+Usage: dmesg [-c] [-n level] [-r] [-s bufsize]
+
+@@journal@@
+kanareika: journalctl: command not found
+
+@@failed_units@@
+sh: line 6: systemctl: command not found
+
+@@df@@
+Filesystem     Type 1024-blocks    Used Available Capacity Mounted on
+/dev/sda1      ext4     7807368 4734588   2655432      65% /
+
+@@dfi@@
+Filesystem      Inodes IUsed   IFree IUse% Mounted on
+/dev/sda1      2056192 56162 2000030    3% /
+
+@@mem@@
+             total       used       free     shared    buffers     cached
+Mem:           490        457         32          1         84        241
+-/+ buffers/cache:        131        358
+Swap:         2047          0       2047
+
+@@load@@
+0.00 0.00 0.00 1/104 21545
+1
+
+@@ro@@
+
+@@ntp@@
+unknown
+
+@@timesvc@@
+ntpd active
+
+@@chrony@@
+
+@@ntpq@@
+-90.188.6.85     46.254.241.75    2 u  714 1024  377   51.154    2.466   1.356
++91.224.234.189  139.143.5.30     2 u  476 1024  377   28.022   -0.121   1.770
+*87.103.245.205  46.254.241.75    2 u  566 1024  377   43.412    0.818   1.154
++213.108.170.26  89.109.251.22    2 u  870 1024  357   26.932    0.477   2.613
+
+@@timesyncd@@

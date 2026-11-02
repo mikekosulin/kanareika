@@ -1,0 +1,12 @@
+{
+ "host": {
+  "org": "acme",
+  "name": "synthetic-timesyncd",
+  "group": "synthetic",
+  "exposure": 3,
+  "address": "10.77.0.13",
+  "user": "root",
+  "privilege": "none"
+ },
+ "scanner_ts": 1793577263.0
+}

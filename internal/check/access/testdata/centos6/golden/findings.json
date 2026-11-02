@@ -1,0 +1,46 @@
+[
+ {
+  "org": "acme",
+  "host": "host-08",
+  "group": "prod_edge",
+  "exposure": 1,
+  "module": "access",
+  "kind": "inventory",
+  "id": "ssh-bruteforce",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "INFO",
+  "title": "SSH password guessing: 4981 attempts from 551 IPs",
+  "url": "",
+  "target": "100.21.0.14 (353), 100.21.1.154 (329), 100.21.1.155 (329)",
+  "msg": "ssh.bruteforce",
+  "args": {
+   "n": 4981,
+   "ips": 551
+  }
+ },
+ {
+  "org": "acme",
+  "host": "host-08",
+  "group": "prod_edge",
+  "exposure": 1,
+  "module": "access",
+  "kind": "inventory",
+  "id": "ssh-keys",
+  "pkg": "authorized_keys",
+  "installed": "14",
+  "fixed": "",
+  "status": "",
+  "severity": "INFO",
+  "title": "authorized_keys: 14 keys, root: 5",
+  "url": "",
+  "target": "",
+  "msg": "ssh.keys",
+  "args": {
+   "n": 14,
+   "root": 5
+  }
+ }
+]

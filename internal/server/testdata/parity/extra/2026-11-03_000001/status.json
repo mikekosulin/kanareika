@@ -1,0 +1,1 @@
+{"state": "running", "started": "2026-11-03T00:10:00+00:00", "updated": "__NOW__", "hosts": {"web-01": {"state": "ok"}, "db-01": {"state": "scanning"}}, "counts": {}}

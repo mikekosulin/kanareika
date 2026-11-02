@@ -1,0 +1,62 @@
+{
+ "denied": [],
+ "dmesg": {
+  "classes": {},
+  "tail": [
+   "dmesg: invalid option -- 'T'",
+   "Usage: dmesg [-c] [-n level] [-r] [-s bufsize]"
+  ]
+ },
+ "journal": {
+  "errors_7d": 1,
+  "top": [
+   [
+    "command not found",
+    1
+   ]
+  ],
+  "tail": [
+   "kanareika: journalctl: command not found"
+  ]
+ },
+ "failed_units": [],
+ "disks": [
+  {
+   "fs": "/dev/sda1",
+   "mount": "/",
+   "use": 65
+  }
+ ],
+ "inodes": [
+  {
+   "fs": "/dev/sda1",
+   "mount": "/",
+   "use": 3
+  }
+ ],
+ "mem": {
+  "total_mb": 490,
+  "available_mb": 241
+ },
+ "swap": {
+  "total_mb": 2047,
+  "used_mb": 0
+ },
+ "load": {
+  "load1": 0.0,
+  "load15": 0.0,
+  "cpus": 1
+ },
+ "readonly_mounts": [],
+ "ntp_synced": "unknown",
+ "time": {
+  "timezone": null,
+  "synced": "yes",
+  "service": "ntpd",
+  "service_active": true,
+  "source": "87.103.245.205",
+  "stratum": 2,
+  "offset_s": 0.0008179999999999999,
+  "skew_s": 0.07
+ }
+}

@@ -1,0 +1,2 @@
+kernel=5.14.0-759.el9.x86_64
+uptime_days=0

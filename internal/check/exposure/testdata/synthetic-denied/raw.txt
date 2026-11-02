@@ -1,0 +1,23 @@
+
+@@addrs@@
+eth0 inet 10.77.0.22/24
+
+@@routes@@
+default via 10.77.0.23 dev eth0
+
+@@listen@@
+tcp   LISTEN 0      128          0.0.0.0:22         0.0.0.0:*
+
+@@firewalld_state@@
+sh: firewall-cmd: command not found
+
+@@firewalld@@
+
+@@nft@@
+Operation not permitted (you must be root)
+
+@@iptables@@
+iptables v1.8.4 (nf_tables): Could not fetch rule set generation id: Permission denied (you must be root)
+
+@@ufw@@
+ERROR: You need to be root to run this script

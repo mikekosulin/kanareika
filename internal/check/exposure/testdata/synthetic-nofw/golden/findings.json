@@ -1,0 +1,64 @@
+[
+ {
+  "org": "acme",
+  "host": "synthetic-nofw",
+  "group": "synthetic",
+  "exposure": 2,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "listen-public-3306",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "MEDIUM",
+  "title": "Close mysql :3306 to the outside",
+  "url": "",
+  "target": "tcp 0.0.0.0:3306",
+  "msg": "net.close",
+  "args": {
+   "service": "mysql",
+   "port": 3306
+  }
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-nofw",
+  "group": "synthetic",
+  "exposure": 2,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "no-firewall",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "MEDIUM",
+  "title": "Enable a firewall: public IP without inbound filtering",
+  "url": "",
+  "target": "iptables INPUT policy: ACCEPT",
+  "msg": "net.no_firewall",
+  "args": {}
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-nofw",
+  "group": "synthetic",
+  "exposure": 2,
+  "module": "exposure",
+  "kind": "inventory",
+  "id": "exposure-limited",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "INFO",
+  "title": "cannot read: denied.procs (needs root or sudo)",
+  "url": "",
+  "target": "",
+  "msg": "health.limited",
+  "args": {
+   "what": "denied.procs"
+  }
+ }
+]

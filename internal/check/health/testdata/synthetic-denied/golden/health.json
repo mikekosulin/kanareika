@@ -1,0 +1,30 @@
+{
+ "denied": [
+  "denied.dmesg",
+  "denied.journal"
+ ],
+ "dmesg": {
+  "classes": {},
+  "tail": []
+ },
+ "journal": {
+  "errors_7d": 0,
+  "top": [],
+  "tail": []
+ },
+ "failed_units": [],
+ "disks": [],
+ "inodes": [],
+ "readonly_mounts": [],
+ "ntp_synced": "unknown",
+ "time": {
+  "timezone": null,
+  "synced": "no",
+  "service": "ntpd",
+  "service_active": true,
+  "source": null,
+  "stratum": null,
+  "offset_s": null,
+  "skew_s": null
+ }
+}

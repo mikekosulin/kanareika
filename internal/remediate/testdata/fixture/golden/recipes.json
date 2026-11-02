@@ -1,0 +1,481 @@
+{
+ "family": {
+  "": "unknown",
+  "Debian GNU/Linux 12 (bookworm)": "apt",
+  "Ubuntu 22.04.4 LTS": "apt",
+  "CentOS Linux 7 (Core)": "yum",
+  "CentOS release 6.10 (Final)": "dnf",
+  "Red Hat Enterprise Linux Server release 7.9 (Maipo)": "yum",
+  "CentOS Stream 9": "dnf",
+  "Rocky Linux 9.4": "dnf",
+  "AlmaLinux 8": "dnf",
+  "Oracle Linux 7": "yum",
+  "Fedora 40": "dnf",
+  "Amazon Linux 2023": "dnf",
+  "Alpine Linux v3.19": "unknown",
+  "Linux 7": "yum"
+ },
+ "apt": {
+  "ssh_password": {
+   "apply": "\ncp -a /etc/ssh/sshd_config \"$B/sshd_config\"\nif grep -qiE '^\\s*Include\\s+/etc/ssh/sshd_config\\.d' /etc/ssh/sshd_config; then\n  F=/etc/ssh/sshd_config.d/00-kanareika.conf\n  [ -f \"$F\" ] && cp -a \"$F\" \"$B/00-kanareika.conf.prev\"\n  printf 'PasswordAuthentication no\\nChallengeResponseAuthentication no\\n' > \"$F\"; echo \"$F\" > \"$B/written\"\nelse\n  # no drop-ins (e.g. CentOS 7): sshd takes the FIRST value, so put ours at the top\n  { printf '# kanareika begin\\nPasswordAuthentication no\\nChallengeResponseAuthentication no\\n# kanareika end\\n'; cat \"$B/sshd_config\"; } > /etc/ssh/sshd_config\n  echo /etc/ssh/sshd_config > \"$B/written\"\nfi\nif ! sshd -t; then echo \"sshd -t failed, restoring\"; cp -a \"$B/sshd_config\" /etc/ssh/sshd_config; rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; exit 1; fi\nsystemctl reload sshd 2>/dev/null || systemctl reload ssh\necho \"sshd reloaded; open a NEW session to check key login before closing this one\"\n",
+   "rollback": "\ncp -a \"$B/sshd_config\" /etc/ssh/sshd_config\nif [ -f \"$B/00-kanareika.conf.prev\" ]; then cp -a \"$B/00-kanareika.conf.prev\" /etc/ssh/sshd_config.d/00-kanareika.conf\nelse rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; fi\nsshd -t && { systemctl reload sshd 2>/dev/null || systemctl reload ssh; }\n",
+   "verify": "sshd -T | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|challengeresponseauthentication|permitrootlogin) '",
+   "reversible": true,
+   "note": [
+    "fix.ssh",
+    {}
+   ]
+  },
+  "ssh_root": {
+   "apply": "\ncp -a /etc/ssh/sshd_config \"$B/sshd_config\"\nif grep -qiE '^\\s*Include\\s+/etc/ssh/sshd_config\\.d' /etc/ssh/sshd_config; then\n  F=/etc/ssh/sshd_config.d/00-kanareika.conf\n  [ -f \"$F\" ] && cp -a \"$F\" \"$B/00-kanareika.conf.prev\"\n  printf 'PermitRootLogin prohibit-password\\n' > \"$F\"; echo \"$F\" > \"$B/written\"\nelse\n  # no drop-ins (e.g. CentOS 7): sshd takes the FIRST value, so put ours at the top\n  { printf '# kanareika begin\\nPermitRootLogin prohibit-password\\n# kanareika end\\n'; cat \"$B/sshd_config\"; } > /etc/ssh/sshd_config\n  echo /etc/ssh/sshd_config > \"$B/written\"\nfi\nif ! sshd -t; then echo \"sshd -t failed, restoring\"; cp -a \"$B/sshd_config\" /etc/ssh/sshd_config; rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; exit 1; fi\nsystemctl reload sshd 2>/dev/null || systemctl reload ssh\necho \"sshd reloaded; open a NEW session to check key login before closing this one\"\n",
+   "rollback": "\ncp -a \"$B/sshd_config\" /etc/ssh/sshd_config\nif [ -f \"$B/00-kanareika.conf.prev\" ]; then cp -a \"$B/00-kanareika.conf.prev\" /etc/ssh/sshd_config.d/00-kanareika.conf\nelse rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; fi\nsshd -t && { systemctl reload sshd 2>/dev/null || systemctl reload ssh; }\n",
+   "verify": "sshd -T | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|challengeresponseauthentication|permitrootlogin) '",
+   "reversible": true,
+   "note": [
+    "fix.ssh",
+    {}
+   ]
+  },
+  "ssh_both": {
+   "apply": "\ncp -a /etc/ssh/sshd_config \"$B/sshd_config\"\nif grep -qiE '^\\s*Include\\s+/etc/ssh/sshd_config\\.d' /etc/ssh/sshd_config; then\n  F=/etc/ssh/sshd_config.d/00-kanareika.conf\n  [ -f \"$F\" ] && cp -a \"$F\" \"$B/00-kanareika.conf.prev\"\n  printf 'PasswordAuthentication no\\nChallengeResponseAuthentication no\\nPermitRootLogin prohibit-password\\n' > \"$F\"; echo \"$F\" > \"$B/written\"\nelse\n  # no drop-ins (e.g. CentOS 7): sshd takes the FIRST value, so put ours at the top\n  { printf '# kanareika begin\\nPasswordAuthentication no\\nChallengeResponseAuthentication no\\nPermitRootLogin prohibit-password\\n# kanareika end\\n'; cat \"$B/sshd_config\"; } > /etc/ssh/sshd_config\n  echo /etc/ssh/sshd_config > \"$B/written\"\nfi\nif ! sshd -t; then echo \"sshd -t failed, restoring\"; cp -a \"$B/sshd_config\" /etc/ssh/sshd_config; rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; exit 1; fi\nsystemctl reload sshd 2>/dev/null || systemctl reload ssh\necho \"sshd reloaded; open a NEW session to check key login before closing this one\"\n",
+   "rollback": "\ncp -a \"$B/sshd_config\" /etc/ssh/sshd_config\nif [ -f \"$B/00-kanareika.conf.prev\" ]; then cp -a \"$B/00-kanareika.conf.prev\" /etc/ssh/sshd_config.d/00-kanareika.conf\nelse rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; fi\nsshd -t && { systemctl reload sshd 2>/dev/null || systemctl reload ssh; }\n",
+   "verify": "sshd -T | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|challengeresponseauthentication|permitrootlogin) '",
+   "reversible": true,
+   "note": [
+    "fix.ssh",
+    {}
+   ]
+  },
+  "kernel": {
+   "apply": "\nuname -r > \"$B/running\"\napt-get update -q && apt-get install -y --only-upgrade 'linux-image-*'\necho \"REBOOT REQUIRED (not done automatically): systemctl reboot\"\n",
+   "rollback": "echo \"boot the previous kernel ($(cat \"$B/running\")) from the GRUB menu (Advanced options)\"",
+   "verify": "echo running: $(uname -r); ls /boot/vmlinuz-* | tail -3",
+   "reversible": true,
+   "note": [
+    "fix.kernel.deb",
+    {}
+   ]
+  },
+  "reboot": {
+   "apply": "\nuname -r > \"$B/running\"; ls -t /boot/vmlinuz-* | head -1 > \"$B/default\" 2>/dev/null || true\necho \"running: $(cat \"$B/running\")  ->  after reboot: $(cat \"$B/default\")\"\nif docker info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null | grep -q true; then\n  docker service ls -q | xargs -r docker service inspect --format '{{.Spec.Name}} {{.Spec.TaskTemplate.RestartPolicy.Condition}}'     | awk '$2 != \"any\" {print \"WARNING: \" $1 \" restart_policy=\" $2 \" - may stay down after reboot: docker service update --force \" $1}'\n  docker service ls --format '{{.Name}} {{.Replicas}}' > \"$B/services_before\"\nfi\necho \"REBOOT (not done automatically): systemctl reboot\"\n",
+   "rollback": "\n[ -s \"$B/running\" ] && echo \"previous kernel: $(cat \"$B/running\") - pick it in GRUB or: grubby --set-default /boot/vmlinuz-$(cat \"$B/running\")\"\n",
+   "verify": "echo \"running: $(uname -r)\"\ndocker info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null | grep -q true &&   docker service ls --format '{{.Name}} {{.Replicas}}' | awk '{split($2, r, \"/\"); if (r[1] != r[2]) print \"NOT RUNNING: \" $0}'; true",
+   "reversible": true,
+   "note": [
+    "fix.reboot",
+    {}
+   ]
+  },
+  "os": {
+   "apply": "\ndpkg-query -W -f='${Package}=${Version}\\n' '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl 2>/dev/null > \"$B/versions_before\" || true\napt-get update -q && apt-get install -y --only-upgrade '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl\n",
+   "rollback": "\nxargs -a \"$B/versions_before\" apt-get install -y --allow-downgrades || echo \"some old versions are no longer in the repository\"\n",
+   "verify": "dpkg-query -W '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl | head -50",
+   "reversible": true,
+   "note": [
+    "fix.os.deb",
+    {}
+   ]
+  },
+  "ntp": {
+   "apply": "\nsystemctl is-enabled chrony > \"$B/was_enabled\" 2>/dev/null || echo disabled > \"$B/was_enabled\"\napt-get install -y chrony\nsystemctl enable --now chrony\n",
+   "rollback": "grep -q enabled \"$B/was_enabled\" || systemctl disable --now chrony",
+   "verify": "timedatectl 2>/dev/null | grep -i synchron; chronyc tracking 2>/dev/null | head -5",
+   "reversible": true,
+   "note": [
+    "fix.ntp",
+    {}
+   ]
+  },
+  "old_kernels": {
+   "apply": "rpm -q kernel > \"$B/kernels\" 2>/dev/null || true\napt-get -y autoremove --purge\n",
+   "rollback": "echo \"removed kernels cannot be restored automatically: see $B/kernels\"",
+   "verify": "rpm -q kernel 2>/dev/null || dpkg -l 'linux-image-*' | grep ^ii",
+   "reversible": false,
+   "note": [
+    "fix.old_kernels",
+    {}
+   ]
+  },
+  "vendor_check": {
+   "apply": "apt-get update -q >/dev/null && apt list --upgradable 2>/dev/null | grep -E '^(cups|rsync)/' || echo 'still nothing to install'",
+   "rollback": "true",
+   "verify": "apt-get update -q >/dev/null && apt list --upgradable 2>/dev/null | grep -E '^(cups|rsync)/' || echo 'still nothing to install'",
+   "reversible": true,
+   "note": [
+    "fix.vendor.check",
+    {}
+   ]
+  },
+  "vendor_users": {
+   "apply": "\nfor p in '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl; do\n  dpkg -L \"$p\" 2>/dev/null | grep -E '\\.so(\\.|$)|/s?bin/|/libexec/' > \"$B/$p.files\"\n  pids=$(for d in /proc/[0-9]*; do { readlink \"$d/exe\"; awk '{print $6}' \"$d/maps\"; } 2>/dev/null | grep -qxF -f \"$B/$p.files\" && echo \"${d#/proc/}\"; done)\n  echo \"== $p: $(echo $pids | wc -w) processes\"\n  [ -n \"$pids\" ] && ps -o comm= -p $(echo $pids | tr ' ' ,) | sort | uniq -c | sort -rn | head -15\ndone; true\n",
+   "rollback": "true",
+   "verify": "true",
+   "reversible": true,
+   "note": [
+    "fix.vendor.users",
+    {}
+   ]
+  }
+ },
+ "yum": {
+  "ssh_password": {
+   "apply": "\ncp -a /etc/ssh/sshd_config \"$B/sshd_config\"\nif grep -qiE '^\\s*Include\\s+/etc/ssh/sshd_config\\.d' /etc/ssh/sshd_config; then\n  F=/etc/ssh/sshd_config.d/00-kanareika.conf\n  [ -f \"$F\" ] && cp -a \"$F\" \"$B/00-kanareika.conf.prev\"\n  printf 'PasswordAuthentication no\\nChallengeResponseAuthentication no\\n' > \"$F\"; echo \"$F\" > \"$B/written\"\nelse\n  # no drop-ins (e.g. CentOS 7): sshd takes the FIRST value, so put ours at the top\n  { printf '# kanareika begin\\nPasswordAuthentication no\\nChallengeResponseAuthentication no\\n# kanareika end\\n'; cat \"$B/sshd_config\"; } > /etc/ssh/sshd_config\n  echo /etc/ssh/sshd_config > \"$B/written\"\nfi\nif ! sshd -t; then echo \"sshd -t failed, restoring\"; cp -a \"$B/sshd_config\" /etc/ssh/sshd_config; rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; exit 1; fi\nsystemctl reload sshd 2>/dev/null || systemctl reload ssh\necho \"sshd reloaded; open a NEW session to check key login before closing this one\"\n",
+   "rollback": "\ncp -a \"$B/sshd_config\" /etc/ssh/sshd_config\nif [ -f \"$B/00-kanareika.conf.prev\" ]; then cp -a \"$B/00-kanareika.conf.prev\" /etc/ssh/sshd_config.d/00-kanareika.conf\nelse rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; fi\nsshd -t && { systemctl reload sshd 2>/dev/null || systemctl reload ssh; }\n",
+   "verify": "sshd -T | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|challengeresponseauthentication|permitrootlogin) '",
+   "reversible": true,
+   "note": [
+    "fix.ssh",
+    {}
+   ]
+  },
+  "ssh_root": {
+   "apply": "\ncp -a /etc/ssh/sshd_config \"$B/sshd_config\"\nif grep -qiE '^\\s*Include\\s+/etc/ssh/sshd_config\\.d' /etc/ssh/sshd_config; then\n  F=/etc/ssh/sshd_config.d/00-kanareika.conf\n  [ -f \"$F\" ] && cp -a \"$F\" \"$B/00-kanareika.conf.prev\"\n  printf 'PermitRootLogin without-password\\n' > \"$F\"; echo \"$F\" > \"$B/written\"\nelse\n  # no drop-ins (e.g. CentOS 7): sshd takes the FIRST value, so put ours at the top\n  { printf '# kanareika begin\\nPermitRootLogin without-password\\n# kanareika end\\n'; cat \"$B/sshd_config\"; } > /etc/ssh/sshd_config\n  echo /etc/ssh/sshd_config > \"$B/written\"\nfi\nif ! sshd -t; then echo \"sshd -t failed, restoring\"; cp -a \"$B/sshd_config\" /etc/ssh/sshd_config; rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; exit 1; fi\nsystemctl reload sshd 2>/dev/null || systemctl reload ssh\necho \"sshd reloaded; open a NEW session to check key login before closing this one\"\n",
+   "rollback": "\ncp -a \"$B/sshd_config\" /etc/ssh/sshd_config\nif [ -f \"$B/00-kanareika.conf.prev\" ]; then cp -a \"$B/00-kanareika.conf.prev\" /etc/ssh/sshd_config.d/00-kanareika.conf\nelse rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; fi\nsshd -t && { systemctl reload sshd 2>/dev/null || systemctl reload ssh; }\n",
+   "verify": "sshd -T | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|challengeresponseauthentication|permitrootlogin) '",
+   "reversible": true,
+   "note": [
+    "fix.ssh",
+    {}
+   ]
+  },
+  "ssh_both": {
+   "apply": "\ncp -a /etc/ssh/sshd_config \"$B/sshd_config\"\nif grep -qiE '^\\s*Include\\s+/etc/ssh/sshd_config\\.d' /etc/ssh/sshd_config; then\n  F=/etc/ssh/sshd_config.d/00-kanareika.conf\n  [ -f \"$F\" ] && cp -a \"$F\" \"$B/00-kanareika.conf.prev\"\n  printf 'PasswordAuthentication no\\nChallengeResponseAuthentication no\\nPermitRootLogin without-password\\n' > \"$F\"; echo \"$F\" > \"$B/written\"\nelse\n  # no drop-ins (e.g. CentOS 7): sshd takes the FIRST value, so put ours at the top\n  { printf '# kanareika begin\\nPasswordAuthentication no\\nChallengeResponseAuthentication no\\nPermitRootLogin without-password\\n# kanareika end\\n'; cat \"$B/sshd_config\"; } > /etc/ssh/sshd_config\n  echo /etc/ssh/sshd_config > \"$B/written\"\nfi\nif ! sshd -t; then echo \"sshd -t failed, restoring\"; cp -a \"$B/sshd_config\" /etc/ssh/sshd_config; rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; exit 1; fi\nsystemctl reload sshd 2>/dev/null || systemctl reload ssh\necho \"sshd reloaded; open a NEW session to check key login before closing this one\"\n",
+   "rollback": "\ncp -a \"$B/sshd_config\" /etc/ssh/sshd_config\nif [ -f \"$B/00-kanareika.conf.prev\" ]; then cp -a \"$B/00-kanareika.conf.prev\" /etc/ssh/sshd_config.d/00-kanareika.conf\nelse rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; fi\nsshd -t && { systemctl reload sshd 2>/dev/null || systemctl reload ssh; }\n",
+   "verify": "sshd -T | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|challengeresponseauthentication|permitrootlogin) '",
+   "reversible": true,
+   "note": [
+    "fix.ssh",
+    {}
+   ]
+  },
+  "kernel": {
+   "apply": "\nuname -r > \"$B/running\"; grubby --default-kernel > \"$B/default\" 2>/dev/null || true\nyum -y update 'kernel*'\necho \"new default: $(grubby --default-kernel 2>/dev/null)\"; echo \"REBOOT REQUIRED (not done automatically): systemctl reboot\"\n",
+   "rollback": "\n[ -s \"$B/default\" ] && grubby --set-default \"$(cat \"$B/default\")\" && echo \"default kernel restored to $(cat \"$B/default\"); reboot to boot it\"\n",
+   "verify": "echo running: $(uname -r); echo default: $(grubby --default-kernel 2>/dev/null)",
+   "reversible": true,
+   "note": [
+    "fix.kernel.rpm",
+    {}
+   ]
+  },
+  "reboot": {
+   "apply": "\nuname -r > \"$B/running\"; grubby --default-kernel 2>/dev/null > \"$B/default\" 2>/dev/null || true\necho \"running: $(cat \"$B/running\")  ->  after reboot: $(cat \"$B/default\")\"\nif docker info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null | grep -q true; then\n  docker service ls -q | xargs -r docker service inspect --format '{{.Spec.Name}} {{.Spec.TaskTemplate.RestartPolicy.Condition}}'     | awk '$2 != \"any\" {print \"WARNING: \" $1 \" restart_policy=\" $2 \" - may stay down after reboot: docker service update --force \" $1}'\n  docker service ls --format '{{.Name}} {{.Replicas}}' > \"$B/services_before\"\nfi\necho \"REBOOT (not done automatically): systemctl reboot\"\n",
+   "rollback": "\n[ -s \"$B/running\" ] && echo \"previous kernel: $(cat \"$B/running\") - pick it in GRUB or: grubby --set-default /boot/vmlinuz-$(cat \"$B/running\")\"\n",
+   "verify": "echo \"running: $(uname -r)\"\ndocker info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null | grep -q true &&   docker service ls --format '{{.Name}} {{.Replicas}}' | awk '{split($2, r, \"/\"); if (r[1] != r[2]) print \"NOT RUNNING: \" $0}'; true",
+   "reversible": true,
+   "note": [
+    "fix.reboot",
+    {}
+   ]
+  },
+  "os": {
+   "apply": "\nyum history list 2>/dev/null | awk '$1 ~ /^[0-9]+$/ {print $1; exit}' > \"$B/history_before\"\nyum -y upgrade '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl\nyum history list 2>/dev/null | awk '$1 ~ /^[0-9]+$/ {print $1; exit}' > \"$B/history_after\"\necho \"transaction $(cat \"$B/history_after\"); services using updated libraries may need a restart: needs-restarting -s\"\n",
+   "rollback": "\na=$(cat \"$B/history_after\" 2>/dev/null); b=$(cat \"$B/history_before\" 2>/dev/null)\nif [ -n \"$a\" ] && [ \"$a\" != \"$b\" ]; then yum -y history undo \"$a\"; else echo \"nothing to undo\"; fi\n",
+   "verify": "rpm -q '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl | head -50",
+   "reversible": true,
+   "note": [
+    "fix.os.rpm",
+    {
+     "n": 6,
+     "pm": "yum"
+    }
+   ]
+  },
+  "ntp": {
+   "apply": "\nsystemctl is-enabled chronyd > \"$B/was_enabled\" 2>/dev/null || echo disabled > \"$B/was_enabled\"\nyum -y install chrony\nsystemctl enable --now chronyd\n",
+   "rollback": "grep -q enabled \"$B/was_enabled\" || systemctl disable --now chronyd",
+   "verify": "timedatectl 2>/dev/null | grep -i synchron; chronyc tracking 2>/dev/null | head -5",
+   "reversible": true,
+   "note": [
+    "fix.ntp",
+    {}
+   ]
+  },
+  "old_kernels": {
+   "apply": "rpm -q kernel > \"$B/kernels\" 2>/dev/null || true\npackage-cleanup -y --oldkernels --count=2\n",
+   "rollback": "echo \"removed kernels cannot be restored automatically: see $B/kernels\"",
+   "verify": "rpm -q kernel 2>/dev/null || dpkg -l 'linux-image-*' | grep ^ii",
+   "reversible": false,
+   "note": [
+    "fix.old_kernels",
+    {}
+   ]
+  },
+  "vendor_check": {
+   "apply": "yum -q --refresh check-update cups rsync; [ $? = 100 ] && echo 'UPDATE AVAILABLE NOW: run the OS packages fix' || echo 'still nothing to install'",
+   "rollback": "true",
+   "verify": "yum -q --refresh check-update cups rsync; [ $? = 100 ] && echo 'UPDATE AVAILABLE NOW: run the OS packages fix' || echo 'still nothing to install'",
+   "reversible": true,
+   "note": [
+    "fix.vendor.check",
+    {}
+   ]
+  },
+  "vendor_users": {
+   "apply": "\nfor p in '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl; do\n  rpm -ql \"$p\" 2>/dev/null | grep -E '\\.so(\\.|$)|/s?bin/|/libexec/' > \"$B/$p.files\"\n  pids=$(for d in /proc/[0-9]*; do { readlink \"$d/exe\"; awk '{print $6}' \"$d/maps\"; } 2>/dev/null | grep -qxF -f \"$B/$p.files\" && echo \"${d#/proc/}\"; done)\n  echo \"== $p: $(echo $pids | wc -w) processes\"\n  [ -n \"$pids\" ] && ps -o comm= -p $(echo $pids | tr ' ' ,) | sort | uniq -c | sort -rn | head -15\ndone; true\n",
+   "rollback": "true",
+   "verify": "true",
+   "reversible": true,
+   "note": [
+    "fix.vendor.users",
+    {}
+   ]
+  }
+ },
+ "dnf": {
+  "ssh_password": {
+   "apply": "\ncp -a /etc/ssh/sshd_config \"$B/sshd_config\"\nif grep -qiE '^\\s*Include\\s+/etc/ssh/sshd_config\\.d' /etc/ssh/sshd_config; then\n  F=/etc/ssh/sshd_config.d/00-kanareika.conf\n  [ -f \"$F\" ] && cp -a \"$F\" \"$B/00-kanareika.conf.prev\"\n  printf 'PasswordAuthentication no\\nChallengeResponseAuthentication no\\n' > \"$F\"; echo \"$F\" > \"$B/written\"\nelse\n  # no drop-ins (e.g. CentOS 7): sshd takes the FIRST value, so put ours at the top\n  { printf '# kanareika begin\\nPasswordAuthentication no\\nChallengeResponseAuthentication no\\n# kanareika end\\n'; cat \"$B/sshd_config\"; } > /etc/ssh/sshd_config\n  echo /etc/ssh/sshd_config > \"$B/written\"\nfi\nif ! sshd -t; then echo \"sshd -t failed, restoring\"; cp -a \"$B/sshd_config\" /etc/ssh/sshd_config; rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; exit 1; fi\nsystemctl reload sshd 2>/dev/null || systemctl reload ssh\necho \"sshd reloaded; open a NEW session to check key login before closing this one\"\n",
+   "rollback": "\ncp -a \"$B/sshd_config\" /etc/ssh/sshd_config\nif [ -f \"$B/00-kanareika.conf.prev\" ]; then cp -a \"$B/00-kanareika.conf.prev\" /etc/ssh/sshd_config.d/00-kanareika.conf\nelse rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; fi\nsshd -t && { systemctl reload sshd 2>/dev/null || systemctl reload ssh; }\n",
+   "verify": "sshd -T | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|challengeresponseauthentication|permitrootlogin) '",
+   "reversible": true,
+   "note": [
+    "fix.ssh",
+    {}
+   ]
+  },
+  "ssh_root": {
+   "apply": "\ncp -a /etc/ssh/sshd_config \"$B/sshd_config\"\nif grep -qiE '^\\s*Include\\s+/etc/ssh/sshd_config\\.d' /etc/ssh/sshd_config; then\n  F=/etc/ssh/sshd_config.d/00-kanareika.conf\n  [ -f \"$F\" ] && cp -a \"$F\" \"$B/00-kanareika.conf.prev\"\n  printf 'PermitRootLogin prohibit-password\\n' > \"$F\"; echo \"$F\" > \"$B/written\"\nelse\n  # no drop-ins (e.g. CentOS 7): sshd takes the FIRST value, so put ours at the top\n  { printf '# kanareika begin\\nPermitRootLogin prohibit-password\\n# kanareika end\\n'; cat \"$B/sshd_config\"; } > /etc/ssh/sshd_config\n  echo /etc/ssh/sshd_config > \"$B/written\"\nfi\nif ! sshd -t; then echo \"sshd -t failed, restoring\"; cp -a \"$B/sshd_config\" /etc/ssh/sshd_config; rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; exit 1; fi\nsystemctl reload sshd 2>/dev/null || systemctl reload ssh\necho \"sshd reloaded; open a NEW session to check key login before closing this one\"\n",
+   "rollback": "\ncp -a \"$B/sshd_config\" /etc/ssh/sshd_config\nif [ -f \"$B/00-kanareika.conf.prev\" ]; then cp -a \"$B/00-kanareika.conf.prev\" /etc/ssh/sshd_config.d/00-kanareika.conf\nelse rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; fi\nsshd -t && { systemctl reload sshd 2>/dev/null || systemctl reload ssh; }\n",
+   "verify": "sshd -T | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|challengeresponseauthentication|permitrootlogin) '",
+   "reversible": true,
+   "note": [
+    "fix.ssh",
+    {}
+   ]
+  },
+  "ssh_both": {
+   "apply": "\ncp -a /etc/ssh/sshd_config \"$B/sshd_config\"\nif grep -qiE '^\\s*Include\\s+/etc/ssh/sshd_config\\.d' /etc/ssh/sshd_config; then\n  F=/etc/ssh/sshd_config.d/00-kanareika.conf\n  [ -f \"$F\" ] && cp -a \"$F\" \"$B/00-kanareika.conf.prev\"\n  printf 'PasswordAuthentication no\\nChallengeResponseAuthentication no\\nPermitRootLogin prohibit-password\\n' > \"$F\"; echo \"$F\" > \"$B/written\"\nelse\n  # no drop-ins (e.g. CentOS 7): sshd takes the FIRST value, so put ours at the top\n  { printf '# kanareika begin\\nPasswordAuthentication no\\nChallengeResponseAuthentication no\\nPermitRootLogin prohibit-password\\n# kanareika end\\n'; cat \"$B/sshd_config\"; } > /etc/ssh/sshd_config\n  echo /etc/ssh/sshd_config > \"$B/written\"\nfi\nif ! sshd -t; then echo \"sshd -t failed, restoring\"; cp -a \"$B/sshd_config\" /etc/ssh/sshd_config; rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; exit 1; fi\nsystemctl reload sshd 2>/dev/null || systemctl reload ssh\necho \"sshd reloaded; open a NEW session to check key login before closing this one\"\n",
+   "rollback": "\ncp -a \"$B/sshd_config\" /etc/ssh/sshd_config\nif [ -f \"$B/00-kanareika.conf.prev\" ]; then cp -a \"$B/00-kanareika.conf.prev\" /etc/ssh/sshd_config.d/00-kanareika.conf\nelse rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; fi\nsshd -t && { systemctl reload sshd 2>/dev/null || systemctl reload ssh; }\n",
+   "verify": "sshd -T | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|challengeresponseauthentication|permitrootlogin) '",
+   "reversible": true,
+   "note": [
+    "fix.ssh",
+    {}
+   ]
+  },
+  "kernel": {
+   "apply": "\nuname -r > \"$B/running\"; grubby --default-kernel > \"$B/default\" 2>/dev/null || true\ndnf -y update 'kernel*'\necho \"new default: $(grubby --default-kernel 2>/dev/null)\"; echo \"REBOOT REQUIRED (not done automatically): systemctl reboot\"\n",
+   "rollback": "\n[ -s \"$B/default\" ] && grubby --set-default \"$(cat \"$B/default\")\" && echo \"default kernel restored to $(cat \"$B/default\"); reboot to boot it\"\n",
+   "verify": "echo running: $(uname -r); echo default: $(grubby --default-kernel 2>/dev/null)",
+   "reversible": true,
+   "note": [
+    "fix.kernel.rpm",
+    {}
+   ]
+  },
+  "reboot": {
+   "apply": "\nuname -r > \"$B/running\"; grubby --default-kernel 2>/dev/null > \"$B/default\" 2>/dev/null || true\necho \"running: $(cat \"$B/running\")  ->  after reboot: $(cat \"$B/default\")\"\nif docker info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null | grep -q true; then\n  docker service ls -q | xargs -r docker service inspect --format '{{.Spec.Name}} {{.Spec.TaskTemplate.RestartPolicy.Condition}}'     | awk '$2 != \"any\" {print \"WARNING: \" $1 \" restart_policy=\" $2 \" - may stay down after reboot: docker service update --force \" $1}'\n  docker service ls --format '{{.Name}} {{.Replicas}}' > \"$B/services_before\"\nfi\necho \"REBOOT (not done automatically): systemctl reboot\"\n",
+   "rollback": "\n[ -s \"$B/running\" ] && echo \"previous kernel: $(cat \"$B/running\") - pick it in GRUB or: grubby --set-default /boot/vmlinuz-$(cat \"$B/running\")\"\n",
+   "verify": "echo \"running: $(uname -r)\"\ndocker info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null | grep -q true &&   docker service ls --format '{{.Name}} {{.Replicas}}' | awk '{split($2, r, \"/\"); if (r[1] != r[2]) print \"NOT RUNNING: \" $0}'; true",
+   "reversible": true,
+   "note": [
+    "fix.reboot",
+    {}
+   ]
+  },
+  "os": {
+   "apply": "\ndnf history list 2>/dev/null | awk '$1 ~ /^[0-9]+$/ {print $1; exit}' > \"$B/history_before\"\ndnf -y upgrade '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl\ndnf history list 2>/dev/null | awk '$1 ~ /^[0-9]+$/ {print $1; exit}' > \"$B/history_after\"\necho \"transaction $(cat \"$B/history_after\"); services using updated libraries may need a restart: needs-restarting -s\"\n",
+   "rollback": "\na=$(cat \"$B/history_after\" 2>/dev/null); b=$(cat \"$B/history_before\" 2>/dev/null)\nif [ -n \"$a\" ] && [ \"$a\" != \"$b\" ]; then dnf -y history undo \"$a\"; else echo \"nothing to undo\"; fi\n",
+   "verify": "rpm -q '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl | head -50",
+   "reversible": true,
+   "note": [
+    "fix.os.rpm",
+    {
+     "n": 6,
+     "pm": "dnf"
+    }
+   ]
+  },
+  "ntp": {
+   "apply": "\nsystemctl is-enabled chronyd > \"$B/was_enabled\" 2>/dev/null || echo disabled > \"$B/was_enabled\"\ndnf -y install chrony\nsystemctl enable --now chronyd\n",
+   "rollback": "grep -q enabled \"$B/was_enabled\" || systemctl disable --now chronyd",
+   "verify": "timedatectl 2>/dev/null | grep -i synchron; chronyc tracking 2>/dev/null | head -5",
+   "reversible": true,
+   "note": [
+    "fix.ntp",
+    {}
+   ]
+  },
+  "old_kernels": {
+   "apply": "rpm -q kernel > \"$B/kernels\" 2>/dev/null || true\ndnf -y remove --oldinstallonly\n",
+   "rollback": "echo \"removed kernels cannot be restored automatically: see $B/kernels\"",
+   "verify": "rpm -q kernel 2>/dev/null || dpkg -l 'linux-image-*' | grep ^ii",
+   "reversible": false,
+   "note": [
+    "fix.old_kernels",
+    {}
+   ]
+  },
+  "vendor_check": {
+   "apply": "dnf -q --refresh check-update cups rsync; [ $? = 100 ] && echo 'UPDATE AVAILABLE NOW: run the OS packages fix' || echo 'still nothing to install'",
+   "rollback": "true",
+   "verify": "dnf -q --refresh check-update cups rsync; [ $? = 100 ] && echo 'UPDATE AVAILABLE NOW: run the OS packages fix' || echo 'still nothing to install'",
+   "reversible": true,
+   "note": [
+    "fix.vendor.check",
+    {}
+   ]
+  },
+  "vendor_users": {
+   "apply": "\nfor p in '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl; do\n  rpm -ql \"$p\" 2>/dev/null | grep -E '\\.so(\\.|$)|/s?bin/|/libexec/' > \"$B/$p.files\"\n  pids=$(for d in /proc/[0-9]*; do { readlink \"$d/exe\"; awk '{print $6}' \"$d/maps\"; } 2>/dev/null | grep -qxF -f \"$B/$p.files\" && echo \"${d#/proc/}\"; done)\n  echo \"== $p: $(echo $pids | wc -w) processes\"\n  [ -n \"$pids\" ] && ps -o comm= -p $(echo $pids | tr ' ' ,) | sort | uniq -c | sort -rn | head -15\ndone; true\n",
+   "rollback": "true",
+   "verify": "true",
+   "reversible": true,
+   "note": [
+    "fix.vendor.users",
+    {}
+   ]
+  }
+ },
+ "unknown": {
+  "ssh_password": {
+   "apply": "\ncp -a /etc/ssh/sshd_config \"$B/sshd_config\"\nif grep -qiE '^\\s*Include\\s+/etc/ssh/sshd_config\\.d' /etc/ssh/sshd_config; then\n  F=/etc/ssh/sshd_config.d/00-kanareika.conf\n  [ -f \"$F\" ] && cp -a \"$F\" \"$B/00-kanareika.conf.prev\"\n  printf 'PasswordAuthentication no\\nChallengeResponseAuthentication no\\n' > \"$F\"; echo \"$F\" > \"$B/written\"\nelse\n  # no drop-ins (e.g. CentOS 7): sshd takes the FIRST value, so put ours at the top\n  { printf '# kanareika begin\\nPasswordAuthentication no\\nChallengeResponseAuthentication no\\n# kanareika end\\n'; cat \"$B/sshd_config\"; } > /etc/ssh/sshd_config\n  echo /etc/ssh/sshd_config > \"$B/written\"\nfi\nif ! sshd -t; then echo \"sshd -t failed, restoring\"; cp -a \"$B/sshd_config\" /etc/ssh/sshd_config; rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; exit 1; fi\nsystemctl reload sshd 2>/dev/null || systemctl reload ssh\necho \"sshd reloaded; open a NEW session to check key login before closing this one\"\n",
+   "rollback": "\ncp -a \"$B/sshd_config\" /etc/ssh/sshd_config\nif [ -f \"$B/00-kanareika.conf.prev\" ]; then cp -a \"$B/00-kanareika.conf.prev\" /etc/ssh/sshd_config.d/00-kanareika.conf\nelse rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; fi\nsshd -t && { systemctl reload sshd 2>/dev/null || systemctl reload ssh; }\n",
+   "verify": "sshd -T | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|challengeresponseauthentication|permitrootlogin) '",
+   "reversible": true,
+   "note": [
+    "fix.ssh",
+    {}
+   ]
+  },
+  "ssh_root": {
+   "apply": "\ncp -a /etc/ssh/sshd_config \"$B/sshd_config\"\nif grep -qiE '^\\s*Include\\s+/etc/ssh/sshd_config\\.d' /etc/ssh/sshd_config; then\n  F=/etc/ssh/sshd_config.d/00-kanareika.conf\n  [ -f \"$F\" ] && cp -a \"$F\" \"$B/00-kanareika.conf.prev\"\n  printf 'PermitRootLogin prohibit-password\\n' > \"$F\"; echo \"$F\" > \"$B/written\"\nelse\n  # no drop-ins (e.g. CentOS 7): sshd takes the FIRST value, so put ours at the top\n  { printf '# kanareika begin\\nPermitRootLogin prohibit-password\\n# kanareika end\\n'; cat \"$B/sshd_config\"; } > /etc/ssh/sshd_config\n  echo /etc/ssh/sshd_config > \"$B/written\"\nfi\nif ! sshd -t; then echo \"sshd -t failed, restoring\"; cp -a \"$B/sshd_config\" /etc/ssh/sshd_config; rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; exit 1; fi\nsystemctl reload sshd 2>/dev/null || systemctl reload ssh\necho \"sshd reloaded; open a NEW session to check key login before closing this one\"\n",
+   "rollback": "\ncp -a \"$B/sshd_config\" /etc/ssh/sshd_config\nif [ -f \"$B/00-kanareika.conf.prev\" ]; then cp -a \"$B/00-kanareika.conf.prev\" /etc/ssh/sshd_config.d/00-kanareika.conf\nelse rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; fi\nsshd -t && { systemctl reload sshd 2>/dev/null || systemctl reload ssh; }\n",
+   "verify": "sshd -T | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|challengeresponseauthentication|permitrootlogin) '",
+   "reversible": true,
+   "note": [
+    "fix.ssh",
+    {}
+   ]
+  },
+  "ssh_both": {
+   "apply": "\ncp -a /etc/ssh/sshd_config \"$B/sshd_config\"\nif grep -qiE '^\\s*Include\\s+/etc/ssh/sshd_config\\.d' /etc/ssh/sshd_config; then\n  F=/etc/ssh/sshd_config.d/00-kanareika.conf\n  [ -f \"$F\" ] && cp -a \"$F\" \"$B/00-kanareika.conf.prev\"\n  printf 'PasswordAuthentication no\\nChallengeResponseAuthentication no\\nPermitRootLogin prohibit-password\\n' > \"$F\"; echo \"$F\" > \"$B/written\"\nelse\n  # no drop-ins (e.g. CentOS 7): sshd takes the FIRST value, so put ours at the top\n  { printf '# kanareika begin\\nPasswordAuthentication no\\nChallengeResponseAuthentication no\\nPermitRootLogin prohibit-password\\n# kanareika end\\n'; cat \"$B/sshd_config\"; } > /etc/ssh/sshd_config\n  echo /etc/ssh/sshd_config > \"$B/written\"\nfi\nif ! sshd -t; then echo \"sshd -t failed, restoring\"; cp -a \"$B/sshd_config\" /etc/ssh/sshd_config; rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; exit 1; fi\nsystemctl reload sshd 2>/dev/null || systemctl reload ssh\necho \"sshd reloaded; open a NEW session to check key login before closing this one\"\n",
+   "rollback": "\ncp -a \"$B/sshd_config\" /etc/ssh/sshd_config\nif [ -f \"$B/00-kanareika.conf.prev\" ]; then cp -a \"$B/00-kanareika.conf.prev\" /etc/ssh/sshd_config.d/00-kanareika.conf\nelse rm -f /etc/ssh/sshd_config.d/00-kanareika.conf; fi\nsshd -t && { systemctl reload sshd 2>/dev/null || systemctl reload ssh; }\n",
+   "verify": "sshd -T | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|challengeresponseauthentication|permitrootlogin) '",
+   "reversible": true,
+   "note": [
+    "fix.ssh",
+    {}
+   ]
+  },
+  "kernel": {
+   "apply": "\nuname -r > \"$B/running\"\napt-get update -q && apt-get install -y --only-upgrade 'linux-image-*'\necho \"REBOOT REQUIRED (not done automatically): systemctl reboot\"\n",
+   "rollback": "echo \"boot the previous kernel ($(cat \"$B/running\")) from the GRUB menu (Advanced options)\"",
+   "verify": "echo running: $(uname -r); ls /boot/vmlinuz-* | tail -3",
+   "reversible": true,
+   "note": [
+    "fix.kernel.deb",
+    {}
+   ]
+  },
+  "reboot": {
+   "apply": "\nuname -r > \"$B/running\"; ls -t /boot/vmlinuz-* | head -1 > \"$B/default\" 2>/dev/null || true\necho \"running: $(cat \"$B/running\")  ->  after reboot: $(cat \"$B/default\")\"\nif docker info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null | grep -q true; then\n  docker service ls -q | xargs -r docker service inspect --format '{{.Spec.Name}} {{.Spec.TaskTemplate.RestartPolicy.Condition}}'     | awk '$2 != \"any\" {print \"WARNING: \" $1 \" restart_policy=\" $2 \" - may stay down after reboot: docker service update --force \" $1}'\n  docker service ls --format '{{.Name}} {{.Replicas}}' > \"$B/services_before\"\nfi\necho \"REBOOT (not done automatically): systemctl reboot\"\n",
+   "rollback": "\n[ -s \"$B/running\" ] && echo \"previous kernel: $(cat \"$B/running\") - pick it in GRUB or: grubby --set-default /boot/vmlinuz-$(cat \"$B/running\")\"\n",
+   "verify": "echo \"running: $(uname -r)\"\ndocker info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null | grep -q true &&   docker service ls --format '{{.Name}} {{.Replicas}}' | awk '{split($2, r, \"/\"); if (r[1] != r[2]) print \"NOT RUNNING: \" $0}'; true",
+   "reversible": true,
+   "note": [
+    "fix.reboot",
+    {}
+   ]
+  },
+  "os": {
+   "apply": "\ndpkg-query -W -f='${Package}=${Version}\\n' '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl 2>/dev/null > \"$B/versions_before\" || true\napt-get update -q && apt-get install -y --only-upgrade '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl\n",
+   "rollback": "\nxargs -a \"$B/versions_before\" apt-get install -y --allow-downgrades || echo \"some old versions are no longer in the repository\"\n",
+   "verify": "dpkg-query -W '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl | head -50",
+   "reversible": true,
+   "note": [
+    "fix.os.deb",
+    {}
+   ]
+  },
+  "ntp": {
+   "apply": "\nsystemctl is-enabled chronyd > \"$B/was_enabled\" 2>/dev/null || echo disabled > \"$B/was_enabled\"\ntrue\nsystemctl enable --now chronyd\n",
+   "rollback": "grep -q enabled \"$B/was_enabled\" || systemctl disable --now chronyd",
+   "verify": "timedatectl 2>/dev/null | grep -i synchron; chronyc tracking 2>/dev/null | head -5",
+   "reversible": true,
+   "note": [
+    "fix.ntp",
+    {}
+   ]
+  },
+  "old_kernels": {
+   "apply": "rpm -q kernel > \"$B/kernels\" 2>/dev/null || true\ntrue\n",
+   "rollback": "echo \"removed kernels cannot be restored automatically: see $B/kernels\"",
+   "verify": "rpm -q kernel 2>/dev/null || dpkg -l 'linux-image-*' | grep ^ii",
+   "reversible": false,
+   "note": [
+    "fix.old_kernels",
+    {}
+   ]
+  },
+  "vendor_check": {
+   "apply": "apt-get update -q >/dev/null && apt list --upgradable 2>/dev/null | grep -E '^(cups|rsync)/' || echo 'still nothing to install'",
+   "rollback": "true",
+   "verify": "apt-get update -q >/dev/null && apt list --upgradable 2>/dev/null | grep -E '^(cups|rsync)/' || echo 'still nothing to install'",
+   "reversible": true,
+   "note": [
+    "fix.vendor.check",
+    {}
+   ]
+  },
+  "vendor_users": {
+   "apply": "\nfor p in '' 'a b' bash 'lib'\"'\"'quote' libstdc++6 openssl; do\n  dpkg -L \"$p\" 2>/dev/null | grep -E '\\.so(\\.|$)|/s?bin/|/libexec/' > \"$B/$p.files\"\n  pids=$(for d in /proc/[0-9]*; do { readlink \"$d/exe\"; awk '{print $6}' \"$d/maps\"; } 2>/dev/null | grep -qxF -f \"$B/$p.files\" && echo \"${d#/proc/}\"; done)\n  echo \"== $p: $(echo $pids | wc -w) processes\"\n  [ -n \"$pids\" ] && ps -o comm= -p $(echo $pids | tr ' ' ,) | sort | uniq -c | sort -rn | head -15\ndone; true\n",
+   "rollback": "true",
+   "verify": "true",
+   "reversible": true,
+   "note": [
+    "fix.vendor.users",
+    {}
+   ]
+  }
+ },
+ "any": {
+  "rpcbind": {
+   "apply": "\nsystemctl is-enabled rpcbind.socket > \"$B/socket\" 2>/dev/null || true; systemctl is-enabled rpcbind > \"$B/service\" 2>/dev/null || true\nsystemctl disable --now rpcbind.socket rpcbind.service\n",
+   "rollback": "\ngrep -q enabled \"$B/socket\" && systemctl enable --now rpcbind.socket\ngrep -q enabled \"$B/service\" && systemctl enable --now rpcbind.service; true\n",
+   "verify": "ss -Hlnp | grep -w 111 || echo 'port 111 closed'",
+   "reversible": true,
+   "note": [
+    "fix.rpcbind",
+    {}
+   ]
+  },
+  "port_tcp_docker": {
+   "apply": "\niptables -S DOCKER-USER > \"$B/DOCKER-USER.before\"\niptables -I DOCKER-USER -p tcp -m conntrack --ctorigdstport 8080 -m comment --comment kanareika-tcp-8080 -j DROP\niptables -I DOCKER-USER -p tcp -m conntrack --ctorigdstport 8080 -s 10.0.0.0/8 -m comment --comment kanareika-tcp-8080 -j ACCEPT\niptables -I DOCKER-USER -p tcp -m conntrack --ctorigdstport 8080 -s 172.16.0.0/12 -m comment --comment kanareika-tcp-8080 -j ACCEPT\niptables -I DOCKER-USER -p tcp -m conntrack --ctorigdstport 8080 -s 192.168.0.0/16 -m comment --comment kanareika-tcp-8080 -j ACCEPT\niptables -I DOCKER-USER -p tcp -m conntrack --ctorigdstport 8080 -s 127.0.0.0/8 -m comment --comment kanareika-tcp-8080 -j ACCEPT\necho \"tcp/8080: only private networks allowed (temporary rule, reboot/firewalld reload removes it)\"\n",
+   "rollback": "\niptables -S DOCKER-USER | grep -- '--comment kanareika-tcp-8080' | sed 's/^-A /-D /' | while read -r r; do iptables $r; done\n",
+   "verify": "iptables -S DOCKER-USER | grep -- 'kanareika-tcp-8080' || echo 'no kanareika rule'",
+   "reversible": true,
+   "note": [
+    "fix.port",
+    {
+     "chain": "DOCKER-USER"
+    }
+   ]
+  },
+  "port_udp_input": {
+   "apply": "\niptables -S INPUT > \"$B/INPUT.before\"\niptables -I INPUT -p udp --dport 9100 -m comment --comment kanareika-udp-9100 -j DROP\niptables -I INPUT -p udp --dport 9100 -s 10.0.0.0/8 -m comment --comment kanareika-udp-9100 -j ACCEPT\niptables -I INPUT -p udp --dport 9100 -s 172.16.0.0/12 -m comment --comment kanareika-udp-9100 -j ACCEPT\niptables -I INPUT -p udp --dport 9100 -s 192.168.0.0/16 -m comment --comment kanareika-udp-9100 -j ACCEPT\niptables -I INPUT -p udp --dport 9100 -s 127.0.0.0/8 -m comment --comment kanareika-udp-9100 -j ACCEPT\necho \"udp/9100: only private networks allowed (temporary rule, reboot/firewalld reload removes it)\"\n",
+   "rollback": "\niptables -S INPUT | grep -- '--comment kanareika-udp-9100' | sed 's/^-A /-D /' | while read -r r; do iptables $r; done\n",
+   "verify": "iptables -S INPUT | grep -- 'kanareika-udp-9100' || echo 'no kanareika rule'",
+   "reversible": true,
+   "note": [
+    "fix.port",
+    {
+     "chain": "INPUT"
+    }
+   ]
+  },
+  "disable": {
+   "apply": "\nfor u in rsyncd.socket rsyncd.service; do systemctl is-enabled \"$u\" 2>/dev/null | grep -q enabled && echo \"$u\" >> \"$B/enabled\"; done\nfor u in rsyncd.socket rsyncd.service; do systemctl is-active \"$u\" 2>/dev/null | grep -q '^active' && echo \"$u\" >> \"$B/active\"; done\nif [ -s \"$B/enabled\" ] || [ -s \"$B/active\" ]; then systemctl disable --now rsyncd.socket rsyncd.service 2>/dev/null; echo \"stopped: $(cat \"$B/enabled\" \"$B/active\" 2>/dev/null | sort -u | tr '\\n' ' ')\"\nelse echo \"rsync / rsync-daemon: service not running — nothing to stop (only the client part is installed)\"; fi\n",
+   "rollback": "\n[ -s \"$B/enabled\" ] && xargs -r systemctl enable < \"$B/enabled\"\n[ -s \"$B/active\" ] && xargs -r systemctl start < \"$B/active\"; true\n",
+   "verify": "systemctl is-active rsyncd.socket rsyncd.service 2>/dev/null | paste -sd' '; true",
+   "reversible": true,
+   "note": [
+    "fix.vendor.mitigate",
+    {
+     "what": "rsync / rsync-daemon"
+    }
+   ]
+  }
+ },
+ "exception_yaml": "  - id: \"*\"                    # 1 CVE, e.g. CVE-9\n    hosts: [a]\n    package: y\n    reason: \"no fix in the host repositories yet (advisory: ); see fix plan mitigations\"\n    owner: \"Alice Smith\"\n    review_by: 2026-12-01\n    until_available: true\n  - id: \"*\"                    # 2 CVE, e.g. \n    hosts: [b]\n    package: a\n    reason: \"no fix in the host repositories yet (advisory: 2); see fix plan mitigations\"\n    owner: \"Alice Smith\"\n    review_by: 2026-12-01\n    until_available: true\n  - id: \"*\"                    # 3 CVE, e.g. CVE-3, CVE-2, CVE-1\n    hosts: [b]\n    package: z\n    reason: \"no fix in the host repositories yet (advisory: 1.2); see fix plan mitigations\"\n    owner: \"Alice Smith\"\n    review_by: 2026-12-01\n    until_available: true"
+}

@@ -1,0 +1,71 @@
+{
+ "denied": [],
+ "dmesg": {
+  "classes": {},
+  "tail": [
+   "[Fri Jul 10 06:13:18 2026] Booted with the nomodeset parameter. Only the system framebuffer will be available",
+   "[Fri Jul 10 06:13:18 2026] acpi PNP0A03:00: fail to add MMCONFIG information, can't access extended configuration space under this bridge",
+   "[Fri Jul 10 06:13:21 2026] device-mapper: core: CONFIG_IMA_DISABLE_HTABLE is disabled. Duplicate IMA measurements will not be recorded in the IMA log.",
+   "[Fri Jul 10 06:13:22 2026] sd 0:0:0:0: Power-on or device reset occurred",
+   "[Fri Jul 10 06:13:23 2026] virtio_gpu virtio0: probe with driver virtio_gpu failed with error -22",
+   "[Fri Jul 10 06:13:41 2026] block sda: the capability attribute has been deprecated.",
+   "[Sat Jul 11 00:07:13 2026] clocksource: Long readout interval, skipping watchdog check: cs_nsec: 4245202150 wd_nsec: 4245200369",
+   "[Sat Jul 11 00:13:52 2026] clocksource: Long readout interval, skipping watchdog check: cs_nsec: 12691353257 wd_nsec: 12691348393",
+   "[Sat Jul 18 00:14:04 2026] clocksource: Long readout interval, skipping watchdog check: cs_nsec: 41389936098 wd_nsec: 41389920393",
+   "[Mon Jul 20 09:19:46 2026] hrtimer: interrupt took 9025792 ns",
+   "[Wed Aug  5 12:24:55 2026] clocksource: timekeeping watchdog on CPU0: kvm-clock retried 1 times before success",
+   "[Wed Sep  2 22:02:12 2026] clocksource: timekeeping watchdog on CPU0: kvm-clock retried 1 times before success",
+   "[Thu Sep 10 07:59:46 2026] clocksource: timekeeping watchdog on CPU0: kvm-clock retried 1 times before success",
+   "[Mon Sep 28 21:59:04 2026] clocksource: timekeeping watchdog on CPU0: kvm-clock retried 1 times before success",
+   "[Thu Oct 29 16:30:10 2026] clocksource: timekeeping watchdog on CPU0: Marking clocksource 'tsc' as unstable because the skew is too large:",
+   "[Thu Oct 29 16:30:10 2026] clocksource:                       'kvm-clock' wd_nsec: 504016201 wd_now: 2234201cdd514b wd_last: 22341ffed2a402 mask: ffffffffffffffff",
+   "[Thu Oct 29 16:30:10 2026] clocksource:                       'tsc' cs_nsec: 515640420 cs_now: 4eab104250da42 cs_last: 4eab0ffba05f25 mask: ffffffffffffffff",
+   "[Thu Oct 29 16:30:10 2026] clocksource:                       'kvm-clock' (not 'tsc') is current clocksource."
+  ]
+ },
+ "journal": {
+  "errors_7d": 0,
+  "top": [],
+  "tail": []
+ },
+ "failed_units": [],
+ "disks": [
+  {
+   "fs": "/dev/sda1",
+   "mount": "/",
+   "use": 16
+  }
+ ],
+ "inodes": [
+  {
+   "fs": "/dev/sda1",
+   "mount": "/",
+   "use": 2
+  }
+ ],
+ "mem": {
+  "total_mb": 15733,
+  "available_mb": 14337
+ },
+ "swap": {
+  "total_mb": 4095,
+  "used_mb": 0
+ },
+ "load": {
+  "load1": 0.18,
+  "load15": 0.09,
+  "cpus": 1
+ },
+ "readonly_mounts": [],
+ "ntp_synced": "yes",
+ "time": {
+  "timezone": "UTC",
+  "synced": "yes",
+  "service": "chronyd",
+  "service_active": true,
+  "source": "188.93.16.172",
+  "stratum": 4,
+  "offset_s": 8.119e-06,
+  "skew_s": 0.22
+ }
+}

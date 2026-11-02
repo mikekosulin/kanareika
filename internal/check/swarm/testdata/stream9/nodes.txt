@@ -1,0 +1,4 @@
+{"Availability":"Active","EngineVersion":"28.0.4","Hostname":"host-16","ID":"vdkvzbaj219wzgplgujrwlz19","ManagerStatus":"","Self":false,"Status":"Ready","TLSStatus":"Ready"}
+{"Availability":"Active","EngineVersion":"28.0.4","Hostname":"host-17","ID":"y1g8nel8mwzqwht1kt2evo3s3","ManagerStatus":"","Self":false,"Status":"Ready","TLSStatus":"Ready"}
+{"Availability":"Active","EngineVersion":"28.0.4","Hostname":"host-18","ID":"x82n84lrlke1fj33i05z4h2rw","ManagerStatus":"","Self":false,"Status":"Ready","TLSStatus":"Ready"}
+{"Availability":"Active","EngineVersion":"29.9.2","Hostname":"host-15","ID":"onfykqu34yqoo0hvlccoj4jrr","ManagerStatus":"Leader","Self":true,"Status":"Ready","TLSStatus":"Ready"}

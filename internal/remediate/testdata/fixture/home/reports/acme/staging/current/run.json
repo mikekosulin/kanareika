@@ -1,0 +1,45 @@
+{
+ "org": "acme",
+ "env": "staging",
+ "run_id": "current",
+ "selection": {},
+ "sources": {
+  "ci-01": {
+   "_facts": "2026-11-01_100000",
+   "os_packages": "2026-11-02_090000",
+   "access": "2026-11-01_100000"
+  }
+ },
+ "hosts_scanned": [
+  "ci-01"
+ ],
+ "hosts_failed": {},
+ "module_errors": {},
+ "modules": [
+  "access",
+  "exposure",
+  "health",
+  "os_packages"
+ ],
+ "last_run": "2026-11-02_090000",
+ "finished": "2026-11-02T09:20:00+00:00",
+ "started": "2026-11-01T10:00:00+00:00",
+ "trivy_version": "0.75.0",
+ "feeds_updated": "2026-11-01T09:00:00+00:00",
+ "hosts_ok": 1,
+ "counts": {
+  "P1": 1,
+  "P2": 6,
+  "P3": 1,
+  "P4": 1,
+  "accepted": 0,
+  "backported": 0
+ },
+ "plan_counts": {
+  "P1": 0,
+  "P2": 3,
+  "P3": 1,
+  "P4": 0,
+  "cves": 5
+ }
+}

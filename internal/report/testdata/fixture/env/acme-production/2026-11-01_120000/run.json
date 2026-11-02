@@ -1,0 +1,38 @@
+{
+ "org": "acme",
+ "env": "production",
+ "run_id": "2026-11-01_120000",
+ "kanareika": "0.9.0",
+ "trivy_version": "0.58.0",
+ "started": "2026-11-01_120000",
+ "finished": "2026-11-01_120000Z",
+ "selection": {
+  "groups": [],
+  "hosts": [
+   "db-01"
+  ],
+  "modules": []
+ },
+ "modules": [
+  "access",
+  "os_packages",
+  "network_external"
+ ],
+ "hosts_scanned": [
+  "db-01"
+ ],
+ "hosts_ok": 1,
+ "modules_by_host": {
+  "db-01": [
+   "os_packages",
+   "access"
+  ]
+ },
+ "hosts_failed": {},
+ "module_errors": {
+  "db-01": [
+   "os_packages: trivy error"
+  ]
+ },
+ "feeds_updated": "2026-11-01"
+}

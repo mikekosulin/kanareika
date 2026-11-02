@@ -1,0 +1,12 @@
+{
+ "host": {
+  "org": "acme",
+  "name": "synthetic-bad",
+  "group": "synthetic",
+  "exposure": 2,
+  "address": "10.77.0.13",
+  "user": "root",
+  "privilege": "none"
+ },
+ "scanner_ts": 1793577200.0
+}

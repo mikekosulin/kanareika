@@ -1,0 +1,21 @@
+[
+ {
+  "org": "acme",
+  "host": "synthetic-exposed",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "mongo",
+  "kind": "misconfig",
+  "id": "mongo-listen-all",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "MongoDB listens on all interfaces",
+  "url": "",
+  "target": "*:27017",
+  "msg": "mongo.listen_all",
+  "args": {}
+ }
+]

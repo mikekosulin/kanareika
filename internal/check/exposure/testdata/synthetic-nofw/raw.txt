@@ -1,0 +1,25 @@
+
+@@addrs@@
+eth0 inet 100.21.4.154/24
+
+@@routes@@
+
+@@listen@@
+tcp   LISTEN 0      128          0.0.0.0:22         0.0.0.0:*
+tcp   LISTEN 0      128          0.0.0.0:3306       0.0.0.0:*
+
+@@firewalld_state@@
+not running
+
+@@firewalld@@
+
+@@nft@@
+sh: nft: command not found
+
+@@iptables@@
+-P INPUT ACCEPT
+-P FORWARD ACCEPT
+-P OUTPUT ACCEPT
+
+@@ufw@@
+Status: inactive

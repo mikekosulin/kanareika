@@ -1,0 +1,1 @@
+synthetic-docker: exposure: 10 listening, 6 on public addresses, public IPs: 100.21.4.156, 100.21.4.157, 2a00:1450:4001:82a::200e, ::ffff:8.8.8.8

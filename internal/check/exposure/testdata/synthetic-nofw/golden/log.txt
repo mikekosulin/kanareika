@@ -1,0 +1,1 @@
+synthetic-nofw: exposure: 2 listening, 2 on public addresses, public IPs: 100.21.4.154; no access to denied.procs

@@ -1,0 +1,33 @@
+{
+ "swarm": {
+  "ControlAvailable": true,
+  "Name": "\u043a\u043b\u0430\u0441\u0442\u0435\u0440 \ud83d\ude00",
+  "Ratio": 1.5,
+  "Big": 1e+21,
+  "Small": 1e-05,
+  "Neg": -0.0,
+  "Int": 12345678901234567890,
+  "Null": null,
+  "List": [],
+  "Obj": {},
+  "Dup": 2,
+  "Esc": "tab\t\u0001 \u007f /"
+ },
+ "nodes": [
+  {
+   "Hostname": "\u0443\u0437\u0435\u043b-1",
+   "EngineVersion": "27.1.1",
+   "Status": "Ready"
+  },
+  {
+   "Hostname": "n2",
+   "Status": "Down"
+  }
+ ],
+ "services": [
+  {
+   "ID": "x",
+   "Name": "svc"
+  }
+ ]
+}

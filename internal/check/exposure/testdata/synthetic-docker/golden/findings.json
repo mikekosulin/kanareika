@@ -1,0 +1,231 @@
+[
+ {
+  "org": "acme",
+  "host": "synthetic-docker",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "public-ip-unlisted",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Add public IP 100.21.4.156 to the config",
+  "url": "",
+  "target": "present on eth1 but missing in orgs/ — the external scan does not check it",
+  "msg": "net.unlisted_ip",
+  "args": {
+   "ip": "100.21.4.156"
+  },
+  "target_msg": "net.unlisted_ip.detail",
+  "target_args": {
+   "iface": "eth1"
+  }
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-docker",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "public-ip-unlisted",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Add public IP 100.21.4.157 to the config",
+  "url": "",
+  "target": "present on eth1 but missing in orgs/ — the external scan does not check it",
+  "msg": "net.unlisted_ip",
+  "args": {
+   "ip": "100.21.4.157"
+  },
+  "target_msg": "net.unlisted_ip.detail",
+  "target_args": {
+   "iface": "eth1"
+  }
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-docker",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "public-ip-unlisted",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Add public IP 2a00:1450:4001:82a::200e to the config",
+  "url": "",
+  "target": "present on eth0 but missing in orgs/ — the external scan does not check it",
+  "msg": "net.unlisted_ip",
+  "args": {
+   "ip": "2a00:1450:4001:82a::200e"
+  },
+  "target_msg": "net.unlisted_ip.detail",
+  "target_args": {
+   "iface": "eth0"
+  }
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-docker",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "public-ip-unlisted",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Add public IP ::ffff:8.8.8.8 to the config",
+  "url": "",
+  "target": "present on eth0 but missing in orgs/ — the external scan does not check it",
+  "msg": "net.unlisted_ip",
+  "args": {
+   "ip": "::ffff:8.8.8.8"
+  },
+  "target_msg": "net.unlisted_ip.detail",
+  "target_args": {
+   "iface": "eth0"
+  }
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-docker",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "listen-public-4789",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Close VXLAN (Docker Swarm overlay) :4789 to the outside",
+  "url": "",
+  "target": "udp 0.0.0.0:4789",
+  "msg": "net.close",
+  "args": {
+   "service": "VXLAN (Docker Swarm overlay)",
+   "port": 4789
+  }
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-docker",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "listen-public-6379",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Close redis :6379 to the outside",
+  "url": "",
+  "target": "tcp 0.0.0.0:6379 redis-server",
+  "msg": "net.close",
+  "args": {
+   "service": "redis",
+   "port": 6379
+  }
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-docker",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "listen-public-8080",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Close http-alt :8080 to the outside",
+  "url": "",
+  "target": "tcp *:8080 docker-proxy",
+  "msg": "net.close",
+  "args": {
+   "service": "http-alt",
+   "port": 8080
+  }
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-docker",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "listen-public-9100",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Close node_exporter :9100 to the outside",
+  "url": "",
+  "target": "tcp 100.21.4.156:9100 node_exporter",
+  "msg": "net.close",
+  "args": {
+   "service": "node_exporter",
+   "port": 9100
+  }
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-docker",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "listen-public-27017",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Close mongodb :27017 to the outside",
+  "url": "",
+  "target": "tcp :::27017 mongod",
+  "msg": "net.close",
+  "args": {
+   "service": "mongodb",
+   "port": 27017
+  }
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-docker",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "docker-bypasses-firewall",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "LOW",
+  "title": "Docker publishes ports bypassing the firewall",
+  "url": "",
+  "target": "4789, 8080",
+  "msg": "net.docker_bypass",
+  "args": {}
+ }
+]

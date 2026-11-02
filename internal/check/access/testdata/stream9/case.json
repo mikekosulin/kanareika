@@ -1,0 +1,12 @@
+{
+ "host": {
+  "org": "acme",
+  "name": "host-15",
+  "group": "stg_swarm_manager",
+  "exposure": 1,
+  "address": "100.21.0.10",
+  "user": "deploy",
+  "privilege": "sudo"
+ },
+ "now": "2026-11-02T00:00:00"
+}

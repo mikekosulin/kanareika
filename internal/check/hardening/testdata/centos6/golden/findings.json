@@ -1,0 +1,21 @@
+[
+ {
+  "org": "acme",
+  "host": "host-08",
+  "group": "prod_edge",
+  "exposure": 1,
+  "module": "hardening",
+  "kind": "misconfig",
+  "id": "reboot-required",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "MEDIUM",
+  "title": "Reboot: updates are installed but not active",
+  "url": "",
+  "target": "",
+  "msg": "hardening.reboot",
+  "args": {}
+ }
+]

@@ -1,0 +1,50 @@
+{
+ "sshd": {
+  "passwordauthentication": "no",
+  "kbdinteractiveauthentication": "yes",
+  "usepam": "yes"
+ },
+ "sshd_source": "sshd_config (no sshd -T: not root) — partial",
+ "password_auth": true,
+ "password_auth_match_users": [],
+ "users_with_password": null,
+ "login_users": [
+  "deploy",
+  "root"
+ ],
+ "uid0": [
+  "root"
+ ],
+ "keys": [
+  {
+   "user": "deploy",
+   "file": "/home/deploy/.ssh/authorized_keys",
+   "type": "ssh-ed25519",
+   "fp": "SHA256:fVEWrxfKdImszn4k33ZzC6PhNR+JRMTYC0ZjAk1l9gc",
+   "comment": "me",
+   "options": ""
+  }
+ ],
+ "logins": {
+  "period": [
+   null,
+   null
+  ],
+  "accepted": [],
+  "failed_total": 0,
+  "failed_ips": 0,
+  "failed_top_ips": [],
+  "failed_top_users": [],
+  "invalid_users": 0,
+  "failed_last": null,
+  "failed_daily": {},
+  "accepted_daily": {},
+  "attackers": []
+ },
+ "last": [],
+ "denied": [
+  "denied.shadow",
+  "denied.keys",
+  "denied.authlog"
+ ]
+}

@@ -1,0 +1,186 @@
+{
+ "addresses": [
+  {
+   "iface": "lo",
+   "ip": "127.0.0.1",
+   "public": false
+  },
+  {
+   "iface": "lo",
+   "ip": "::1",
+   "public": false
+  },
+  {
+   "iface": "eth0",
+   "ip": "10.77.0.16",
+   "public": false
+  },
+  {
+   "iface": "eth0",
+   "ip": "fe80::a0a0:1:100d",
+   "public": false
+  },
+  {
+   "iface": "docker0",
+   "ip": "172.17.0.1",
+   "public": false
+  },
+  {
+   "iface": "docker0",
+   "ip": "fe80::a0a0:1:1004",
+   "public": false
+  },
+  {
+   "iface": "br-03897529915b",
+   "ip": "172.18.0.1",
+   "public": false
+  },
+  {
+   "iface": "br-03897529915b",
+   "ip": "fe80::a0a0:1:1008",
+   "public": false
+  },
+  {
+   "iface": "vethec9416a",
+   "ip": "fe80::a0a0:1:1003",
+   "public": false
+  },
+  {
+   "iface": "veth09a7ac1",
+   "ip": "fe80::a0a0:1:1002",
+   "public": false
+  }
+ ],
+ "public": [],
+ "unlisted_public": [],
+ "default_route": "default via 10.77.0.17 dev eth0 proto static",
+ "listen": [
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 22,
+   "process": "sshd",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 22,
+   "process": "sshd",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "127.0.0.53",
+   "port": 53,
+   "process": "systemd-resolve",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "127.0.0.54",
+   "port": 53,
+   "process": "systemd-resolve",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "udp",
+   "addr": "127.0.0.53",
+   "port": 53,
+   "process": "systemd-resolve",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "udp",
+   "addr": "127.0.0.54",
+   "port": 53,
+   "process": "systemd-resolve",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 80,
+   "process": "docker-proxy",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 80,
+   "process": "docker-proxy",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "127.0.0.1",
+   "port": 323,
+   "process": "chronyd",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "udp",
+   "addr": "::1",
+   "port": 323,
+   "process": "chronyd",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 443,
+   "process": "docker-proxy",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 443,
+   "process": "docker-proxy",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 9090,
+   "process": "docker-proxy",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 9090,
+   "process": "docker-proxy",
+   "public": true,
+   "local_only": false
+  }
+ ],
+ "firewall": {
+  "readable": true,
+  "firewalld": null,
+  "ufw_active": false,
+  "iptables_input_policy": "ACCEPT",
+  "docker_rules": true,
+  "has_input_filtering": true
+ },
+ "firewall_raw": {
+  "firewalld": null,
+  "nft": "table ip raw {\n\tchain PREROUTING {\n\t\ttype filter hook prerouting priority raw; policy accept;\n\t\tip daddr 172.18.0.2 iifname != \"br-03897529915b\" counter packets 0 bytes 0 drop\n\t\tip daddr 172.18.0.3 iifname != \"br-03897529915b\" counter packets 0 bytes 0 drop\n\t}\n\n\tchain OUTPUT {\n\t\ttype filter hook output priority raw; policy accept;\n\t}\n}\n# Warning: table ip filter is managed by iptables-nft, do not touch!\ntable ip filter {\n\tchain INPUT {\n\t\ttype filter hook input priority filter; policy accept;\n\t}\n\n\tchain FORWARD {\n\t\ttype filter hook forward priority filter; policy drop;\n\t\tcounter packets 35695527 bytes 2297323694 jump DOCKER-USER\n\t\tcounter packets 35693258 bytes 2297214558 jump DOCKER-FORWARD\n\t}\n\n\tchain OUTPUT {\n\t\ttype filter hook output priority filter; policy accept;\n\t}\n\n\tchain DOCKER {\n\t\tip daddr 172.18.0.3 iifname != \"br-03897529915b\" oifname \"br-03897529915b\" tcp dport 443 counter packets 2807055 bytes 143996608 accept\n\t\tip daddr 172.18.0.3 iifname != \"br-03897529915b\" oifname \"br-03897529915b\" tcp dport 80 counter packets 2764666 bytes 141603293 accept\n\t\tip daddr 172.18.0.2 iifname != \"br-03897529915b\" oifname \"br-03897529915b\" tcp dport 8888 counter packets 5465 bytes 343916 accept\n\t\tiifname != \"docker0\" oifname \"docker0\" counter packets 0 bytes 0 drop\n\t\tiifname != \"br-03897529915b\" oifname \"br-03897529915b\" counter packets 0 bytes 0 drop\n\t}\n\n\tchain DOCKER-BRIDGE {\n\t\toifname \"docker0\" counter packets 0 bytes 0 jump DOCKER\n\t\toifname \"br-03897529915b\" counter packets 5577186 bytes 285943817 jump DOCKER\n\t}\n\n\tchain DOCKER-CT {\n\t\toifname \"docker0\" ct state related,established counter packets 0 bytes 0 accept\n\t\toifname \"br-03897529915b\" ct state related,established counter packets 1141536 bytes 196759559 accept\n\t}\n\n\tchain DOCKER-FORWARD {\n\t\tcounter packets 35693258 bytes 2297214558 jump DOCKER-CT\n\t\tcounter packets 34551722 bytes 2100454999 jump DOCKER-INTERNAL\n\t\tcounter packets 34551722 bytes 2100454999 jump DOCKER-BRIDGE\n\t\tiifname \"docker0\" counter packets 0 bytes 0 accept\n\t\tiifname \"br-03897529915b\" counter packets 28974536 bytes 1814511182 accept\n\t}\n\n\tchain DOCKER-INTERNAL {\n\t}\n\n\tchain DOCKER-USER {\n\t\tip saddr 100.21.4.152 tcp dport 8888  counter packets 38232 bytes 9421635 return\n\t\tip saddr 100.21.4.153 tcp dport 8888  counter packets 13297 bytes 2428384 return\n\t\tip saddr 100.21.0.10 tcp dport 8888  counter packets 0 bytes 0 return\n\t\tip saddr 100.21.0.4 tcp dport 8888  counter packets 0 bytes 0 return\n\t\tip saddr 100.21.0.2 tcp dport 8888  counter packets 0 bytes 0 return\n\t\ttcp dport 8888  counter packets 2269 bytes 109136 drop\n\t}\n}\n# Warning: table ip nat is managed by iptables-nft, do not touch!\ntable ip nat {\n\tchain PREROUTING {\n\t\ttype nat hook prerouting priority dstnat; policy accept;\n\t\tfib daddr type local counter packets 8961567 bytes 514178945 jump DOCKER\n\t}\n\n\tchain INPUT {\n\t\ttype nat hook input priority srcnat; policy accept;\n\t}\n\n\tchain OUTPUT {\n\t\ttype nat hook output priority dstnat; policy accept;\n\t\tip daddr != 127.0.0.0/8 fib daddr type local counter packets 0 bytes 0 jump DOCKER\n\t}\n\n\tchain POSTROUTING {\n\t\ttype nat hook postrouting priority srcnat; policy accept;\n\t\tip saddr 172.18.0.0/16 oifname != \"br-03897529915b\" counter packets 3345 bytes 200700 masquerade\n\t\tip saddr 172.17.0.0/16 oifname != \"docker0\" counter packets 0 bytes 0 masquerade\n\t}\n\n\tchain DOCKER {\n\t\tiifname != \"br-03897529915b\" tcp dport 9090 counter packets 7289 bytes 430312 dnat to 172.18.0.2:8888\n\t\tiifname != \"br-03897529915b\" tcp dport 80 counter packets 2764666 bytes 141603293 dnat to 172.18.0.3:80\n\t\tiifname != \"br-03897529915b\" tcp dport 443 counter packets 2807055 bytes 143996608 dnat to 172.18.0.3:443\n\t}\n}\ntable ip6 filter {\n\tchain INPUT {\n\t\ttype filter hook input priority filter; policy accept;\n\t}\n\n\tchain FORWARD {\n\t\ttype filter hook forward priority filter; policy accept;\n\t\tcounter packets 0 bytes 0 jump DOCKER-USER\n\t\tcounter packets 0 bytes 0 jump DOCKER-FORWARD\n\t}\n\n\tchain OUTPUT {\n\t\ttype filter hook output priority filter; policy accept;\n\t}\n\n\tchain DOCKER {\n\t}\n\n\tchain DOCKER-BRIDGE {\n\t}\n\n\tchain DOCKER-CT {\n\t}\n\n\tchain DOCKER-FORWARD {\n\t\tcounter packets 0 bytes 0 jump DOCKER-CT\n\t\tcounter packets 0 bytes 0 jump DOCKER-INTERNAL\n\t\tcounter packets 0 bytes 0 jump DOCKER-BRIDGE\n\t}\n\n\tchain DOCKER-INTERNAL {\n\t}\n\n\tchain DOCKER-USER {\n\t}\n}\n# Warning: table ip6 nat is managed by iptables-nft, do not touch!\ntable ip6 nat {\n\tchain PREROUTING {\n\t\ttype nat hook prerouting priority dstnat; policy accept;\n\t\tfib daddr type local counter packets 0 bytes 0 jump DOCKER\n\t}\n\n\tchain INPUT {\n\t\ttype nat hook input priority srcnat; policy accept;\n\t}\n\n\tchain OUTPUT {\n\t\ttype nat hook output priority dstnat; policy accept;\n\t\tip6 daddr != ::1 fib daddr type local counter packets 0 bytes 0 jump DOCKER\n\t}\n\n\tchain POSTROUTING {\n\t\ttype nat hook postrouting priority srcnat; policy accept;\n\t}\n\n\tchain DOCKER {\n\t}\n}",
+  "iptables": "-P INPUT ACCEPT\n-P FORWARD DROP\n-P OUTPUT ACCEPT\n-N DOCKER\n-N DOCKER-BRIDGE\n-N DOCKER-CT\n-N DOCKER-FORWARD\n-N DOCKER-INTERNAL\n-N DOCKER-USER\n-A FORWARD -j DOCKER-USER\n-A FORWARD -j DOCKER-FORWARD\n-A DOCKER -d 172.18.0.3/32 ! -i br-03897529915b -o br-03897529915b -p tcp -m tcp --dport 443 -j ACCEPT\n-A DOCKER -d 172.18.0.3/32 ! -i br-03897529915b -o br-03897529915b -p tcp -m tcp --dport 80 -j ACCEPT\n-A DOCKER -d 172.18.0.2/32 ! -i br-03897529915b -o br-03897529915b -p tcp -m tcp --dport 8888 -j ACCEPT\n-A DOCKER ! -i docker0 -o docker0 -j DROP\n-A DOCKER ! -i br-03897529915b -o br-03897529915b -j DROP\n-A DOCKER-BRIDGE -o docker0 -j DOCKER\n-A DOCKER-BRIDGE -o br-03897529915b -j DOCKER\n-A DOCKER-CT -o docker0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT\n-A DOCKER-CT -o br-03897529915b -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT\n-A DOCKER-FORWARD -j DOCKER-CT\n-A DOCKER-FORWARD -j DOCKER-INTERNAL\n-A DOCKER-FORWARD -j DOCKER-BRIDGE\n-A DOCKER-FORWARD -i docker0 -j ACCEPT\n-A DOCKER-FORWARD -i br-03897529915b -j ACCEPT\n-A DOCKER-USER -s 100.21.4.152/32 -p tcp -m tcp --dport 8888 -m comment --comment \"kz_gateway: allow forward proxy from 100.21.4.152\" -j RETURN\n-A DOCKER-USER -s 100.21.4.153/32 -p tcp -m tcp --dport 8888 -m comment --comment \"kz_gateway: allow forward proxy from 100.21.4.153\" -j RETURN\n-A DOCKER-USER -s 100.21.0.10/32 -p tcp -m tcp --dport 8888 -m comment --comment \"kz_gateway: allow forward proxy from 100.21.0.10\" -j RETURN\n-A DOCKER-USER -s 100.21.0.4/32 -p tcp -m tcp --dport 8888 -m comment --comment \"kz_gateway: allow forward proxy from 100.21.0.4\" -j RETURN\n-A DOCKER-USER -s 100.21.0.2/32 -p tcp -m tcp --dport 8888 -m comment --comment \"kz_gateway: allow forward proxy from 100.21.0.2\" -j RETURN\n-A DOCKER-USER -p tcp -m tcp --dport 8888 -m comment --comment \"kz_gateway: deny forward proxy from anywhere else\" -j DROP",
+  "ufw": null
+ },
+ "denied": []
+}

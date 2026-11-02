@@ -1,0 +1,178 @@
+
+@@time@@
+1793577263.000000000
+Timezone=Europe/Berlin
+NTPSynchronized=no
+
+@@dmesg@@
+[Sun Nov  1 10:00:00 2026] blk_update_request: I/O error, dev sda, sector 123
+[Sun Nov  1 10:00:01 2026] XFS (sdb1): metadata I/O error: block 0x1 ("xlog_iodone") error 5 corrupt
+[Sun Nov  1 10:00:02 2026] Out of memory: Killed process 1234 (java)
+[Sun Nov  1 10:00:03 2026] mce: [Hardware Error]: Machine check events logged
+[Sun Nov  1 10:00:04 2026] watchdog: BUG: soft lockup - CPU#0 stuck for 22s! [kworker:1]
+[Sun Nov  1 10:00:05 2026] INFO: task jbd2 blocked for more than 120 seconds.
+[Sun Nov  1 10:00:06 2026] nf_conntrack: table full, dropping packet
+[Sun Nov  1 10:00:07 2026] app[777]: segfault at 0 ip 0 sp 0 error 4 in libc.so.6 — сбой xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+[Sun Nov  1 10:00:08 2026] app[778]: segfault at 8 ip 0 sp 0 error 4 in libc.so.6 é中😀 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+@@journal@@
+2026-11-01T10:00:00+0300 h kernel: EXT4-fs warning 0
+2026-11-01T10:01:00+0300 h kernel: EXT4-fs warning 1
+2026-11-01T10:02:00+0300 h kernel: EXT4-fs warning 2
+2026-11-01T10:03:00+0300 h kernel: EXT4-fs warning 3
+2026-11-01T10:04:00+0300 h kernel: EXT4-fs warning 4
+2026-11-01T10:05:00+0300 h kernel: EXT4-fs warning 5
+2026-11-01T10:06:00+0300 h kernel: EXT4-fs warning 6
+2026-11-01T10:07:00+0300 h kernel: EXT4-fs warning 7
+2026-11-01T10:08:00+0300 h kernel: EXT4-fs warning 8
+2026-11-01T10:09:00+0300 h kernel: EXT4-fs warning 9
+2026-11-01T10:10:00+0300 h kernel: EXT4-fs warning 10
+2026-11-01T10:11:00+0300 h kernel: EXT4-fs warning 11
+2026-11-01T10:12:00+0300 h kernel: EXT4-fs warning 12
+2026-11-01T10:13:00+0300 h kernel: EXT4-fs warning 13
+2026-11-01T10:14:00+0300 h kernel: EXT4-fs warning 14
+2026-11-01T10:15:00+0300 h kernel: EXT4-fs warning 15
+2026-11-01T10:16:00+0300 h kernel: EXT4-fs warning 16
+2026-11-01T10:17:00+0300 h kernel: EXT4-fs warning 17
+2026-11-01T10:18:00+0300 h kernel: EXT4-fs warning 18
+2026-11-01T10:19:00+0300 h kernel: EXT4-fs warning 19
+2026-11-01T10:20:00+0300 h kernel: EXT4-fs warning 20
+2026-11-01T10:21:00+0300 h kernel: EXT4-fs warning 21
+2026-11-01T10:22:00+0300 h kernel: EXT4-fs warning 22
+2026-11-01T10:23:00+0300 h kernel: EXT4-fs warning 23
+2026-11-01T10:24:00+0300 h kernel: EXT4-fs warning 24
+2026-11-01T10:25:00+0300 h kernel: EXT4-fs warning 25
+2026-11-01T10:26:00+0300 h kernel: EXT4-fs warning 26
+2026-11-01T10:27:00+0300 h kernel: EXT4-fs warning 27
+2026-11-01T10:28:00+0300 h kernel: EXT4-fs warning 28
+2026-11-01T10:29:00+0300 h kernel: EXT4-fs warning 29
+2026-11-01T10:30:00+0300 h kernel: EXT4-fs warning 30
+2026-11-01T10:31:00+0300 h kernel: EXT4-fs warning 31
+2026-11-01T10:32:00+0300 h kernel: EXT4-fs warning 32
+2026-11-01T10:33:00+0300 h kernel: EXT4-fs warning 33
+2026-11-01T10:34:00+0300 h kernel: EXT4-fs warning 34
+2026-11-01T10:35:00+0300 h kernel: EXT4-fs warning 35
+2026-11-01T10:36:00+0300 h kernel: EXT4-fs warning 36
+2026-11-01T10:37:00+0300 h kernel: EXT4-fs warning 37
+2026-11-01T10:38:00+0300 h kernel: EXT4-fs warning 38
+2026-11-01T10:39:00+0300 h kernel: EXT4-fs warning 39
+2026-11-01T10:40:00+0300 h kernel: EXT4-fs warning 40
+2026-11-01T10:41:00+0300 h kernel: EXT4-fs warning 41
+2026-11-01T10:42:00+0300 h kernel: EXT4-fs warning 42
+2026-11-01T10:43:00+0300 h kernel: EXT4-fs warning 43
+2026-11-01T10:44:00+0300 h kernel: EXT4-fs warning 44
+2026-11-01T10:45:00+0300 h kernel: EXT4-fs warning 45
+2026-11-01T10:46:00+0300 h kernel: EXT4-fs warning 46
+2026-11-01T10:47:00+0300 h kernel: EXT4-fs warning 47
+2026-11-01T10:48:00+0300 h kernel: EXT4-fs warning 48
+2026-11-01T10:49:00+0300 h kernel: EXT4-fs warning 49
+2026-11-01T10:50:00+0300 h kernel: EXT4-fs warning 50
+2026-11-01T10:51:00+0300 h kernel: EXT4-fs warning 51
+2026-11-01T10:52:00+0300 h kernel: EXT4-fs warning 52
+2026-11-01T10:53:00+0300 h kernel: EXT4-fs warning 53
+2026-11-01T10:54:00+0300 h kernel: EXT4-fs warning 54
+2026-11-01T10:55:00+0300 h kernel: EXT4-fs warning 55
+2026-11-01T10:56:00+0300 h kernel: EXT4-fs warning 56
+2026-11-01T10:57:00+0300 h kernel: EXT4-fs warning 57
+2026-11-01T10:58:00+0300 h kernel: EXT4-fs warning 58
+2026-11-01T10:59:00+0300 h kernel: EXT4-fs warning 59
+2026-11-01T11:00:00+0300 h nginx[123]: upstream error 0
+2026-11-01T11:01:00+0300 h nginx[123]: upstream error 1
+2026-11-01T11:02:00+0300 h nginx[123]: upstream error 2
+2026-11-01T11:03:00+0300 h nginx[123]: upstream error 3
+2026-11-01T11:04:00+0300 h nginx[123]: upstream error 4
+2026-11-01T11:05:00+0300 h nginx[123]: upstream error 5
+2026-11-01T11:06:00+0300 h nginx[123]: upstream error 6
+2026-11-01T11:07:00+0300 h nginx[123]: upstream error 7
+2026-11-01T11:08:00+0300 h nginx[123]: upstream error 8
+2026-11-01T11:09:00+0300 h nginx[123]: upstream error 9
+2026-11-01T11:10:00+0300 h nginx[123]: upstream error 10
+2026-11-01T11:11:00+0300 h nginx[123]: upstream error 11
+2026-11-01T11:12:00+0300 h nginx[123]: upstream error 12
+2026-11-01T11:13:00+0300 h nginx[123]: upstream error 13
+2026-11-01T11:14:00+0300 h nginx[123]: upstream error 14
+2026-11-01T11:15:00+0300 h nginx[123]: upstream error 15
+2026-11-01T11:16:00+0300 h nginx[123]: upstream error 16
+2026-11-01T11:17:00+0300 h nginx[123]: upstream error 17
+2026-11-01T11:18:00+0300 h nginx[123]: upstream error 18
+2026-11-01T11:19:00+0300 h nginx[123]: upstream error 19
+2026-11-01T11:20:00+0300 h nginx[123]: upstream error 20
+2026-11-01T11:21:00+0300 h nginx[123]: upstream error 21
+2026-11-01T11:22:00+0300 h nginx[123]: upstream error 22
+2026-11-01T11:23:00+0300 h nginx[123]: upstream error 23
+2026-11-01T11:24:00+0300 h nginx[123]: upstream error 24
+2026-11-01T11:25:00+0300 h nginx[123]: upstream error 25
+2026-11-01T11:26:00+0300 h nginx[123]: upstream error 26
+2026-11-01T11:27:00+0300 h nginx[123]: upstream error 27
+2026-11-01T11:28:00+0300 h nginx[123]: upstream error 28
+2026-11-01T11:29:00+0300 h nginx[123]: upstream error 29
+2026-11-01T11:30:00+0300 h nginx[123]: upstream error 30
+2026-11-01T11:31:00+0300 h nginx[123]: upstream error 31
+2026-11-01T11:32:00+0300 h nginx[123]: upstream error 32
+2026-11-01T11:33:00+0300 h nginx[123]: upstream error 33
+2026-11-01T11:34:00+0300 h nginx[123]: upstream error 34
+2026-11-01T11:35:00+0300 h nginx[123]: upstream error 35
+2026-11-01T11:36:00+0300 h nginx[123]: upstream error 36
+2026-11-01T11:37:00+0300 h nginx[123]: upstream error 37
+2026-11-01T11:38:00+0300 h nginx[123]: upstream error 38
+2026-11-01T11:39:00+0300 h nginx[123]: upstream error 39
+2026-11-01T11:40:00+0300 h nginx[123]: upstream error 40
+2026-11-01T11:41:00+0300 h nginx[123]: upstream error 41
+2026-11-01T11:42:00+0300 h nginx[123]: upstream error 42
+2026-11-01T11:43:00+0300 h nginx[123]: upstream error 43
+2026-11-01T11:44:00+0300 h nginx[123]: upstream error 44
+2026-11-01T12:00:00+0300 h dockerd: ошибка 0
+2026-11-01T12:01:00+0300 h dockerd: ошибка 1
+2026-11-01T12:02:00+0300 h dockerd: ошибка 2
+2026-11-01T12:03:00+0300 h dockerd: ошибка 3
+2026-11-01T12:04:00+0300 h dockerd: ошибка 4
+garbage
+
+@@failed_units@@
+nginx.service loaded failed failed The nginx HTTP and reverse proxy server
+docker.socket   loaded failed failed Docker Socket
+0 loaded units listed.
+UNIT
+
+@@df@@
+Filesystem     Type 1024-blocks    Used Available Capacity Mounted on
+/dev/sda1      ext4     100 96 4      96% /
+/dev/sdb1      xfs      100 88 12     88% /var
+/dev/sdc1      xfs      100 10 90     10% /data
+broken line
+
+@@dfi@@
+Filesystem      Inodes IUsed   IFree IUse% Mounted on
+/dev/sda1      100 96 4    96% /
+/dev/sdb1      100 86 14   86% /var
+/dev/sdc1      100 50 50    - /data
+/dev/sdd1      0 0 0    % /empty
+
+@@mem@@
+               total        used        free      shared  buff/cache   available
+Mem:            1000         990           5           0           5          20
+Swap:              0           0           0
+
+@@load@@
+9.50 8.25 7.75 3/200 1234
+2
+
+@@ro@@
+/var xfs
+/data ext4
+
+@@ntp@@
+no
+
+@@timesvc@@
+chronyd active
+
+@@chrony@@
+Reference ID    : C0A80001 (10.77.0.17)
+Stratum         : 4
+System time     : 1.500000000 seconds slow of NTP time
+^* 10.77.0.17                 3  10   377   915   -870us[ -808us] +/-   33ms
+
+@@ntpq@@
+
+@@timesyncd@@

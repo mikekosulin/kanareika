@@ -1,0 +1,26 @@
+[
+ {
+  "org": "acme",
+  "host": "host-11",
+  "group": "prod_edge",
+  "exposure": 1,
+  "module": "health",
+  "kind": "health",
+  "id": "journal-errors",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "LOW",
+  "title": "Look into journal errors",
+  "url": "",
+  "target": "248 in 7 days: sshd (232), networkctl (16)",
+  "msg": "health.journal",
+  "args": {},
+  "target_msg": "health.journal.detail",
+  "target_args": {
+   "n": 248,
+   "top": "sshd (232), networkctl (16)"
+  }
+ }
+]

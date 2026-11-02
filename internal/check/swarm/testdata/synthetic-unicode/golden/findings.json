@@ -1,0 +1,36 @@
+[
+ {
+  "org": "acme",
+  "host": "synthetic-unicode",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "swarm",
+  "kind": "inventory",
+  "id": "swarm-node",
+  "pkg": "узел-1",
+  "installed": "27.1.1",
+  "fixed": "",
+  "status": "Ready",
+  "severity": "INFO",
+  "title": "Swarm node",
+  "url": "",
+  "target": "swarm"
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-unicode",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "swarm",
+  "kind": "inventory",
+  "id": "swarm-node",
+  "pkg": "n2",
+  "installed": "",
+  "fixed": "",
+  "status": "Down",
+  "severity": "INFO",
+  "title": "Swarm node",
+  "url": "",
+  "target": "swarm"
+ }
+]

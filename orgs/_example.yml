@@ -1,0 +1,126 @@
+# Example (not scanned: files starting with "_" are skipped). A fictional organization, RFC 5737 addresses (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24).
+org:
+  id: acme
+  name: "ACME Corp (example)"
+  contacts:
+    - name: Alice Smith
+      email: it@acme.example
+      role: sysadmin
+  owners:
+    - name: Bob Jones
+      email: cto@acme.example
+      role: CTO
+
+consent:
+  document: "Audit agreement #42 of 2026-09-01, appendix 3 (consent to audit)"
+  signed: 2026-09-01
+  valid_until: 2027-09-01
+  external_scan: true
+  window:
+    days: [mon, tue, wed, thu, fri, sat, sun]
+    from: "21:00"
+    to: "07:00"
+    tz: UTC
+
+access:
+  user: audit
+  key: acme/id_ed25519
+  known_hosts: acme/known_hosts
+  host_key_checking: accept-new
+  sudo: true
+  jumps:
+    bastion:
+      address: 203.0.113.5
+      port: 2222
+    inner-bastion:
+      address: 192.0.2.5
+      jump: bastion
+
+checks:
+  docker:
+    scan_images: save
+  k8s: true
+  network_external:
+    ports: 22,80,443,8080,8443,27017
+
+groups:
+  front:
+    exposure: 1
+    jump: bastion
+    hosts:
+      web-01:
+        address: 192.0.2.11
+        os: debian-12
+      web-02:
+        address: 192.0.2.12
+        os: debian-12
+  app:
+    exposure: 2
+    jump: bastion
+    checks:
+      software_fs:
+        paths: [/opt/acme, /srv]
+    hosts:
+      app-01:
+        address: 192.0.2.21
+        os: ubuntu-22.04
+  swarm_manager:
+    exposure: 2
+    jump: bastion
+    hosts:
+      swm-01:
+        address: 192.0.2.31
+        os: debian-12
+  swarm_worker:
+    exposure: 3
+    jump: bastion
+    hosts:
+      sww-01:
+        address: 192.0.2.41
+        os: debian-12
+      sww-02:
+        address: 192.0.2.42
+        os: debian-12
+  k8s_node:
+    exposure: 3
+    jump: inner-bastion
+    hosts:
+      k8s-01:
+        address: 192.0.2.51
+        os: rocky-9
+  mongo:
+    exposure: 3
+    jump: inner-bastion
+    hosts:
+      mongo-01:
+        address: 192.0.2.61
+        os: ubuntu-22.04
+        checks:
+          software_fs: false
+  internal:
+    exposure: 3
+    jump: inner-bastion
+    hosts:
+      ci-01:
+        address: 192.0.2.71
+        os: almalinux-9
+        sudo: false
+
+k8s:
+  - name: prod
+    kubeconfig: acme/kubeconfig-prod
+    namespaces: [shop, payments]
+    exposure: 2
+
+external:
+  - 198.51.100.10
+  - shop.acme.example
+  - https://api.acme.example
+
+exceptions:
+  - id: CVE-2023-4911
+    hosts: [ci-01]
+    package: glibc
+    reason: "Isolated host, no local users; to be updated together with the CI migration"
+    owner: "Bob Jones"
+    review_by: 2026-12-15

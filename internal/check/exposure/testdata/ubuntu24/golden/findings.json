@@ -1,0 +1,46 @@
+[
+ {
+  "org": "acme",
+  "host": "host-11",
+  "group": "prod_edge",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "listen-public-9090",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Close prometheus :9090 to the outside",
+  "url": "",
+  "target": "tcp 0.0.0.0:9090 docker-proxy",
+  "msg": "net.close",
+  "args": {
+   "service": "prometheus",
+   "port": 9090
+  }
+ },
+ {
+  "org": "acme",
+  "host": "host-11",
+  "group": "prod_edge",
+  "exposure": 1,
+  "module": "exposure",
+  "kind": "exposure",
+  "id": "listen-public-9090",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Close prometheus :9090 to the outside",
+  "url": "",
+  "target": "tcp :::9090 docker-proxy",
+  "msg": "net.close",
+  "args": {
+   "service": "prometheus",
+   "port": 9090
+  }
+ }
+]

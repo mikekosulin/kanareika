@@ -1,0 +1,25 @@
+[
+ {
+  "org": "acme",
+  "host": "synthetic-uptime",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "hardening",
+  "kind": "misconfig",
+  "id": "long-uptime",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "LOW",
+  "title": "Not rebooted for a long time",
+  "url": "",
+  "target": "uptime 200 days — kernel updates are probably not active",
+  "msg": "hardening.uptime",
+  "args": {},
+  "target_msg": "hardening.uptime.detail",
+  "target_args": {
+   "days": "200"
+  }
+ }
+]

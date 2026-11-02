@@ -1,0 +1,93 @@
+{
+ "denied": [],
+ "dmesg": {
+  "classes": {},
+  "tail": [
+   "[Sun Nov  1 22:43:21 2026] Booted with the nomodeset parameter. Only the system framebuffer will be available",
+   "[Sun Nov  1 22:43:21 2026] acpi PNP0A03:00: fail to add MMCONFIG information, can't access extended configuration space under this bridge",
+   "[Sun Nov  1 22:43:23 2026] Warning: Deprecated Driver is detected: qla4xxx will not be maintained in a future major release and may be disabled",
+   "[Sun Nov  1 22:43:23 2026] Warning: Deprecated Driver is detected: qla4xxx_module_init will not be maintained in a future major release and may be disabled",
+   "[Sun Nov  1 22:43:23 2026] Warning: Deprecated Driver is detected: cnic will not be maintained in a future major release and may be disabled",
+   "[Sun Nov  1 22:43:23 2026] Warning: Deprecated Driver is detected: cnic_init will not be maintained in a future major release and may be disabled",
+   "[Sun Nov  1 22:43:23 2026] Warning: Deprecated Driver is detected: bnx2i will not be maintained in a future major release and may be disabled",
+   "[Sun Nov  1 22:43:23 2026] Warning: Deprecated Driver is detected: bnx2i_mod_init will not be maintained in a future major release and may be disabled",
+   "[Sun Nov  1 22:43:24 2026] sd 0:0:0:0: Power-on or device reset occurred",
+   "[Sun Nov  1 22:43:25 2026] SELinux: https://github.com/SELinuxProject/selinux-kernel/wiki/DEPRECATE-runtime-disable",
+   "[Sun Nov  1 22:43:25 2026] SELinux: Runtime disable is not supported, use selinux=0 on the kernel cmdline.",
+   "[Sun Nov  1 22:43:26 2026] virtio_gpu virtio0: probe with driver virtio_gpu failed with error -22",
+   "[Sun Nov  1 22:43:29 2026] block sda: the capability attribute has been deprecated.",
+   "[Sun Nov  1 22:43:30 2026] Warning: Deprecated Driver is detected: ip_tables will not be maintained in a future major release and may be disabled",
+   "[Sun Nov  1 22:43:30 2026] Warning: Deprecated Driver is detected: ip_tables_init will not be maintained in a future major release and may be disabled",
+   "[Sun Nov  1 22:43:30 2026] Warning: Deprecated Driver is detected: ip_set will not be maintained in a future major release and may be disabled",
+   "[Sun Nov  1 22:43:30 2026] Warning: Deprecated Driver is detected: ip_set_init will not be maintained in a future major release and may be disabled",
+   "[Sun Nov  1 22:43:30 2026] Warning: Deprecated Driver is detected: ip6_tables will not be maintained in a future major release and may be disabled",
+   "[Sun Nov  1 22:43:30 2026] Warning: Deprecated Driver is detected: ip6_tables_init will not be maintained in a future major release and may be disabled"
+  ]
+ },
+ "journal": {
+  "errors_7d": 15,
+  "top": [
+   [
+    "kernel",
+    15
+   ]
+  ],
+  "tail": [
+   "2026-11-01T22:43:23+0000 localhost kernel: Warning: Deprecated Driver is detected: qla4xxx will not be maintained in a future major release and may be disabled",
+   "2026-11-01T22:43:23+0000 localhost kernel: Warning: Deprecated Driver is detected: qla4xxx_module_init will not be maintained in a future major release and may be disabled",
+   "2026-11-01T22:43:23+0000 localhost kernel: Warning: Deprecated Driver is detected: cnic will not be maintained in a future major release and may be disabled",
+   "2026-11-01T22:43:23+0000 localhost kernel: Warning: Deprecated Driver is detected: cnic_init will not be maintained in a future major release and may be disabled",
+   "2026-11-01T22:43:23+0000 localhost kernel: Warning: Deprecated Driver is detected: bnx2i will not be maintained in a future major release and may be disabled",
+   "2026-11-01T22:43:23+0000 localhost kernel: Warning: Deprecated Driver is detected: bnx2i_mod_init will not be maintained in a future major release and may be disabled",
+   "2026-11-01T22:43:26+0000 host-15 kernel: SELinux: https://github.com/SELinuxProject/selinux-kernel/wiki/DEPRECATE-runtime-disable",
+   "2026-11-01T22:43:26+0000 host-15 kernel: SELinux: Runtime disable is not supported, use selinux=0 on the kernel cmdline.",
+   "2026-11-01T22:43:26+0000 host-15 kernel: virtio_gpu virtio0: probe with driver virtio_gpu failed with error -22",
+   "2026-11-01T22:43:29+0000 host-15 kernel: Warning: Deprecated Driver is detected: ip_tables will not be maintained in a future major release and may be disabled",
+   "2026-11-01T22:43:29+0000 host-15 kernel: Warning: Deprecated Driver is detected: ip_tables_init will not be maintained in a future major release and may be disabled",
+   "2026-11-01T22:43:30+0000 host-15 kernel: Warning: Deprecated Driver is detected: ip_set will not be maintained in a future major release and may be disabled",
+   "2026-11-01T22:43:30+0000 host-15 kernel: Warning: Deprecated Driver is detected: ip_set_init will not be maintained in a future major release and may be disabled",
+   "2026-11-01T22:43:30+0000 host-15 kernel: Warning: Deprecated Driver is detected: ip6_tables will not be maintained in a future major release and may be disabled",
+   "2026-11-01T22:43:30+0000 host-15 kernel: Warning: Deprecated Driver is detected: ip6_tables_init will not be maintained in a future major release and may be disabled"
+  ]
+ },
+ "failed_units": [],
+ "disks": [
+  {
+   "fs": "/dev/sda1",
+   "mount": "/",
+   "use": 63
+  }
+ ],
+ "inodes": [
+  {
+   "fs": "/dev/sda1",
+   "mount": "/",
+   "use": 16
+  }
+ ],
+ "mem": {
+  "total_mb": 3654,
+  "available_mb": 2322
+ },
+ "swap": {
+  "total_mb": 0,
+  "used_mb": 0
+ },
+ "load": {
+  "load1": 0.01,
+  "load15": 0.0,
+  "cpus": 4
+ },
+ "readonly_mounts": [],
+ "ntp_synced": "yes",
+ "time": {
+  "timezone": "UTC",
+  "synced": "yes",
+  "service": "chronyd",
+  "service_active": true,
+  "source": "188.93.16.172",
+  "stratum": 4,
+  "offset_s": 8.757e-06,
+  "skew_s": 0.24
+ }
+}

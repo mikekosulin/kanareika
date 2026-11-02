@@ -1,0 +1,771 @@
+{
+"cases": [
+{
+"name": "production",
+"runs": [
+{
+"cfg": {},
+"env": "production"
+}
+],
+"trivy": {
+"prod.json": {
+"file": "k8s-prod.json.gz"
+},
+"def.json": {
+"file": "k8s-prod.json.gz"
+},
+"broken.json": {
+"err": "trivy k8s: FATAL unable to load kubeconfig"
+},
+"empty.json": {
+"file": "k8s-empty.json.gz"
+}
+},
+"results": [
+{
+"findings": [
+{
+"org": "acme",
+"host": "k8s:prod",
+"group": "k8s:prod",
+"exposure": 1,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2026-94300",
+"pkg": "bind9-dnsutils",
+"pkg_path": null,
+"installed": "1:9.18.39-0ubuntu0.24.04.8",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "bind: bind: Arbitrary code execution via GSS-TSIG UDP message replay",
+"url": "https://avd.aquasec.com/nvd/cve-2026-94300",
+"vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+"preauth": true,
+"rce": true
+},
+{
+"org": "acme",
+"host": "k8s:prod",
+"group": "k8s:prod",
+"exposure": 1,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2026-94300",
+"pkg": "bind9-host",
+"pkg_path": null,
+"installed": "1:9.18.39-0ubuntu0.24.04.8",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "bind: bind: Arbitrary code execution via GSS-TSIG UDP message replay",
+"url": "https://avd.aquasec.com/nvd/cve-2026-94300",
+"vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+"preauth": true,
+"rce": true
+},
+{
+"org": "acme",
+"host": "k8s:prod",
+"group": "k8s:prod",
+"exposure": 1,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2026-94300",
+"pkg": "bind9-libs",
+"pkg_path": null,
+"installed": "1:9.18.39-0ubuntu0.24.04.8",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "bind: bind: Arbitrary code execution via GSS-TSIG UDP message replay",
+"url": "https://avd.aquasec.com/nvd/cve-2026-94300",
+"vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+"preauth": true,
+"rce": true
+},
+{
+"org": "acme",
+"host": "k8s:prod",
+"group": "k8s:prod",
+"exposure": 1,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2025-69644",
+"pkg": "binutils",
+"pkg_path": null,
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "binutils: Binutils: Denial of Service via crafted binary with malformed DWARF debug information",
+"url": "https://avd.aquasec.com/nvd/cve-2025-69644",
+"vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:R/S:U/C:N/I:N/A:L",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "k8s:prod",
+"group": "k8s:prod",
+"exposure": 1,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2025-69645",
+"pkg": "binutils",
+"pkg_path": null,
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "binutils: Binutils objdump: Denial of Service via crafted DWARF debug information",
+"url": "https://avd.aquasec.com/nvd/cve-2025-69645",
+"vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:R/S:U/C:N/I:N/A:L",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "k8s:prod",
+"group": "k8s:prod",
+"exposure": 1,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2025-69646",
+"pkg": "binutils",
+"pkg_path": null,
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "binutils: Binutils: Denial of Service via malformed DWARF debug_rnglists data",
+"url": "https://avd.aquasec.com/nvd/cve-2025-69646",
+"vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:R/S:U/C:N/I:N/A:L",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "k8s:prod",
+"group": "k8s:prod",
+"exposure": 1,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2025-69648",
+"pkg": "binutils",
+"pkg_path": "usr/local/bin/app",
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "binutils: infinite loop in readelf via crafted binary with malformed DWARF .debug_rnglists data",
+"url": "https://avd.aquasec.com/nvd/cve-2025-69648",
+"vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:L",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "k8s:prod",
+"group": "k8s:prod",
+"exposure": 1,
+"module": "k8s",
+"target": "/Node/node-1",
+"kind": "vuln",
+"id": "CVE-2017-13716",
+"pkg": "binutils",
+"pkg_path": null,
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "LOW",
+"title": "binutils: Memory leak with the C++ symbol demangler routine in libiberty",
+"url": "https://avd.aquasec.com/nvd/cve-2017-13716",
+"vector": "CVSS:3.0/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "k8s:prod",
+"group": "k8s:prod",
+"exposure": 1,
+"module": "k8s",
+"target": "/Node/node-1",
+"kind": "vuln",
+"id": "CVE-2025-1152",
+"pkg": "binutils",
+"pkg_path": null,
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "LOW",
+"title": "binutils: GNU Binutils ld xstrdup.c xstrdup memory leak",
+"url": "https://avd.aquasec.com/nvd/cve-2025-1152",
+"vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
+"preauth": true,
+"rce": false
+},
+{
+"org": "acme",
+"host": "k8s:prod",
+"group": "k8s:prod",
+"exposure": 1,
+"module": "k8s",
+"target": "None/ClusterRole/x",
+"kind": "vuln",
+"id": "CVE-2025-1152",
+"pkg": "binutils-common",
+"pkg_path": null,
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "LOW",
+"title": "binutils: GNU Binutils ld xstrdup.c xstrdup memory leak",
+"url": "https://avd.aquasec.com/nvd/cve-2025-1152",
+"vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
+"preauth": true,
+"rce": false
+}
+],
+"error": null
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/org/": "dir",
+"k8s/": "dir",
+"k8s/empty.json.gz": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+"k8s/prod.json.gz": "f3aa3a27f71a1c5e7837543338d365f81563729ef1d310eb99b0810c23357793"
+},
+"logs": [
+"k8s prod: 5 resources",
+"k8s missing: kubeconfig not found: secrets/acme/kubeconfig-missing",
+"k8s isdir: kubeconfig not found: secrets/acme",
+"k8s broken: trivy k8s: FATAL unable to load kubeconfig",
+"k8s empty: 0 resources"
+],
+"calls": [],
+"trivy_calls": [
+{
+"args": [
+"k8s",
+"--kubeconfig",
+"$SECRETS/acme/kubeconfig-prod",
+"--scanners",
+"vuln",
+"--report",
+"all",
+"--disable-node-collector",
+"--include-namespaces",
+"shop,payments",
+"prod-admin"
+],
+"output": "$OUT/k8s/prod.json",
+"timeout": 7200,
+"target": {
+"$SECRETS/acme/kubeconfig-prod": "9ff859f3d78f5b7b6d6c1b216f9b4c280e48f7092979e2cd91bcf4d2a5cd12ca"
+}
+},
+{
+"args": [
+"k8s",
+"--kubeconfig",
+"$SECRETS/acme/kubeconfig-prod",
+"--scanners",
+"vuln",
+"--report",
+"all",
+"--disable-node-collector"
+],
+"output": "$OUT/k8s/broken.json",
+"timeout": 7200,
+"target": {
+"$SECRETS/acme/kubeconfig-prod": "9ff859f3d78f5b7b6d6c1b216f9b4c280e48f7092979e2cd91bcf4d2a5cd12ca"
+}
+},
+{
+"args": [
+"k8s",
+"--kubeconfig",
+"$SECRETS/acme/kubeconfig-prod",
+"--scanners",
+"vuln",
+"--report",
+"all",
+"--disable-node-collector",
+"--include-namespaces",
+"a"
+],
+"output": "$OUT/k8s/empty.json",
+"timeout": 7200,
+"target": {
+"$SECRETS/acme/kubeconfig-prod": "9ff859f3d78f5b7b6d6c1b216f9b4c280e48f7092979e2cd91bcf4d2a5cd12ca"
+}
+}
+]
+},
+{
+"name": "default",
+"runs": [
+{
+"cfg": {},
+"env": "default"
+}
+],
+"trivy": {
+"prod.json": {
+"file": "k8s-prod.json.gz"
+},
+"def.json": {
+"file": "k8s-prod.json.gz"
+},
+"broken.json": {
+"err": "trivy k8s: FATAL unable to load kubeconfig"
+},
+"empty.json": {
+"file": "k8s-empty.json.gz"
+}
+},
+"results": [
+{
+"findings": [
+{
+"org": "acme",
+"host": "k8s:def",
+"group": "k8s:def",
+"exposure": 2,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2026-94300",
+"pkg": "bind9-dnsutils",
+"pkg_path": null,
+"installed": "1:9.18.39-0ubuntu0.24.04.8",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "bind: bind: Arbitrary code execution via GSS-TSIG UDP message replay",
+"url": "https://avd.aquasec.com/nvd/cve-2026-94300",
+"vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+"preauth": true,
+"rce": true
+},
+{
+"org": "acme",
+"host": "k8s:def",
+"group": "k8s:def",
+"exposure": 2,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2026-94300",
+"pkg": "bind9-host",
+"pkg_path": null,
+"installed": "1:9.18.39-0ubuntu0.24.04.8",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "bind: bind: Arbitrary code execution via GSS-TSIG UDP message replay",
+"url": "https://avd.aquasec.com/nvd/cve-2026-94300",
+"vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+"preauth": true,
+"rce": true
+},
+{
+"org": "acme",
+"host": "k8s:def",
+"group": "k8s:def",
+"exposure": 2,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2026-94300",
+"pkg": "bind9-libs",
+"pkg_path": null,
+"installed": "1:9.18.39-0ubuntu0.24.04.8",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "bind: bind: Arbitrary code execution via GSS-TSIG UDP message replay",
+"url": "https://avd.aquasec.com/nvd/cve-2026-94300",
+"vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+"preauth": true,
+"rce": true
+},
+{
+"org": "acme",
+"host": "k8s:def",
+"group": "k8s:def",
+"exposure": 2,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2025-69644",
+"pkg": "binutils",
+"pkg_path": null,
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "binutils: Binutils: Denial of Service via crafted binary with malformed DWARF debug information",
+"url": "https://avd.aquasec.com/nvd/cve-2025-69644",
+"vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:R/S:U/C:N/I:N/A:L",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "k8s:def",
+"group": "k8s:def",
+"exposure": 2,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2025-69645",
+"pkg": "binutils",
+"pkg_path": null,
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "binutils: Binutils objdump: Denial of Service via crafted DWARF debug information",
+"url": "https://avd.aquasec.com/nvd/cve-2025-69645",
+"vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:R/S:U/C:N/I:N/A:L",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "k8s:def",
+"group": "k8s:def",
+"exposure": 2,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2025-69646",
+"pkg": "binutils",
+"pkg_path": null,
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "binutils: Binutils: Denial of Service via malformed DWARF debug_rnglists data",
+"url": "https://avd.aquasec.com/nvd/cve-2025-69646",
+"vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:R/S:U/C:N/I:N/A:L",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "k8s:def",
+"group": "k8s:def",
+"exposure": 2,
+"module": "k8s",
+"target": "shop/Deployment/web",
+"kind": "vuln",
+"id": "CVE-2025-69648",
+"pkg": "binutils",
+"pkg_path": "usr/local/bin/app",
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "MEDIUM",
+"title": "binutils: infinite loop in readelf via crafted binary with malformed DWARF .debug_rnglists data",
+"url": "https://avd.aquasec.com/nvd/cve-2025-69648",
+"vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:L",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "k8s:def",
+"group": "k8s:def",
+"exposure": 2,
+"module": "k8s",
+"target": "/Node/node-1",
+"kind": "vuln",
+"id": "CVE-2017-13716",
+"pkg": "binutils",
+"pkg_path": null,
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "LOW",
+"title": "binutils: Memory leak with the C++ symbol demangler routine in libiberty",
+"url": "https://avd.aquasec.com/nvd/cve-2017-13716",
+"vector": "CVSS:3.0/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H",
+"preauth": false,
+"rce": false
+},
+{
+"org": "acme",
+"host": "k8s:def",
+"group": "k8s:def",
+"exposure": 2,
+"module": "k8s",
+"target": "/Node/node-1",
+"kind": "vuln",
+"id": "CVE-2025-1152",
+"pkg": "binutils",
+"pkg_path": null,
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "LOW",
+"title": "binutils: GNU Binutils ld xstrdup.c xstrdup memory leak",
+"url": "https://avd.aquasec.com/nvd/cve-2025-1152",
+"vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
+"preauth": true,
+"rce": false
+},
+{
+"org": "acme",
+"host": "k8s:def",
+"group": "k8s:def",
+"exposure": 2,
+"module": "k8s",
+"target": "None/ClusterRole/x",
+"kind": "vuln",
+"id": "CVE-2025-1152",
+"pkg": "binutils-common",
+"pkg_path": null,
+"installed": "2.42-4ubuntu2.10",
+"fixed": "",
+"status": "affected",
+"severity": "LOW",
+"title": "binutils: GNU Binutils ld xstrdup.c xstrdup memory leak",
+"url": "https://avd.aquasec.com/nvd/cve-2025-1152",
+"vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
+"preauth": true,
+"rce": false
+}
+],
+"error": null
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/org/": "dir",
+"k8s/": "dir",
+"k8s/def.json.gz": "f3aa3a27f71a1c5e7837543338d365f81563729ef1d310eb99b0810c23357793"
+},
+"logs": [
+"k8s def: 5 resources"
+],
+"calls": [],
+"trivy_calls": [
+{
+"args": [
+"k8s",
+"--kubeconfig",
+"$SECRETS/acme/kubeconfig-prod",
+"--scanners",
+"vuln",
+"--report",
+"all",
+"--disable-node-collector"
+],
+"output": "$OUT/k8s/def.json",
+"timeout": 7200,
+"target": {
+"$SECRETS/acme/kubeconfig-prod": "9ff859f3d78f5b7b6d6c1b216f9b4c280e48f7092979e2cd91bcf4d2a5cd12ca"
+}
+}
+]
+},
+{
+"name": "staging",
+"runs": [
+{
+"cfg": {},
+"env": "staging"
+}
+],
+"trivy": {
+"prod.json": {
+"file": "k8s-prod.json.gz"
+},
+"def.json": {
+"file": "k8s-prod.json.gz"
+},
+"broken.json": {
+"err": "trivy k8s: FATAL unable to load kubeconfig"
+},
+"empty.json": {
+"file": "k8s-empty.json.gz"
+}
+},
+"results": [
+{
+"findings": [],
+"error": null
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/org/": "dir",
+"k8s/": "dir"
+},
+"logs": [
+"k8s stage: trivy k8s: no recorded report for stage.json"
+],
+"calls": [],
+"trivy_calls": [
+{
+"args": [
+"k8s",
+"--kubeconfig",
+"$SECRETS/acme/kubeconfig-prod",
+"--scanners",
+"vuln",
+"--report",
+"all",
+"--disable-node-collector"
+],
+"output": "$OUT/k8s/stage.json",
+"timeout": 7200,
+"target": {
+"$SECRETS/acme/kubeconfig-prod": "9ff859f3d78f5b7b6d6c1b216f9b4c280e48f7092979e2cd91bcf4d2a5cd12ca"
+}
+}
+]
+},
+{
+"name": "evil",
+"runs": [
+{
+"cfg": {},
+"env": "evil"
+}
+],
+"trivy": {
+"prod.json": {
+"file": "k8s-prod.json.gz"
+},
+"def.json": {
+"file": "k8s-prod.json.gz"
+},
+"broken.json": {
+"err": "trivy k8s: FATAL unable to load kubeconfig"
+},
+"empty.json": {
+"file": "k8s-empty.json.gz"
+}
+},
+"results": [
+{
+"findings": null,
+"error": "acme: secret path escapes secrets/: ../escape"
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/org/": "dir",
+"k8s/": "dir"
+},
+"logs": [],
+"calls": [],
+"trivy_calls": []
+},
+{
+"name": "none",
+"runs": [
+{
+"cfg": {},
+"env": "none"
+}
+],
+"trivy": {
+"prod.json": {
+"file": "k8s-prod.json.gz"
+},
+"def.json": {
+"file": "k8s-prod.json.gz"
+},
+"broken.json": {
+"err": "trivy k8s: FATAL unable to load kubeconfig"
+},
+"empty.json": {
+"file": "k8s-empty.json.gz"
+}
+},
+"results": [
+{
+"findings": [],
+"error": null
+}
+],
+"files": {
+"hosts/": "dir",
+"hosts/org/": "dir",
+"k8s/": "dir"
+},
+"logs": [],
+"calls": [],
+"trivy_calls": []
+}
+],
+"clusters": [
+{
+"name": "prod",
+"env": "production",
+"kubeconfig": "acme/kubeconfig-prod",
+"namespaces": [
+"shop",
+"payments"
+],
+"context": "prod-admin",
+"exposure": 1
+},
+{
+"name": "stage",
+"env": "staging",
+"kubeconfig": "acme/kubeconfig-prod"
+},
+{
+"name": "def",
+"kubeconfig": "acme/kubeconfig-prod"
+},
+{
+"name": "missing",
+"env": "production",
+"kubeconfig": "acme/kubeconfig-missing"
+},
+{
+"name": "isdir",
+"env": "production",
+"kubeconfig": "acme"
+},
+{
+"name": "broken",
+"env": "production",
+"kubeconfig": "acme/kubeconfig-prod",
+"exposure": 3
+},
+{
+"name": "empty",
+"env": "production",
+"kubeconfig": "acme/kubeconfig-prod",
+"namespaces": [
+"a"
+]
+},
+{
+"name": "escape",
+"env": "evil",
+"kubeconfig": "../escape"
+}
+],
+"secrets": {
+"acme/kubeconfig-prod": "apiVersion: v1\nkind: Config\nclusters: []\n"
+}
+}

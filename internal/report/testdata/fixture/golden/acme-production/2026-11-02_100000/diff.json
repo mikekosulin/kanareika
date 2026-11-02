@@ -1,0 +1,1 @@
+{"prev": "2026-11-01_100000", "new": [["db-01", "os_packages", "os", "libssl3", "CVE-2026-0900"], ["external:203.0.113.10", "network_external", "ext-open-8443", "", "8443"]], "gone": [["web-01", "os_packages", "os", "openssl", "CVE-2026-0001"], ["external:203.0.113.10", "network_external", "ext-open-443", "", "443"]]}
