@@ -1,0 +1,45 @@
+org:
+  id: beta
+  name: Company name
+  owners:
+  - name: First Last
+    email: cto@example.com
+  notes: ''
+consent:
+  document: Contract No ___ of ____, appendix ___
+  signed: 2026-01-01
+  valid_until: 2027-01-01
+  external_scan: false
+  window:
+    days:
+    - mon
+    - tue
+    - wed
+    - thu
+    - fri
+    from: '22:00'
+    to: 06:00
+    tz: UTC
+access:
+  user: audit
+  privilege: helper
+  host_key_checking: accept-new
+  jumps:
+    bastion:
+      address: 198.51.100.250
+      port: 22
+checks:
+  k8s: false
+  network_external: false
+groups:
+  app:
+    role: app
+    exposure: 2
+    jump: bastion
+    hosts:
+      app-01:
+        address: 198.51.100.200
+        os: ubuntu-22.04
+k8s: []
+external: []
+exceptions: []

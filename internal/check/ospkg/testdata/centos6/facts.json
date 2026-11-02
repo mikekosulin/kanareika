@@ -1,0 +1,9 @@
+{
+ "os_release": {
+  "ID": "centos",
+  "VERSION_ID": "6",
+  "PRETTY_NAME": "CentOS release 6.10 (Final)"
+ },
+ "uname": "Linux 2.6.32-696.el6.x86_64 x86_64",
+ "hostname": "vpn-box"
+}

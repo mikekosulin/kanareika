@@ -1,0 +1,154 @@
+{
+ "addresses": [
+  {
+   "iface": "lo",
+   "ip": "127.0.0.1",
+   "public": false
+  },
+  {
+   "iface": "eth0",
+   "ip": "10.77.0.18",
+   "public": false
+  },
+  {
+   "iface": "eth1",
+   "ip": "100.21.4.156",
+   "public": true
+  },
+  {
+   "iface": "eth1",
+   "ip": "100.21.4.157",
+   "public": true
+  },
+  {
+   "iface": "eth0",
+   "ip": "2a00:1450:4001:82a::200e",
+   "public": true
+  },
+  {
+   "iface": "eth0",
+   "ip": "fe80::c684:76d0:c150",
+   "public": false
+  },
+  {
+   "iface": "eth0",
+   "ip": "::ffff:8.8.8.8",
+   "public": true
+  },
+  {
+   "iface": "docker0",
+   "ip": "172.17.0.1",
+   "public": false
+  }
+ ],
+ "public": [
+  "100.21.4.156",
+  "100.21.4.157",
+  "2a00:1450:4001:82a::200e",
+  "::ffff:8.8.8.8"
+ ],
+ "unlisted_public": [
+  "100.21.4.156",
+  "100.21.4.157",
+  "2a00:1450:4001:82a::200e",
+  "::ffff:8.8.8.8"
+ ],
+ "default_route": "default via 10.77.0.14 dev eth0 proto static",
+ "listen": [
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 22,
+   "process": "sshd",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "127.0.0.53",
+   "port": 53,
+   "process": "systemd-resolve",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "udp",
+   "addr": "0.0.0.0",
+   "port": 4789,
+   "process": "",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "127.0.0.1",
+   "port": 5432,
+   "process": "postgres",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 6379,
+   "process": "redis-server",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "fe80::c684:76d0:c150",
+   "port": 7946,
+   "process": "dockerd",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "*",
+   "port": 8080,
+   "process": "docker-proxy",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::1",
+   "port": 9000,
+   "process": "",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "100.21.4.156",
+   "port": 9100,
+   "process": "node_exporter",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 27017,
+   "process": "mongod",
+   "public": true,
+   "local_only": false
+  }
+ ],
+ "firewall": {
+  "readable": true,
+  "firewalld": "running",
+  "ufw_active": false,
+  "iptables_input_policy": "ACCEPT",
+  "docker_rules": true,
+  "has_input_filtering": true
+ },
+ "firewall_raw": {
+  "firewalld": "public (active)\n  target: default\n  interfaces: eth0\n  services: ssh",
+  "nft": "table inet firewalld {\n\tchain filter_INPUT {\n\t\ttype filter hook input priority filter + 10; policy accept;\n\t}\n}",
+  "iptables": "-P INPUT ACCEPT\n-P FORWARD DROP\n-P OUTPUT ACCEPT\n-N DOCKER\n-A FORWARD -j DOCKER",
+  "ufw": null
+ },
+ "denied": []
+}

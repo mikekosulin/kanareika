@@ -1,0 +1,36 @@
+
+@@time@@
+not-a-number
+UTC+0000
+
+@@dmesg@@
+dmesg: read kernel buffer failed: Operation not permitted
+
+@@journal@@
+No journal files were opened due to insufficient permissions.
+Hint: you are currently not seeing messages from other users and the system.
+
+@@failed_units@@
+sh: line 6: systemctl: command not found
+
+@@df@@
+
+@@dfi@@
+
+@@mem@@
+
+@@load@@
+
+@@ro@@
+
+@@ntp@@
+unknown
+
+@@timesvc@@
+ntpd active
+
+@@chrony@@
+
+@@ntpq@@
++90.188.6.85     46.254.241.75    2 u  714 1024  377   51.154    2.466   1.356
+-91.224.234.189  139.143.5.30     2 u  476 1024  377   28.022   -0.121   1.770

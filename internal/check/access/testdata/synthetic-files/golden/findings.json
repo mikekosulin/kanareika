@@ -1,0 +1,66 @@
+[
+ {
+  "org": "acme",
+  "host": "synthetic-files",
+  "group": "synthetic",
+  "exposure": 2,
+  "module": "access",
+  "kind": "misconfig",
+  "id": "ssh-password-auth",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "LOW",
+  "title": "Disable SSH password login",
+  "url": "",
+  "target": "whether accounts have passwords is not visible without root",
+  "msg": "ssh.password",
+  "args": {},
+  "target_msg": "ssh.password.unknown",
+  "target_args": {}
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-files",
+  "group": "synthetic",
+  "exposure": 2,
+  "module": "access",
+  "kind": "inventory",
+  "id": "ssh-keys",
+  "pkg": "authorized_keys",
+  "installed": "1",
+  "fixed": "",
+  "status": "",
+  "severity": "INFO",
+  "title": "authorized_keys: 1 keys, root: 0",
+  "url": "",
+  "target": "",
+  "msg": "ssh.keys",
+  "args": {
+   "n": 1,
+   "root": 0
+  }
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-files",
+  "group": "synthetic",
+  "exposure": 2,
+  "module": "access",
+  "kind": "inventory",
+  "id": "access-limited",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "INFO",
+  "title": "cannot read: denied.shadow, denied.keys, denied.authlog (needs root or sudo)",
+  "url": "",
+  "target": "",
+  "msg": "health.limited",
+  "args": {
+   "what": "denied.shadow, denied.keys, denied.authlog"
+  }
+ }
+]

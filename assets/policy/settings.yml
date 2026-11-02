@@ -1,0 +1,4 @@
+# Run retention in reports/<org>/<env>/. The current state (current/) is never deleted.
+retention:
+  keep_full: 12        # last full runs (trends and "changes" are built from them)
+  keep_partial: 30     # last partial runs

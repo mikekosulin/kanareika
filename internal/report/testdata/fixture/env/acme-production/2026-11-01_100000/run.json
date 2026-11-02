@@ -1,0 +1,79 @@
+{
+ "org": "acme",
+ "env": "production",
+ "run_id": "2026-11-01_100000",
+ "kanareika": "0.9.0",
+ "trivy_version": "0.58.0",
+ "started": "2026-11-01_100000",
+ "finished": "2026-11-01_100000Z",
+ "selection": {
+  "groups": [],
+  "hosts": [],
+  "modules": []
+ },
+ "modules": [
+  "access",
+  "docker",
+  "exposure",
+  "hardening",
+  "health",
+  "os_packages",
+  "software_fs",
+  "network_external"
+ ],
+ "hosts_scanned": [
+  "web-01",
+  "db-01",
+  "app-01",
+  "dead-01"
+ ],
+ "hosts_ok": 3,
+ "modules_by_host": {
+  "web-01": [
+   "os_packages",
+   "access",
+   "docker",
+   "health",
+   "exposure",
+   "software_fs",
+   "hardening"
+  ],
+  "db-01": [
+   "os_packages",
+   "access",
+   "docker",
+   "health",
+   "exposure",
+   "software_fs",
+   "hardening"
+  ],
+  "app-01": [
+   "os_packages",
+   "access",
+   "docker",
+   "health",
+   "exposure",
+   "software_fs",
+   "hardening"
+  ],
+  "dead-01": [
+   "os_packages",
+   "access",
+   "docker",
+   "health",
+   "exposure",
+   "software_fs",
+   "hardening"
+  ]
+ },
+ "hosts_failed": {
+  "dead-01": "ssh: connection refused"
+ },
+ "module_errors": {
+  "app-01": [
+   "docker: boom",
+   "hardening: x"
+  ]
+ },
+ "feeds_updated": null
+}

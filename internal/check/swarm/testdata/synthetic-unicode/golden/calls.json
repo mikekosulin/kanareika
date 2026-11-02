@@ -1,0 +1,17 @@
+[
+ {
+  "command": "sudo -n sh -c 'docker info --format '\"'\"'{{json .Swarm}}'\"'\"'' kanareika ",
+  "timeout": 300,
+  "check": true
+ },
+ {
+  "command": "sudo -n sh -c 'docker node ls --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+  "timeout": 300,
+  "check": true
+ },
+ {
+  "command": "sudo -n sh -c 'docker service ls --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+  "timeout": 300,
+  "check": true
+ }
+]

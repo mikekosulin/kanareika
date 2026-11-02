@@ -1,0 +1,44 @@
+[
+    {
+        "Id": "sha256:54f2a904c251d5a34adf545a72d32515a15e08418dae0266e23be2e18c66fefa",
+        "RepoTags": [
+            "mirror.gcr.io/nginx:alpine"
+        ],
+        "RepoDigests": [
+            "mirror.gcr.io/nginx@sha256:54f2a904c251d5a34adf545a72d32515a15e08418dae0266e23be2e18c66fefa"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-06-22T20:17:12.157582832Z",
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 26008064
+    },
+    {
+        "Id": "sha256:6bb19cff0b3972a69855686e0ccbd20b98dbfae2aa43845a5df48947ba1401b4",
+        "RepoTags": [
+            "certbot/certbot:latest"
+        ],
+        "RepoDigests": [
+            "certbot/certbot@sha256:6bb19cff0b3972a69855686e0ccbd20b98dbfae2aa43845a5df48947ba1401b4"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-07-07T18:29:55.605446062Z",
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 88296974
+    },
+    {
+        "Id": "sha256:83d56af9e31427df0fac3923f1fa1e5b464d612d8f1c02e57ed015a9860cf11a",
+        "RepoTags": [
+            "kz-tinyproxy:local"
+        ],
+        "RepoDigests": [
+            "kz-tinyproxy@sha256:83d56af9e31427df0fac3923f1fa1e5b464d612d8f1c02e57ed015a9860cf11a"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-07-12T19:44:44.466742735Z",
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 3684418
+    }
+]

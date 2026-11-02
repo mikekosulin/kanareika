@@ -1,0 +1,266 @@
+{
+ "addresses": [
+  {
+   "iface": "lo",
+   "ip": "127.0.0.1",
+   "public": false
+  },
+  {
+   "iface": "lo",
+   "ip": "::1",
+   "public": false
+  },
+  {
+   "iface": "eth0",
+   "ip": "10.77.0.20",
+   "public": false
+  },
+  {
+   "iface": "eth0",
+   "ip": "fe80::b6b9:8813:b851:3eff:fef7:8296",
+   "public": false
+  },
+  {
+   "iface": "eth1",
+   "ip": "100.21.0.3",
+   "public": true
+  },
+  {
+   "iface": "eth1",
+   "ip": "fe80::b6b9:8813:b851:3eff:fe0c:df31",
+   "public": false
+  },
+  {
+   "iface": "tap0",
+   "ip": "10.77.0.21",
+   "public": false
+  },
+  {
+   "iface": "tap0",
+   "ip": "fe80::961c:f310:e4fd:43ff:fe81:e877",
+   "public": false
+  }
+ ],
+ "public": [
+  "100.21.0.3"
+ ],
+ "unlisted_public": [],
+ "default_route": "169.254.169.254 via 10.77.0.19 dev eth0  proto static \n100.21.0.38/29 dev eth1  proto kernel  scope link  src 100.21.0.3 \n10.77.0.15/24 dev eth0  proto kernel  scope link  src 10.77.0.20 \n10.77.0.16/24 via 10.77.0.21 dev tap0  scope link \n10.77.0.17/24 dev tap0  proto kernel  scope link  src 10.77.0.21 \ndefault via 100.21.4.155 dev eth1",
+ "listen": [
+  {
+   "proto": "tcp",
+   "addr": "*",
+   "port": 22,
+   "process": "sshd",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 22,
+   "process": "sshd",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "127.0.0.1",
+   "port": 25,
+   "process": "master",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "::1",
+   "port": 25,
+   "process": "master",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "udp",
+   "addr": "*",
+   "port": 68,
+   "process": "dhclient",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "*",
+   "port": 80,
+   "process": "nginx",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 80,
+   "process": "nginx",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "*",
+   "port": 123,
+   "process": "ntpd",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "10.77.0.20",
+   "port": 123,
+   "process": "ntpd",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "10.77.0.21",
+   "port": 123,
+   "process": "ntpd",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "100.21.0.3",
+   "port": 123,
+   "process": "ntpd",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "127.0.0.1",
+   "port": 123,
+   "process": "ntpd",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "udp",
+   "addr": "::",
+   "port": 123,
+   "process": "ntpd",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "::1",
+   "port": 123,
+   "process": "ntpd",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "udp",
+   "addr": "fe80::961c:f310:e4fd:43ff:fe81:e877",
+   "port": 123,
+   "process": "ntpd",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "fe80::b6b9:8813:b851:3eff:fe0c:df31",
+   "port": 123,
+   "process": "ntpd",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "fe80::b6b9:8813:b851:3eff:fef7:8296",
+   "port": 123,
+   "process": "ntpd",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "*",
+   "port": 443,
+   "process": "nginx",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "127.0.0.1",
+   "port": 1080,
+   "process": "ssh",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "::1",
+   "port": 1080,
+   "process": "ssh",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "127.0.0.1",
+   "port": 1081,
+   "process": "autossh",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "*",
+   "port": 1194,
+   "process": "openvpn",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "*",
+   "port": 8429,
+   "process": "vmagent",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "127.0.0.1",
+   "port": 9080,
+   "process": "ssh",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 9100,
+   "process": "node_exporter",
+   "public": true,
+   "local_only": false
+  }
+ ],
+ "firewall": {
+  "readable": true,
+  "firewalld": null,
+  "ufw_active": false,
+  "iptables_input_policy": "ACCEPT",
+  "docker_rules": false,
+  "has_input_filtering": false
+ },
+ "firewall_raw": {
+  "firewalld": null,
+  "nft": null,
+  "iptables": "-P INPUT ACCEPT\n-P FORWARD ACCEPT\n-P OUTPUT ACCEPT\n-A FORWARD -s 10.77.0.17/24 -o eth1 -j ACCEPT \n-A FORWARD -d 10.77.0.17/24 -o tap0 -m state --state RELATED,ESTABLISHED -j ACCEPT \n-A FORWARD -s 10.77.0.17/24 -o eth1 -j ACCEPT \n-A FORWARD -d 10.77.0.17/24 -o tap0 -m state --state RELATED,ESTABLISHED -j ACCEPT",
+  "ufw": null
+ },
+ "denied": []
+}

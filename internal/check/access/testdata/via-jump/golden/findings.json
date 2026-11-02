@@ -1,0 +1,43 @@
+[
+ {
+  "org": "acme",
+  "host": "host-05",
+  "group": "prod_internal",
+  "exposure": 3,
+  "module": "access",
+  "kind": "misconfig",
+  "id": "ssh-root-login",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "MEDIUM",
+  "title": "Forbid root password login",
+  "url": "",
+  "target": "PermitRootLogin yes → prohibit-password",
+  "msg": "ssh.root",
+  "args": {}
+ },
+ {
+  "org": "acme",
+  "host": "host-05",
+  "group": "prod_internal",
+  "exposure": 3,
+  "module": "access",
+  "kind": "inventory",
+  "id": "ssh-keys",
+  "pkg": "authorized_keys",
+  "installed": "4",
+  "fixed": "",
+  "status": "",
+  "severity": "INFO",
+  "title": "authorized_keys: 4 keys, root: 1",
+  "url": "",
+  "target": "",
+  "msg": "ssh.keys",
+  "args": {
+   "n": 4,
+   "root": 1
+  }
+ }
+]

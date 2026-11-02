@@ -1,0 +1,382 @@
+{
+ "sshd": {
+  "port": "22",
+  "permitrootlogin": "yes",
+  "pubkeyauthentication": "yes",
+  "passwordauthentication": "yes",
+  "kbdinteractiveauthentication": "no",
+  "usepam": "yes",
+  "permitemptypasswords": "yes"
+ },
+ "sshd_source": "sshd -T",
+ "password_auth": true,
+ "password_auth_match_users": [],
+ "users_with_password": [
+  "deploy",
+  "ghost",
+  "root",
+  "svc"
+ ],
+ "login_users": [
+  "deploy",
+  "root",
+  "toor",
+  "weird"
+ ],
+ "uid0": [
+  "root",
+  "toor"
+ ],
+ "keys": [
+  {
+   "user": "root",
+   "file": "/root/.ssh/authorized_keys",
+   "type": "ssh-ed25519",
+   "fp": "SHA256:b2CSP90wr65n9EszmKVMuR25xOqzoKuHCMaF/oh8mTE",
+   "comment": "root@laptop",
+   "options": ""
+  },
+  {
+   "user": "deploy",
+   "file": "/home/deploy/.ssh/authorized_keys",
+   "type": "ssh-rsa",
+   "fp": "SHA256:5SlINfE9N+oSECnpRjc5nnrfMrfRpR/6PMamNDwdies",
+   "comment": "deploy@ci comment with spaces",
+   "options": "command=\"/bin/true\",no-pty,from=\"10.77.0.24/8\""
+  }
+ ],
+ "logins": {
+  "period": [
+   "2025-12-31T23:59:59",
+   "2026-10-02T10:00:00"
+  ],
+  "accepted": [
+   {
+    "user": "deploy",
+    "ip": "198.51.100.3",
+    "method": "keyboard-interactive/pam",
+    "count": 1,
+    "first": "2026-11-01T20:50:21",
+    "last": "2026-11-01T20:50:21"
+   },
+   {
+    "user": "deploy",
+    "ip": "198.51.100.1",
+    "method": "password",
+    "count": 2,
+    "first": "2025-12-31T23:59:59",
+    "last": "2026-10-21T10:00:00"
+   },
+   {
+    "user": "root",
+    "ip": "198.51.100.2",
+    "method": "publickey",
+    "count": 2,
+    "first": "",
+    "last": "2026-10-20T10:00:00"
+   },
+   {
+    "user": "admin",
+    "ip": "198.51.100.4",
+    "method": "password",
+    "count": 2,
+    "first": "2026-11-01T20:50:22",
+    "last": ""
+   },
+   {
+    "user": "admin",
+    "ip": "198.51.100.5",
+    "method": "password",
+    "count": 1,
+    "first": "",
+    "last": ""
+   }
+  ],
+  "failed_total": 1101,
+  "failed_ips": 8,
+  "failed_top_ips": [
+   [
+    "203.0.113.0",
+    158
+   ],
+   [
+    "203.0.113.1",
+    157
+   ],
+   [
+    "203.0.113.2",
+    157
+   ],
+   [
+    "203.0.113.3",
+    157
+   ],
+   [
+    "203.0.113.4",
+    157
+   ],
+   [
+    "203.0.113.5",
+    157
+   ],
+   [
+    "203.0.113.6",
+    157
+   ],
+   [
+    "192.0.2.99",
+    1
+   ]
+  ],
+  "failed_top_users": [
+   [
+    "root",
+    275
+   ],
+   [
+    "admin",
+    275
+   ],
+   [
+    "oracle",
+    275
+   ],
+   [
+    "test",
+    275
+   ],
+   [
+    "",
+    1
+   ]
+  ],
+  "invalid_users": 734,
+  "failed_last": "2026-10-08T19:00:19",
+  "failed_daily": {
+   "2026-10-01": 40,
+   "2026-10-02": 41,
+   "2026-10-03": 40,
+   "2026-10-04": 40,
+   "2026-10-05": 40,
+   "2026-10-06": 40,
+   "2026-10-07": 40,
+   "2026-10-08": 40,
+   "2026-10-09": 39,
+   "2026-10-10": 39,
+   "2026-10-11": 39,
+   "2026-10-12": 39,
+   "2026-10-13": 39,
+   "2026-10-14": 39,
+   "2026-10-15": 39,
+   "2026-10-16": 39,
+   "2026-10-17": 39,
+   "2026-10-18": 39,
+   "2026-10-19": 39,
+   "2026-10-20": 39,
+   "2026-10-21": 39,
+   "2026-10-22": 39,
+   "2026-10-23": 39,
+   "2026-10-24": 39,
+   "2026-10-25": 39,
+   "2026-10-26": 39,
+   "2026-10-27": 39,
+   "2026-10-28": 39
+  },
+  "accepted_daily": {
+   "2025-12-31": 1,
+   "2026-10-20": 1,
+   "2026-10-21": 1,
+   "2026-11-01": 2
+  },
+  "attackers": [
+   {
+    "ip": "203.0.113.0",
+    "n": 158,
+    "first": "2026-10-01T00:00:00",
+    "last": "2026-10-08T19:00:19",
+    "users": [
+     [
+      "root",
+      40
+     ],
+     [
+      "test",
+      40
+     ],
+     [
+      "oracle",
+      39
+     ],
+     [
+      "admin",
+      39
+     ]
+    ]
+   },
+   {
+    "ip": "203.0.113.1",
+    "n": 157,
+    "first": "2026-10-02T11:00:01",
+    "last": "2026-10-02T13:00:13",
+    "users": [
+     [
+      "admin",
+      40
+     ],
+     [
+      "root",
+      39
+     ],
+     [
+      "test",
+      39
+     ],
+     [
+      "oracle",
+      39
+     ]
+    ]
+   },
+   {
+    "ip": "203.0.113.2",
+    "n": 157,
+    "first": "2026-10-03T12:00:02",
+    "last": "2026-10-03T14:00:14",
+    "users": [
+     [
+      "oracle",
+      40
+     ],
+     [
+      "admin",
+      39
+     ],
+     [
+      "root",
+      39
+     ],
+     [
+      "test",
+      39
+     ]
+    ]
+   },
+   {
+    "ip": "203.0.113.3",
+    "n": 157,
+    "first": "2026-10-04T03:00:03",
+    "last": "2026-10-04T05:00:15",
+    "users": [
+     [
+      "test",
+      40
+     ],
+     [
+      "oracle",
+      39
+     ],
+     [
+      "admin",
+      39
+     ],
+     [
+      "root",
+      39
+     ]
+    ]
+   },
+   {
+    "ip": "203.0.113.4",
+    "n": 157,
+    "first": "2026-10-05T14:00:04",
+    "last": "2026-10-05T16:00:16",
+    "users": [
+     [
+      "root",
+      40
+     ],
+     [
+      "test",
+      39
+     ],
+     [
+      "oracle",
+      39
+     ],
+     [
+      "admin",
+      39
+     ]
+    ]
+   },
+   {
+    "ip": "203.0.113.5",
+    "n": 157,
+    "first": "2026-10-06T15:00:05",
+    "last": "2026-10-06T17:00:17",
+    "users": [
+     [
+      "admin",
+      40
+     ],
+     [
+      "root",
+      39
+     ],
+     [
+      "test",
+      39
+     ],
+     [
+      "oracle",
+      39
+     ]
+    ]
+   },
+   {
+    "ip": "203.0.113.6",
+    "n": 157,
+    "first": "2026-10-07T06:00:06",
+    "last": "2026-10-07T08:00:18",
+    "users": [
+     [
+      "oracle",
+      40
+     ],
+     [
+      "admin",
+      39
+     ],
+     [
+      "root",
+      39
+     ],
+     [
+      "test",
+      39
+     ]
+    ]
+   },
+   {
+    "ip": "192.0.2.99",
+    "n": 1,
+    "first": "2026-10-02T10:00:00",
+    "last": "2026-10-02T10:00:00",
+    "users": [
+     [
+      "",
+      1
+     ]
+    ]
+   }
+  ]
+ },
+ "last": [
+  "root     pts/0        198.51.100.2     Sun Nov  1 20:00:00 2026   still logged in",
+  "",
+  "wtmp begins Sun Nov  1 00:00:00 2026"
+ ],
+ "denied": [
+  "denied.keys"
+ ]
+}

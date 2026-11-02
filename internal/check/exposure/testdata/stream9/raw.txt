@@ -1,0 +1,111 @@
+
+@@addrs@@
+lo inet 127.0.0.1/8
+lo inet6 ::1/128
+eth0 inet 10.77.0.16/24
+eth0 inet6 fe80::b6b9:8813:b851:3eff:fea1:a18a/64
+docker_gwbridge inet 172.18.0.1/16
+docker_gwbridge inet6 fe80::80a2:79a6:2b37:bff:fe66:68c3/64
+docker0 inet 172.17.0.1/16
+vethffb9a14 inet6 fe80::4402:1f20:8bf8:9dff:fe34:712e/64
+veth7511122 inet6 fe80::1b45:cb0f:bb84:5eff:fe3e:434b/64
+vethfa0e16f inet6 fe80::139a:92db:a54:bbff:fe8f:71df/64
+veth02f16f6 inet6 fe80::f0ee:6dca:5071:88ff:fee4:13b7/64
+vethc1cde6f inet6 fe80::78b1:e834:a3a0:e1ff:fead:e1c/64
+
+@@routes@@
+default via 10.77.0.17 dev eth0 
+
+@@listen@@
+udp UNCONN 0      0          0.0.0.0:111  0.0.0.0:* users:(("rpcbind",pid=685,fd=5),("systemd",pid=1,fd=38))
+udp UNCONN 0      0        127.0.0.1:323  0.0.0.0:* users:(("chronyd",pid=769,fd=5))                        
+udp UNCONN 0      0          0.0.0.0:4789 0.0.0.0:*                                                         
+udp UNCONN 0      0      10.77.0.16:7946 0.0.0.0:* users:(("dockerd",pid=988,fd=30))                       
+udp UNCONN 0      0             [::]:111     [::]:* users:(("rpcbind",pid=685,fd=7),("systemd",pid=1,fd=40))
+udp UNCONN 0      0            [::1]:323     [::]:* users:(("chronyd",pid=769,fd=6))                        
+tcp LISTEN 0      8192       0.0.0.0:80   0.0.0.0:* users:(("docker-proxy",pid=2619,fd=8))                  
+tcp LISTEN 0      4096       0.0.0.0:111  0.0.0.0:* users:(("rpcbind",pid=685,fd=4),("systemd",pid=1,fd=37))
+tcp LISTEN 0      128        0.0.0.0:22   0.0.0.0:* users:(("sshd",pid=993,fd=7))                           
+tcp LISTEN 0      8192       0.0.0.0:8429 0.0.0.0:* users:(("vmagent",pid=995,fd=9))                        
+tcp LISTEN 0      8192       0.0.0.0:443  0.0.0.0:* users:(("docker-proxy",pid=2643,fd=8))                  
+tcp LISTEN 0      8192   10.77.0.16:7946 0.0.0.0:* users:(("dockerd",pid=988,fd=29))                       
+tcp LISTEN 0      8192       0.0.0.0:1025 0.0.0.0:* users:(("docker-proxy",pid=2668,fd=8))                  
+tcp LISTEN 0      8192   10.77.0.16:2377 0.0.0.0:* users:(("dockerd",pid=988,fd=21))                       
+tcp LISTEN 0      8192          [::]:80      [::]:* users:(("docker-proxy",pid=2625,fd=8))                  
+tcp LISTEN 0      4096          [::]:111     [::]:* users:(("rpcbind",pid=685,fd=6),("systemd",pid=1,fd=39))
+tcp LISTEN 0      128           [::]:22      [::]:* users:(("sshd",pid=993,fd=8))                           
+tcp LISTEN 0      8192          [::]:443     [::]:* users:(("docker-proxy",pid=2648,fd=8))                  
+tcp LISTEN 0      8192             *:9100       *:* users:(("node_exporter",pid=990,fd=3))                  
+tcp LISTEN 0      8192          [::]:1025    [::]:* users:(("docker-proxy",pid=2673,fd=8))                  
+tcp LISTEN 0      8192             *:8080       *:* users:(("cadvisor",pid=986,fd=7))                       
+
+@@firewalld_state@@
+kanareika: line 1: firewall-cmd: command not found
+
+@@firewalld@@
+
+@@nft@@
+
+@@iptables@@
+-P INPUT ACCEPT
+-P FORWARD DROP
+-P OUTPUT ACCEPT
+-N DOCKER
+-N DOCKER-BRIDGE
+-N DOCKER-CT
+-N DOCKER-FORWARD
+-N DOCKER-INTERNAL
+-N DOCKER-USER
+-A FORWARD -j DOCKER-USER
+-A FORWARD -j DOCKER-FORWARD
+-A DOCKER -d 172.18.0.3/32 -i docker_gwbridge -o docker_gwbridge -p tcp -m tcp --dport 1025 -m conntrack ! --ctorigdst 172.18.0.3 -j ACCEPT
+-A DOCKER -d 172.18.0.3/32 ! -i docker_gwbridge -o docker_gwbridge -p tcp -m tcp --dport 1025 -j ACCEPT
+-A DOCKER -d 172.18.0.3/32 -i docker_gwbridge -o docker_gwbridge -p tcp -m tcp --dport 443 -m conntrack ! --ctorigdst 172.18.0.3 -j ACCEPT
+-A DOCKER -d 172.18.0.3/32 ! -i docker_gwbridge -o docker_gwbridge -p tcp -m tcp --dport 443 -j ACCEPT
+-A DOCKER -d 172.18.0.3/32 -i docker_gwbridge -o docker_gwbridge -p tcp -m tcp --dport 80 -m conntrack ! --ctorigdst 172.18.0.3 -j ACCEPT
+-A DOCKER -d 172.18.0.3/32 ! -i docker_gwbridge -o docker_gwbridge -p tcp -m tcp --dport 80 -j ACCEPT
+-A DOCKER ! -i docker_gwbridge -o docker_gwbridge -j DROP
+-A DOCKER ! -i docker0 -o docker0 -j DROP
+-A DOCKER-BRIDGE -o docker_gwbridge -j DOCKER
+-A DOCKER-BRIDGE -o docker0 -j DOCKER
+-A DOCKER-CT -o docker_gwbridge -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A DOCKER-CT -o docker0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A DOCKER-FORWARD -j DOCKER-CT
+-A DOCKER-FORWARD -j DOCKER-INTERNAL
+-A DOCKER-FORWARD -j DOCKER-BRIDGE
+-A DOCKER-FORWARD -i docker_gwbridge -o docker_gwbridge -j DROP
+-A DOCKER-FORWARD -i docker_gwbridge ! -o docker_gwbridge -j ACCEPT
+-A DOCKER-FORWARD -i docker0 -j ACCEPT
+
+@@iptables_nat@@
+-P PREROUTING ACCEPT
+-P INPUT ACCEPT
+-P OUTPUT ACCEPT
+-P POSTROUTING ACCEPT
+-N DOCKER
+-A PREROUTING -m addrtype --dst-type LOCAL -j DOCKER
+-A OUTPUT ! -d 127.0.0.0/8 -m addrtype --dst-type LOCAL -j DOCKER
+-A POSTROUTING -s 172.17.0.0/16 ! -o docker0 -j MASQUERADE
+-A POSTROUTING -s 172.18.0.0/16 ! -o docker_gwbridge -j MASQUERADE
+-A DOCKER ! -i docker_gwbridge -p tcp -m tcp --dport 80 -j DNAT --to-destination 172.18.0.3:80
+-A DOCKER ! -i docker_gwbridge -p tcp -m tcp --dport 443 -j DNAT --to-destination 172.18.0.3:443
+-A DOCKER ! -i docker_gwbridge -p tcp -m tcp --dport 1025 -j DNAT --to-destination 172.18.0.3:1025
+
+@@ip6tables@@
+-P INPUT ACCEPT
+-P FORWARD ACCEPT
+-P OUTPUT ACCEPT
+-N DOCKER
+-N DOCKER-BRIDGE
+-N DOCKER-CT
+-N DOCKER-FORWARD
+-N DOCKER-INTERNAL
+-N DOCKER-USER
+-A FORWARD -j DOCKER-USER
+-A FORWARD -j DOCKER-FORWARD
+-A DOCKER-FORWARD -j DOCKER-CT
+-A DOCKER-FORWARD -j DOCKER-INTERNAL
+-A DOCKER-FORWARD -j DOCKER-BRIDGE
+
+@@ufw@@
+kanareika: line 1: ufw: command not found

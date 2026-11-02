@@ -1,0 +1,27 @@
+# Weekly updates of the pinned GitHub Actions (SHA + version comment) and Go modules, one grouped PR per ecosystem.
+# A cooldown skips releases younger than a few days: a hijacked release is usually caught and pulled by then.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      go:
+        patterns: ["*"]
+    commit-message:
+      prefix: deps

@@ -1,0 +1,7 @@
+[
+ {
+  "command": "sudo -n /usr/local/libexec/kanareika-collect swarm-info",
+  "timeout": 300,
+  "check": true
+ }
+]

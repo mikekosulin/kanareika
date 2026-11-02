@@ -1,0 +1,158 @@
+{
+ "addresses": [
+  {
+   "iface": "lo",
+   "ip": "127.0.0.1",
+   "public": false
+  },
+  {
+   "iface": "lo",
+   "ip": "::1",
+   "public": false
+  },
+  {
+   "iface": "eth0",
+   "ip": "10.77.0.5",
+   "public": false
+  },
+  {
+   "iface": "eth0",
+   "ip": "fe80::b6b9:8813:b851:3eff:fea4:1c3b",
+   "public": false
+  }
+ ],
+ "public": [],
+ "unlisted_public": [],
+ "default_route": "default via 10.77.0.19 dev eth0 proto dhcp src 10.77.0.5 metric 100",
+ "listen": [
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 22,
+   "process": "sshd",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 22,
+   "process": "sshd",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 111,
+   "process": "rpcbind",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 111,
+   "process": "rpcbind",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "0.0.0.0",
+   "port": 111,
+   "process": "rpcbind",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "::",
+   "port": 111,
+   "process": "rpcbind",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "127.0.0.1",
+   "port": 323,
+   "process": "chronyd",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "udp",
+   "addr": "::1",
+   "port": 323,
+   "process": "chronyd",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "10.77.0.5",
+   "port": 6379,
+   "process": "redis-server",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "127.0.0.1",
+   "port": 6379,
+   "process": "redis-server",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "::1",
+   "port": 6379,
+   "process": "redis-server",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "*",
+   "port": 8080,
+   "process": "cadvisor",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 8429,
+   "process": "vmagent",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "*",
+   "port": 9100,
+   "process": "node_exporter",
+   "public": false,
+   "local_only": false
+  }
+ ],
+ "firewall": {
+  "readable": false,
+  "firewalld": null,
+  "ufw_active": false,
+  "iptables_input_policy": null,
+  "docker_rules": false,
+  "has_input_filtering": null
+ },
+ "firewall_raw": {
+  "firewalld": null,
+  "nft": null,
+  "iptables": null,
+  "ufw": null
+ },
+ "denied": [
+  "denied.firewall"
+ ]
+}

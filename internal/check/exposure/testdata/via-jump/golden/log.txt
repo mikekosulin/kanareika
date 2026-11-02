@@ -1,0 +1,1 @@
+host-05: exposure: 14 listening, 0 on public addresses, public IPs: none; no access to denied.firewall

@@ -1,0 +1,47 @@
+[
+ {
+  "org": "acme",
+  "host": "synthetic-match",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "access",
+  "kind": "misconfig",
+  "id": "ssh-password-auth",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "HIGH",
+  "title": "Disable SSH password login",
+  "url": "",
+  "target": "enabled by a Match block for: deploy, ops",
+  "msg": "ssh.password",
+  "args": {},
+  "target_msg": "ssh.password.match",
+  "target_args": {
+   "users": "deploy, ops"
+  }
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-match",
+  "group": "synthetic",
+  "exposure": 1,
+  "module": "access",
+  "kind": "inventory",
+  "id": "ssh-keys",
+  "pkg": "authorized_keys",
+  "installed": "0",
+  "fixed": "",
+  "status": "",
+  "severity": "INFO",
+  "title": "authorized_keys: 0 keys, root: 0",
+  "url": "",
+  "target": "",
+  "msg": "ssh.keys",
+  "args": {
+   "n": 0,
+   "root": 0
+  }
+ }
+]

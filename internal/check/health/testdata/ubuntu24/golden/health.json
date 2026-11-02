@@ -1,0 +1,99 @@
+{
+ "denied": [],
+ "dmesg": {
+  "classes": {},
+  "tail": [
+   "[Wed Oct 21 08:45:41 2026] clocksource: Long readout interval, skipping watchdog check: cs_nsec: 4072149080 wd_nsec: 4072148913",
+   "[Mon Oct 26 00:40:51 2026] clocksource: timekeeping watchdog on CPU0: Marking clocksource 'tsc' as unstable because the skew is too large:",
+   "[Mon Oct 26 00:40:51 2026] clocksource:                       'kvm-clock' wd_nsec: 504033262 wd_now: 2101f255739658 wd_last: 2101f23768a66a mask: ffffffffffffffff",
+   "[Mon Oct 26 00:40:51 2026] clocksource:                       'tsc' cs_nsec: 515862242 cs_now: 50de5a827ba1fc cs_last: 50de5a3726a341 mask: ffffffffffffffff",
+   "[Mon Oct 26 00:40:51 2026] clocksource:                       Clocksource 'tsc' skewed 11828980 ns (11 ms) over watchdog 'kvm-clock' interval of 504033262 ns (504 ms)",
+   "[Mon Oct 26 00:40:51 2026] clocksource:                       'kvm-clock' (not 'tsc') is current clocksource."
+  ]
+ },
+ "journal": {
+  "errors_7d": 248,
+  "top": [
+   [
+    "sshd",
+    232
+   ],
+   [
+    "networkctl",
+    16
+   ]
+  ],
+  "tail": [
+   "2026-10-31T14:01:09+00:00 host-11 sshd[1013964]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 41589 ssh2 [preauth]",
+   "2026-10-31T14:01:11+00:00 host-11 sshd[1013966]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 42010 ssh2 [preauth]",
+   "2026-10-31T14:01:12+00:00 host-11 sshd[1013968]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 42396 ssh2 [preauth]",
+   "2026-10-31T14:01:13+00:00 host-11 sshd[1013970]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 42715 ssh2 [preauth]",
+   "2026-10-31T14:01:14+00:00 host-11 sshd[1013972]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 42930 ssh2 [preauth]",
+   "2026-10-31T14:01:28+00:00 host-11 sshd[1013974]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 43189 ssh2 [preauth]",
+   "2026-10-31T14:01:44+00:00 host-11 sshd[1013976]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 50744 ssh2 [preauth]",
+   "2026-10-31T14:02:10+00:00 host-11 sshd[1013978]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 57093 ssh2 [preauth]",
+   "2026-10-31T14:02:11+00:00 host-11 sshd[1013980]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 5126 ssh2 [preauth]",
+   "2026-10-31T14:02:13+00:00 host-11 sshd[1013982]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 5466 ssh2 [preauth]",
+   "2026-10-31T14:02:15+00:00 host-11 sshd[1013984]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 6139 ssh2 [preauth]",
+   "2026-10-31T14:02:17+00:00 host-11 sshd[1013986]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 6635 ssh2 [preauth]",
+   "2026-10-31T14:02:19+00:00 host-11 sshd[1013988]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 7031 ssh2 [preauth]",
+   "2026-10-31T14:02:58+00:00 host-11 sshd[1014021]: error: maximum authentication attempts exceeded for invalid user guest from 100.21.0.12 port 20634 ssh2 [preauth]",
+   "2026-10-31T15:09:40+00:00 host-11 networkctl[1014281]: Interface \"vethf20d94d\" not found.",
+   "2026-10-31T15:14:58+00:00 host-11 sshd[1014337]: error: kex_exchange_identification: read: Connection reset by peer",
+   "2026-10-31T16:49:35+00:00 host-11 sshd[1014664]: error: kex_exchange_identification: read: Connection reset by peer",
+   "2026-10-31T22:01:28+00:00 host-11 sshd[1015332]: error: kex_exchange_identification: read: Connection reset by peer",
+   "2026-11-01T00:47:41+00:00 host-11 sshd[1015816]: error: kex_exchange_identification: read: Connection reset by peer",
+   "2026-11-01T01:41:30+00:00 host-11 sshd[1015943]: error: kex_exchange_identification: read: Connection reset by peer",
+   "2026-11-01T02:41:47+00:00 host-11 sshd[1016077]: error: Protocol major versions differ: 2 vs. 1",
+   "2026-11-01T03:35:40+00:00 host-11 networkctl[1016331]: Interface \"veth05bfebe\" not found.",
+   "2026-11-01T06:41:01+00:00 host-11 sshd[1017989]: error: kex_exchange_identification: read: Connection reset by peer",
+   "2026-11-01T13:09:51+00:00 host-11 sshd[1019961]: error: kex_exchange_identification: read: Connection reset by peer",
+   "2026-11-01T13:19:42+00:00 host-11 sshd[1019991]: error: kex_exchange_identification: read: Connection reset by peer",
+   "2026-11-01T15:21:09+00:00 host-11 networkctl[1020621]: Interface \"vethb1cf763\" not found.",
+   "2026-11-01T17:00:48+00:00 host-11 sshd[1021051]: error: send_error: write: Connection reset by peer",
+   "2026-11-01T17:15:06+00:00 host-11 sshd[1021162]: error: kex_exchange_identification: read: Connection reset by peer",
+   "2026-11-01T18:36:38+00:00 host-11 sshd[1021531]: error: kex_exchange_identification: read: Connection reset by peer",
+   "2026-11-01T22:06:52+00:00 host-11 sshd[1022117]: error: Protocol major versions differ: 2 vs. 1"
+  ]
+ },
+ "failed_units": [],
+ "disks": [
+  {
+   "fs": "/dev/sda1",
+   "mount": "/",
+   "use": 25
+  }
+ ],
+ "inodes": [
+  {
+   "fs": "/dev/sda1",
+   "mount": "/",
+   "use": 5
+  }
+ ],
+ "mem": {
+  "total_mb": 458,
+  "available_mb": 323
+ },
+ "swap": {
+  "total_mb": 1023,
+  "used_mb": 99
+ },
+ "load": {
+  "load1": 0.08,
+  "load15": 0.01,
+  "cpus": 1
+ },
+ "readonly_mounts": [],
+ "ntp_synced": "yes",
+ "time": {
+  "timezone": "Etc/UTC",
+  "synced": "yes",
+  "service": "chronyd",
+  "service_active": true,
+  "source": "213.148.0.223",
+  "stratum": 3,
+  "offset_s": 0.000182047,
+  "skew_s": 0.92
+ }
+}

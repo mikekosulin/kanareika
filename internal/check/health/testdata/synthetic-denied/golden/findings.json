@@ -1,0 +1,47 @@
+[
+ {
+  "org": "acme",
+  "host": "synthetic-denied",
+  "group": "synthetic",
+  "exposure": 2,
+  "module": "health",
+  "kind": "health",
+  "id": "time-not-synced",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "MEDIUM",
+  "title": "Enable time synchronization (NTP)",
+  "url": "",
+  "target": "service: ntpd, synchronized: no",
+  "msg": "health.ntp",
+  "args": {},
+  "target_msg": "health.ntp.detail",
+  "target_args": {
+   "service": "ntpd",
+   "synced": "no"
+  }
+ },
+ {
+  "org": "acme",
+  "host": "synthetic-denied",
+  "group": "synthetic",
+  "exposure": 2,
+  "module": "health",
+  "kind": "inventory",
+  "id": "health-limited",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "INFO",
+  "title": "cannot read: denied.dmesg, denied.journal (needs root or sudo)",
+  "url": "",
+  "target": "",
+  "msg": "health.limited",
+  "args": {
+   "what": "denied.dmesg, denied.journal"
+  }
+ }
+]

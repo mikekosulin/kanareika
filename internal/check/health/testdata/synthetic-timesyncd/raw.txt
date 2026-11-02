@@ -1,0 +1,39 @@
+
+@@time@@
+1793577263.250000000
+               Local time: Sun 2026-11-01 23:54:24 MSK
+                Time zone: Europe/Berlin (CET, +0100)
+      System clock synchronized: yes
+/usr/share/zoneinfo/Europe/Berlin
+
+@@dmesg@@
+
+@@journal@@
+-- No entries --
+
+@@failed_units@@
+
+@@df@@
+Filesystem     Type 1024-blocks    Used Available Capacity Mounted on
+
+@@mem@@
+Mem: 1000 100 900
+
+@@load@@
+0.5 0.4 0.3 1/100
+
+@@ro@@
+
+@@timesvc@@
+ntpd inactive
+systemd-timesyncd active
+
+@@chrony@@
+
+@@ntpq@@
+
+@@timesyncd@@
+       Server: 192.0.2.10 (ntp.example.org)
+Poll interval: 34min 8s (min: 32s; max 34min 8s)
+         Leap: normal
+       Offset: +1.234567s

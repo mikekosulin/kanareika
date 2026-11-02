@@ -1,0 +1,45 @@
+
+@@addrs@@
+lo inet 127.0.0.1/8
+lo inet6 ::1/128
+eth0 inet 10.77.0.5/24
+eth0 inet6 fe80::b6b9:8813:b851:3eff:fea4:1c3b/64
+
+@@routes@@
+default via 10.77.0.19 dev eth0 proto dhcp src 10.77.0.5 metric 100 
+
+@@listen@@
+udp UNCONN 0      0        0.0.0.0:111  0.0.0.0:* users:(("rpcbind",pid=637,fd=5),("systemd",pid=1,fd=33))
+udp UNCONN 0      0      127.0.0.1:323  0.0.0.0:* users:(("chronyd",pid=711,fd=5))                        
+udp UNCONN 0      0           [::]:111     [::]:* users:(("rpcbind",pid=637,fd=7),("systemd",pid=1,fd=35))
+udp UNCONN 0      0          [::1]:323     [::]:* users:(("chronyd",pid=711,fd=6))                        
+tcp LISTEN 0      1024     0.0.0.0:8429 0.0.0.0:* users:(("vmagent",pid=898,fd=8))                        
+tcp LISTEN 0      4096     0.0.0.0:111  0.0.0.0:* users:(("rpcbind",pid=637,fd=4),("systemd",pid=1,fd=31))
+tcp LISTEN 0      128      0.0.0.0:22   0.0.0.0:* users:(("sshd",pid=896,fd=7))                           
+tcp LISTEN 0      511    127.0.0.1:6379 0.0.0.0:* users:(("redis-server",pid=893,fd=6))                   
+tcp LISTEN 0      511    10.77.0.5:6379 0.0.0.0:* users:(("redis-server",pid=893,fd=7))                   
+tcp LISTEN 0      511        [::1]:6379    [::]:* users:(("redis-server",pid=893,fd=8))                   
+tcp LISTEN 0      1024           *:9100       *:* users:(("node_exporter",pid=892,fd=3))                  
+tcp LISTEN 0      4096        [::]:111     [::]:* users:(("rpcbind",pid=637,fd=6),("systemd",pid=1,fd=34))
+tcp LISTEN 0      128         [::]:22      [::]:* users:(("sshd",pid=896,fd=8))                           
+tcp LISTEN 0      1024           *:8080       *:* users:(("cadvisor",pid=889,fd=3))                       
+
+@@firewalld_state@@
+kanareika: line 1: firewall-cmd: command not found
+
+@@firewalld@@
+
+@@nft@@
+kanareika: line 1: nft: command not found
+
+@@iptables@@
+kanareika: line 1: iptables: command not found
+
+@@iptables_nat@@
+kanareika: line 1: iptables: command not found
+
+@@ip6tables@@
+kanareika: line 1: ip6tables: command not found
+
+@@ufw@@
+kanareika: line 1: ufw: command not found

@@ -1,0 +1,12 @@
+{
+ "host": {
+  "org": "acme",
+  "name": "synthetic-match",
+  "group": "synthetic",
+  "exposure": 1,
+  "address": "10.77.0.13",
+  "user": "audit",
+  "privilege": "helper"
+ },
+ "now": "2026-01-05T12:00:00"
+}

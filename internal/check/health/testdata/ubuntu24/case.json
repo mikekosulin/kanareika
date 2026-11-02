@@ -1,0 +1,12 @@
+{
+ "host": {
+  "org": "acme",
+  "name": "host-11",
+  "group": "prod_edge",
+  "exposure": 1,
+  "address": "100.21.0.6",
+  "user": "root",
+  "privilege": "none"
+ },
+ "scanner_ts": 1793577263.0
+}

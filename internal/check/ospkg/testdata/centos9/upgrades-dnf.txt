@@ -1,0 +1,5 @@
+PackageKit	1.2.6-2.el9_8
+gzip	1.12-2.el9_8
+kernel-core	5.14.0-800.el9
+libgcrypt	1.10.0-13.el9_8
+@@rc 0

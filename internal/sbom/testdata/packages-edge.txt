@@ -1,0 +1,11 @@
+ii 	libssl3	3.0.15-1~deb12u1	amd64	openssl	3.0.15-1~deb12u1
+rc 	old	1	amd64	old	1
+ii 	libc6	2.36-9+deb12u4	amd64		
+ii 	tzdata	2024a-0+deb12u1	all	tzdata	
+ii 	epoch-pkg	1:2.0-1-2	amd64	epoch-src	2:3.0
+ii 	no-release	1.0	amd64	no-release	1.0
+ii 	plus+name	1.0+dfsg-1	amd64	src name	0:1.0~rc1-1
+hi 	held	1-1	amd64	held	1-1
+ii 	short	1
+iU 	unpacked	1-1	amd64	unpacked	1-1
+ii 	ünïcode	1.0-1	amd64	ünïcode	1.0-1

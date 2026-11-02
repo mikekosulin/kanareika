@@ -1,0 +1,11 @@
+{
+ "host": {
+  "org": "acme",
+  "name": "host-05",
+  "group": "prod_internal",
+  "exposure": 3,
+  "address": "10.77.0.5",
+  "user": "root",
+  "privilege": "none"
+ }
+}

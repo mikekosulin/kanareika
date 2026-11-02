@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "kanareika": {
+      "command": "./dist/kanareika",
+      "args": ["mcp"]
+    }
+  }
+}

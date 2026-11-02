@@ -1,0 +1,30 @@
+# Odd but valid conditions: Python semantics of `in` (substring for a string), bools compared as numbers.
+rules:
+  - priority: P1
+    when:
+      severity: CRITICAL          # a string: substring match ("CRIT" would match too)
+      kev: 1
+  - priority: P2
+    when:
+      epss_gte: 0.0001
+      kind: vuln
+      fixable: false
+  - priority: P2
+    when:
+      exposure: [1.0]
+      rce: 1
+  - priority: P3
+    when:
+      id: [os-eol, CVE-2024-6387]
+      unknown_condition: whatever
+  - priority: P3
+    when:
+      preauth: false
+      kernel: true
+  - priority: P5                  # no SLA for it: due stays empty
+    when:
+      severity: [LOW]
+sla_days:
+  P1: 1
+  P2: 14.9
+  P3: 365

@@ -1,0 +1,8 @@
+openssl-libs	1	3.0.7	27.el9	x86_64	openssl-3.0.7-27.el9.src.rpm
+gpg-pubkey	(none)	1	2	(none)	(none)
+kernel-core	(none)	5.14.0	626.el9	x86_64	kernel-5.14.0-626.el9.src.rpm
+noarch-pkg	0	1.0	1	noarch	noarch-pkg-1.0-1.src.rpm
+nosrc	(none)	1.0	1	x86_64	(none)
+dash-name-x	2	1.2.3	4.el7_9	x86_64	dash-name-x-src-1.2.3-4.el7_9.src.rpm
+plus+name	(none)	1.0+git	1%2	x86_64	plus+name-1.0+git-1%2.src.rpm
+short	1	2

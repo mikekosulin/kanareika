@@ -1,0 +1,7 @@
+[
+ {
+  "command": "sh -c '\nexport PATH=\"$PATH:/usr/local/sbin:/usr/sbin:/sbin\"  # non-login SSH shells on RHEL 7 lack sbin\nsec(){ printf '\"'\"'\\n@@%s@@\\n'\"'\"' \"$1\"; }\nsec addrs; ip -o addr show 2>/dev/null | awk '\"'\"'{print $2, $3, $4}'\"'\"'\nsec routes; ip route show default 2>/dev/null\nsec listen; sudo -n sh -c '\"'\"'ss -Hltnup 2>/dev/null || ss -ltnup 2>/dev/null | tail -n +2'\"'\"' kanareika  || ss -Hltnu 2>/dev/null\nsudo -n sh -c '\"'\"'printf '\"'\"'\"'\"'\"'\"'\"'\"'\\n@@%s@@\\n'\"'\"'\"'\"'\"'\"'\"'\"' firewalld_state; firewall-cmd --state 2>&1; printf '\"'\"'\"'\"'\"'\"'\"'\"'\\n@@%s@@\\n'\"'\"'\"'\"'\"'\"'\"'\"' firewalld; firewall-cmd --list-all-zones 2>/dev/null | head -n 400; printf '\"'\"'\"'\"'\"'\"'\"'\"'\\n@@%s@@\\n'\"'\"'\"'\"'\"'\"'\"'\"' nft; nft list ruleset 2>&1 | head -n 600; printf '\"'\"'\"'\"'\"'\"'\"'\"'\\n@@%s@@\\n'\"'\"'\"'\"'\"'\"'\"'\"' iptables; iptables -S 2>&1 | head -n 600; printf '\"'\"'\"'\"'\"'\"'\"'\"'\\n@@%s@@\\n'\"'\"'\"'\"'\"'\"'\"'\"' iptables_nat; iptables -t nat -S 2>&1 | head -n 300; printf '\"'\"'\"'\"'\"'\"'\"'\"'\\n@@%s@@\\n'\"'\"'\"'\"'\"'\"'\"'\"' ip6tables; ip6tables -S 2>&1 | head -n 200; printf '\"'\"'\"'\"'\"'\"'\"'\"'\\n@@%s@@\\n'\"'\"'\"'\"'\"'\"'\"'\"' ufw; ufw status verbose 2>&1'\"'\"' kanareika \n'",
+  "timeout": 180,
+  "check": false
+ }
+]

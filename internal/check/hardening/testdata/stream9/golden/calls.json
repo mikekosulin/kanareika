@@ -1,0 +1,7 @@
+[
+ {
+  "command": "sh -c '\nexport PATH=\"$PATH:/usr/local/sbin:/usr/sbin:/sbin\"  # non-login SSH shells on RHEL 7 lack sbin\necho \"kernel=$(uname -r)\"\n[ -f /var/run/reboot-required ] && echo reboot_required=yes\ncommand -v needs-restarting >/dev/null 2>&1 && { needs-restarting -r >/dev/null 2>&1; [ $? -eq 1 ] && echo reboot_required=yes; }\nk=$(rpm -q --last kernel 2>/dev/null | head -1 | awk '\"'\"'{print $1}'\"'\"'); [ -n \"$k\" ] && [ \"${k#kernel-}\" != \"$(uname -r)\" ] && echo reboot_required=yes\necho \"uptime_days=$(awk '\"'\"'{print int($1/86400)}'\"'\"' /proc/uptime)\"\n'",
+  "timeout": 300,
+  "check": false
+ }
+]

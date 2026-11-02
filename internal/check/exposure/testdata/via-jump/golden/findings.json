@@ -1,0 +1,23 @@
+[
+ {
+  "org": "acme",
+  "host": "host-05",
+  "group": "prod_internal",
+  "exposure": 3,
+  "module": "exposure",
+  "kind": "inventory",
+  "id": "exposure-limited",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "INFO",
+  "title": "cannot read: denied.firewall (needs root or sudo)",
+  "url": "",
+  "target": "",
+  "msg": "health.limited",
+  "args": {
+   "what": "denied.firewall"
+  }
+ }
+]

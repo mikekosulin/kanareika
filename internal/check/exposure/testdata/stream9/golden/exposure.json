@@ -1,0 +1,252 @@
+{
+ "addresses": [
+  {
+   "iface": "lo",
+   "ip": "127.0.0.1",
+   "public": false
+  },
+  {
+   "iface": "lo",
+   "ip": "::1",
+   "public": false
+  },
+  {
+   "iface": "eth0",
+   "ip": "10.77.0.16",
+   "public": false
+  },
+  {
+   "iface": "eth0",
+   "ip": "fe80::b6b9:8813:b851:3eff:fea1:a18a",
+   "public": false
+  },
+  {
+   "iface": "docker_gwbridge",
+   "ip": "172.18.0.1",
+   "public": false
+  },
+  {
+   "iface": "docker_gwbridge",
+   "ip": "fe80::80a2:79a6:2b37:bff:fe66:68c3",
+   "public": false
+  },
+  {
+   "iface": "docker0",
+   "ip": "172.17.0.1",
+   "public": false
+  },
+  {
+   "iface": "vethffb9a14",
+   "ip": "fe80::4402:1f20:8bf8:9dff:fe34:712e",
+   "public": false
+  },
+  {
+   "iface": "veth7511122",
+   "ip": "fe80::1b45:cb0f:bb84:5eff:fe3e:434b",
+   "public": false
+  },
+  {
+   "iface": "vethfa0e16f",
+   "ip": "fe80::139a:92db:a54:bbff:fe8f:71df",
+   "public": false
+  },
+  {
+   "iface": "veth02f16f6",
+   "ip": "fe80::f0ee:6dca:5071:88ff:fee4:13b7",
+   "public": false
+  },
+  {
+   "iface": "vethc1cde6f",
+   "ip": "fe80::78b1:e834:a3a0:e1ff:fead:e1c",
+   "public": false
+  }
+ ],
+ "public": [],
+ "unlisted_public": [],
+ "default_route": "default via 10.77.0.17 dev eth0",
+ "listen": [
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 22,
+   "process": "sshd",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 22,
+   "process": "sshd",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 80,
+   "process": "docker-proxy",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 80,
+   "process": "docker-proxy",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 111,
+   "process": "rpcbind",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 111,
+   "process": "rpcbind",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "0.0.0.0",
+   "port": 111,
+   "process": "rpcbind",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "::",
+   "port": 111,
+   "process": "rpcbind",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "127.0.0.1",
+   "port": 323,
+   "process": "chronyd",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "udp",
+   "addr": "::1",
+   "port": 323,
+   "process": "chronyd",
+   "public": false,
+   "local_only": true
+  },
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 443,
+   "process": "docker-proxy",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 443,
+   "process": "docker-proxy",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 1025,
+   "process": "docker-proxy",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "::",
+   "port": 1025,
+   "process": "docker-proxy",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "10.77.0.16",
+   "port": 2377,
+   "process": "dockerd",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "0.0.0.0",
+   "port": 4789,
+   "process": "",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "10.77.0.16",
+   "port": 7946,
+   "process": "dockerd",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "udp",
+   "addr": "10.77.0.16",
+   "port": 7946,
+   "process": "dockerd",
+   "public": false,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "*",
+   "port": 8080,
+   "process": "cadvisor",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 8429,
+   "process": "vmagent",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "*",
+   "port": 9100,
+   "process": "node_exporter",
+   "public": true,
+   "local_only": false
+  }
+ ],
+ "firewall": {
+  "readable": true,
+  "firewalld": null,
+  "ufw_active": false,
+  "iptables_input_policy": "ACCEPT",
+  "docker_rules": true,
+  "has_input_filtering": false
+ },
+ "firewall_raw": {
+  "firewalld": null,
+  "nft": null,
+  "iptables": "-P INPUT ACCEPT\n-P FORWARD DROP\n-P OUTPUT ACCEPT\n-N DOCKER\n-N DOCKER-BRIDGE\n-N DOCKER-CT\n-N DOCKER-FORWARD\n-N DOCKER-INTERNAL\n-N DOCKER-USER\n-A FORWARD -j DOCKER-USER\n-A FORWARD -j DOCKER-FORWARD\n-A DOCKER -d 172.18.0.3/32 -i docker_gwbridge -o docker_gwbridge -p tcp -m tcp --dport 1025 -m conntrack ! --ctorigdst 172.18.0.3 -j ACCEPT\n-A DOCKER -d 172.18.0.3/32 ! -i docker_gwbridge -o docker_gwbridge -p tcp -m tcp --dport 1025 -j ACCEPT\n-A DOCKER -d 172.18.0.3/32 -i docker_gwbridge -o docker_gwbridge -p tcp -m tcp --dport 443 -m conntrack ! --ctorigdst 172.18.0.3 -j ACCEPT\n-A DOCKER -d 172.18.0.3/32 ! -i docker_gwbridge -o docker_gwbridge -p tcp -m tcp --dport 443 -j ACCEPT\n-A DOCKER -d 172.18.0.3/32 -i docker_gwbridge -o docker_gwbridge -p tcp -m tcp --dport 80 -m conntrack ! --ctorigdst 172.18.0.3 -j ACCEPT\n-A DOCKER -d 172.18.0.3/32 ! -i docker_gwbridge -o docker_gwbridge -p tcp -m tcp --dport 80 -j ACCEPT\n-A DOCKER ! -i docker_gwbridge -o docker_gwbridge -j DROP\n-A DOCKER ! -i docker0 -o docker0 -j DROP\n-A DOCKER-BRIDGE -o docker_gwbridge -j DOCKER\n-A DOCKER-BRIDGE -o docker0 -j DOCKER\n-A DOCKER-CT -o docker_gwbridge -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT\n-A DOCKER-CT -o docker0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT\n-A DOCKER-FORWARD -j DOCKER-CT\n-A DOCKER-FORWARD -j DOCKER-INTERNAL\n-A DOCKER-FORWARD -j DOCKER-BRIDGE\n-A DOCKER-FORWARD -i docker_gwbridge -o docker_gwbridge -j DROP\n-A DOCKER-FORWARD -i docker_gwbridge ! -o docker_gwbridge -j ACCEPT\n-A DOCKER-FORWARD -i docker0 -j ACCEPT",
+  "ufw": null
+ },
+ "denied": []
+}

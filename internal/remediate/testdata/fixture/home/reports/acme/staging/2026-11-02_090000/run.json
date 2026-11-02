@@ -1,0 +1,37 @@
+{
+ "org": "acme",
+ "env": "staging",
+ "run_id": "2026-11-02_090000",
+ "kanareika": "1.0.0",
+ "trivy_version": "0.75.0",
+ "started": "2026-11-02T09:00:00+00:00",
+ "finished": "2026-11-02T09:20:00+00:00",
+ "selection": {
+  "groups": [],
+  "hosts": [
+   "ci-01"
+  ],
+  "modules": []
+ },
+ "modules": [
+  "access",
+  "exposure",
+  "health",
+  "os_packages"
+ ],
+ "hosts_scanned": [
+  "ci-01"
+ ],
+ "hosts_ok": 1,
+ "hosts_failed": {},
+ "module_errors": {},
+ "feeds_updated": null,
+ "counts": {
+  "P1": 1,
+  "P2": 5,
+  "P3": 7,
+  "P4": 1,
+  "accepted": 0,
+  "backported": 1
+ }
+}

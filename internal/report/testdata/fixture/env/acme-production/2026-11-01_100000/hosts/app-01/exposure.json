@@ -1,0 +1,1 @@
+{"listen": [{"port": 22, "proto": "tcp"}], "firewall_raw": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "public": ["192.0.2.1"]}

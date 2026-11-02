@@ -1,0 +1,80 @@
+# Parity fixture: the org of internal/report/testdata/fixture (acme/production) plus an empty staging env.
+org:
+  id: acme
+  name: "ACME Corp (fixture) </script>"
+  contacts:
+    - name: Alice Smith
+      email: it@acme.example
+      role: sysadmin
+  owners:
+    - name: Bob Jones
+      email: cto@acme.example
+      role: CTO
+
+consent:
+  document: "fixture"
+  signed: 2026-09-01
+  valid_until: 2027-09-01
+  external_scan: true
+  window:
+    days: [mon, tue, wed, thu, fri, sat, sun]
+    from: "00:00"
+    to: "23:59"
+    tz: UTC
+
+access:
+  user: audit
+  key: acme/id_ed25519
+  jumps:
+    bastion:
+      address: 203.0.113.5
+      port: 2222
+    inner:
+      address: 192.0.2.21
+      jump: bastion
+
+checks:
+  docker:
+    scan_images: save
+
+groups:
+  front:
+    env: production
+    exposure: 1
+    jump: bastion
+    hosts:
+      web-01:
+        address: 100.21.4.170
+  db:
+    env: production
+    role: app
+    exposure: 3
+    jump: inner
+    checks:
+      software_fs: false
+    hosts:
+      db-01:
+        address: 192.0.2.12
+  app:
+    env: production
+    exposure: 2
+    hosts:
+      app-01:
+        address: 192.0.2.21
+      dead-01:
+        address: dead.acme.example
+  stage:
+    env: staging
+    role: app
+    hosts:
+      stg-01:
+        address: 10.77.1.1
+        checks:
+          health: false
+
+external:
+  production:
+    - 198.51.100.0/24
+    - shop.acme.example
+  staging:
+    - 2001:db8::/32

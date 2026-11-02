@@ -1,0 +1,536 @@
+{
+ "swarm": {
+  "NodeID": "onfykqu34yqoo0hvlccoj4jrr",
+  "NodeAddr": "10.77.0.16",
+  "LocalNodeState": "active",
+  "ControlAvailable": true,
+  "Error": "",
+  "RemoteManagers": [
+   {
+    "NodeID": "onfykqu34yqoo0hvlccoj4jrr",
+    "Addr": "10.77.0.16:2377"
+   }
+  ],
+  "Nodes": 4,
+  "Managers": 1,
+  "Cluster": {
+   "ID": "kojdhigzivxaqce3ky90o6usr",
+   "Version": {
+    "Index": 850325
+   },
+   "CreatedAt": "2025-04-04T14:31:06.664492542Z",
+   "UpdatedAt": "2026-11-01T20:14:22.745411254Z",
+   "Spec": {
+    "Name": "default",
+    "Labels": {},
+    "Orchestration": {
+     "TaskHistoryRetentionLimit": 5
+    },
+    "Raft": {
+     "SnapshotInterval": 10000,
+     "KeepOldSnapshots": 0,
+     "LogEntriesForSlowFollowers": 500,
+     "ElectionTick": 10,
+     "HeartbeatTick": 1
+    },
+    "Dispatcher": {
+     "HeartbeatPeriod": 5000000000
+    },
+    "CAConfig": {
+     "NodeCertExpiry": 7776000000000000
+    },
+    "TaskDefaults": {},
+    "EncryptionConfig": {
+     "AutoLockManagers": false
+    }
+   },
+   "TLSInfo": {
+    "TrustRoot": "-----BEGIN CERTIFICATE-----\nMIIBajCCARCgAwIBAgIUSv66IMIinQkL4u1UNypVsiwgc4cwCgYIKoZIzj0EAwIw\nEzERMA8GA1UEAxMIc3dhcm0tY2EwHhcNMjUwNDA0MTQyNjAwWhcNNDUwMzMwMTQy\nNjAwWjATMREwDwYDVQQDEwhzd2FybS1jYTBZMBMGByqGSM49AgEGCCqGSM49AwEH\nA0IABNFn5M+9/7jrRJEAjiq+Pj4laTZvi6W0vWviwT2pqXCvU5WYRzlZQh3L8RYj\nc1locMlNZxsrG0vHb04w69IVf/ejQjBAMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMB\nAf8EBTADAQH/MB0GA1UdDgQWBBSLQ6p5lpmpVVqNz6bVn2R93f6+PTAKBggqhkjO\nPQQDAgNIADBFAiAXnEurq/9EetWEmPPM3Zq3eMZArNFrt4gFxeKJqjPCzgIhAOPI\nL5w8eTcGO4C0gHFikmoK99+ZU6yEp0I0SE4fTrdD\n-----END CERTIFICATE-----\n",
+    "CertIssuerSubject": "MBMxETAPBgNVBAMTCHN3YXJtLWNh",
+    "CertIssuerPublicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE0Wfkz73/uOtEkQCOKr4+PiVpNm+LpbS9a+LBPampcK9TlZhHOVlCHcvxFiNzWWhwyU1nGysbS8dvTjDr0hV/9w=="
+   },
+   "RootRotationInProgress": false,
+   "DefaultAddrPool": [
+    "10.77.0.24/8"
+   ],
+   "SubnetSize": 24,
+   "DataPathPort": 4789
+  }
+ },
+ "nodes": [
+  {
+   "Availability": "Active",
+   "EngineVersion": "28.0.4",
+   "Hostname": "host-16",
+   "ID": "vdkvzbaj219wzgplgujrwlz19",
+   "ManagerStatus": "",
+   "Self": false,
+   "Status": "Ready",
+   "TLSStatus": "Ready"
+  },
+  {
+   "Availability": "Active",
+   "EngineVersion": "28.0.4",
+   "Hostname": "host-17",
+   "ID": "y1g8nel8mwzqwht1kt2evo3s3",
+   "ManagerStatus": "",
+   "Self": false,
+   "Status": "Ready",
+   "TLSStatus": "Ready"
+  },
+  {
+   "Availability": "Active",
+   "EngineVersion": "28.0.4",
+   "Hostname": "host-18",
+   "ID": "x82n84lrlke1fj33i05z4h2rw",
+   "ManagerStatus": "",
+   "Self": false,
+   "Status": "Ready",
+   "TLSStatus": "Ready"
+  },
+  {
+   "Availability": "Active",
+   "EngineVersion": "29.9.2",
+   "Hostname": "host-15",
+   "ID": "onfykqu34yqoo0hvlccoj4jrr",
+   "ManagerStatus": "Leader",
+   "Self": true,
+   "Status": "Ready",
+   "TLSStatus": "Ready"
+  }
+ ],
+ "services": [
+  {
+   "ID": "shbsanlxd7dw",
+   "Image": "crazymax/fail2ban@sha256:a1476ec3587dd7c6756d8cdb448fb0a262c242042d8a71557da6b5aa7aecd911",
+   "Mode": "global",
+   "Name": "fail2ban_fail2ban",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "op7zf8zle8dy",
+   "Image": "registry.gitlab.com/acme-team/docker-images/nginx-geoip:2026-09-07",
+   "Mode": "global",
+   "Name": "nginx-ingress_nginx",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "pkq5856qdfgy",
+   "Image": "portainer/agent:latest",
+   "Mode": "global",
+   "Name": "portainer_agent",
+   "Ports": "",
+   "Replicas": "4/4"
+  },
+  {
+   "ID": "w2pvikpwov9h",
+   "Image": "portainer/portainer-ce:latest",
+   "Mode": "replicated",
+   "Name": "portainer_portainer",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "49l214huck56",
+   "Image": "docker.redpanda.com/redpandadata/console:v2.8.5",
+   "Mode": "replicated",
+   "Name": "redpanda_console",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "ejlpy44mmwba",
+   "Image": "docker.redpanda.com/redpandadata/redpanda:v24.3.8",
+   "Mode": "replicated",
+   "Name": "redpanda_redpanda-1",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "l3hj9lwvatw4",
+   "Image": "docker.redpanda.com/redpandadata/redpanda:v24.3.8",
+   "Mode": "replicated",
+   "Name": "redpanda_redpanda-2",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "6n3ebcf0zcyk",
+   "Image": "docker.redpanda.com/redpandadata/redpanda:v24.3.8",
+   "Mode": "replicated",
+   "Name": "redpanda_redpanda-3",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "jjvno1bs9nex",
+   "Image": "registry.gitlab.com/acme-team/bob/bob-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-bob_app",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "9gk0c5rm5ype",
+   "Image": "registry.gitlab.com/acme-team/bob/bob-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-bob_karafka",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "9g4f5v03pj35",
+   "Image": "registry.gitlab.com/acme-team/bob/bob-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-bob_sidekiq",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "pdlgqjufo7cw",
+   "Image": "registry.gitlab.com/acme-team/bob/bob-web:dev",
+   "Mode": "replicated",
+   "Name": "acme-bob_web",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "jkf20de8ahbw",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-blog-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-blog_app",
+   "Ports": "",
+   "Replicas": "2/2"
+  },
+  {
+   "ID": "jkk4v7sxkeac",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-blog-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-blog_sidekiq",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "ji1qw8ulmmz2",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-office-web:dev",
+   "Mode": "replicated",
+   "Name": "acme-blog_web",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "at43yrjenohp",
+   "Image": "nginx:alpine",
+   "Mode": "replicated",
+   "Name": "acme-cdn_cache",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "l9cbzqyncs4f",
+   "Image": "darthsim/imgproxy:v4.0.4",
+   "Mode": "replicated",
+   "Name": "acme-cdn_imgproxy",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "s81buu84h5hu",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-core_api",
+   "Ports": "",
+   "Replicas": "3/3 (max 1 per node)"
+  },
+  {
+   "ID": "iej7pqde0npx",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-core_karafka",
+   "Ports": "",
+   "Replicas": "2/2"
+  },
+  {
+   "ID": "ivxm32dsadkg",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-core_sidekiq",
+   "Ports": "",
+   "Replicas": "2/2 (max 1 per node)"
+  },
+  {
+   "ID": "eqpeltw50qjk",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-web:dev",
+   "Mode": "replicated",
+   "Name": "acme-core_web",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "j9qp5qxjmg06",
+   "Image": "registry.gitlab.com/acme-team/alice/crm-web:dev",
+   "Mode": "replicated",
+   "Name": "acme-crm_app",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "q0w7xugunpt4",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-docs:latest",
+   "Mode": "replicated",
+   "Name": "acme-docs_web",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "grxojtelha0n",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-email-svc:dev",
+   "Mode": "replicated",
+   "Name": "acme-email_app",
+   "Ports": "",
+   "Replicas": "2/2"
+  },
+  {
+   "ID": "1vl2e6bcoska",
+   "Image": "registry.gitlab.com/acme-team/alice/widgets:dev",
+   "Mode": "replicated",
+   "Name": "acme-embed_widjets",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "5ociu633ik0a",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-finance-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-finance_app",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "hmj4qb36ppxg",
+   "Image": "registry.gitlab.com/acme-team/carol/carol-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-carol_app",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "fssgptrk5nz2",
+   "Image": "registry.gitlab.com/acme-team/carol/carol-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-carol_karafka",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "x7ewnef7bpow",
+   "Image": "registry.gitlab.com/acme-team/carol/carol-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-carol_sidekiq",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "t3drys63x8h2",
+   "Image": "registry.gitlab.com/acme-team/carol/carol-web:dev",
+   "Mode": "replicated",
+   "Name": "acme-carol_web",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "oy243qxy590f",
+   "Image": "registry.gitlab.com/acme-team/alice/ejabberd-im:latest",
+   "Mode": "replicated",
+   "Name": "acme-carol_xmpp",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "c8xm1arzvc1f",
+   "Image": "mirror.gcr.io/axllent/mailpit:v1.30.4",
+   "Mode": "replicated",
+   "Name": "acme-mailcatcher_mailcatcher",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "60p1xegfn7jk",
+   "Image": "registry.gitlab.com/acme-team/alice/heidi:develop_1.5",
+   "Mode": "replicated",
+   "Name": "acme-heidi_heidi",
+   "Ports": "",
+   "Replicas": "0/1"
+  },
+  {
+   "ID": "moqxzdq5p9f3",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-frank-svc:dev",
+   "Mode": "replicated",
+   "Name": "acme-frank_app",
+   "Ports": "",
+   "Replicas": "2/2 (max 1 per node)"
+  },
+  {
+   "ID": "apeos2rbyvg1",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-frank-svc:dev",
+   "Mode": "replicated",
+   "Name": "acme-frank_sidekiq",
+   "Ports": "",
+   "Replicas": "1/1 (max 1 per node)"
+  },
+  {
+   "ID": "qzld9xrbgh4a",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-payment:dev",
+   "Mode": "replicated",
+   "Name": "acme-payment_app",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "ynqvvp7z46bg",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-payment:dev",
+   "Mode": "replicated",
+   "Name": "acme-payment_sidekiq",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "4unahy9tu9vs",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-payment-web:dev",
+   "Mode": "replicated",
+   "Name": "acme-payment_web",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "142cojlq7ofx",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-print-svc:dev",
+   "Mode": "replicated",
+   "Name": "acme-prints_app",
+   "Ports": "",
+   "Replicas": "2/2"
+  },
+  {
+   "ID": "j603dqs7pzxg",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-site-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-site_app",
+   "Ports": "",
+   "Replicas": "2/2"
+  },
+  {
+   "ID": "x4rufj2yg6zr",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-site-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-site_karafka",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "vav9ptvkbskc",
+   "Image": "registry.gitlab.com/acme-team/alice/mcp/landing:dev",
+   "Mode": "replicated",
+   "Name": "acme-site_mcp",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "bgxsjwaykylp",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-site-api:dev",
+   "Mode": "replicated",
+   "Name": "acme-site_sidekiq",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "jaofuve90v55",
+   "Image": "registry.gitlab.com/acme-team/alice/acme-site-v2:dev",
+   "Mode": "replicated",
+   "Name": "acme-site_web",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "khwrru4iyb4j",
+   "Image": "registry.gitlab.com/acme-team/alice/grace:latest",
+   "Mode": "replicated",
+   "Name": "grace_app",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "lfqerb28zikz",
+   "Image": "registry.gitlab.com/acme-team/alice/erin-api:dev",
+   "Mode": "replicated",
+   "Name": "erin_app",
+   "Ports": "",
+   "Replicas": "2/2"
+  },
+  {
+   "ID": "q5b46co2ylpm",
+   "Image": "registry.gitlab.com/acme-team/alice/erin-api:dev",
+   "Mode": "replicated",
+   "Name": "erin_articles-consumer",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "gr6dqg5nz0pb",
+   "Image": "registry.gitlab.com/acme-team/alice/erin-api:dev",
+   "Mode": "replicated",
+   "Name": "erin_hotel_pages-consumer",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "m20swrhij4mj",
+   "Image": "nginx:latest",
+   "Mode": "replicated",
+   "Name": "erin_lb",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "l474qby1gnmh",
+   "Image": "registry.gitlab.com/acme-team/alice/erin-api:dev",
+   "Mode": "replicated",
+   "Name": "erin_sidekiq",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "j0tbrhlpi8to",
+   "Image": "registry.gitlab.com/acme-team/alice/erin-v2:dev",
+   "Mode": "replicated",
+   "Name": "erin_web",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "5gn89a2191z7",
+   "Image": "ghcr.io/steveiliop56/tinyauth:v5",
+   "Mode": "replicated",
+   "Name": "tinyauth_tinyauth",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "y7k9trtz2o6b",
+   "Image": "registry.gitlab.com/acme-team/alice/dave/server:66c6d2e910f324fc1b62cfd9b59574836eaf92a9",
+   "Mode": "replicated",
+   "Name": "dave_server",
+   "Ports": "",
+   "Replicas": "1/1"
+  },
+  {
+   "ID": "tnmebcayod2r",
+   "Image": "typesense/typesense:0.23.1",
+   "Mode": "replicated",
+   "Name": "typesense_ts-01",
+   "Ports": "",
+   "Replicas": "1/1"
+  }
+ ]
+}

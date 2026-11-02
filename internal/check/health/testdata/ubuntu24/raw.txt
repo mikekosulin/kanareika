@@ -1,0 +1,326 @@
+
+@@time@@
+1793577263.915511234
+Timezone=Etc/UTC
+LocalRTC=no
+CanNTP=yes
+NTP=yes
+NTPSynchronized=yes
+TimeUSec=Sun 2026-11-01 23:54:24 UTC
+RTCTimeUSec=Sun 2026-11-01 23:54:24 UTC
+               Local time: Sun 2026-11-01 23:54:24 UTC
+           Universal time: Sun 2026-11-01 23:54:24 UTC
+                 RTC time: Sun 2026-11-01 23:54:24
+                Time zone: Etc/UTC (UTC, +0000)
+System clock synchronized: yes
+              NTP service: active
+          RTC in local TZ: no
+/usr/share/zoneinfo/Etc/UTC
+Etc/UTC
+UTC+0000
+
+@@dmesg@@
+[Wed Oct 21 08:45:41 2026] clocksource: Long readout interval, skipping watchdog check: cs_nsec: 4072149080 wd_nsec: 4072148913
+[Mon Oct 26 00:40:51 2026] clocksource: timekeeping watchdog on CPU0: Marking clocksource 'tsc' as unstable because the skew is too large:
+[Mon Oct 26 00:40:51 2026] clocksource:                       'kvm-clock' wd_nsec: 504033262 wd_now: 2101f255739658 wd_last: 2101f23768a66a mask: ffffffffffffffff
+[Mon Oct 26 00:40:51 2026] clocksource:                       'tsc' cs_nsec: 515862242 cs_now: 50de5a827ba1fc cs_last: 50de5a3726a341 mask: ffffffffffffffff
+[Mon Oct 26 00:40:51 2026] clocksource:                       Clocksource 'tsc' skewed 11828980 ns (11 ms) over watchdog 'kvm-clock' interval of 504033262 ns (504 ms)
+[Mon Oct 26 00:40:51 2026] clocksource:                       'kvm-clock' (not 'tsc') is current clocksource.
+
+@@journal@@
+2026-10-26T03:49:16+00:00 host-11 networkctl[974225]: Interface "veth543bf1b" not found.
+2026-10-26T04:06:55+00:00 host-11 sshd[974301]: error: Protocol major versions differ: 2 vs. 1
+2026-10-26T06:06:13+00:00 host-11 sshd[974542]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-26T09:56:04+00:00 host-11 sshd[975242]: error: maximum authentication attempts exceeded for invalid user ftpuser from 100.21.4.159 port 11562 ssh2 [preauth]
+2026-10-26T09:56:13+00:00 host-11 sshd[975244]: error: maximum authentication attempts exceeded for invalid user ftpuser from 100.21.4.159 port 11628 ssh2 [preauth]
+2026-10-26T09:56:26+00:00 host-11 sshd[975248]: error: maximum authentication attempts exceeded for invalid user usuario from 100.21.4.159 port 11758 ssh2 [preauth]
+2026-10-26T09:56:33+00:00 host-11 sshd[975250]: error: maximum authentication attempts exceeded for invalid user usuario from 100.21.4.159 port 11832 ssh2 [preauth]
+2026-10-26T09:56:46+00:00 host-11 sshd[975254]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.4.159 port 11944 ssh2 [preauth]
+2026-10-26T09:56:54+00:00 host-11 sshd[975256]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.4.159 port 10024 ssh2 [preauth]
+2026-10-26T09:57:10+00:00 host-11 sshd[975263]: error: maximum authentication attempts exceeded for invalid user oracle from 100.21.4.159 port 10156 ssh2 [preauth]
+2026-10-26T09:57:18+00:00 host-11 sshd[975265]: error: maximum authentication attempts exceeded for invalid user oracle from 100.21.4.159 port 10236 ssh2 [preauth]
+2026-10-26T09:57:34+00:00 host-11 sshd[975269]: error: maximum authentication attempts exceeded for invalid user user from 100.21.4.159 port 10389 ssh2 [preauth]
+2026-10-26T09:57:45+00:00 host-11 sshd[975271]: error: maximum authentication attempts exceeded for invalid user user from 100.21.4.159 port 10470 ssh2 [preauth]
+2026-10-26T09:58:00+00:00 host-11 sshd[975275]: error: maximum authentication attempts exceeded for invalid user test from 100.21.4.159 port 10614 ssh2 [preauth]
+2026-10-26T09:58:08+00:00 host-11 sshd[975277]: error: maximum authentication attempts exceeded for invalid user test from 100.21.4.159 port 10683 ssh2 [preauth]
+2026-10-26T09:58:23+00:00 host-11 sshd[975281]: error: maximum authentication attempts exceeded for invalid user ubuntu from 100.21.4.159 port 10822 ssh2 [preauth]
+2026-10-26T09:58:31+00:00 host-11 sshd[975283]: error: maximum authentication attempts exceeded for invalid user ubuntu from 100.21.4.159 port 10887 ssh2 [preauth]
+2026-10-26T09:58:46+00:00 host-11 sshd[975288]: error: maximum authentication attempts exceeded for invalid user test2 from 100.21.4.159 port 11031 ssh2 [preauth]
+2026-10-26T09:58:54+00:00 host-11 sshd[975290]: error: maximum authentication attempts exceeded for invalid user test2 from 100.21.4.159 port 11104 ssh2 [preauth]
+2026-10-26T09:59:16+00:00 host-11 sshd[975296]: error: maximum authentication attempts exceeded for root from 100.21.4.159 port 11322 ssh2 [preauth]
+2026-10-26T09:59:23+00:00 host-11 sshd[975298]: error: maximum authentication attempts exceeded for root from 100.21.4.159 port 11396 ssh2 [preauth]
+2026-10-26T09:59:33+00:00 host-11 sshd[975300]: error: maximum authentication attempts exceeded for root from 100.21.4.159 port 11477 ssh2 [preauth]
+2026-10-26T09:59:48+00:00 host-11 sshd[975304]: error: maximum authentication attempts exceeded for invalid user test1 from 100.21.4.159 port 11624 ssh2 [preauth]
+2026-10-26T09:59:57+00:00 host-11 sshd[975306]: error: maximum authentication attempts exceeded for invalid user test1 from 100.21.4.159 port 11703 ssh2 [preauth]
+2026-10-26T10:17:23+00:00 host-11 sshd[975329]: fatal: userauth_pubkey: parse publickey packet: incomplete message [preauth]
+2026-10-26T15:36:50+00:00 host-11 networkctl[976464]: Interface "veth7d7d29d" not found.
+2026-10-26T15:37:23+00:00 host-11 sshd[976517]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-26T16:07:31+00:00 host-11 sshd[976646]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-26T23:11:14+00:00 host-11 sshd[978692]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-27T01:54:10+00:00 host-11 sshd[979832]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-27T03:01:11+00:00 host-11 networkctl[980088]: Interface "veth2fdfaf6" not found.
+2026-10-27T03:01:11+00:00 host-11 networkctl[980097]: Interface "veth6badaa9" not found.
+2026-10-27T04:47:50+00:00 host-11 sshd[980522]: error: Protocol major versions differ: 2 vs. 1
+2026-10-27T09:16:58+00:00 host-11 sshd[981956]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-27T15:23:02+00:00 host-11 networkctl[983581]: Interface "veth2c559fc" not found.
+2026-10-27T23:07:32+00:00 host-11 sshd[985529]: error: maximum authentication attempts exceeded for root from 100.21.4.160 port 38426 ssh2 [preauth]
+2026-10-27T23:07:40+00:00 host-11 sshd[985533]: error: maximum authentication attempts exceeded for root from 100.21.4.160 port 38822 ssh2 [preauth]
+2026-10-27T23:07:48+00:00 host-11 sshd[985535]: error: maximum authentication attempts exceeded for root from 100.21.4.160 port 39156 ssh2 [preauth]
+2026-10-27T23:08:06+00:00 host-11 sshd[985539]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.4.160 port 39838 ssh2 [preauth]
+2026-10-27T23:08:14+00:00 host-11 sshd[985541]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.4.160 port 40242 ssh2 [preauth]
+2026-10-27T23:08:31+00:00 host-11 sshd[985545]: error: maximum authentication attempts exceeded for invalid user oracle from 100.21.4.160 port 40934 ssh2 [preauth]
+2026-10-27T23:08:40+00:00 host-11 sshd[985549]: error: maximum authentication attempts exceeded for invalid user oracle from 100.21.4.160 port 41322 ssh2 [preauth]
+2026-10-27T23:08:54+00:00 host-11 sshd[985553]: error: maximum authentication attempts exceeded for invalid user usuario from 100.21.4.160 port 41970 ssh2 [preauth]
+2026-10-27T23:09:03+00:00 host-11 sshd[985555]: error: maximum authentication attempts exceeded for invalid user usuario from 100.21.4.160 port 42312 ssh2 [preauth]
+2026-10-27T23:09:19+00:00 host-11 sshd[985561]: error: maximum authentication attempts exceeded for invalid user test from 100.21.4.160 port 42988 ssh2 [preauth]
+2026-10-27T23:09:29+00:00 host-11 sshd[985563]: error: maximum authentication attempts exceeded for invalid user test from 100.21.4.160 port 43366 ssh2 [preauth]
+2026-10-27T23:09:45+00:00 host-11 sshd[985569]: error: maximum authentication attempts exceeded for invalid user user from 100.21.4.160 port 44024 ssh2 [preauth]
+2026-10-27T23:09:54+00:00 host-11 sshd[985571]: error: maximum authentication attempts exceeded for invalid user user from 100.21.4.160 port 44438 ssh2 [preauth]
+2026-10-27T23:10:13+00:00 host-11 sshd[985575]: error: maximum authentication attempts exceeded for invalid user ftpuser from 100.21.4.160 port 45236 ssh2 [preauth]
+2026-10-27T23:10:22+00:00 host-11 sshd[985577]: error: maximum authentication attempts exceeded for invalid user ftpuser from 100.21.4.160 port 45608 ssh2 [preauth]
+2026-10-27T23:10:39+00:00 host-11 sshd[985585]: error: maximum authentication attempts exceeded for invalid user test1 from 100.21.4.160 port 46378 ssh2 [preauth]
+2026-10-27T23:10:48+00:00 host-11 sshd[985587]: error: maximum authentication attempts exceeded for invalid user test1 from 100.21.4.160 port 46734 ssh2 [preauth]
+2026-10-27T23:11:07+00:00 host-11 sshd[985593]: error: maximum authentication attempts exceeded for invalid user test2 from 100.21.4.160 port 47504 ssh2 [preauth]
+2026-10-27T23:11:15+00:00 host-11 sshd[985595]: error: maximum authentication attempts exceeded for invalid user test2 from 100.21.4.160 port 47906 ssh2 [preauth]
+2026-10-27T23:11:32+00:00 host-11 sshd[985599]: error: maximum authentication attempts exceeded for invalid user ubuntu from 100.21.4.160 port 48638 ssh2 [preauth]
+2026-10-27T23:11:40+00:00 host-11 sshd[985603]: error: maximum authentication attempts exceeded for invalid user ubuntu from 100.21.4.160 port 48992 ssh2 [preauth]
+2026-10-28T01:12:20+00:00 host-11 sshd[986278]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-28T02:04:14+00:00 host-11 sshd[986664]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-28T02:26:58+00:00 host-11 sshd[986727]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-28T03:33:47+00:00 host-11 sshd[987121]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-28T03:58:00+00:00 host-11 networkctl[987304]: Interface "veth256e424" not found.
+2026-10-28T03:58:00+00:00 host-11 networkctl[987311]: Interface "veth590b7c8" not found.
+2026-10-28T07:44:19+00:00 host-11 sshd[988674]: error: Protocol major versions differ: 2 vs. 1
+2026-10-28T15:51:06+00:00 host-11 networkctl[990135]: Interface "veth6b0088c" not found.
+2026-10-28T18:24:54+00:00 host-11 sshd[991747]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-28T20:37:30+00:00 host-11 sshd[992882]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-29T00:47:11+00:00 host-11 sshd[994529]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-29T00:47:57+00:00 host-11 sshd[994534]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-29T00:49:00+00:00 host-11 sshd[994544]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-29T03:54:44+00:00 host-11 networkctl[995961]: Interface "veth03fc3be" not found.
+2026-10-29T06:24:56+00:00 host-11 sshd[996922]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-29T06:25:01+00:00 host-11 sshd[996923]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-29T06:54:51+00:00 host-11 sshd[997031]: error: Protocol major versions differ: 2 vs. 1
+2026-10-29T15:07:51+00:00 host-11 networkctl[999084]: Interface "vethc41a706" not found.
+2026-10-29T19:04:02+00:00 host-11 sshd[1000065]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-30T03:36:42+00:00 host-11 networkctl[1001631]: Interface "veth26daac2" not found.
+2026-10-30T04:43:55+00:00 host-11 sshd[1001896]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-30T04:50:55+00:00 host-11 sshd[1001935]: error: Protocol major versions differ: 2 vs. 1
+2026-10-30T04:51:13+00:00 host-11 sshd[1001942]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-30T05:38:00+00:00 host-11 sshd[1002503]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-30T08:40:48+00:00 host-11 sshd[1004073]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-30T09:36:19+00:00 host-11 sshd[1004246]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-30T13:53:43+00:00 host-11 sshd[1005068]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-30T15:13:41+00:00 host-11 sshd[1005355]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-30T15:33:01+00:00 host-11 networkctl[1005514]: Interface "vethaf63eb0" not found.
+2026-10-31T03:05:46+00:00 host-11 networkctl[1010210]: Interface "veth600e58e" not found.
+2026-10-31T03:41:08+00:00 host-11 sshd[1010392]: error: Protocol major versions differ: 2 vs. 1
+2026-10-31T03:54:20+00:00 host-11 sshd[1010953]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-31T05:39:38+00:00 host-11 sshd[1011199]: fatal: userauth_pubkey: parse publickey packet: incomplete message [preauth]
+2026-10-31T06:10:50+00:00 host-11 sshd[1011264]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-31T08:53:51+00:00 host-11 sshd[1011887]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-31T12:45:31+00:00 host-11 sshd[1012547]: error: maximum authentication attempts exceeded for invalid user oracle from 100.21.0.12 port 6941 ssh2 [preauth]
+2026-10-31T12:45:32+00:00 host-11 sshd[1012549]: error: maximum authentication attempts exceeded for invalid user oracle from 100.21.0.12 port 7256 ssh2 [preauth]
+2026-10-31T12:45:33+00:00 host-11 sshd[1012551]: error: maximum authentication attempts exceeded for invalid user oracle from 100.21.0.12 port 7530 ssh2 [preauth]
+2026-10-31T12:45:35+00:00 host-11 sshd[1012553]: error: maximum authentication attempts exceeded for invalid user oracle from 100.21.0.12 port 8041 ssh2 [preauth]
+2026-10-31T12:45:40+00:00 host-11 sshd[1012559]: error: maximum authentication attempts exceeded for invalid user pi from 100.21.0.12 port 10356 ssh2 [preauth]
+2026-10-31T12:46:37+00:00 host-11 sshd[1012627]: error: maximum authentication attempts exceeded for invalid user administrator from 100.21.0.12 port 26395 ssh2 [preauth]
+2026-10-31T12:51:58+00:00 host-11 sshd[1012694]: error: maximum authentication attempts exceeded for invalid user user1 from 100.21.0.12 port 6303 ssh2 [preauth]
+2026-10-31T12:51:59+00:00 host-11 sshd[1012696]: error: maximum authentication attempts exceeded for invalid user user1 from 100.21.0.12 port 6498 ssh2 [preauth]
+2026-10-31T12:52:00+00:00 host-11 sshd[1012698]: error: maximum authentication attempts exceeded for invalid user user1 from 100.21.0.12 port 6731 ssh2 [preauth]
+2026-10-31T12:53:02+00:00 host-11 sshd[1012740]: error: maximum authentication attempts exceeded for invalid user admin1 from 100.21.0.12 port 22113 ssh2 [preauth]
+2026-10-31T12:53:37+00:00 host-11 sshd[1012776]: error: maximum authentication attempts exceeded for invalid user test from 100.21.0.12 port 35928 ssh2 [preauth]
+2026-10-31T12:53:38+00:00 host-11 sshd[1012778]: error: maximum authentication attempts exceeded for invalid user test from 100.21.0.12 port 36305 ssh2 [preauth]
+2026-10-31T12:53:40+00:00 host-11 sshd[1012780]: error: maximum authentication attempts exceeded for invalid user test from 100.21.0.12 port 36933 ssh2 [preauth]
+2026-10-31T12:53:41+00:00 host-11 sshd[1012782]: error: maximum authentication attempts exceeded for invalid user test from 100.21.0.12 port 37344 ssh2 [preauth]
+2026-10-31T12:53:43+00:00 host-11 sshd[1012784]: error: maximum authentication attempts exceeded for invalid user test from 100.21.0.12 port 37548 ssh2 [preauth]
+2026-10-31T12:57:08+00:00 host-11 sshd[1012903]: error: maximum authentication attempts exceeded for invalid user Admin from 100.21.0.12 port 30770 ssh2 [preauth]
+2026-10-31T12:57:12+00:00 host-11 sshd[1012907]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 31507 ssh2 [preauth]
+2026-10-31T12:57:13+00:00 host-11 sshd[1012909]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 32656 ssh2 [preauth]
+2026-10-31T12:57:14+00:00 host-11 sshd[1012911]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 33036 ssh2 [preauth]
+2026-10-31T12:57:15+00:00 host-11 sshd[1012913]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 33456 ssh2 [preauth]
+2026-10-31T12:57:16+00:00 host-11 sshd[1012915]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 33985 ssh2 [preauth]
+2026-10-31T12:57:17+00:00 host-11 sshd[1012917]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 34241 ssh2 [preauth]
+2026-10-31T12:57:19+00:00 host-11 sshd[1012919]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 34594 ssh2 [preauth]
+2026-10-31T12:57:20+00:00 host-11 sshd[1012921]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 35038 ssh2 [preauth]
+2026-10-31T12:57:21+00:00 host-11 sshd[1012923]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 35350 ssh2 [preauth]
+2026-10-31T12:57:22+00:00 host-11 sshd[1012925]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 35601 ssh2 [preauth]
+2026-10-31T12:57:24+00:00 host-11 sshd[1012927]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 36116 ssh2 [preauth]
+2026-10-31T12:57:30+00:00 host-11 sshd[1012929]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 38062 ssh2 [preauth]
+2026-10-31T12:57:31+00:00 host-11 sshd[1012931]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 38611 ssh2 [preauth]
+2026-10-31T12:57:32+00:00 host-11 sshd[1012933]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 38921 ssh2 [preauth]
+2026-10-31T12:57:34+00:00 host-11 sshd[1012935]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 39488 ssh2 [preauth]
+2026-10-31T12:57:35+00:00 host-11 sshd[1012937]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 39803 ssh2 [preauth]
+2026-10-31T12:57:37+00:00 host-11 sshd[1012939]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 40135 ssh2 [preauth]
+2026-10-31T12:57:38+00:00 host-11 sshd[1012941]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 40519 ssh2 [preauth]
+2026-10-31T12:57:39+00:00 host-11 sshd[1012943]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 40986 ssh2 [preauth]
+2026-10-31T13:00:11+00:00 host-11 sshd[1012954]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 20618 ssh2 [preauth]
+2026-10-31T13:00:12+00:00 host-11 sshd[1012957]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 28631 ssh2 [preauth]
+2026-10-31T13:00:14+00:00 host-11 sshd[1012959]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 29926 ssh2 [preauth]
+2026-10-31T13:00:15+00:00 host-11 sshd[1012961]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 30374 ssh2 [preauth]
+2026-10-31T13:00:19+00:00 host-11 sshd[1012963]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 30925 ssh2 [preauth]
+2026-10-31T13:00:21+00:00 host-11 sshd[1012965]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 32519 ssh2 [preauth]
+2026-10-31T13:02:32+00:00 host-11 sshd[1012972]: error: maximum authentication attempts exceeded for invalid user admin from 100.21.0.12 port 14502 ssh2 [preauth]
+2026-10-31T13:16:40+00:00 host-11 sshd[1013111]: error: maximum authentication attempts exceeded for invalid user testuser from 100.21.0.12 port 46135 ssh2 [preauth]
+2026-10-31T13:27:41+00:00 host-11 sshd[1013267]: error: maximum authentication attempts exceeded for invalid user postgres from 100.21.0.12 port 21846 ssh2 [preauth]
+2026-10-31T13:28:42+00:00 host-11 sshd[1013291]: error: maximum authentication attempts exceeded for invalid user anonymous from 100.21.0.12 port 44364 ssh2 [preauth]
+2026-10-31T13:28:46+00:00 host-11 sshd[1013299]: error: maximum authentication attempts exceeded for invalid user system from 100.21.0.12 port 45723 ssh2 [preauth]
+2026-10-31T13:34:03+00:00 host-11 sshd[1013434]: error: maximum authentication attempts exceeded for invalid user ubuntu from 100.21.0.12 port 29269 ssh2 [preauth]
+2026-10-31T13:35:21+00:00 host-11 sshd[1013458]: error: maximum authentication attempts exceeded for invalid user default from 100.21.0.12 port 47476 ssh2 [preauth]
+2026-10-31T13:35:24+00:00 host-11 sshd[1013464]: error: maximum authentication attempts exceeded for invalid user user from 100.21.0.12 port 58441 ssh2 [preauth]
+2026-10-31T13:35:25+00:00 host-11 sshd[1013466]: error: maximum authentication attempts exceeded for invalid user user from 100.21.0.12 port 59259 ssh2 [preauth]
+2026-10-31T13:36:09+00:00 host-11 sshd[1013468]: error: maximum authentication attempts exceeded for invalid user user from 100.21.0.12 port 59601 ssh2 [preauth]
+2026-10-31T13:36:10+00:00 host-11 sshd[1013472]: error: maximum authentication attempts exceeded for invalid user user from 100.21.0.12 port 12665 ssh2 [preauth]
+2026-10-31T13:36:11+00:00 host-11 sshd[1013474]: error: maximum authentication attempts exceeded for invalid user user from 100.21.0.12 port 13103 ssh2 [preauth]
+2026-10-31T13:36:12+00:00 host-11 sshd[1013476]: error: maximum authentication attempts exceeded for invalid user user from 100.21.0.12 port 13462 ssh2 [preauth]
+2026-10-31T13:36:14+00:00 host-11 sshd[1013478]: error: maximum authentication attempts exceeded for invalid user user from 100.21.0.12 port 13676 ssh2 [preauth]
+2026-10-31T13:36:33+00:00 host-11 sshd[1013502]: error: maximum authentication attempts exceeded for invalid user ftpuser from 100.21.0.12 port 20983 ssh2 [preauth]
+2026-10-31T13:36:34+00:00 host-11 sshd[1013504]: error: maximum authentication attempts exceeded for invalid user ftpuser from 100.21.0.12 port 21468 ssh2 [preauth]
+2026-10-31T13:40:23+00:00 host-11 sshd[1013594]: error: maximum authentication attempts exceeded for invalid user support from 100.21.0.12 port 53657 ssh2 [preauth]
+2026-10-31T13:40:36+00:00 host-11 sshd[1013618]: error: maximum authentication attempts exceeded for invalid user tomcat from 100.21.0.12 port 57596 ssh2 [preauth]
+2026-10-31T13:40:54+00:00 host-11 sshd[1013638]: error: maximum authentication attempts exceeded for invalid user ftp from 100.21.0.12 port 64454 ssh2 [preauth]
+2026-10-31T13:41:17+00:00 host-11 sshd[1013652]: error: maximum authentication attempts exceeded for invalid user ubnt from 100.21.0.12 port 9593 ssh2 [preauth]
+2026-10-31T13:42:57+00:00 host-11 sshd[1013718]: error: maximum authentication attempts exceeded for backup from 100.21.0.12 port 44420 ssh2 [preauth]
+2026-10-31T13:49:22+00:00 host-11 sshd[1013805]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 56305 ssh2 [preauth]
+2026-10-31T13:49:23+00:00 host-11 sshd[1013808]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 57405 ssh2 [preauth]
+2026-10-31T13:49:24+00:00 host-11 sshd[1013812]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 57647 ssh2 [preauth]
+2026-10-31T13:49:32+00:00 host-11 sshd[1013814]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 58167 ssh2 [preauth]
+2026-10-31T13:49:34+00:00 host-11 sshd[1013816]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 60302 ssh2 [preauth]
+2026-10-31T13:49:35+00:00 host-11 sshd[1013818]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 60613 ssh2 [preauth]
+2026-10-31T13:49:36+00:00 host-11 sshd[1013820]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 60902 ssh2 [preauth]
+2026-10-31T13:49:37+00:00 host-11 sshd[1013822]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 61353 ssh2 [preauth]
+2026-10-31T13:49:39+00:00 host-11 sshd[1013824]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 61597 ssh2 [preauth]
+2026-10-31T13:49:40+00:00 host-11 sshd[1013826]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 61770 ssh2 [preauth]
+2026-10-31T13:49:44+00:00 host-11 sshd[1013828]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 62409 ssh2 [preauth]
+2026-10-31T13:49:46+00:00 host-11 sshd[1013831]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 63877 ssh2 [preauth]
+2026-10-31T13:49:49+00:00 host-11 sshd[1013833]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 64968 ssh2 [preauth]
+2026-10-31T13:49:54+00:00 host-11 sshd[1013835]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 2502 ssh2 [preauth]
+2026-10-31T13:51:10+00:00 host-11 sshd[1013837]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 3341 ssh2 [preauth]
+2026-10-31T13:51:11+00:00 host-11 sshd[1013839]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 28684 ssh2 [preauth]
+2026-10-31T13:51:14+00:00 host-11 sshd[1013841]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 29157 ssh2 [preauth]
+2026-10-31T13:51:16+00:00 host-11 sshd[1013843]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 29640 ssh2 [preauth]
+2026-10-31T13:51:17+00:00 host-11 sshd[1013845]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 30382 ssh2 [preauth]
+2026-10-31T13:51:19+00:00 host-11 sshd[1013847]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 30791 ssh2 [preauth]
+2026-10-31T13:51:20+00:00 host-11 sshd[1013849]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 30935 ssh2 [preauth]
+2026-10-31T13:51:23+00:00 host-11 sshd[1013851]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 31424 ssh2 [preauth]
+2026-10-31T13:51:24+00:00 host-11 sshd[1013853]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 32104 ssh2 [preauth]
+2026-10-31T13:51:25+00:00 host-11 sshd[1013855]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 32501 ssh2 [preauth]
+2026-10-31T13:51:27+00:00 host-11 sshd[1013857]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 32799 ssh2 [preauth]
+2026-10-31T13:51:28+00:00 host-11 sshd[1013859]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 33164 ssh2 [preauth]
+2026-10-31T13:51:29+00:00 host-11 sshd[1013861]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 33454 ssh2 [preauth]
+2026-10-31T13:51:30+00:00 host-11 sshd[1013863]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 33653 ssh2 [preauth]
+2026-10-31T13:51:31+00:00 host-11 sshd[1013865]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 34107 ssh2 [preauth]
+2026-10-31T13:51:33+00:00 host-11 sshd[1013867]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 34380 ssh2 [preauth]
+2026-10-31T13:51:34+00:00 host-11 sshd[1013869]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 35060 ssh2 [preauth]
+2026-10-31T13:51:35+00:00 host-11 sshd[1013871]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 35356 ssh2 [preauth]
+2026-10-31T13:51:36+00:00 host-11 sshd[1013873]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 35662 ssh2 [preauth]
+2026-10-31T13:51:40+00:00 host-11 sshd[1013875]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 36059 ssh2 [preauth]
+2026-10-31T13:51:42+00:00 host-11 sshd[1013878]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 37887 ssh2 [preauth]
+2026-10-31T13:51:43+00:00 host-11 sshd[1013881]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 38495 ssh2 [preauth]
+2026-10-31T13:51:44+00:00 host-11 sshd[1013883]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 38778 ssh2 [preauth]
+2026-10-31T13:51:45+00:00 host-11 sshd[1013885]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 38963 ssh2 [preauth]
+2026-10-31T13:51:47+00:00 host-11 sshd[1013887]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 39809 ssh2 [preauth]
+2026-10-31T13:51:48+00:00 host-11 sshd[1013889]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 40159 ssh2 [preauth]
+2026-10-31T13:51:49+00:00 host-11 sshd[1013891]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 40707 ssh2 [preauth]
+2026-10-31T13:51:50+00:00 host-11 sshd[1013893]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 40898 ssh2 [preauth]
+2026-10-31T13:59:39+00:00 host-11 sshd[1013914]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 57876 ssh2 [preauth]
+2026-10-31T13:59:40+00:00 host-11 sshd[1013918]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 10860 ssh2 [preauth]
+2026-10-31T13:59:41+00:00 host-11 sshd[1013920]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 11750 ssh2 [preauth]
+2026-10-31T13:59:43+00:00 host-11 sshd[1013923]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 12084 ssh2 [preauth]
+2026-10-31T13:59:44+00:00 host-11 sshd[1013925]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 12556 ssh2 [preauth]
+2026-10-31T13:59:47+00:00 host-11 sshd[1013927]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 13745 ssh2 [preauth]
+2026-10-31T13:59:49+00:00 host-11 sshd[1013929]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 14221 ssh2 [preauth]
+2026-10-31T13:59:50+00:00 host-11 sshd[1013931]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 14609 ssh2 [preauth]
+2026-10-31T14:00:00+00:00 host-11 sshd[1013933]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 14915 ssh2 [preauth]
+2026-10-31T14:00:02+00:00 host-11 sshd[1013935]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 19124 ssh2 [preauth]
+2026-10-31T14:00:04+00:00 host-11 sshd[1013937]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 20039 ssh2 [preauth]
+2026-10-31T14:00:47+00:00 host-11 sshd[1013939]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 20467 ssh2 [preauth]
+2026-10-31T14:00:48+00:00 host-11 sshd[1013941]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 34265 ssh2 [preauth]
+2026-10-31T14:00:50+00:00 host-11 sshd[1013943]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 34862 ssh2 [preauth]
+2026-10-31T14:00:51+00:00 host-11 sshd[1013945]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 35269 ssh2 [preauth]
+2026-10-31T14:00:53+00:00 host-11 sshd[1013947]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 35800 ssh2 [preauth]
+2026-10-31T14:00:54+00:00 host-11 sshd[1013949]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 36358 ssh2 [preauth]
+2026-10-31T14:00:56+00:00 host-11 sshd[1013951]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 36823 ssh2 [preauth]
+2026-10-31T14:00:58+00:00 host-11 sshd[1013953]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 37312 ssh2 [preauth]
+2026-10-31T14:01:04+00:00 host-11 sshd[1013955]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 38306 ssh2 [preauth]
+2026-10-31T14:01:05+00:00 host-11 sshd[1013958]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 40175 ssh2 [preauth]
+2026-10-31T14:01:07+00:00 host-11 sshd[1013960]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 40812 ssh2 [preauth]
+2026-10-31T14:01:08+00:00 host-11 sshd[1013962]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 41265 ssh2 [preauth]
+2026-10-31T14:01:09+00:00 host-11 sshd[1013964]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 41589 ssh2 [preauth]
+2026-10-31T14:01:11+00:00 host-11 sshd[1013966]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 42010 ssh2 [preauth]
+2026-10-31T14:01:12+00:00 host-11 sshd[1013968]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 42396 ssh2 [preauth]
+2026-10-31T14:01:13+00:00 host-11 sshd[1013970]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 42715 ssh2 [preauth]
+2026-10-31T14:01:14+00:00 host-11 sshd[1013972]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 42930 ssh2 [preauth]
+2026-10-31T14:01:28+00:00 host-11 sshd[1013974]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 43189 ssh2 [preauth]
+2026-10-31T14:01:44+00:00 host-11 sshd[1013976]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 50744 ssh2 [preauth]
+2026-10-31T14:02:10+00:00 host-11 sshd[1013978]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 57093 ssh2 [preauth]
+2026-10-31T14:02:11+00:00 host-11 sshd[1013980]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 5126 ssh2 [preauth]
+2026-10-31T14:02:13+00:00 host-11 sshd[1013982]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 5466 ssh2 [preauth]
+2026-10-31T14:02:15+00:00 host-11 sshd[1013984]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 6139 ssh2 [preauth]
+2026-10-31T14:02:17+00:00 host-11 sshd[1013986]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 6635 ssh2 [preauth]
+2026-10-31T14:02:19+00:00 host-11 sshd[1013988]: error: maximum authentication attempts exceeded for root from 100.21.0.12 port 7031 ssh2 [preauth]
+2026-10-31T14:02:58+00:00 host-11 sshd[1014021]: error: maximum authentication attempts exceeded for invalid user guest from 100.21.0.12 port 20634 ssh2 [preauth]
+2026-10-31T15:09:40+00:00 host-11 networkctl[1014281]: Interface "vethf20d94d" not found.
+2026-10-31T15:14:58+00:00 host-11 sshd[1014337]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-31T16:49:35+00:00 host-11 sshd[1014664]: error: kex_exchange_identification: read: Connection reset by peer
+2026-10-31T22:01:28+00:00 host-11 sshd[1015332]: error: kex_exchange_identification: read: Connection reset by peer
+2026-11-01T00:47:41+00:00 host-11 sshd[1015816]: error: kex_exchange_identification: read: Connection reset by peer
+2026-11-01T01:41:30+00:00 host-11 sshd[1015943]: error: kex_exchange_identification: read: Connection reset by peer
+2026-11-01T02:41:47+00:00 host-11 sshd[1016077]: error: Protocol major versions differ: 2 vs. 1
+2026-11-01T03:35:40+00:00 host-11 networkctl[1016331]: Interface "veth05bfebe" not found.
+2026-11-01T06:41:01+00:00 host-11 sshd[1017989]: error: kex_exchange_identification: read: Connection reset by peer
+2026-11-01T13:09:51+00:00 host-11 sshd[1019961]: error: kex_exchange_identification: read: Connection reset by peer
+2026-11-01T13:19:42+00:00 host-11 sshd[1019991]: error: kex_exchange_identification: read: Connection reset by peer
+2026-11-01T15:21:09+00:00 host-11 networkctl[1020621]: Interface "vethb1cf763" not found.
+2026-11-01T17:00:48+00:00 host-11 sshd[1021051]: error: send_error: write: Connection reset by peer
+2026-11-01T17:15:06+00:00 host-11 sshd[1021162]: error: kex_exchange_identification: read: Connection reset by peer
+2026-11-01T18:36:38+00:00 host-11 sshd[1021531]: error: kex_exchange_identification: read: Connection reset by peer
+2026-11-01T22:06:52+00:00 host-11 sshd[1022117]: error: Protocol major versions differ: 2 vs. 1
+
+@@failed_units@@
+
+@@df@@
+Filesystem     Type 1024-blocks    Used Available Capacity Mounted on
+/dev/sda1      ext4    16433456 3777828  11960492      25% /
+
+@@dfi@@
+Filesystem      Inodes IUsed  IFree IUse% Mounted on
+/dev/sda1      1030144 46796 983348    5% /
+
+@@mem@@
+               total        used        free      shared  buff/cache   available
+Mem:             458         135           7           1         331         323
+Swap:           1023          99         924
+
+@@load@@
+0.08 0.02 0.01 1/187 1023087
+1
+
+@@ro@@
+
+@@ntp@@
+yes
+
+@@timesvc@@
+chronyd active
+chrony active
+
+@@chrony@@
+Reference ID    : D59400DF (213.148.0.223)
+Stratum         : 3
+Ref time (UTC)  : Sun Nov 01 23:39:12 2026
+System time     : 0.000182047 seconds fast of NTP time
+Last offset     : +0.000061345 seconds
+RMS offset      : 0.000073232 seconds
+Frequency       : 15.419 ppm slow
+Residual freq   : +0.001 ppm
+Skew            : 0.028 ppm
+Root delay      : 0.059534661 seconds
+Root dispersion : 0.002348339 seconds
+Update interval : 1032.2 seconds
+Leap status     : Normal
+^* 213.148.0.223                 2  10   377   915   -870us[ -808us] +/-   33ms
+
+@@ntpq@@
+
+@@timesyncd@@

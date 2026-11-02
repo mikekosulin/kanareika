@@ -1,0 +1,12 @@
+[
+ {
+  "command": "mongod --version 2>/dev/null | head -1 || true",
+  "timeout": 300,
+  "check": false
+ },
+ {
+  "command": "ss -Hltn 2>/dev/null | awk '{print $4}'",
+  "timeout": 300,
+  "check": false
+ }
+]

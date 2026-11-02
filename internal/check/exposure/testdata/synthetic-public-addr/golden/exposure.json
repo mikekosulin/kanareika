@@ -1,0 +1,39 @@
+{
+ "addresses": [
+  {
+   "iface": "eth0",
+   "ip": "10.77.0.22",
+   "public": false
+  }
+ ],
+ "public": [],
+ "unlisted_public": [],
+ "default_route": "default via 10.77.0.23 dev eth0",
+ "listen": [
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 22,
+   "process": "",
+   "public": true,
+   "local_only": false
+  }
+ ],
+ "firewall": {
+  "readable": true,
+  "firewalld": null,
+  "ufw_active": false,
+  "iptables_input_policy": null,
+  "docker_rules": false,
+  "has_input_filtering": true
+ },
+ "firewall_raw": {
+  "firewalld": null,
+  "nft": "table inet filter {\n chain input { type filter hook input priority 0; policy drop; }\n}",
+  "iptables": null,
+  "ufw": "ERROR: You need to be root to run this script"
+ },
+ "denied": [
+  "denied.procs"
+ ]
+}

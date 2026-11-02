@@ -1,0 +1,49 @@
+{
+ "addresses": [
+  {
+   "iface": "eth0",
+   "ip": "100.21.4.154",
+   "public": true
+  }
+ ],
+ "public": [
+  "100.21.4.154"
+ ],
+ "unlisted_public": [],
+ "default_route": "",
+ "listen": [
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 22,
+   "process": "",
+   "public": true,
+   "local_only": false
+  },
+  {
+   "proto": "tcp",
+   "addr": "0.0.0.0",
+   "port": 3306,
+   "process": "",
+   "public": true,
+   "local_only": false
+  }
+ ],
+ "firewall": {
+  "readable": true,
+  "firewalld": "running",
+  "ufw_active": false,
+  "iptables_input_policy": "ACCEPT",
+  "docker_rules": false,
+  "has_input_filtering": false
+ },
+ "firewall_raw": {
+  "firewalld": "",
+  "nft": null,
+  "iptables": "-P INPUT ACCEPT\n-P FORWARD ACCEPT\n-P OUTPUT ACCEPT",
+  "ufw": "Status: inactive"
+ },
+ "denied": [
+  "denied.procs"
+ ]
+}

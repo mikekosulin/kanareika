@@ -1,0 +1,67 @@
+[
+ {
+  "org": "acme",
+  "host": "host-15",
+  "group": "stg_swarm_manager",
+  "exposure": 1,
+  "module": "access",
+  "kind": "inventory",
+  "id": "ssh-bruteforce",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "INFO",
+  "title": "SSH password guessing: 3383 attempts from 304 IPs",
+  "url": "",
+  "target": "100.21.3.122 (1189), 100.21.3.123 (372), 100.21.3.124 (250)",
+  "msg": "ssh.bruteforce",
+  "args": {
+   "n": 3383,
+   "ips": 304
+  }
+ },
+ {
+  "org": "acme",
+  "host": "host-15",
+  "group": "stg_swarm_manager",
+  "exposure": 1,
+  "module": "access",
+  "kind": "inventory",
+  "id": "ssh-keys",
+  "pkg": "authorized_keys",
+  "installed": "8",
+  "fixed": "",
+  "status": "",
+  "severity": "INFO",
+  "title": "authorized_keys: 8 keys, root: 2",
+  "url": "",
+  "target": "",
+  "msg": "ssh.keys",
+  "args": {
+   "n": 8,
+   "root": 2
+  }
+ },
+ {
+  "org": "acme",
+  "host": "host-15",
+  "group": "stg_swarm_manager",
+  "exposure": 1,
+  "module": "access",
+  "kind": "inventory",
+  "id": "access-limited",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "INFO",
+  "title": "cannot read: denied.keys, denied.authlog (needs root or sudo)",
+  "url": "",
+  "target": "",
+  "msg": "health.limited",
+  "args": {
+   "what": "denied.keys, denied.authlog"
+  }
+ }
+]

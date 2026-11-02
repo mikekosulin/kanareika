@@ -1,0 +1,98 @@
+# Kanareika organization file. Create with: make new-org ORG=<id>
+# One file = one organization. The scanner never connects to anything not listed here.
+# Every key: docs/org-file.md
+
+org:
+  id: __ORG_ID__                 # equals the file name; a-z, 0-9, '-', '_'
+  name: "Company name"
+  contacts:                      # who is told about scans and results
+    - name: First Last
+      email: it@example.com
+      phone: "+1 ..."
+      role: admin
+  owners:                        # who is responsible for fixing
+    - name: First Last
+      email: cto@example.com
+  notes: ""
+
+consent:                         # no scan without a valid consent
+  document: "Contract No ___ of ____, appendix ___"   # where the signed consent lives
+  signed: 2026-01-01
+  valid_until: 2027-01-01        # scans refuse to run after this date
+  external_scan: false           # allow network scans from the outside (the `external` section)
+  window:                        # when scanning is allowed; outside it only with --ignore-window
+    days: [mon, tue, wed, thu, fri]
+    from: "22:00"
+    to: "06:00"                  # may cross midnight
+    tz: UTC
+
+access:
+  user: audit                    # read-only user, key login only (provisioner role audit_user)
+  privilege: helper              # none | sudo | helper — how root-only reads run (README: Isolation and safety)
+  # admin_user: deploy           # account with sudo used by fix.sh; the audit user cannot change anything
+  # key: __ORG_ID__/id_ed25519   # key file in secrets/. Without it the host's ssh-agent is used (recommended)
+  # known_hosts: __ORG_ID__/known_hosts   # pinned host keys (in secrets/); learned keys go to reports/<org>/known_hosts
+  host_key_checking: accept-new  # strict — only keys from known_hosts above and already learned ones
+  jumps:                         # jump hosts (bastions); chains via `jump`
+    bastion:
+      address: 192.0.2.1
+      port: 22
+      # user: audit              # defaults to access.user
+      # jump: other-bastion
+
+checks:                          # org-level overrides (on top of policy/profiles.yml)
+  # os_packages: true
+  # software_fs:
+  #   paths: [/opt, /srv]
+  # docker:
+  #   scan_images: packages
+  k8s: false                     # k8s and network_external can only be set here
+  network_external: false
+
+groups:                          # host groups; the group name is the role unless `role` is set
+  app:
+    # env: production            # environment. If the org has several (production/staging),
+    #                            # set env on EVERY group; scans then run one env at a time: ENV=
+    role: app                    # front | app | swarm_manager | swarm_worker | k8s_node | mongo | internal
+    exposure: 2                  # 1 perimeter / 2 neighbours / 3 internal; can be overridden per host
+    jump: bastion                # jump host for all hosts of the group (if needed)
+    # checks:
+    #   docker: false
+    hosts:
+      app-01:
+        address: 192.0.2.10
+        os: ubuntu-22.04         # informational; the real OS is detected during the scan
+        # port: 22
+        # exposure: 1
+        # jump: bastion
+        # checks:
+        #   software_fs:
+        #     paths: [/opt/app]
+
+k8s: []                          # clusters, e.g.:
+  # - name: prod
+  #   env: production              # if the org has environments
+  #   kubeconfig: __ORG_ID__/kubeconfig-prod   # path in secrets/ (read-only role)
+  #   context: prod                # optional
+  #   namespaces: [app]            # only these namespaces
+  #   exposure: 2
+
+external: []                     # IPs, CIDRs, domains or URLs — scanned only with consent.external_scan: true
+  # without environments — a plain list:
+  # - 203.0.113.10
+  # - shop.example.com
+# with environments — per environment:
+# external:
+#   production:
+#     - shop.example.com
+#   staging:
+#     - stage.example.com
+
+exceptions: []                   # accepted risks:
+  # - id: CVE-2024-0000
+  #   hosts: [app-01]            # omitted — all hosts
+  #   package: openssl           # omitted — any package
+  #   reason: "compensating control: ..."
+  #   owner: "First Last"
+  #   review_by: 2026-12-31      # after this date the exception stops applying
+  #   until_available: true      # also ends as soon as the host's repositories have a fix

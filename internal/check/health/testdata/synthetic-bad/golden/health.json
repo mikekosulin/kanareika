@@ -1,0 +1,182 @@
+{
+ "denied": [],
+ "dmesg": {
+  "classes": {
+   "disk-io-error": {
+    "count": 2,
+    "last": "[Sun Nov  1 10:00:01 2026] XFS (sdb1): metadata I/O error: block 0x1 (\"xlog_iodone\") error 5 corrupt",
+    "title": "disk / filesystem I/O errors",
+    "key": "dmesg.disk-io-error",
+    "severity": "HIGH"
+   },
+   "hw-error": {
+    "count": 1,
+    "last": "[Sun Nov  1 10:00:03 2026] mce: [Hardware Error]: Machine check events logged",
+    "title": "hardware errors (MCE / EDAC)",
+    "key": "dmesg.hw-error",
+    "severity": "HIGH"
+   },
+   "oom": {
+    "count": 1,
+    "last": "[Sun Nov  1 10:00:02 2026] Out of memory: Killed process 1234 (java)",
+    "title": "OOM killer killed processes",
+    "key": "dmesg.oom",
+    "severity": "MEDIUM"
+   },
+   "hang": {
+    "count": 2,
+    "last": "[Sun Nov  1 10:00:05 2026] INFO: task jbd2 blocked for more than 120 seconds.",
+    "title": "hangs (soft lockup / hung task)",
+    "key": "dmesg.hang",
+    "severity": "MEDIUM"
+   },
+   "kernel-bug": {
+    "count": 1,
+    "last": "[Sun Nov  1 10:00:04 2026] watchdog: BUG: soft lockup - CPU#0 stuck for 22s! [kworker:1]",
+    "title": "kernel errors (BUG / Call Trace)",
+    "key": "dmesg.kernel-bug",
+    "severity": "MEDIUM"
+   },
+   "conntrack-full": {
+    "count": 1,
+    "last": "[Sun Nov  1 10:00:06 2026] nf_conntrack: table full, dropping packet",
+    "title": "conntrack table overflow",
+    "key": "dmesg.conntrack-full",
+    "severity": "MEDIUM"
+   },
+   "segfault": {
+    "count": 2,
+    "last": "[Sun Nov  1 10:00:08 2026] app[778]: segfault at 8 ip 0 sp 0 error 4 in libc.so.6 é中😀 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "title": "process crashes (segfault)",
+    "key": "dmesg.segfault",
+    "severity": "LOW"
+   }
+  },
+  "tail": [
+   "[Sun Nov  1 10:00:00 2026] blk_update_request: I/O error, dev sda, sector 123",
+   "[Sun Nov  1 10:00:01 2026] XFS (sdb1): metadata I/O error: block 0x1 (\"xlog_iodone\") error 5 corrupt",
+   "[Sun Nov  1 10:00:02 2026] Out of memory: Killed process 1234 (java)",
+   "[Sun Nov  1 10:00:03 2026] mce: [Hardware Error]: Machine check events logged",
+   "[Sun Nov  1 10:00:04 2026] watchdog: BUG: soft lockup - CPU#0 stuck for 22s! [kworker:1]",
+   "[Sun Nov  1 10:00:05 2026] INFO: task jbd2 blocked for more than 120 seconds.",
+   "[Sun Nov  1 10:00:06 2026] nf_conntrack: table full, dropping packet",
+   "[Sun Nov  1 10:00:07 2026] app[777]: segfault at 0 ip 0 sp 0 error 4 in libc.so.6 — сбой xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "[Sun Nov  1 10:00:08 2026] app[778]: segfault at 8 ip 0 sp 0 error 4 in libc.so.6 é中😀 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  ]
+ },
+ "journal": {
+  "errors_7d": 110,
+  "top": [
+   [
+    "kernel",
+    60
+   ],
+   [
+    "nginx",
+    45
+   ],
+   [
+    "dockerd",
+    5
+   ]
+  ],
+  "tail": [
+   "2026-11-01T11:21:00+0300 h nginx[123]: upstream error 21",
+   "2026-11-01T11:22:00+0300 h nginx[123]: upstream error 22",
+   "2026-11-01T11:23:00+0300 h nginx[123]: upstream error 23",
+   "2026-11-01T11:24:00+0300 h nginx[123]: upstream error 24",
+   "2026-11-01T11:25:00+0300 h nginx[123]: upstream error 25",
+   "2026-11-01T11:26:00+0300 h nginx[123]: upstream error 26",
+   "2026-11-01T11:27:00+0300 h nginx[123]: upstream error 27",
+   "2026-11-01T11:28:00+0300 h nginx[123]: upstream error 28",
+   "2026-11-01T11:29:00+0300 h nginx[123]: upstream error 29",
+   "2026-11-01T11:30:00+0300 h nginx[123]: upstream error 30",
+   "2026-11-01T11:31:00+0300 h nginx[123]: upstream error 31",
+   "2026-11-01T11:32:00+0300 h nginx[123]: upstream error 32",
+   "2026-11-01T11:33:00+0300 h nginx[123]: upstream error 33",
+   "2026-11-01T11:34:00+0300 h nginx[123]: upstream error 34",
+   "2026-11-01T11:35:00+0300 h nginx[123]: upstream error 35",
+   "2026-11-01T11:36:00+0300 h nginx[123]: upstream error 36",
+   "2026-11-01T11:37:00+0300 h nginx[123]: upstream error 37",
+   "2026-11-01T11:38:00+0300 h nginx[123]: upstream error 38",
+   "2026-11-01T11:39:00+0300 h nginx[123]: upstream error 39",
+   "2026-11-01T11:40:00+0300 h nginx[123]: upstream error 40",
+   "2026-11-01T11:41:00+0300 h nginx[123]: upstream error 41",
+   "2026-11-01T11:42:00+0300 h nginx[123]: upstream error 42",
+   "2026-11-01T11:43:00+0300 h nginx[123]: upstream error 43",
+   "2026-11-01T11:44:00+0300 h nginx[123]: upstream error 44",
+   "2026-11-01T12:00:00+0300 h dockerd: ошибка 0",
+   "2026-11-01T12:01:00+0300 h dockerd: ошибка 1",
+   "2026-11-01T12:02:00+0300 h dockerd: ошибка 2",
+   "2026-11-01T12:03:00+0300 h dockerd: ошибка 3",
+   "2026-11-01T12:04:00+0300 h dockerd: ошибка 4",
+   "garbage"
+  ]
+ },
+ "failed_units": [
+  "nginx.service",
+  "docker.socket"
+ ],
+ "disks": [
+  {
+   "fs": "/dev/sda1",
+   "mount": "/",
+   "use": 96
+  },
+  {
+   "fs": "/dev/sdb1",
+   "mount": "/var",
+   "use": 88
+  },
+  {
+   "fs": "/dev/sdc1",
+   "mount": "/data",
+   "use": 10
+  }
+ ],
+ "inodes": [
+  {
+   "fs": "/dev/sda1",
+   "mount": "/",
+   "use": 96
+  },
+  {
+   "fs": "/dev/sdb1",
+   "mount": "/var",
+   "use": 86
+  },
+  {
+   "fs": "/dev/sdd1",
+   "mount": "/empty",
+   "use": 0
+  }
+ ],
+ "mem": {
+  "total_mb": 1000,
+  "available_mb": 20
+ },
+ "swap": {
+  "total_mb": 0,
+  "used_mb": 0
+ },
+ "load": {
+  "load1": 9.5,
+  "load15": 7.75,
+  "cpus": 2
+ },
+ "readonly_mounts": [
+  "/var xfs",
+  "/data ext4"
+ ],
+ "ntp_synced": "no",
+ "time": {
+  "timezone": "Europe/Berlin",
+  "synced": "no",
+  "service": "chronyd",
+  "service_active": true,
+  "source": "10.77.0.17",
+  "stratum": 4,
+  "offset_s": -1.5,
+  "skew_s": 63.0
+ }
+}

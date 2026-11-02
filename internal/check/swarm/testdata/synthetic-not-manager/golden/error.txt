@@ -1,0 +1,1 @@
+host is not a swarm manager (docker info: ControlAvailable=false)

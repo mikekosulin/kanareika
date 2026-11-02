@@ -1,0 +1,44 @@
+# secrets: keys, kubeconfig, known_hosts, tokens
+secrets/*
+!secrets/README.md
+*.pem
+*.key
+id_*
+kubeconfig*
+.env
+.vault_pass
+
+# organizations are local: only the example and the template are tracked
+orgs/*
+!orgs/_example.yml
+!orgs/_template.yml
+
+# scan results
+reports/*
+!reports/.gitkeep
+
+# Go: builds, test and profiling output, local workspaces, debugger binaries
+dist/
+.go/
+*.test
+*.out
+*.prof
+coverage.*
+go.work
+go.work.sum
+__debug_bin*
+
+# test data captured from real hosts stays local; committed testdata must be anonymized
+**/testdata/local/
+
+# backups written by `kanareika migrate`
+*.bak
+
+# editors, OS
+.DS_Store
+.idea/
+.vscode/
+.claude/
+
+# Python bytecode
+__pycache__/

@@ -1,0 +1,25 @@
+[
+ {
+  "org": "acme",
+  "host": "synthetic-timesyncd",
+  "group": "synthetic",
+  "exposure": 3,
+  "module": "health",
+  "kind": "health",
+  "id": "time-offset",
+  "pkg": "",
+  "installed": "",
+  "fixed": "",
+  "status": "",
+  "severity": "LOW",
+  "title": "Clock drifted from the NTP source",
+  "url": "",
+  "target": "offset 1.23 s",
+  "msg": "health.ntp_offset",
+  "args": {},
+  "target_msg": "health.ntp_offset.detail",
+  "target_args": {
+   "offset": "1.23"
+  }
+ }
+]

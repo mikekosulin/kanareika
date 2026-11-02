@@ -1,0 +1,4 @@
+{"Hostname":"узел-1","EngineVersion":"27.1.1","Status":"Ready"}
+
+  
+{"Hostname":"n2","Status":"Down"}

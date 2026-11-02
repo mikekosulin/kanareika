@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kanareika/org.schema.json",
+  "title": "Kanareika organization file (orgs/<id>.yml)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["org", "consent", "access", "groups"],
+  "properties": {
+    "version": {"type": "integer", "minimum": 1, "description": "org file format version; absent = 1. Older files are migrated on load, `kanareika migrate` rewrites them"},
+    "org": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": {"$ref": "#/$defs/slug"},
+        "name": {"type": "string", "minLength": 1},
+        "contacts": {"type": "array", "items": {"$ref": "#/$defs/person"}},
+        "owners": {"type": "array", "items": {"$ref": "#/$defs/person"}},
+        "notes": {"type": "string"}
+      }
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document", "signed", "valid_until"],
+      "properties": {
+        "document": {"type": "string", "minLength": 1},
+        "signed": {"$ref": "#/$defs/date"},
+        "valid_until": {"$ref": "#/$defs/date"},
+        "external_scan": {"type": "boolean", "default": false},
+        "window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "to"],
+          "properties": {
+            "days": {
+              "type": "array",
+              "items": {"enum": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]},
+              "uniqueItems": true
+            },
+            "from": {"$ref": "#/$defs/hhmm"},
+            "to": {"$ref": "#/$defs/hhmm"},
+            "tz": {"type": "string", "default": "UTC"}
+          }
+        }
+      }
+    },
+    "access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user"],
+      "properties": {
+        "user": {"type": "string", "minLength": 1},
+        "key": {"type": "string", "description": "path relative to secrets/; omit to use ssh-agent"},
+        "known_hosts": {"type": "string", "description": "path relative to secrets/"},
+        "host_key_checking": {"enum": ["strict", "accept-new"], "default": "accept-new"},
+        "sudo": {"type": "boolean", "default": false, "description": "legacy: true = privilege sudo"},
+        "privilege": {"enum": ["none", "sudo", "helper"], "description": "how root-only reads run, see kanareika/priv.py"},
+        "admin_user": {"type": "string", "description": "account with sudo used by fix.sh (remediation); default: the SSH user"},
+        "jumps": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/slug"},
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["address"],
+            "properties": {
+              "address": {"type": "string", "minLength": 1},
+              "port": {"$ref": "#/$defs/port"},
+              "user": {"type": "string"},
+              "jump": {"$ref": "#/$defs/slug"}
+            }
+          }
+        }
+      }
+    },
+    "checks": {"$ref": "#/$defs/checks"},
+    "groups": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/slug"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["hosts"],
+        "properties": {
+          "env": {"$ref": "#/$defs/slug", "description": "environment (production, staging, ...); scans never mix envs"},
+          "role": {"$ref": "#/$defs/role"},
+          "exposure": {"$ref": "#/$defs/exposure"},
+          "jump": {"$ref": "#/$defs/slug"},
+          "checks": {"$ref": "#/$defs/checks"},
+          "hosts": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": {"$ref": "#/$defs/slug"},
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["address"],
+              "properties": {
+                "address": {"type": "string", "minLength": 1},
+                "port": {"$ref": "#/$defs/port"},
+                "user": {"type": "string"},
+                "os": {"type": "string", "description": "informational; actual OS is detected"},
+                "exposure": {"$ref": "#/$defs/exposure"},
+                "jump": {"$ref": "#/$defs/slug"},
+                "sudo": {"type": "boolean"},
+                "privilege": {"enum": ["none", "sudo", "helper"]},
+                "admin_user": {"type": "string"},
+                "legacy_ssh": {"type": "boolean", "description": "allow ssh-rsa (SHA-1) for this host only: old OpenSSH (CentOS 6, ...) offers nothing else"},
+                "checks": {"$ref": "#/$defs/checks"},
+                "notes": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "k8s": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kubeconfig"],
+        "properties": {
+          "name": {"$ref": "#/$defs/slug"},
+          "env": {"$ref": "#/$defs/slug"},
+          "kubeconfig": {"type": "string", "description": "path relative to secrets/"},
+          "context": {"type": "string"},
+          "namespaces": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "exposure": {"$ref": "#/$defs/exposure"}
+        }
+      }
+    },
+    "external": {
+      "description": "external IPs / CIDRs / domains / URLs; scanned only if consent.external_scan is true. A list, or env -> list when the org has envs",
+      "oneOf": [
+        {"$ref": "#/$defs/targets"},
+        {"type": "object", "propertyNames": {"$ref": "#/$defs/slug"}, "additionalProperties": {"$ref": "#/$defs/targets"}}
+      ]
+    },
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "reason", "owner", "review_by"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "hosts": {"type": "array", "items": {"type": "string"}},
+          "package": {"type": "string"},
+          "reason": {"type": "string", "minLength": 1},
+          "owner": {"type": "string", "minLength": 1},
+          "review_by": {"$ref": "#/$defs/date"},
+          "until_available": {"type": "boolean", "description": "accepted only while the host's repositories have no fix; ends as soon as an update can be installed"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "targets": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "slug": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+    "date": {"type": "string", "format": "date", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "hhmm": {"type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"},
+    "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+    "exposure": {"enum": [1, 2, 3]},
+    "role": {"enum": ["front", "app", "swarm_manager", "swarm_worker", "k8s_node", "mongo", "internal"]},
+    "person": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {"type": "string"},
+        "email": {"type": "string"},
+        "phone": {"type": "string"},
+        "role": {"type": "string"}
+      }
+    },
+    "toggle": {
+      "description": "bool shorthand for {enabled: bool}",
+      "oneOf": [
+        {"type": "boolean"},
+        {"type": "object", "properties": {"enabled": {"type": "boolean"}}}
+      ]
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "os_packages": {"$ref": "#/$defs/toggle"},
+        "software_fs": {
+          "oneOf": [
+            {"type": "boolean"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {"type": "boolean"},
+                "paths": {"type": "array", "items": {"type": "string", "pattern": "^/"}},
+                "exclude": {"type": "array", "items": {"type": "string", "pattern": "^/"}},
+                "patterns": {"type": "array", "items": {"type": "string"}},
+                "max_file_mb": {"type": "integer", "minimum": 1},
+                "max_total_mb": {"type": "integer", "minimum": 1}
+              }
+            }
+          ]
+        },
+        "docker": {
+          "oneOf": [
+            {"type": "boolean"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {"type": "boolean"},
+                "scan_images": {"enum": [false, "packages", "registry", "save"]},
+                "images": {"enum": ["running", "all"]},
+                "image_parallel": {"type": "integer", "minimum": 1, "maximum": 8},
+                "max_image_mb": {"type": "integer", "minimum": 1}
+              }
+            }
+          ]
+        },
+        "swarm": {"$ref": "#/$defs/toggle"},
+        "mongo": {"$ref": "#/$defs/toggle"},
+        "hardening": {"$ref": "#/$defs/toggle"},
+        "health": {"$ref": "#/$defs/toggle"},
+        "access": {"$ref": "#/$defs/toggle"},
+        "exposure": {"$ref": "#/$defs/toggle"},
+        "network_internal": {"$ref": "#/$defs/toggle"},
+        "k8s": {"$ref": "#/$defs/toggle"},
+        "network_external": {
+          "oneOf": [
+            {"type": "boolean"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {"type": "boolean"},
+                "ports": {"type": "string", "description": "nmap -p value; default: --top-ports 1000"},
+                "timing": {"enum": ["T2", "T3", "T4"]}
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
