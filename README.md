@@ -25,4 +25,4 @@ make dashboard               # http://127.0.0.1:8088
 
 Details: [docs/org-file.md](docs/org-file.md) · `kanareika --help`
 
-License: [MIT](LICENSE)
+License: [MIT](LICENSE) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
