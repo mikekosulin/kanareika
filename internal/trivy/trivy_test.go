@@ -185,3 +185,58 @@ func TestInstallDownload(t *testing.T) {
 		t.Fatal(v)
 	}
 }
+
+// TestPrepare: repositories tried in order until one works; overrides; the cached DB as the last resort.
+func TestPrepare(t *testing.T) {
+	ctx := context.Background()
+	t.Setenv("TRIVY_CACHE_DIR", t.TempDir())
+	t.Setenv("TRIVY_DB_REPOSITORY", "")
+	t.Setenv("TRIVY_JAVA_DB_REPOSITORY", "")
+	calls := filepath.Join(t.TempDir(), "calls")
+	t.Setenv("CALLS", calls)
+	// records the repository; ghcr.io fails, the rest work
+	fake(t, `repo=-; while [ $# -gt 0 ]; do case $1 in --db-repository|--java-db-repository) repo=$2;; esac; shift; done
+echo "$repo" >> "$CALLS"; case $repo in ghcr.io/*) echo "FATAL stream error" >&2; exit 1;; esac; exit 0`)
+	var logs []string
+	logf := func(f string, a ...any) { logs = append(logs, f) }
+
+	must(t, Prepare(ctx, logf))
+	got, _ := os.ReadFile(calls)
+	want := "ghcr.io/aquasecurity/trivy-db:2\nmirror.gcr.io/aquasec/trivy-db:2\n" +
+		"ghcr.io/aquasecurity/trivy-java-db:1\nmirror.gcr.io/aquasec/trivy-java-db:1\n"
+	if string(got) != want {
+		t.Fatalf("calls:\n%s", got)
+	}
+	if len(logs) != 2 {
+		t.Fatal(logs)
+	}
+
+	// kanareika's override, then trivy's own setting (no repository flag at all)
+	os.Remove(calls)
+	t.Setenv("KANAREIKA_TRIVY_DB_REPOS", " my.registry/trivy-db:2 , ")
+	t.Setenv("TRIVY_JAVA_DB_REPOSITORY", "x/java:1")
+	must(t, Prepare(ctx, nil))
+	if got, _ := os.ReadFile(calls); string(got) != "my.registry/trivy-db:2\n-\n" {
+		t.Fatalf("calls:\n%s", got)
+	}
+
+	// nothing reachable: fails with every attempt listed, unless a DB is cached
+	t.Setenv("KANAREIKA_TRIVY_DB_REPOS", "")
+	t.Setenv("TRIVY_JAVA_DB_REPOSITORY", "")
+	fake(t, `echo "FATAL down" >&2; exit 1`)
+	err := Prepare(ctx, nil)
+	var te *Error
+	if !errors.As(err, &te) || strings.Count(te.Msg, "FATAL down") != 3 || !strings.Contains(te.Msg, "public.ecr.aws/") {
+		t.Fatal(err)
+	}
+	for _, d := range []string{"db", "java-db"} {
+		p := filepath.Join(os.Getenv("TRIVY_CACHE_DIR"), d)
+		must(t, os.MkdirAll(p, 0o755))
+		must(t, os.WriteFile(filepath.Join(p, "metadata.json"), []byte(`{"UpdatedAt":"2026-11-01T19:08:08Z"}`), 0o644))
+	}
+	logs = nil
+	must(t, Prepare(ctx, logf))
+	if len(logs) != 8 || !strings.HasPrefix(logs[3], "WARNING") || !strings.HasPrefix(logs[7], "WARNING") {
+		t.Fatal(logs)
+	}
+}

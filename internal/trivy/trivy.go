@@ -58,16 +58,127 @@ func command(ctx context.Context, timeout time.Duration, args ...string) (stdout
 	return o.String(), e.String(), err
 }
 
-// Prepare downloads the vulnerability DBs once, before parallel scans start: concurrent first-time downloads from
-// several trivy processes break each other. Later runs then skip the DB update.
-func Prepare(ctx context.Context) error {
-	for _, flag := range []string{"--download-db-only", "--download-java-db-only"} {
-		_, stderr, err := command(ctx, 30*time.Minute, "image", flag, "--skip-version-check")
+// dbKind: one of trivy's vulnerability DBs and where it can be downloaded from.
+type dbKind struct {
+	name     string   // "db", "java-db": the directory under trivy's cache dir
+	flag     string   // trivy flag that downloads it and exits
+	repoFlag string   // trivy flag naming the OCI repositories
+	trivyEnv string   // trivy's own setting for the repositories: when set, kanareika leaves the choice to trivy
+	ourEnv   string   // kanareika's override: comma-separated repositories, tried in order
+	repos    []string // default: GitHub Container Registry (published there by Aqua), then its mirrors
+}
+
+var dbKinds = []dbKind{
+	{"db", "--download-db-only", "--db-repository", "TRIVY_DB_REPOSITORY", "KANAREIKA_TRIVY_DB_REPOS",
+		[]string{"ghcr.io/aquasecurity/trivy-db:2", "mirror.gcr.io/aquasec/trivy-db:2", "public.ecr.aws/aquasecurity/trivy-db:2"}},
+	{"java-db", "--download-java-db-only", "--java-db-repository", "TRIVY_JAVA_DB_REPOSITORY", "KANAREIKA_TRIVY_JAVA_DB_REPOS",
+		[]string{"ghcr.io/aquasecurity/trivy-java-db:1", "mirror.gcr.io/aquasec/trivy-java-db:1", "public.ecr.aws/aquasecurity/trivy-java-db:1"}},
+}
+
+// dbTimeout: per download attempt. Passed to trivy as well: its own default (5m) is too short for a slow link.
+var dbTimeout = 30 * time.Minute
+
+// repositories to try for k, in order; nil = let trivy decide (its own TRIVY_*_REPOSITORY is set).
+func (k dbKind) repositories() []string {
+	if os.Getenv(k.trivyEnv) != "" {
+		return nil
+	}
+	if v := os.Getenv(k.ourEnv); v != "" {
+		var out []string
+		for _, r := range strings.Split(v, ",") {
+			if r = strings.TrimSpace(r); r != "" {
+				out = append(out, r)
+			}
+		}
+		if len(out) > 0 {
+			return out
+		}
+	}
+	return k.repos
+}
+
+// trivyCacheDir: trivy's cache dir (TRIVY_CACHE_DIR, else <user cache dir>/trivy, as trivy itself picks it).
+func trivyCacheDir() string {
+	if d := os.Getenv("TRIVY_CACHE_DIR"); d != "" {
+		return d
+	}
+	d, err := os.UserCacheDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(d, "trivy")
+}
+
+// cachedAt: when the cached copy of k was downloaded; zero if there is none.
+func (k dbKind) cachedAt() time.Time {
+	dir := trivyCacheDir()
+	if dir == "" {
+		return time.Time{}
+	}
+	data, err := os.ReadFile(filepath.Join(dir, k.name, "metadata.json"))
+	if err != nil {
+		return time.Time{}
+	}
+	var m struct{ DownloadedAt, UpdatedAt time.Time }
+	if json.Unmarshal(data, &m) != nil {
+		return time.Time{}
+	}
+	if !m.UpdatedAt.IsZero() {
+		return m.UpdatedAt
+	}
+	return m.DownloadedAt
+}
+
+// download k, trying each repository in turn; the errors of all attempts if none worked.
+func (k dbKind) download(ctx context.Context, logf func(string, ...any)) error {
+	args := []string{"image", k.flag, "--skip-version-check", "--no-progress", "--timeout", dbTimeout.String()}
+	repos := k.repositories()
+	if repos == nil {
+		repos = []string{""} // trivy's own setting
+	}
+	var errs []string
+	for _, repo := range repos {
+		a := args
+		where := k.trivyEnv
+		if repo != "" {
+			a = append(slices.Clone(args), k.repoFlag, repo)
+			where = repo
+		}
+		_, stderr, err := command(ctx, dbTimeout+time.Minute, a...)
+		if err == nil {
+			return nil
+		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		var exit *exec.ExitError
 		if errors.As(err, &exit) {
-			return &Error{fmt.Sprintf("trivy %s: %s", flag, tail(strings.TrimSpace(stderr), 800))}
-		} else if err != nil {
+			err = errors.New(tail(strings.TrimSpace(stderr), 400))
+		}
+		errs = append(errs, fmt.Sprintf("%s: %v", where, err))
+		if logf != nil {
+			logf("trivy %s: %s failed, %d more to try", k.name, where, len(repos)-len(errs))
+		}
+	}
+	return &Error{fmt.Sprintf("trivy %s: no repository worked:\n    %s", k.flag, strings.Join(errs, "\n    "))}
+}
+
+// Prepare downloads the vulnerability DBs once, before parallel scans start: concurrent first-time downloads from
+// several trivy processes break each other. Later runs then skip the DB update. When no repository can be reached
+// but a DB is already cached, the scan goes on with it and logf says how old it is; with nothing cached it fails.
+func Prepare(ctx context.Context, logf func(string, ...any)) error {
+	for _, k := range dbKinds {
+		err := k.download(ctx, logf)
+		if err == nil {
+			continue
+		}
+		at := k.cachedAt()
+		if at.IsZero() || ctx.Err() != nil {
 			return err
+		}
+		if logf != nil {
+			logf("WARNING: trivy %s not updated, using the cached copy from %s (%s old): %v",
+				k.name, at.UTC().Format("2006-01-02 15:04Z"), time.Since(at).Round(time.Hour), err)
 		}
 	}
 	prepared.Store(true)
