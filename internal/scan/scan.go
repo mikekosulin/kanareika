@@ -200,7 +200,7 @@ func (s *Scanner) Org(ctx context.Context, o *config.Org, env string, opt Option
 		return 1
 	}
 	s.log("trivy: updating vulnerability DB ...")
-	if err := trivy.Prepare(ctx); err != nil {
+	if err := trivy.Prepare(ctx, s.log); err != nil {
 		return refuse(err)
 	}
 	conn, err := sshx.New(o, s.Paths)
