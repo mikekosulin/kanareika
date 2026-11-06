@@ -105,6 +105,7 @@ td { padding: 10px 12px; border-bottom: 1px solid var(--grid); vertical-align: t
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 tr.click { cursor: pointer; } tr.click:hover td { background: var(--surface-2); }
 .scroll { max-height: 440px; overflow: auto; }
+.xscroll { overflow-x: auto; }
 .cell { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cell.w2 { max-width: 220px; } .cell.w1 { max-width: 140px; }
 
@@ -233,7 +234,7 @@ pre.log { margin: 10px 0 0; max-height: 260px; overflow: auto; background: var(-
     </div>
     <div class="card">
       <h2><span data-icon="server-stack"></span><span data-t="Hosts"></span> <span class="sub" id="hostsub"></span></h2>
-      <table id="hosts"></table>
+      <div class="xscroll"><table id="hosts"></table></div>
       <div id="hostsmore"></div>
     </div>
   </section>
@@ -588,7 +589,7 @@ function renderHosts() {
   const n = (v, p) => v ? (p === "P1" || p === "P2" ? `<b>${fmt(v)}</b>` : fmt(v)) : `<span class="zero">0</span>`;
   const shortOs = (o) => o.replace("CentOS Stream", "Stream").replace("CentOS Linux", "CentOS").replace(" (Core)", "").replace("GNU/Linux ", "");
   const limit = 6, shown = S.hostsAll ? rows : rows.slice(0, limit);
-  $("#hosts").innerHTML = `<thead><tr><th></th><th>${t("host")}</th><th>${t("group")}</th><th class="num" title="exposure: 1 ${t("perimeter · 2 neighbours · 3 internal")}">exp</th><th>${t("OS")}</th>${PRIOS.map((p) => `<th class="num" title="${t("packages to update")}">${p}</th>`).join("")}<th class="num" title="${t("when the data was collected")}">${t("data")}</th></tr></thead><tbody>`
+  $("#hosts").innerHTML = `<thead><tr><th></th><th>${t("host")}</th><th>${t("group")}</th><th class="num" title="exposure: 1 ${t("perimeter · 2 neighbours · 3 internal")}">exp</th><th>${t("OS")}</th>${PRIOS.map((p) => `<th class="num" title="${t("packages to update")}">${p}</th>`).join("")}<th class="num" title="${t("when the data was collected")}">${t("scanned")}</th></tr></thead><tbody>`
     + shown.map((r) => `<tr class="click" data-host="${esc(r.name)}" ${r.name === S.filt.host ? 'style="background:var(--surface-2)"' : ""}>
       <td>${st(r.s[0], "", r.s[1])}</td><td class="nw"><b>${esc(r.name)}</b></td><td><div class="cell w1 ink2" title="${esc(r.group)}">${esc(r.group)}</div></td>
       <td class="num">${esc(r.exposure)}</td><td><div class="cell w1 ink2" title="${esc(r.os)}">${esc(shortOs(r.os))}</div></td>
@@ -835,7 +836,7 @@ function tabAccess(body) {
   const ts = (v) => (v || "").replace("T", " ").slice(0, 16);
   const root = (v) => ({ "without-password": t("key only"), "prohibit-password": t("key only"), "forced-commands-only": t("commands"), no: t("no"), yes: t("yes") }[v] || v || "—");
   body.innerHTML = deniedNote(A) + `
-    <table><thead><tr><th>${t("host")}</th><th title="PasswordAuthentication (sshd -T)">${t("password")}</th><th title="PermitRootLogin">root</th><th>${t("with password")}</th><th class="num">${t("keys")}</th><th class="num">${t("logins")}</th><th class="num" title="${t("unique source addresses of successful logins")}">${t("from")}</th><th class="num">${t("failed")}</th><th class="num" title="${t("unique addresses of failed attempts")}">${t("attackers")}</th><th>${t("last attack")}</th></tr></thead><tbody>
+    <div class="xscroll"><table><thead><tr><th>${t("host")}</th><th title="PasswordAuthentication (sshd -T)">${t("password")}</th><th title="PermitRootLogin">root</th><th>${t("with password")}</th><th class="num">${t("keys")}</th><th class="num">${t("logins")}</th><th class="num" title="${t("unique source addresses of successful logins")}">${t("from")}</th><th class="num">${t("failed")}</th><th class="num" title="${t("unique addresses of failed attempts")}">${t("attackers")}</th><th>${t("last attack")}</th></tr></thead><tbody>
     ${hosts.map((h) => { const a = A[h], L = a.logins; return `<tr><td class="nw"><b>${esc(h)}</b></td><td>${pw(a)}</td>
       <td>${a.sshd.permitrootlogin === "yes" ? st("bad", t("yes")) : esc(root(a.sshd.permitrootlogin))}</td>
       <td>${a.users_with_password === null ? `<span class="muted">?</span>` : a.users_with_password.length ? `<div class="cell w1" title="${esc(a.users_with_password.join(", "))}">${esc(a.users_with_password.join(", "))}</div>` : `<span class="zero">—</span>`}</td>
@@ -843,7 +844,7 @@ function tabAccess(body) {
       <td class="num">${fmtc(L.accepted.reduce((n, x) => n + x.count, 0))}</td><td class="num">${new Set(L.accepted.map((x) => x.ip)).size}</td>
       <td class="num">${fmtc(L.failed_total)}</td><td class="num">${fmt(L.failed_ips)}</td>
       <td class="nw" title="${esc((L.failed_last || "").replace("T", " ").slice(0, 16))}">${L.failed_last ? esc(ago(L.failed_last)) : `<span class="zero">—</span>`}</td></tr>`; }).join("")}
-    </tbody></table>
+    </tbody></table></div>
     <div class="subh">${icon("key")}${t("Successful logins")} <span class="sub">~30 ${t("days")}</span></div>
     ${logins.length ? `<div class="scroll" style="max-height:330px"><table><thead><tr><th>${t("host")}</th><th>${t("who")}</th><th>${t("from")}</th><th>${t("how")}</th><th class="num">${t("times")}</th><th>${t("last")}</th></tr></thead><tbody>
       ${logins.slice(0, 400).map((x) => `<tr><td class="nw">${esc(x.host)}</td><td><b>${esc(x.user)}</b></td><td>${ipCell(x.ip)}</td>
@@ -907,14 +908,14 @@ function tabExposure(body) {
   const all = hosts.flatMap((h) => E[h].listen.map((x) => ({ host: h, ...x })));
   const rows = all.filter((x) => hostOk(x.host) && (!f.pubOnly || x.public));
   body.innerHTML = deniedNote(E) + `
-    <table><thead><tr><th>${t("host")}</th><th>${t("public")} IP</th><th>${t("open to the outside")}</th><th>firewall</th><th></th></tr></thead><tbody>
+    <div class="xscroll"><table><thead><tr><th>${t("host")}</th><th>${t("public")} IP</th><th>${t("open to the outside")}</th><th>firewall</th><th></th></tr></thead><tbody>
     ${hosts.map((h) => { const e = E[h]; const ports = [...new Set(e.listen.filter((x) => x.public).map((x) => x.port))].sort((a, b) => a - b);
       return `<tr><td class="nw"><b>${esc(h)}</b></td>
         <td>${e.public.length ? e.public.map((ip) => e.unlisted_public.includes(ip) ? `<span class="tag bad" title="${t("not in the organization config")}">${esc(ip)}</span>` : `<span class="tag">${esc(ip)}</span>`).join(" ") : `<span class="muted" title="${t("no public addresses on the interfaces")}">NAT</span>`}</td>
         <td><div class="cell mono" title="${esc(ports.join(", "))}">${ports.length ? esc(ports.join(" ")) : `<span class="zero">—</span>`}</div></td>
         <td>${fwCell(e.firewall)}</td>
         <td>${e.firewall?.readable ? `<button class="iconbtn xs" data-fw="${esc(h)}" title="${t("show rules")}">${icon("document-text", "sm")}</button>` : ""}</td></tr>`; }).join("")}
-    </tbody></table>
+    </tbody></table></div>
     <pre class="log mono" id="fwraw" hidden></pre>
     <div class="subh">${icon("signal")}${t("Listening ports")}</div>
     <div class="filters"><button class="chip" id="fpub" aria-pressed="${f.pubOnly}">${icon("globe-alt", "sm")}${t("outside only")}</button><span class="count">${rows.length}</span></div>
@@ -954,7 +955,7 @@ function tabHealth(body) {
   const tzs = allHosts.map((h) => H[h].time?.timezone).filter(Boolean);
   const tzMain = tzs.sort((a, b) => tzs.filter((v) => v === b).length - tzs.filter((v) => v === a).length)[0];
   body.innerHTML = deniedNote(H) + `
-    <table><thead><tr><th>${t("host")}</th><th>${t("disk")}</th><th>inode</th><th>${t("memory")}</th><th>load</th><th>${t("units")}</th><th>${t("kernel")} (dmesg)</th><th class="num" title="${t("errors in")} journal ${t("in 7 days")}">journal</th><th>${t("time zone")}</th><th>${t("time")}</th></tr></thead><tbody>
+    <div class="xscroll"><table><thead><tr><th>${t("host")}</th><th>${t("disk")}</th><th>inode</th><th>${t("memory")}</th><th>load</th><th>${t("units")}</th><th>${t("kernel")} (dmesg)</th><th class="num" title="${t("errors in")} journal ${t("in 7 days")}">journal</th><th>${t("time zone")}</th><th>${t("time")}</th></tr></thead><tbody>
     ${hosts.map((h) => { const x = H[h], d = maxOf(x.disks), i = maxOf(x.inodes), cls = Object.values(x.dmesg?.classes || {}), tz = x.time?.timezone;
       return `<tr><td class="nw"><b>${esc(h)}</b></td>
         <td class="nw" title="${esc((x.disks || []).map((r) => `${r.mount} ${r.use}%`).join("\n"))}">${d ? `${pct(d.use)} <span class="muted">${esc(d.mount)}</span>` : "—"}</td>
@@ -966,7 +967,7 @@ function tabHealth(body) {
         <td class="num">${x.denied?.includes("denied.journal") ? `<span class="muted">?</span>` : fmtc(x.journal?.errors_7d)}</td>
         <td class="nw">${tz ? (tz !== tzMain ? st("warn", tz, `${t("differs from most hosts")} (${tzMain})`) : `<span class="ink2">${esc(tz)}</span>`) : `<span class="muted">?</span>`}</td>
         <td class="nw">${timeCell(x)}</td></tr>`; }).join("")}
-    </tbody></table>
+    </tbody></table></div>
     ${hosts.filter((h) => Object.keys(H[h].dmesg?.classes || {}).length).map((h) => `
       <div class="subh">${icon("cpu-chip")}${esc(h)} <span class="sub">${t("latest kernel messages")}</span></div>
       <pre class="log mono" style="max-height:200px">${esc((H[h].dmesg.tail || []).slice(-20).join("\n"))}</pre>`).join("")}`;
