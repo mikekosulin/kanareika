@@ -1,16 +1,16 @@
 [
  {
-  "command": "sudo -n sh -c 'docker info --format '\"'\"'{{json .Swarm}}'\"'\"'' kanareika ",
+  "command": "sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker info --format '\"'\"'{{json .Swarm}}'\"'\"'' kanareika ",
   "timeout": 300,
   "check": true
  },
  {
-  "command": "sudo -n sh -c 'docker node ls --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+  "command": "sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker node ls --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
   "timeout": 300,
   "check": true
  },
  {
-  "command": "sudo -n sh -c 'docker service ls --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+  "command": "sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker service ls --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
   "timeout": 300,
   "check": true
  }

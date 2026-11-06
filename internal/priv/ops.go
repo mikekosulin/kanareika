@@ -6,6 +6,10 @@ package priv
 // PkgDBPaths: paths `docker cp` may read from a container: OS package databases and release files only.
 var PkgDBPaths = []string{"/etc/os-release", "/usr/lib/os-release", "/etc/debian_version", "/etc/lsb-release", "/etc/alpine-release", "/etc/redhat-release", "/var/lib/dpkg/status", "/var/lib/dpkg/status.d", "/lib/apk/db/installed", "/var/lib/rpm", "/usr/lib/sysimage/rpm"}
 
+// dockerHost: rootless Docker has no /var/run/docker.sock; its daemon listens on /run/user/<uid>/docker.sock, which
+// root may use. Picks the first one when neither DOCKER_HOST nor the system socket is there.
+const dockerHost = `[ -n "${DOCKER_HOST:-}" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S "$s" ] && export DOCKER_HOST="unix://$s" && break; done; `
+
 // Ops: name -> shell snippet run as root ("$1".. are validated args) and the argument validators.
 var Ops = map[string]Op{
 	"dmesg":            {Snippet: "dmesg -T --level=emerg,alert,crit,err,warn 2>&1 | tail -n 400", Args: []Validator{}},
@@ -17,15 +21,15 @@ var Ops = map[string]Op{
 	"auth-log":         {Snippet: "{ journalctl -u sshd -u ssh --since -30d -o short-iso --no-pager -q 2>/dev/null; for f in $(ls -1tr /var/log/secure /var/log/secure.1 /var/log/secure-[0-9]* /var/log/auth.log /var/log/auth.log.1 2>/dev/null | grep -v '\\.gz$'); do cat \"$f\"; done; } | grep -E 'sshd\\[[0-9]+\\]: (Accepted |Failed |Invalid user )' | tail -n 150000; echo @@auth-readable@@", Args: []Validator{}},
 	"sockets":          {Snippet: "ss -Hltnup 2>/dev/null || ss -ltnup 2>/dev/null | tail -n +2", Args: []Validator{}},
 	"firewall":         {Snippet: "printf '\\n@@%s@@\\n' firewalld_state; firewall-cmd --state 2>&1; printf '\\n@@%s@@\\n' firewalld; firewall-cmd --list-all-zones 2>/dev/null | head -n 400; printf '\\n@@%s@@\\n' nft; nft list ruleset 2>&1 | head -n 600; printf '\\n@@%s@@\\n' iptables; iptables -S 2>&1 | head -n 600; printf '\\n@@%s@@\\n' iptables_nat; iptables -t nat -S 2>&1 | head -n 300; printf '\\n@@%s@@\\n' ip6tables; ip6tables -S 2>&1 | head -n 200; printf '\\n@@%s@@\\n' ufw; ufw status verbose 2>&1", Args: []Validator{}},
-	"docker-version":   {Snippet: "docker version --format '{{json .}}'", Args: []Validator{}},
-	"docker-ps":        {Snippet: "docker ps -a --no-trunc --format '{{json .}}'", Args: []Validator{}},
-	"docker-running":   {Snippet: "docker ps -q --no-trunc | xargs -r docker inspect --format '{{.Image}} {{.Id}}'", Args: []Validator{}},
-	"docker-images":    {Snippet: "docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect", Args: []Validator{}},
-	"docker-cp":        {Snippet: "docker cp -L \"$1:$2\" -", Args: []Validator{{Kind: "re", Rule: "[0-9a-f]{64}"}, {Kind: "enum", Enum: PkgDBPaths}}},
-	"docker-save":      {Snippet: "docker save \"$1\"", Args: []Validator{{Kind: "re", Rule: "sha256:[0-9a-f]{64}"}}},
-	"swarm-info":       {Snippet: "docker info --format '{{json .Swarm}}'", Args: []Validator{}},
-	"swarm-nodes":      {Snippet: "docker node ls --format '{{json .}}'", Args: []Validator{}},
-	"swarm-services":   {Snippet: "docker service ls --format '{{json .}}'", Args: []Validator{}},
+	"docker-version":   {Snippet: dockerHost + "docker version --format '{{json .}}'", Args: []Validator{}},
+	"docker-ps":        {Snippet: dockerHost + "docker ps -a --no-trunc --format '{{json .}}'", Args: []Validator{}},
+	"docker-running":   {Snippet: dockerHost + "docker ps -q --no-trunc | xargs -r docker inspect --format '{{.Image}} {{.Id}}'", Args: []Validator{}},
+	"docker-images":    {Snippet: dockerHost + "docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect", Args: []Validator{}},
+	"docker-cp":        {Snippet: dockerHost + "docker cp -L \"$1:$2\" -", Args: []Validator{{Kind: "re", Rule: "[0-9a-f]{64}"}, {Kind: "enum", Enum: PkgDBPaths}}},
+	"docker-save":      {Snippet: dockerHost + "docker save \"$1\"", Args: []Validator{{Kind: "re", Rule: "sha256:[0-9a-f]{64}"}}},
+	"swarm-info":       {Snippet: dockerHost + "docker info --format '{{json .Swarm}}'", Args: []Validator{}},
+	"swarm-nodes":      {Snippet: dockerHost + "docker node ls --format '{{json .}}'", Args: []Validator{}},
+	"swarm-services":   {Snippet: dockerHost + "docker service ls --format '{{json .}}'", Args: []Validator{}},
 }
 
 // OpOrder: registry order, for a stable helper script.

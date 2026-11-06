@@ -21,84 +21,84 @@
 "command -v docker || ls /usr/bin/docker /usr/local/bin/docker 2>/dev/null": {
 "file": "ubuntu24/which.txt"
 },
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/version.txt"
 },
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/ps.txt"
 },
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/running.txt"
 },
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
 "file": "ubuntu24/images.json"
 }
 },
 "stream": {
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null": {
 "file": "ubuntu24/cp/20fd948190bf_etc_os-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null": {
 "file": "ubuntu24/cp/20fd948190bf_etc_alpine-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null": {
 "file": "ubuntu24/cp/20fd948190bf_lib_apk_db_installed.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_etc_os-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_usr_lib_os-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_etc_alpine-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_lib_apk_db_installed.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 }
 },
@@ -4187,182 +4187,182 @@ false
 [
 "run",
 "host-11",
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null",
 268435456,
 300
 ]
@@ -4449,84 +4449,84 @@ true
 "command -v docker || ls /usr/bin/docker /usr/local/bin/docker 2>/dev/null": {
 "file": "ubuntu24/which.txt"
 },
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/version.txt"
 },
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/ps.txt"
 },
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/running.txt"
 },
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
 "file": "ubuntu24/images.json"
 }
 },
 "stream": {
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null": {
 "file": "ubuntu24/cp/20fd948190bf_etc_os-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null": {
 "file": "ubuntu24/cp/20fd948190bf_etc_alpine-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null": {
 "file": "ubuntu24/cp/20fd948190bf_lib_apk_db_installed.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_etc_os-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_usr_lib_os-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_etc_alpine-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_lib_apk_db_installed.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 }
 },
@@ -12668,182 +12668,182 @@ false
 [
 "run",
 "host-11",
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null",
 268435456,
 300
 ],
@@ -12857,28 +12857,28 @@ false
 [
 "run",
 "host-11-2",
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11-2",
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11-2",
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11-2",
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ]
@@ -12952,84 +12952,84 @@ true
 "command -v docker || ls /usr/bin/docker /usr/local/bin/docker 2>/dev/null": {
 "file": "ubuntu24/which.txt"
 },
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/version.txt"
 },
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/ps.txt"
 },
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/running.txt"
 },
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
 "file": "ubuntu24/images.json"
 }
 },
 "stream": {
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null": {
 "file": "ubuntu24/cp/20fd948190bf_etc_os-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null": {
 "file": "ubuntu24/cp/20fd948190bf_etc_alpine-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_etc_os-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_etc_alpine-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 }
 },
@@ -13092,182 +13092,182 @@ false
 [
 "run",
 "host-11",
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null",
 268435456,
 300
 ]
@@ -13307,84 +13307,84 @@ true
 "command -v docker || ls /usr/bin/docker /usr/local/bin/docker 2>/dev/null": {
 "file": "ubuntu24/which.txt"
 },
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/version.txt"
 },
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/ps.txt"
 },
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/running.txt"
 },
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
 "file": "ubuntu24/images.json"
 }
 },
 "stream": {
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null": {
 "file": "ubuntu24/cp/20fd948190bf_etc_os-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null": {
 "file": "ubuntu24/cp/20fd948190bf_etc_alpine-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null": {
 "file": "ubuntu24/cp/20fd948190bf_lib_apk_db_installed.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_etc_os-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_usr_lib_os-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_etc_alpine-release.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null": {
 "file": "ubuntu24/cp/99cf042f0730_lib_apk_db_installed.tar"
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 },
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null": {
 "err": "host-11: exit 1: "
 }
 },
@@ -13553,182 +13553,182 @@ false
 [
 "run",
 "host-11",
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/debian_version 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/lsb-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/alpine-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /etc/redhat-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/dpkg/status.d 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /lib/apk/db/installed 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /var/lib/rpm 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 99cf042f0730744ebbb6f3df348b7b064ae1ff7e607b9499532d47dbfdad6556 /usr/lib/sysimage/rpm 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/os-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/debian_version 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/lsb-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/alpine-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /etc/redhat-release 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/dpkg/status.d 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /lib/apk/db/installed 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /var/lib/rpm 2>/dev/null",
 268435456,
 300
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker cp -L \"$1:$2\" -' kanareika 20fd948190bffd3a4e00ee6f851645297953fb7b1a9d152623968e2da25e6ef7 /usr/lib/sysimage/rpm 2>/dev/null",
 268435456,
 300
 ],
@@ -13742,28 +13742,28 @@ false
 [
 "run",
 "host-11-2",
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11-2",
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11-2",
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11-2",
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ]
@@ -13851,16 +13851,16 @@ true
 "command -v docker || ls /usr/bin/docker /usr/local/bin/docker 2>/dev/null": {
 "file": "ubuntu24/which.txt"
 },
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/version.txt"
 },
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/ps.txt"
 },
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/running.txt"
 },
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
 "file": "ubuntu24/images.json"
 }
 },
@@ -22049,28 +22049,28 @@ false
 [
 "run",
 "host-11",
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ],
@@ -22084,28 +22084,28 @@ false
 [
 "run",
 "host-11-2",
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11-2",
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11-2",
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11-2",
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ]
@@ -22167,24 +22167,24 @@ true
 "command -v docker || ls /usr/bin/docker /usr/local/bin/docker 2>/dev/null": {
 "file": "ubuntu24/which.txt"
 },
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/version.txt"
 },
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/ps.txt"
 },
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/running.txt"
 },
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
 "file": "ubuntu24/images.json"
 }
 },
 "stream": {
-"sh -c 'docker save \"$1\"' kanareika sha256:54f2a904c251d5a34adf545a72d32515a15e08418dae0266e23be2e18c66fefa | (gzip -1 2>/dev/null || cat)": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker save \"$1\"' kanareika sha256:54f2a904c251d5a34adf545a72d32515a15e08418dae0266e23be2e18c66fefa | (gzip -1 2>/dev/null || cat)": {
 "file": "save-gz.bin"
 },
-"sh -c 'docker save \"$1\"' kanareika sha256:83d56af9e31427df0fac3923f1fa1e5b464d612d8f1c02e57ed015a9860cf11a | (gzip -1 2>/dev/null || cat)": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker save \"$1\"' kanareika sha256:83d56af9e31427df0fac3923f1fa1e5b464d612d8f1c02e57ed015a9860cf11a | (gzip -1 2>/dev/null || cat)": {
 "file": "save-raw.bin"
 }
 },
@@ -26273,42 +26273,42 @@ false
 [
 "run",
 "host-11",
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker save \"$1\"' kanareika sha256:54f2a904c251d5a34adf545a72d32515a15e08418dae0266e23be2e18c66fefa | (gzip -1 2>/dev/null || cat)",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker save \"$1\"' kanareika sha256:54f2a904c251d5a34adf545a72d32515a15e08418dae0266e23be2e18c66fefa | (gzip -1 2>/dev/null || cat)",
 4294967296,
 1800
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker save \"$1\"' kanareika sha256:83d56af9e31427df0fac3923f1fa1e5b464d612d8f1c02e57ed015a9860cf11a | (gzip -1 2>/dev/null || cat)",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker save \"$1\"' kanareika sha256:83d56af9e31427df0fac3923f1fa1e5b464d612d8f1c02e57ed015a9860cf11a | (gzip -1 2>/dev/null || cat)",
 4294967296,
 1800
 ]
@@ -26366,24 +26366,24 @@ true
 "command -v docker || ls /usr/bin/docker /usr/local/bin/docker 2>/dev/null": {
 "file": "ubuntu24/which.txt"
 },
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/version.txt"
 },
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/ps.txt"
 },
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/running.txt"
 },
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
 "file": "ubuntu24/images.json"
 }
 },
 "stream": {
-"sh -c 'docker save \"$1\"' kanareika sha256:54f2a904c251d5a34adf545a72d32515a15e08418dae0266e23be2e18c66fefa | (gzip -1 2>/dev/null || cat)": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker save \"$1\"' kanareika sha256:54f2a904c251d5a34adf545a72d32515a15e08418dae0266e23be2e18c66fefa | (gzip -1 2>/dev/null || cat)": {
 "file": "save-gz.bin"
 },
-"sh -c 'docker save \"$1\"' kanareika sha256:83d56af9e31427df0fac3923f1fa1e5b464d612d8f1c02e57ed015a9860cf11a | (gzip -1 2>/dev/null || cat)": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker save \"$1\"' kanareika sha256:83d56af9e31427df0fac3923f1fa1e5b464d612d8f1c02e57ed015a9860cf11a | (gzip -1 2>/dev/null || cat)": {
 "err": "host-11: exit 1: no such image"
 }
 },
@@ -26486,42 +26486,42 @@ false
 [
 "run",
 "host-11",
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker save \"$1\"' kanareika sha256:54f2a904c251d5a34adf545a72d32515a15e08418dae0266e23be2e18c66fefa | (gzip -1 2>/dev/null || cat)",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker save \"$1\"' kanareika sha256:54f2a904c251d5a34adf545a72d32515a15e08418dae0266e23be2e18c66fefa | (gzip -1 2>/dev/null || cat)",
 0,
 1800
 ],
 [
 "stream",
 "host-11",
-"sh -c 'docker save \"$1\"' kanareika sha256:83d56af9e31427df0fac3923f1fa1e5b464d612d8f1c02e57ed015a9860cf11a | (gzip -1 2>/dev/null || cat)",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker save \"$1\"' kanareika sha256:83d56af9e31427df0fac3923f1fa1e5b464d612d8f1c02e57ed015a9860cf11a | (gzip -1 2>/dev/null || cat)",
 0,
 1800
 ]
@@ -26548,16 +26548,16 @@ true
 "command -v docker || ls /usr/bin/docker /usr/local/bin/docker 2>/dev/null": {
 "file": "ubuntu24/which.txt"
 },
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/version.txt"
 },
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/ps.txt"
 },
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
 "file": "ubuntu24/running.txt"
 },
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
 "file": "ubuntu24/images.json"
 }
 },
@@ -26604,28 +26604,28 @@ false
 [
 "run",
 "host-11",
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ]
@@ -26653,16 +26653,16 @@ true
 "command -v docker || ls /usr/bin/docker /usr/local/bin/docker 2>/dev/null": {
 "file": "stream9/which.txt"
 },
-"sudo -n sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "stream9/version.txt"
 },
-"sudo -n sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "stream9/ps.txt"
 },
-"sudo -n sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
 "file": "stream9/running.txt"
 },
-"sudo -n sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
 "file": "stream9/images.json"
 }
 },
@@ -26711,28 +26711,28 @@ false
 [
 "run",
 "host-15",
-"sudo -n sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-15",
-"sudo -n sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-15",
-"sudo -n sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-15",
-"sudo -n sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ]
@@ -26866,16 +26866,16 @@ true
 "command -v docker || ls /usr/bin/docker /usr/local/bin/docker 2>/dev/null": {
 "file": "stream9/which.txt"
 },
-"sudo -n sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "stream9/version.txt"
 },
-"sudo -n sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "stream9/ps.txt"
 },
-"sudo -n sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
 "file": "stream9/running.txt"
 },
-"sudo -n sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
 "file": "stream9/images.json"
 }
 },
@@ -26922,28 +26922,28 @@ false
 [
 "run",
 "host-15",
-"sudo -n sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-15",
-"sudo -n sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-15",
-"sudo -n sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-15",
-"sudo -n sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ]
@@ -27034,16 +27034,16 @@ false
 "command -v docker || ls /usr/bin/docker /usr/local/bin/docker 2>/dev/null": {
 "file": "stream9/which.txt"
 },
-"sudo -n sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "err": "host-15: exit 1: sudo: a password is required"
 },
-"sudo -n sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "stream9/ps.txt"
 },
-"sudo -n sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
 "file": "stream9/running.txt"
 },
-"sudo -n sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
 "file": "stream9/images.json"
 }
 },
@@ -27069,7 +27069,7 @@ false
 [
 "run",
 "host-15",
-"sudo -n sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ]
@@ -27095,16 +27095,16 @@ true
 "command -v docker || ls /usr/bin/docker /usr/local/bin/docker 2>/dev/null": {
 "file": "stream9/which.txt"
 },
-"sudo -n sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "file": "stream9/version.txt"
 },
-"sudo -n sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "err": "host-15: exit 1: Cannot connect"
 },
-"sudo -n sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
 "file": "stream9/running.txt"
 },
-"sudo -n sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
 "file": "stream9/images.json"
 }
 },
@@ -27130,14 +27130,14 @@ false
 [
 "run",
 "host-15",
-"sudo -n sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-15",
-"sudo -n sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sudo -n sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ]
@@ -27164,16 +27164,16 @@ true
 "command -v docker || ls /usr/bin/docker /usr/local/bin/docker 2>/dev/null": {
 "file": "ubuntu24/which.txt"
 },
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "text": ""
 },
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ": {
 "text": "\n"
 },
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ": {
 "text": ""
 },
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ": {
 "text": ""
 }
 },
@@ -27204,28 +27204,28 @@ false
 [
 "run",
 "host-11",
-"sh -c 'docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker version --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -a --no-trunc --format '\"'\"'{{json .}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker ps -q --no-trunc | xargs -r docker inspect --format '\"'\"'{{.Image}} {{.Id}}'\"'\"'' kanareika ",
 300,
 true
 ],
 [
 "run",
 "host-11",
-"sh -c 'docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
+"sh -c '[ -n \"${DOCKER_HOST:-}\" ] || [ -S /var/run/docker.sock ] || for s in /run/user/*/docker.sock; do [ -S \"$s\" ] && export DOCKER_HOST=\"unix://$s\" && break; done; docker image ls -q --no-trunc | sort -u | xargs -r docker image inspect' kanareika ",
 300,
 true
 ]
