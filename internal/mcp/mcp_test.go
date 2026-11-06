@@ -26,6 +26,8 @@ const fixture = "../remediate/testdata/fixture"
 
 func TestMain(m *testing.M) {
 	remediate.Now = func() time.Time { return time.Date(2026, 11, 2, 12, 34, 56, 0, time.Local) }
+	// the fixture's running scans last reported at 10:05 UTC: half a minute later they are still running
+	Now = func() time.Time { return time.Date(2026, 11, 2, 10, 5, 30, 0, time.UTC) }
 	os.Exit(m.Run())
 }
 

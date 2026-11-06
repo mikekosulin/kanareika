@@ -77,6 +77,9 @@ func (s *Store) OrgIDs() []string {
 // staleAfter: a running scan's heartbeat is 5s; older than this = the process is gone.
 const staleAfter = 60 * time.Second
 
+// Now: the clock stale detection reads; tests fix it to the fixture's time.
+var Now = time.Now
+
 var runName = regexp.MustCompile(`^[A-Za-z0-9_.-]+$`)
 
 // Run is one line of an environment's run history (from run.json, or status.json while it runs).
@@ -113,7 +116,7 @@ func status(runDir string) map[string]any {
 	if st != nil && st["state"] == "running" {
 		u, _ := st["updated"].(string)
 		t, err := time.Parse(time.RFC3339Nano, u)
-		if err != nil || time.Since(t) > staleAfter {
+		if err != nil || Now().Sub(t) > staleAfter {
 			st["state"] = "stale"
 		}
 	}
