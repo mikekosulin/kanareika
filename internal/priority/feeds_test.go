@@ -156,3 +156,56 @@ func TestFeedsDirDefault(t *testing.T) {
 		t.Fatal(d)
 	}
 }
+
+// TestLoadFeedsPartial: each file may be missing (an older or interrupted update); broken ones are errors.
+func TestLoadFeedsPartial(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("KANAREIKA_FEEDS_DIR", dir)
+	write := func(name, s string) { must(t, os.WriteFile(filepath.Join(dir, name), []byte(s), 0o644)) }
+	if f, err := LoadFeeds(); err != nil || len(f.KEV) != 0 {
+		t.Fatal(f, err)
+	}
+	write("kev.json", `["CVE-1"]`)
+	if f, err := LoadFeeds(); err != nil || !f.KEV["CVE-1"] || len(f.EPSS) != 0 {
+		t.Fatal(f, err)
+	}
+	write("epss.json", `{"CVE-1": 0.3}`)
+	if f, err := LoadFeeds(); err != nil || f.EPSS["CVE-1"] != 0.3 || f.Updated != "" {
+		t.Fatal(f, err)
+	}
+	write("updated", "2026-11-07T00:00:00\n")
+	if f, err := LoadFeeds(); err != nil || f.Updated != "2026-11-07T00:00:00" {
+		t.Fatal(f, err)
+	}
+	for _, c := range [][2]string{{"epss.json", "["}, {"kev.json", "{"}} {
+		write(c[0], c[1])
+		if _, err := LoadFeeds(); err == nil || !strings.Contains(err.Error(), c[0]) {
+			t.Fatalf("%s: %v", c[0], err)
+		}
+	}
+	for _, name := range []string{"kev.json", "epss.json", "updated"} { // a directory where a file should be
+		d := t.TempDir()
+		t.Setenv("KANAREIKA_FEEDS_DIR", d)
+		if name != "kev.json" {
+			must(t, os.WriteFile(filepath.Join(d, "kev.json"), []byte(`[]`), 0o644))
+		}
+		if name == "updated" {
+			must(t, os.WriteFile(filepath.Join(d, "epss.json"), []byte(`{}`), 0o644))
+		}
+		must(t, os.Mkdir(filepath.Join(d, name), 0o755))
+		if _, err := LoadFeeds(); err == nil {
+			t.Fatalf("%s as a directory", name)
+		}
+	}
+}
+
+func TestTruthy(t *testing.T) {
+	for v, want := range map[any]bool{nil: false, true: true, false: false, "": false, "x": true, 0.0: false, 2.0: true, 3: true} {
+		if truthy(v) != want {
+			t.Errorf("%#v", v)
+		}
+	}
+	if truthy([]any{}) || !truthy([]any{1}) || truthy(map[string]any{}) || !truthy(map[string]any{"a": 1}) {
+		t.Fatal("collections")
+	}
+}

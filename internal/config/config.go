@@ -4,7 +4,6 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -28,15 +27,6 @@ type Paths struct {
 	Policy  string
 	Secrets string
 	Reports string
-}
-
-// NewPaths: KANAREIKA_HOME or the current directory.
-func NewPaths() Paths {
-	home := os.Getenv("KANAREIKA_HOME")
-	if home == "" {
-		home, _ = os.Getwd()
-	}
-	return PathsAt(home)
 }
 
 func PathsAt(home string) Paths {

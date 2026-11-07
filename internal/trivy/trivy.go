@@ -284,15 +284,6 @@ func gzipFile(path string, data []byte) error {
 	return err
 }
 
-// RunReport: Run, decoded as an fs / image / rootfs / sbom report.
-func RunReport(ctx context.Context, args []string, output string, timeout time.Duration) (*Report, error) {
-	data, err := Run(ctx, args, output, timeout)
-	if err != nil {
-		return nil, err
-	}
-	return ParseReport(data)
-}
-
 // Version of the trivy kanareika runs, "?" when it can't be asked.
 func Version(ctx context.Context) string {
 	if os.Getenv("KANAREIKA_TRIVY") == "" {
