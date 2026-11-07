@@ -74,7 +74,7 @@ func TestHelpScrolls(t *testing.T) {
 	h.hasNot("1-9, 0, S, tab")
 	h.key("up", "k", "j", "x")
 	h.hasNot("any key closes this")
-	h.has("To do(")
+	h.has("ToDo(")
 }
 
 // TestPanels: the panel settings change the header and the columns and are kept for the next session.
@@ -178,7 +178,7 @@ func TestTabsAndZone(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production", Settings: path, Zone: time.FixedZone("MSK", 3*3600)}, true)
 	h.size(120, 30)
 	h.key("0")
-	h.has(" 1 Organizations ", "2 To do", " 0 Runs ", "2026-11-02 14:00") // the run of 11:00 UTC, in MSK
+	h.has(" 1 Organizations ", "2 ToDo", " 0 Runs ", "2026-11-02 14:00") // the run of 11:00 UTC, in MSK
 	h.size(44, 20)
 	h.has(" 0 Runs ", " 1  2 ")
 	h.hasNot("Organizations ")

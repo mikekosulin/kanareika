@@ -226,8 +226,8 @@ func (h *harness) waitJob(state string) {
 
 func TestBrowse(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.has("To do(acme/production)[13]", "Org:", "acme", "production", "Current state", "KEV RCE Update OS packages (2)",
-		"<s> scan", "acme   production   to do")
+	h.has("ToDo(acme/production)[13]", "Org:", "acme", "production", "Current state", "KEV RCE Update OS packages (2)",
+		"<s> scan", "acme   production   todo")
 	h.key("p") // P4 too
 	if n := len(h.m.actions()); n <= 13 {
 		t.Fatal("P4 not shown:", n)
@@ -242,14 +242,14 @@ func TestBrowse(t *testing.T) {
 	h.has("Runs(acme/production)[5]", "2026-11-02 11:00", "partial")
 	// open an older run, then back to the current state
 	h.key("G", "enter")
-	h.has("To do(acme/production@2026-11-01 10:00)")
+	h.has("ToDo(acme/production@2026-11-01 10:00)")
 	h.key("0", "c")
-	h.has("To do(acme/production)[")
+	h.has("ToDo(acme/production)[")
 	h.key("1")
 	h.has("Organizations[2]", "staging", "no runs")
 	// another env: no runs yet, with the hint
 	h.key("down", "enter")
-	h.has("acme   staging   to do", "kanareika scan acme --env staging", "or press <s>")
+	h.has("acme   staging   todo", "kanareika scan acme --env staging", "or press <s>")
 	h.key("tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab") // around all views and one more
 	h.has("acme   staging   hosts")
 	h.key("?")
@@ -261,7 +261,7 @@ func TestBrowse(t *testing.T) {
 func TestFilterSelectCopy(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.key("/", "k", "e", "r", "n", "e", "l")
-	h.has("</kernel_>", "To do(acme/production)[2]")
+	h.has("</kernel_>", "ToDo(acme/production)[2]")
 	h.key("backspace", "enter")
 	h.has("</kerne>")
 	if h.m.typing {

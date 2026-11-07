@@ -111,7 +111,7 @@ func (m *Model) layout(v view, cols []col, rows [][]string, width int) (keep, wi
 				n = max(n, ansi.StringWidth(r[i]))
 			}
 		}
-		if c.width > 0 {
+		if c.width > 0 && !c.right { // numbers (right-aligned) are never cut: they take what they need
 			n = min(n, c.width)
 		}
 		if c.width == 0 {
@@ -756,7 +756,7 @@ func (m *Model) actionsView(list []action, w, h int) []string {
 		}
 		cves := ""
 		if a.CVEs > 0 {
-			cves = fmt.Sprint(a.CVEs)
+			cves = compact(float64(a.CVEs))
 		}
 		rows = append(rows, []string{box, prio(a.Priority), sMuted.Render(a.Due), tags + sText.Render(m.t.title(a)),
 			sText.Render(hostsCell(a.Hosts)), cves})
@@ -822,7 +822,7 @@ func (m *Model) hostsView(list []hostItem, w, h int) []string {
 	for _, x := range list {
 		c := x.counts
 		rows = append(rows, []string{sBold.Render(x.name), sText.Render(x.os), count("P1", c["P1"], true), count("P2", c["P2"], true),
-			count("P3", c["P3"], true), count("P4", c["P4"], true), fmt.Sprint(c["cves"]), ""})
+			count("P3", c["P3"], true), count("P4", c["P4"], true), compact(float64(c["cves"])), ""})
 	}
 	cols := slices.Clone(viewCols[vHosts])
 	cols[len(cols)-1].fill = func(r, w int) string { return stack(list[r].counts, top, w) }
@@ -844,7 +844,7 @@ func (m *Model) packagesView(list []planRow, w, h int) []string {
 			target = m.t.T("OS")
 		}
 		rows = append(rows, []string{prio(p.Priority), sText.Render(p.Host), sMuted.Render(target), sBold.Render(p.Pkg),
-			sMuted.Render(p.Installed), sOK.Render(p.Fixed), fmt.Sprint(p.CVEs), kev, sMuted.Render(p.Due)})
+			sMuted.Render(p.Installed), sOK.Render(p.Fixed), compact(float64(p.CVEs)), kev, sMuted.Render(p.Due)})
 	}
 	return m.table(viewCols[vPackages], rows, w, h)
 }
@@ -1066,6 +1066,15 @@ func (m *Model) crumbs() string {
 		l += "  " + sOK.Render(m.toast)
 	case len(m.orgs.Errors) > 0:
 		l += "  " + sErr.Render(fmt.Sprintf("%s: %d (kanareika validate)", m.t.T("Config errors"), len(m.orgs.Errors)))
+	}
+	// the time now at the right, in the zone times are shown in (z switches it); the screen refreshes often enough
+	z := m.t.zone
+	if z == nil {
+		z = time.UTC
+	}
+	clock := sMuted.Render(m.now().In(z).Format("15:04") + " " + m.t.zoneName(m.now()))
+	if room := m.w - ansi.StringWidth(l) - ansi.StringWidth(clock) - 1; room >= 2 {
+		l += strings.Repeat(" ", room) + clock
 	}
 	return l
 }

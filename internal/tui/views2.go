@@ -111,7 +111,7 @@ func (m *Model) changesView(list []change, w, h int) []string {
 			tags += sErr.Render("RCE ")
 		}
 		rows = append(rows, []string{sign, prio(c.Priority), sText.Render(c.Host), tags + sBold.Render(c.Pkg), sMuted.Render(c.Target),
-			fmt.Sprint(c.Count)})
+			compact(float64(c.Count))})
 	}
 	return append([]string{note}, m.table(viewCols[vChanges], rows, w, h-1)...)
 }

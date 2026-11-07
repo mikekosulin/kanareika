@@ -33,7 +33,7 @@ const (
 )
 
 // viewNames: tab titles (English keys of the web page's translations where it has them).
-var viewNames = [nViews]string{"Organizations", "To do", "Hosts", "Packages", "Changes", "Access", "Network", "Health",
+var viewNames = [nViews]string{"Organizations", "ToDo", "Hosts", "Packages", "Changes", "Access", "Network", "Health",
 	"Exceptions", "Runs", "Scans"}
 
 // viewHotkeys: the key of each view: 1-9, 0, then S.

@@ -16,7 +16,7 @@ func TestHostCard(t *testing.T) {
 	h.size(110, 70)
 	h.key("3", "enter")
 	h.has("Host(web-01)", "CentOS Stream 9", "5.14.0-575.el9.x86_64", "19 CVE",
-		"To do", "Update OS packages (2)", "Packages", "openssl", "KEV", "+8 more",
+		"ToDo", "Update OS packages (2)", "Packages", "openssl", "KEV", "+8 more",
 		"SSH and logins", "port", "logged in", "10.77.0.24", "failed logins", "password guessing", "198.51.100.0",
 		"Network", "public IPs", "192.0.2.1", "listening", "tcp *:22",
 		"Health", "disks", "50% /", "load", "Other findings", "SSH password guessing")
