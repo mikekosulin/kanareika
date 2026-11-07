@@ -11,7 +11,11 @@ cd "$(dirname "$0")/../.."
 
 id="kn-e2e-$$"
 work="$(mktemp -d)"
+# own: what the container (root) wrote in the mounted directories, back to the user running this, so the host
+# can write there and remove it (Linux keeps the owner; Docker Desktop on a Mac hides the difference)
+own() { docker exec "$id-runner" chown -R "$(id -u):$(id -g)" /work /root/.cache /tmp 2>/dev/null || true; }
 cleanup() {
+	own
 	docker rm -f "$id-target" "$id-runner" >/dev/null 2>&1 || true
 	docker network rm "$id" >/dev/null 2>&1 || true
 	rm -rf "$work"
@@ -48,6 +52,7 @@ step "init, org, validate"
 k version
 k init .
 k org new e2e
+own
 install -m 600 "$work/key" "$work/home/secrets/e2e_key"
 today="$(date -u +%F)"
 until="$(date -u -d '+30 days' +%F 2>/dev/null || date -u -v+30d +%F)"

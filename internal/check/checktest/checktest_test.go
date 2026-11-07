@@ -758,3 +758,22 @@ func TestRunReplayFatal(t *testing.T) {
 			expect(t, true, "invalid character")
 	})
 }
+
+// TestNormWindows: on Windows a root is also found JSON-escaped and with /, and what follows a token gets / as
+// the recordings (made on Unix) have it.
+func TestNormWindows(t *testing.T) {
+	old := windowsPaths
+	windowsPaths = true
+	t.Cleanup(func() { windowsPaths = old })
+	n := &Norm{Roots: [][2]string{{`C:\Users\a\Temp\001`, "$OUT"}}}
+	for in, want := range map[string]string{
+		`C:\Users\a\Temp\001\hosts\web-01\x.txt`:         "$OUT/hosts/web-01/x.txt",
+		`{"target":"C:\\Users\\a\\Temp\\001\\hosts\\x"}`: `{"target":"$OUT/hosts/x"}`,
+		`C:/Users/a/Temp/001/stage`:                      "$OUT/stage",
+		`no path here`:                                   "no path here",
+	} {
+		if got := n.S(in); got != want {
+			t.Errorf("S(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

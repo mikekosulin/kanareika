@@ -71,13 +71,27 @@ var uuidRE = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}
 // Norm replaces temp paths with tokens and UUIDs with "UUID", as the recording did.
 type Norm struct{ Roots [][2]string }
 
-// S normalizes a string.
+// S normalizes a string: each root (as written, with / and, inside JSON, with \\ for \) becomes its token, and on
+// Windows the separators after a token become / as the recordings have them.
 func (n *Norm) S(s string) string {
 	for _, r := range n.Roots {
 		s = strings.ReplaceAll(s, r[0], r[1])
+		if windowsPaths {
+			s = strings.ReplaceAll(s, strings.ReplaceAll(r[0], `\`, `\\`), r[1])
+			s = strings.ReplaceAll(s, strings.ReplaceAll(r[0], `\`, "/"), r[1])
+		}
+	}
+	if windowsPaths {
+		s = afterToken.ReplaceAllStringFunc(s, func(m string) string { return strings.ReplaceAll(strings.ReplaceAll(m, `\\`, "/"), `\`, "/") })
 	}
 	return uuidRE.ReplaceAllString(s, "UUID")
 }
+
+// windowsPaths: local paths use \ (tests of the harness switch it to see both ways).
+var windowsPaths = filepath.Separator == '\\'
+
+// afterToken: a path under a token ($OUT\hosts\x, or $OUT\\hosts\\x inside JSON).
+var afterToken = regexp.MustCompile(`\$[A-Z]+(?:\\{1,2}[^\s"'\\]+)+`)
 
 // P normalizes a local path argument: S, and the OS's separators as the recordings have them (made on Unix).
 func (n *Norm) P(s string) string { return filepath.ToSlash(n.S(s)) }
@@ -227,7 +241,8 @@ func FakeTrivy(here string, c *Replay, n *Norm, calls *[]any) TrivyFunc {
 		}
 		text := gunzip(raw)
 		if stage != "" {
-			text = bytes.ReplaceAll(text, []byte("@STAGE@"), []byte(stage))
+			// with / even on Windows: the report is JSON (a \ would be an escape there), and the paths read back the same
+			text = bytes.ReplaceAll(text, []byte("@STAGE@"), []byte(filepath.ToSlash(stage)))
 		}
 		if err := os.WriteFile(output+".gz", gzipBytes(text), 0o644); err != nil {
 			return nil, err
