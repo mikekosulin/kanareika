@@ -417,6 +417,9 @@ func (m *Model) compactHeader() string {
 	if s := m.scanState(); s != "" {
 		parts = append(parts, part{s, 2})
 	}
+	if m.dbAttention() != "" || m.db != nil && m.db.Updating {
+		parts = append(parts, part{m.dbState(), 3})
+	}
 	help := sKey.Render("<?>") + " " + sMuted.Render(m.t.T("help"))
 	join := func(ps []part) string {
 		t := make([]string, len(ps))
@@ -479,7 +482,45 @@ func (m *Model) info() []string {
 			trivy += sMuted.Render(" · KEV/EPSS " + m.t.T("not loaded"))
 		}
 	}
-	return []string{kv("Org", org), kv("Env", env), kv("Data", data), kv("Scan", scan), kv("Trivy", trivy)}
+
+	db := m.dbState()
+	if db == "" {
+		db = sDim.Render("-")
+	}
+	return []string{kv("Org", org), kv("Env", env), kv("Data", data), kv("Scan", scan), kv("Trivy", trivy), kv("DB", db)}
+}
+
+// dbState: the vulnerability DB in a few words: updating, missing, a newer one out, or its age.
+func (m *Model) dbState() string {
+	if m.db == nil {
+		return ""
+	}
+	warn := lipgloss.NewStyle().Foreground(cP["P3"])
+	switch {
+	case m.db.Updating:
+		return sRun.Render(m.t.T("DB updating…"))
+	case m.dbAttention() == "missing":
+		return sErr.Render(m.t.T("no DB")) + " " + sKey.Render("<U>")
+	case m.dbAttention() == "outdated":
+		return warn.Render(m.t.T("newer DB out")) + " " + sKey.Render("<U>")
+	}
+	for _, d := range m.db.DBs {
+		if at, err := time.Parse(time.RFC3339, d.Updated); err == nil && d.Name == "db" {
+			return sMuted.Render("DB " + agoShort(m.now().Sub(at)))
+		}
+	}
+	return ""
+}
+
+// agoShort: a duration as 5m, 3h, 2d.
+func agoShort(d time.Duration) string {
+	switch {
+	case d < time.Hour:
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	case d < 48*time.Hour:
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	}
+	return fmt.Sprintf("%dd", int(d.Hours()/24))
 }
 
 // scanState: a scan running in this env (or scans started here), "" when none.
@@ -530,7 +571,8 @@ func (m *Model) gauges(barW int) []string {
 // keys: k9s-style hints in columns, for the view on screen; what doesn't fit in width ends with <?> help.
 func (m *Model) keys(width int) []string {
 	type k struct{ key, what string }
-	global := []k{{"1-0,S", "views"}, {"/", "filter"}, {"o", "panels"}, {"r", "refresh"}, {"L", "language"}, {"q", "quit"}}
+	global := []k{{"1-0,S", "views"}, {"/", "filter"}, {"U", "update DBs"}, {"o", "panels"}, {"r", "refresh"}, {"L", "language"},
+		{"q", "quit"}}
 	local := map[view][]k{
 		vOrgs:       {{"enter", "open"}},
 		vActions:    {{"space", "select"}, {"a", "select all"}, {"y", "copy task"}, {"enter", "details"}, {"p", "P4"}},
@@ -990,6 +1032,7 @@ var helpRows = [][2]string{
 	{"f", "only ports open to the outside (Network)"},
 	{"o", "panels: header, columns of this view (kept between sessions)"},
 	{"z", "times in the system's time zone or in UTC"},
+	{"U", "check for newer vulnerability DBs and download them (kanareika db update)"},
 	{"L", "language"},
 	{"r", "refresh"},
 	{"q, ctrl+c", "quit"},

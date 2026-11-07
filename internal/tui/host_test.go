@@ -3,6 +3,7 @@ package tui
 import (
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -127,4 +128,40 @@ func TestSelectedRowKeepsChart(t *testing.T) {
 		}
 	}
 	t.Fatal("no web-01 row")
+}
+
+// TestDBStatus: checked at start (none yet: a hint), shown in the header, U updates it.
+func TestDBStatus(t *testing.T) {
+	t.Setenv("KN_TEST_NO_DB", "1")
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
+	h.has("DB:", "no DB <U>", "No vulnerability DB yet: press U to download it", "<U> update DBs")
+	h.key("U")
+	h.has("Updating vulnerability DBs")
+	for i := 0; i < 200 && (h.m.db == nil || h.m.db.Updating || h.m.dbAttention() != ""); i++ {
+		time.Sleep(5 * time.Millisecond)
+		h.run(h.m.fetchDB())
+	}
+	h.has("DB 1h")
+	h.hasNot("no DB")
+
+	// one running: U does nothing; a newer build out: said so; a failed update: the error
+	h.m.db.Updating = true
+	if h.m.updateDB() != nil {
+		t.Fatal("second update started")
+	}
+	h.has("updating")
+	h.m.db.DBs[1].Outdated = true
+	h.m.db.Updating = false
+	h.has("newer DB out <U>")
+	h.m.db.Updating = true
+	h.run(func() tea.Msg { return dbMsg(dbResp{Error: "no repository worked", Enabled: true}) })
+	h.has("DB update failed: no repository worked")
+
+	// read-only: no updates from here
+	h2 := newHarness(t, Options{Org: "acme", Env: "production"}, false)
+	h2.key("U")
+	h2.has("DB updates are off here (read-only)")
+	if agoShort(5*time.Minute) != "5m" || agoShort(3*time.Hour) != "3h" || agoShort(72*time.Hour) != "3d" {
+		t.Fatal("agoShort")
+	}
 }

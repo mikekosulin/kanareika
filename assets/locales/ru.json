@@ -490,6 +490,18 @@
     "errors and log": "ошибки, журнал",
     "Like it? Star it on GitHub": "Нравится? Поставьте звезду на GitHub",
     "Something wrong? Report an issue on GitHub (no real data, please)": "Что-то не так? Сообщите о проблеме на GitHub (без реальных данных)",
-    "views: organizations, ToDo, hosts, packages, changes, access, network, health, exceptions, runs, scans": "экраны: организации, ToDo, хосты, пакеты, изменения, доступ, сеть, здоровье, исключения, прогоны, сканы"
+    "views: organizations, ToDo, hosts, packages, changes, access, network, health, exceptions, runs, scans": "экраны: организации, ToDo, хосты, пакеты, изменения, доступ, сеть, здоровье, исключения, прогоны, сканы",
+    "DB update failed": "Не удалось обновить базы",
+    "Vulnerability DBs updated": "Базы уязвимостей обновлены",
+    "No vulnerability DB yet: press U to download it": "Базы уязвимостей ещё нет: нажмите U, чтобы скачать",
+    "A newer vulnerability DB is out: press U to update": "Вышла новая база уязвимостей: нажмите U, чтобы обновить",
+    "DB updates are off here (read-only)": "Обновление баз здесь отключено (только чтение)",
+    "Updating vulnerability DBs…": "Обновляю базы уязвимостей…",
+    "DB updating…": "обновляется…",
+    "no DB": "нет базы",
+    "newer DB out": "есть новее",
+    "update DBs": "обновить базы",
+    "check for newer vulnerability DBs and download them (kanareika db update)": "проверить, нет ли новых баз уязвимостей, и скачать их (kanareika db update)",
+    "DB": "База"
   }
 }

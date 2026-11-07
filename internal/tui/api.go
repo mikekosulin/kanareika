@@ -187,6 +187,22 @@ type scanOptions struct {
 	Modules []string `json:"modules"`
 }
 
+// dbResp: the DBs scans use (GET /api/db) and the update started from here or the web.
+type dbResp struct {
+	DBs []struct {
+		Name     string `json:"name"`
+		Updated  string `json:"updated"`
+		Next     string `json:"next_update"`
+		Outdated bool   `json:"outdated"`
+	} `json:"dbs"`
+	FeedsUpdated string   `json:"feeds_updated"`
+	Enabled      bool     `json:"enabled"`
+	Updating     bool     `json:"updating"`
+	Output       []string `json:"output"`
+	Error        string   `json:"error"`
+	Finished     string   `json:"finished"`
+}
+
 type i18nResp struct {
 	Langs    []string                     `json:"langs"`
 	Messages map[string]map[string]string `json:"messages"`

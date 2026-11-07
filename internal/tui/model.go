@@ -73,6 +73,7 @@ type Model struct {
 	runKey string // org/env/run/last-run the run data is for
 	jobs   jobsResp
 	scanOK bool
+	db     *dbResp // nil until the first answer
 	loaded bool
 
 	cur     [nViews]int
@@ -137,6 +138,7 @@ type (
 		d   *runResp
 	}
 	jobsMsg    jobsResp
+	dbMsg      dbResp
 	i18nMsg    i18nResp
 	errMsg     struct{ err error }
 	tickMsg    time.Time
@@ -185,11 +187,68 @@ func (m *Model) fetchI18n() tea.Cmd {
 	return m.get("/api/i18n", func(v any) tea.Msg { return i18nMsg(*v.(*i18nResp)) }, &i18nResp{})
 }
 
-func (m *Model) refresh() tea.Cmd { return tea.Batch(m.fetchOrgs(), m.fetchEnv(), m.fetchJobs()) }
+func (m *Model) fetchDB() tea.Cmd {
+	return m.get("/api/db", func(v any) tea.Msg { return dbMsg(*v.(*dbResp)) }, &dbResp{})
+}
+
+func (m *Model) refresh() tea.Cmd {
+	return tea.Batch(m.fetchOrgs(), m.fetchEnv(), m.fetchJobs(), m.fetchDB())
+}
+
+// dbAttention: the DBs need an update (one is missing, or a newer build is out); "" when they don't.
+func (m *Model) dbAttention() string {
+	if m.db == nil {
+		return ""
+	}
+	for _, d := range m.db.DBs {
+		if d.Updated == "" && d.Name == "db" {
+			return "missing"
+		}
+	}
+	for _, d := range m.db.DBs {
+		if d.Outdated {
+			return "outdated"
+		}
+	}
+	return ""
+}
+
+func (m *Model) onDB(d dbResp) tea.Cmd {
+	was, first := m.db != nil && m.db.Updating, m.db == nil
+	m.db = &d
+	switch {
+	case was && !d.Updating && d.Error != "":
+		m.err = m.t.T("DB update failed") + ": " + d.Error
+	case was && !d.Updating:
+		m.say(m.t.T("Vulnerability DBs updated"))
+		m.runKey = "" // the current state is rebuilt with them on the next look
+		return m.refresh()
+	case first && d.Enabled && m.dbAttention() == "missing":
+		m.say(m.t.T("No vulnerability DB yet: press U to download it"))
+	case first && d.Enabled && m.dbAttention() == "outdated":
+		m.say(m.t.T("A newer vulnerability DB is out: press U to update"))
+	}
+	return nil
+}
+
+// updateDB: U — check for newer DBs and download them (what kanareika db update does).
+func (m *Model) updateDB() tea.Cmd {
+	if m.db != nil && !m.db.Enabled {
+		m.say(m.t.T("DB updates are off here (read-only)"))
+		return nil
+	}
+	if m.db != nil && m.db.Updating {
+		return nil
+	}
+	fetch := m.fetchDB()
+	return m.post("/api/db/update", nil, func(any) tea.Msg {
+		return tea.BatchMsg{fetch, func() tea.Msg { return toastMsg(m.t.T("Updating vulnerability DBs…")) }}
+	})
+}
 
 // busy: a scan is running here or in the selected env (refresh more often).
 func (m *Model) busy() bool {
-	if m.envd.Live != nil && m.envd.Live.State == "running" {
+	if m.envd.Live != nil && m.envd.Live.State == "running" || m.db != nil && m.db.Updating {
 		return true
 	}
 	return slices.ContainsFunc(m.jobs.Jobs, func(j jobInfo) bool { return j.State == "running" })
@@ -228,6 +287,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.key == m.wantKey() {
 			m.rund, m.runKey, m.err = msg.d, msg.key, ""
 		}
+	case dbMsg:
+		return m, m.onDB(dbResp(msg))
 	case jobsMsg:
 		was := m.busy()
 		m.jobs, m.scanOK = jobsResp(msg), msg.Enabled
@@ -447,6 +508,8 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.panels = &panelsDlg{cur: 1}
 	case "z":
 		m.toggleZone()
+	case "U":
+		return m, m.updateDB()
 	case "/":
 		m.typing = true
 	case "esc":

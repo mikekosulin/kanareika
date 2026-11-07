@@ -113,6 +113,21 @@ func trivyCacheDir() string {
 }
 
 // cachedAt: when the cached copy of k was downloaded; zero if there is none.
+// nextUpdate: when trivy publishes the next build (metadata.json NextUpdate); zero when unknown.
+func (k dbKind) nextUpdate() time.Time {
+	dir := trivyCacheDir()
+	if dir == "" {
+		return time.Time{}
+	}
+	data, err := os.ReadFile(filepath.Join(dir, k.name, "metadata.json"))
+	if err != nil {
+		return time.Time{}
+	}
+	var m struct{ NextUpdate time.Time }
+	_ = json.Unmarshal(data, &m)
+	return m.NextUpdate
+}
+
 func (k dbKind) cachedAt() time.Time {
 	dir := trivyCacheDir()
 	if dir == "" {
@@ -213,6 +228,13 @@ type DBInfo struct {
 	Name    string    `json:"name"`    // "db", "java-db"
 	Dir     string    `json:"dir"`     // where it is (or would be)
 	Updated time.Time `json:"updated"` // zero: not downloaded
+	// Next: when the next build of this DB is published (trivy's metadata); after it, a newer one is out
+	Next time.Time `json:"next_update"`
+}
+
+// Outdated: a newer build has been published since this one (or there is none yet).
+func (d DBInfo) Outdated(now time.Time) bool {
+	return d.Updated.IsZero() || !d.Next.IsZero() && now.After(d.Next)
 }
 
 // DBStatus: the cached DBs, in a fixed order.
@@ -223,7 +245,7 @@ func DBStatus() []DBInfo {
 		if c := trivyCacheDir(); c != "" {
 			dir = filepath.Join(c, k.name)
 		}
-		out = append(out, DBInfo{Name: k.name, Dir: dir, Updated: k.cachedAt()})
+		out = append(out, DBInfo{Name: k.name, Dir: dir, Updated: k.cachedAt(), Next: k.nextUpdate()})
 	}
 	return out
 }

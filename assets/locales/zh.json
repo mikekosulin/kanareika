@@ -490,6 +490,18 @@
     "errors and log": "错误与日志",
     "Like it? Star it on GitHub": "喜欢吗？在 GitHub 上点个星",
     "Something wrong? Report an issue on GitHub (no real data, please)": "有问题？在 GitHub 上提交 issue（请勿包含真实数据）",
-    "views: organizations, ToDo, hosts, packages, changes, access, network, health, exceptions, runs, scans": "视图：组织、待办、主机、软件包、变化、访问、网络、健康、例外、运行、扫描"
+    "views: organizations, ToDo, hosts, packages, changes, access, network, health, exceptions, runs, scans": "视图：组织、待办、主机、软件包、变化、访问、网络、健康、例外、运行、扫描",
+    "DB update failed": "漏洞库更新失败",
+    "Vulnerability DBs updated": "漏洞库已更新",
+    "No vulnerability DB yet: press U to download it": "尚无漏洞库：按 U 下载",
+    "A newer vulnerability DB is out: press U to update": "有新版漏洞库：按 U 更新",
+    "DB updates are off here (read-only)": "此处无法更新漏洞库（只读）",
+    "Updating vulnerability DBs…": "正在更新漏洞库…",
+    "DB updating…": "更新中…",
+    "no DB": "无漏洞库",
+    "newer DB out": "有新版",
+    "update DBs": "更新漏洞库",
+    "check for newer vulnerability DBs and download them (kanareika db update)": "检查并下载更新的漏洞库（kanareika db update）",
+    "DB": "漏洞库"
   }
 }

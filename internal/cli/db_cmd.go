@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -52,39 +53,44 @@ func (a *app) dbUpdateCmd(use string) *cobra.Command {
 		Short: "download trivy's vulnerability DBs, CISA KEV, EPSS and the IP database",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			out := cmd.OutOrStdout()
-			pol, err := priority.LoadPolicy(a.paths)
-			if err != nil {
-				return err
-			}
 			ctx, stop := interruptible()
 			defer stop()
-			st, err := updateFeeds(ctx, pol)
-			if err != nil {
-				return err
-			}
-			city, asn := st.IPDBCity, st.IPDBASN
-			if city == "" {
-				city = "none"
-			}
-			if asn == "" {
-				asn = "none"
-			}
-			fmt.Fprintf(out, "KEV: %d CVEs, EPSS: %d scores, IP DB (DB-IP Lite): city %s, asn %s -> %s\n",
-				st.KEV, st.EPSS, city, asn, priority.FeedsDir())
-			if skipTrivy {
-				return nil
-			}
-			logf := func(f string, a ...any) { fmt.Fprintf(cmd.ErrOrStderr(), f+"\n", a...) }
-			if err := prepareDB(ctx, logf); err != nil {
-				return err
-			}
-			printDBStatus(out, time.Now())
-			return nil
+			return a.updateDBs(ctx, cmd.OutOrStdout(), cmd.ErrOrStderr(), skipTrivy)
 		},
 	}
 	c.Flags().BoolVar(&skipTrivy, "skip-trivy", false, "feeds only, not trivy's vulnerability DBs")
 	return c
+}
+
+// updateDBs: the feeds (KEV, EPSS, IP database), then trivy's DBs unless skipTrivy; what `db update` does, and what
+// the TUI and the web start with U / the update button.
+func (a *app) updateDBs(ctx context.Context, out, errOut io.Writer, skipTrivy bool) error {
+	pol, err := priority.LoadPolicy(a.paths)
+	if err != nil {
+		return err
+	}
+	st, err := updateFeeds(ctx, pol)
+	if err != nil {
+		return err
+	}
+	city, asn := st.IPDBCity, st.IPDBASN
+	if city == "" {
+		city = "none"
+	}
+	if asn == "" {
+		asn = "none"
+	}
+	fmt.Fprintf(out, "KEV: %d CVEs, EPSS: %d scores, IP DB (DB-IP Lite): city %s, asn %s -> %s\n",
+		st.KEV, st.EPSS, city, asn, priority.FeedsDir())
+	if skipTrivy {
+		return nil
+	}
+	logf := func(f string, a ...any) { fmt.Fprintf(errOut, f+"\n", a...) }
+	if err := prepareDB(ctx, logf); err != nil {
+		return err
+	}
+	printDBStatus(out, time.Now())
+	return nil
 }
 
 func printDBStatus(out io.Writer, now time.Time) {

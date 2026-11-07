@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"log"
@@ -84,6 +85,20 @@ func (s *scanner) run(ctx context.Context, o *config.Org, req server.ScanRequest
 	}
 }
 
+// writeDBMeta: trivy's DBs as downloaded an hour before the harness's now, the next build far ahead.
+func writeDBMeta(cache string) error {
+	b := `{"UpdatedAt":"2026-11-07T11:00:00Z","NextUpdate":"2099-01-01T00:00:00Z"}`
+	for _, n := range []string{"db", "java-db"} {
+		if err := os.MkdirAll(filepath.Join(cache, n), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(cache, n, "metadata.json"), []byte(b), 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type harness struct {
 	t    *testing.T
 	m    *Model
@@ -93,6 +108,11 @@ type harness struct {
 
 func newHarness(t *testing.T, o Options, scans bool) *harness {
 	t.Helper()
+	cache := t.TempDir() // never the user's DBs: a current one here, or none for tests that want none
+	t.Setenv("TRIVY_CACHE_DIR", cache)
+	if os.Getenv("KN_TEST_NO_DB") == "" {
+		must(t, writeDBMeta(cache))
+	}
 	sc := &scanner{release: make(chan struct{})}
 	opts := server.Options{Paths: fixture(t), Log: log.New(io.Discard, "", 0),
 		Prompt: func(_ *config.Org, env string, _ *report.View, ids []string, lang string) string {
@@ -100,6 +120,13 @@ func newHarness(t *testing.T, o Options, scans bool) *harness {
 		}}
 	if scans {
 		opts.Scan = sc.run
+		opts.UpdateDB = func(_ context.Context, out io.Writer) error { // writes what trivy would, at once
+			if err := writeDBMeta(os.Getenv("TRIVY_CACHE_DIR")); err != nil {
+				return err
+			}
+			_, err := fmt.Fprintln(out, "trivy db: updated")
+			return err
+		}
 	}
 	s, err := server.New(opts)
 	must(t, err)

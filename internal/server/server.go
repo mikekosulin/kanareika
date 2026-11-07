@@ -54,10 +54,12 @@ type PromptFunc func(org *config.Org, env string, view *report.View, ids []strin
 
 type Options struct {
 	Paths  config.Paths
-	Prompt PromptFunc  // nil: /api/prompt answers 501
-	Scan   ScanFunc    // nil: scans can't be started from the dashboard
-	Token  string      // "": no access token (fine on localhost)
-	Log    *log.Logger // errors and panics; nil: the standard logger
+	Prompt PromptFunc // nil: /api/prompt answers 501
+	Scan   ScanFunc   // nil: scans can't be started from the dashboard
+	// UpdateDB: what `db update` does; nil: DB updates can't be started from an interface
+	UpdateDB DBUpdateFunc
+	Token    string      // "": no access token (fine on localhost)
+	Log      *log.Logger // errors and panics; nil: the standard logger
 }
 
 // Server holds the API state: org configs (reloaded by /api/orgs) and the last few views.
@@ -71,6 +73,7 @@ type Server struct {
 	token  string
 	csrf   string
 	jobs   *jobs       // nil: scans disabled
+	db     *dbUpdater  // nil: DB updates disabled
 	local  atomic.Bool // bound to loopback: only loopback Host headers are served
 
 	mu    sync.Mutex // view builds and current/ updates, one at a time (each can take seconds on big runs)
@@ -90,6 +93,9 @@ func New(o Options) (*Server, error) {
 	}
 	if o.Scan != nil {
 		s.jobs = &jobs{scan: o.Scan, now: time.Now}
+	}
+	if o.UpdateDB != nil {
+		s.db = &dbUpdater{fn: o.UpdateDB, now: time.Now}
 	}
 	var err error
 	if s.page, err = page(); err != nil {
@@ -164,6 +170,8 @@ func (s *Server) Handler() http.Handler {
 	r.Get("/api/scan-options", s.api(s.apiScanOptions))
 	r.Get("/api/session", s.apiSession)
 	r.Get("/api/jobs", s.apiJobs)
+	r.Get("/api/db", s.apiDB)
+	r.With(s.csrfCheck).Post("/api/db/update", s.apiDBUpdate)
 	r.With(s.csrfCheck).Post("/api/scan", s.apiScan)
 	r.With(s.csrfCheck).Post("/api/jobs/{id}/cancel", s.apiCancel)
 	return r
@@ -217,7 +225,7 @@ func headers(next http.Handler) http.Handler {
 // methods: GET everywhere, POST to the scan endpoints only.
 func methods(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		post := r.Method == http.MethodPost && (r.URL.Path == "/api/scan" ||
+		post := r.Method == http.MethodPost && (r.URL.Path == "/api/scan" || r.URL.Path == "/api/db/update" ||
 			strings.HasPrefix(r.URL.Path, "/api/jobs/") && strings.HasSuffix(r.URL.Path, "/cancel"))
 		if r.Method != http.MethodGet && !post {
 			send(w, 501, "text/plain", []byte("unsupported method"))
@@ -323,9 +331,9 @@ func (s *Server) Serve(ctx context.Context, host string, port int, out io.Writer
 
 func (s *Server) serve(ctx context.Context, ln net.Listener, host string, out io.Writer) error {
 	s.local.Store(loopbackHost(host))
-	if !s.local.Load() && s.token == "" && s.jobs != nil {
-		s.jobs = nil
-		fmt.Fprintln(out, "note: listening beyond localhost without --token: the dashboard is read-only (no scans)")
+	if !s.local.Load() && s.token == "" && (s.jobs != nil || s.db != nil) {
+		s.jobs, s.db = nil, nil
+		fmt.Fprintln(out, "note: listening beyond localhost without --token: the dashboard is read-only (no scans, no DB updates)")
 	}
 	_, port, _ := net.SplitHostPort(ln.Addr().String())
 	shown := host
@@ -355,6 +363,9 @@ func (s *Server) serve(ctx context.Context, ln net.Listener, host string, out io
 	err := <-done
 	if s.jobs != nil {
 		s.jobs.stop()
+	}
+	if s.db != nil {
+		s.db.stop()
 	}
 	return err
 }

@@ -26,6 +26,11 @@ func (a *app) dashboardScan(ctx context.Context, o *config.Org, req server.ScanR
 		DryRun: req.DryRun, IgnoreWindow: req.IgnoreWindow, Offline: req.Offline, Parallel: 4, Version: a.version})
 }
 
+// updateDBFunc: `db update` as the interfaces start it (its log to the update's output).
+func (a *app) updateDBFunc(ctx context.Context, out io.Writer) error {
+	return a.updateDBs(ctx, out, out, false)
+}
+
 func (a *app) webCmd() *cobra.Command {
 	var host, token string
 	var port int
@@ -44,7 +49,7 @@ once, the browser keeps it in a cookie. Without a token it is read-only there.
 The TUI can connect to it too: kanareika tui --url http://host:8088 --token ...`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			opts := server.Options{Paths: a.paths, Prompt: prompt.Build, Token: token}
+			opts := server.Options{Paths: a.paths, Prompt: prompt.Build, Token: token, UpdateDB: a.updateDBFunc}
 			if !noScans {
 				opts.Scan = a.dashboardScan
 			}

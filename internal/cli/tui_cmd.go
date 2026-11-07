@@ -48,7 +48,7 @@ func (a *app) tuiRun(cmd *cobra.Command, f tuiFlags) error {
 	if f.url != "" {
 		c = tui.Remote(f.url, f.token)
 	} else {
-		s, err := server.New(server.Options{Paths: a.paths, Prompt: prompt.Build, Scan: a.dashboardScan,
+		s, err := server.New(server.Options{Paths: a.paths, Prompt: prompt.Build, Scan: a.dashboardScan, UpdateDB: a.updateDBFunc,
 			Log: log.New(io.Discard, "", 0)}) // nothing may write to the terminal under the TUI
 		if err != nil {
 			return err
