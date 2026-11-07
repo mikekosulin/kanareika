@@ -339,7 +339,9 @@ func TestReadOnlyAndLanguages(t *testing.T) {
 	h.has("Отсюда сканы не запускаются")
 	h.key("6")
 	h.has("Отсюда сканы не запускаются")
-	h.key("L") // ru -> en (the next language)
+	h.key("L") // ru -> zh -> en -> ru: every language in turn
+	h.has("扫描[0]", "此处无法启动扫描")
+	h.key("L")
 	h.has("Scans[0]")
 	h.key("L")
 	h.has("Сканы[0]")

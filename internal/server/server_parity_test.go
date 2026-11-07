@@ -8,10 +8,12 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
+	"maps"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -86,7 +88,7 @@ func replay(t *testing.T, home, goldenPath string) {
 					diffs = append(diffs, "body differs (page changed on purpose? go test -run Parity -update-page)")
 				}
 			}
-		} else if d := jsonDiff(c.JSON, rec.Body.Bytes()); d != "" {
+		} else if d := jsonDiff(c.JSON, pythonLangs(c.JSON, rec.Body.Bytes())); d != "" {
 			diffs = append(diffs, d)
 		}
 		if len(diffs) > 0 {
@@ -96,6 +98,27 @@ func replay(t *testing.T, home, goldenPath string) {
 	if *updatePage {
 		must(t, os.WriteFile(goldenPath, b, 0o644))
 	}
+}
+
+// pythonLangs: an /api/i18n answer cut to the languages Python had (languages added since are checked by
+// i18n's TestLocalesComplete); other answers as they are.
+func pythonLangs(want, got []byte) []byte {
+	var w, g struct {
+		Langs    []string                     `json:"langs"`
+		Messages map[string]map[string]string `json:"messages"`
+	}
+	if json.Unmarshal(want, &w) != nil || json.Unmarshal(got, &g) != nil || w.Langs == nil || g.Langs == nil {
+		return got
+	}
+	g.Langs = slices.DeleteFunc(g.Langs, func(l string) bool { return !slices.Contains(w.Langs, l) })
+	for _, m := range g.Messages {
+		maps.DeleteFunc(m, func(l, _ string) bool { return !slices.Contains(w.Langs, l) })
+	}
+	b, err := json.Marshal(g)
+	if err != nil {
+		return got
+	}
+	return b
 }
 
 // installExtra copies testdata/parity/extra into an environment, with __NOW__ set to the current time (a

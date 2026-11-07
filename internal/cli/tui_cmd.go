@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
+	"github.com/mikekosulin/kanareika/internal/i18n"
 	"github.com/mikekosulin/kanareika/internal/prompt"
 	"github.com/mikekosulin/kanareika/internal/server"
 	"github.com/mikekosulin/kanareika/internal/tui"
@@ -77,7 +78,7 @@ instead (with --token when it has one).`,
 	}
 	c.Flags().StringVar(&f.url, "url", "", "a running kanareika web, e.g. http://127.0.0.1:8088")
 	c.Flags().StringVar(&f.token, "token", os.Getenv("KANAREIKA_TOKEN"), "its access token (env KANAREIKA_TOKEN)")
-	c.Flags().StringVar(&f.lang, "lang", "", "interface language: en, ru (default: from LANG)")
+	c.Flags().StringVar(&f.lang, "lang", "", "interface language: "+strings.Join(i18n.Langs(), ", ")+" (default: from LANG)")
 	c.Flags().StringVar(&f.org, "org", "", "open this org")
 	c.Flags().StringVar(&f.env, "env", "", "open this environment")
 	return c

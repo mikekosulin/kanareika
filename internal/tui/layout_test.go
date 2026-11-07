@@ -154,3 +154,18 @@ func TestSettingsFile(t *testing.T) {
 	h.key("2", "p")
 	h.has("not a directory")
 }
+
+// TestWideScript: Chinese takes two cells a character; every frame is still exactly the terminal's size.
+func TestWideScript(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production", Lang: "zh"}, true)
+	for _, sz := range [][2]int{{41, 9}, {61, 18}, {80, 24}, {161, 40}} {
+		h.size(sz[0], sz[1])
+		for _, k := range []string{"1", "2", "enter", "3", "4", "5", "6", "o", "esc", "?", "x", "s", "esc"} {
+			h.key(k)
+			h.screen()
+		}
+	}
+	h.size(120, 30)
+	h.key("2")
+	h.has("组织", "<?>")
+}

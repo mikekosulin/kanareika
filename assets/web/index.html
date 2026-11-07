@@ -284,7 +284,13 @@ dialog.scan .err { color: var(--bad-text); font-size: 13px; min-height: 1em; }
 /* i18n. UI strings: English in the code, translations keyed by the English text (gettext style), from locales/<lang>.json.
    Finding/action texts come from the server catalog (/api/i18n) by message key, see L(). */
 const UI = /*I18N_UI*/{};  // locales/<lang>.json "ui", inlined by the server
-let LANG = (() => { try { return localStorage.getItem("kn.lang") || "en"; } catch { return "en"; } })();
+const LANGS = ["en", ...Object.keys(UI).filter((l) => l !== "en").sort()];
+let LANG = (() => {
+  let l = "";
+  try { l = localStorage.getItem("kn.lang") || ""; } catch {}
+  if (!l) l = (navigator.language || "en").slice(0, 2).toLowerCase();  // the browser's language when not chosen
+  return LANGS.includes(l) ? l : "en";
+})();
 let CATALOG = {};
 const t = (s) => (UI[LANG] && UI[LANG][s]) || s;
 function L(o, field = "title") {
@@ -317,7 +323,7 @@ function applyStatic() {
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const PRIOS = ["P1", "P2", "P3", "P4"];
 const PNAME = { P1: "P1 · " + t("urgent"), P2: "P2", P3: "P3", P4: "P4 · " + t("background") };
-const loc = () => (LANG === "ru" ? "ru-RU" : "en-GB");
+const loc = () => ({ ru: "ru-RU", zh: "zh-CN" })[LANG] || "en-GB";
 const fmt = (n) => (n ?? 0).toLocaleString(loc());
 const fmtc = (n) => (n ?? 0) >= 10000 ? new Intl.NumberFormat(loc(), { notation: "compact", maximumFractionDigits: 0 }).format(n) : fmt(n);
 const store = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
@@ -1133,7 +1139,7 @@ $("#theme").onclick = () => { document.documentElement.dataset.theme = curTheme(
 addEventListener("resize", () => { clearTimeout(window._rt); window._rt = setTimeout(renderTrend, 150); });
 
 $("#lang").onclick = () => {
-  LANG = LANG === "en" ? "ru" : "en";
+  LANG = LANGS[(LANGS.indexOf(LANG) + 1) % LANGS.length];
   try { localStorage.setItem("kn.lang", LANG); } catch {}
   location.reload();  // labels in constants (tabs, priorities, categories) are built once at load
 };

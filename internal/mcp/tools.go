@@ -25,11 +25,11 @@ const Instructions = "Kanareika: security audit results for our servers, by orga
 	"OS packages are checked against the host's own repositories: fix_state available = update now, reboot = " +
 	"installed, reboot pending, vendor = no fix in the repositories yet (action cat 'vendor': mitigate or accept " +
 	"until available). CVEs already fixed in the installed build (package changelog) are left out of actions. " +
-	"All tools are read-only; scans are started by a human. Pass lang=ru for Russian texts."
+	"All tools are read-only; scans are started by a human. Pass lang=ru or lang=zh for Russian or Chinese texts."
 
 func orgEnv() pyfmt.Obj {
 	return pyfmt.O(
-		"lang", pyfmt.O("enum", []string{"en", "ru"}, "description", "language of texts (default en)"),
+		"lang", pyfmt.O("enum", i18n.Langs(), "description", "language of texts (default en)"),
 		"org", pyfmt.O("type", "string", "description", "organization id from list_orgs"),
 		"env", pyfmt.O("type", "string", "description", "environment (production, staging, ...); optional if there is only one"),
 	)

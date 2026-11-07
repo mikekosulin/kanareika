@@ -79,6 +79,30 @@ var texts = map[string]text{
 		check:  "Когда пользователь запустит скрипты, перепроверка (из каталога kanareika):",
 		end:    "Ответ: скрипты и инструкция по запуску.",
 	},
+	"zh": {
+		task: "任务：为 Kanareika 安全审计的发现准备修复 — 组织 {org}{env}（{name}）。" +
+			"结果是一个由用户自己在服务器上运行的脚本。",
+		env: "，环境 {env}",
+		rules: []string{
+			"需要产出：",
+			"- 每台主机一个 bash 脚本：`fix-<host>.sh`。要易读：每个代码块前有简短注释，`set -euo pipefail`，",
+			"  模式 `apply`（默认）、`verify` 和 `rollback`，结尾打印摘要。",
+			"- 每项更改先备份它要修改的内容（放在 /var/backups/kanareika/<date>/ 下）；`rollback` 从那里恢复。",
+			"  不可逆的步骤（例如删除旧内核）需要确认。",
+			"- 以下面的现成步骤为基础；如有需要，按主机的操作系统调整。不要添加列表之外的更改。",
+			"- sshd：reload 前先执行 `sshd -t`，并提醒用户在新登录验证成功前保持当前会话不关闭。",
+			"- 脚本中不要重启系统，也不要做会导致停机的服务重启 — 改为打印需要执行的操作。",
+			"- 可以通过 ssh 以只读方式检查当前状态，以确认这些步骤适用；不要自己运行脚本。",
+			"- 最后说明：如何运行（先在一台主机上）、之后检查什么、如何回滚。",
+		},
+		hosts: "主机：", host: "- {name}：{os}，暴露面 {exp}，访问：`{route}`", sudo: "，免密 sudo",
+		todo: "需要修复的内容（按优先级）：", kev: "KEV — 已被在野利用", rce: "pre-auth RCE：{n} 个 CVE",
+		on: "   主机：{hosts}", image: "   镜像：{v}", path: "   路径：{v}", detail: "   详情：{v}",
+		hint: "   提示：`{v}`", cves: "   CVE：{n}", due: "，SLA 期限：{due}",
+		script: []string{"Kanareika 提供的现成步骤（经过测试、带备份和回滚的方案）— 作为脚本的基础："},
+		check:  "用户运行脚本后，重新检查（在 kanareika 目录中执行）：",
+		end:    "请回复脚本和运行说明。",
+	},
 }
 
 // format fills {name} placeholders (the templates are Python str.format strings without format specs).
