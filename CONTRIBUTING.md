@@ -14,7 +14,10 @@ make lint     # golangci-lint
 make cover    # coverage per function, dist/coverage.html
 ```
 
-CI also runs `gofmt` and `go test -race`; run `gofmt -l cmd internal assets tools` before pushing.
+CI also runs `gofmt` and `go test -race`; run `gofmt -l cmd internal assets tools` before pushing. It tests on
+Windows too, and runs the Linux end-to-end check: `tools/e2e/e2e.sh` (needs Docker; downloads the vulnerability DB,
+about 1 GB on the host) builds the Linux binary, scans a Debian container over SSH and reads the result through
+`history` and the web API. Everything in it is made up and removed afterwards.
 
 ## Test data must be fake
 
