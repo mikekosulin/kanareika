@@ -54,6 +54,12 @@ One binary, nothing else to install, three interfaces.
 - **Windows**: binaries in releases; the environment lock uses `LockFileEx`, the ssh-agent is the OpenSSH
   Authentication Agent's pipe (or `SSH_AUTH_SOCK`).
 
+### Fixed
+
+- `tools/anonymize` missed compressed IPv6 addresses and replaced link-local ones only in part, so MAC-derived
+  interface ids stayed in test data; they are replaced now, and the test-data guard checks IPv6 too.
+- `scan --offline` help showed `db update` as the flag's value.
+
 ### Checked
 
 - A test fails when any committable or embeddable file holds a name or address from the local `orgs/`, or a
