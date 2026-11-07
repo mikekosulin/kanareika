@@ -154,7 +154,7 @@ func Files(root string) ([]string, error) {
 		}
 		if st, err := os.Stat(p); err == nil && st.Mode().IsRegular() {
 			rel, _ := filepath.Rel(root, p)
-			out = append(out, rel)
+			out = append(out, filepath.ToSlash(rel)) // paths on the scanned host: / whatever OS runs this
 		}
 		return nil
 	})
