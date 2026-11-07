@@ -45,6 +45,12 @@ var (
 		netip.MustParsePrefix("0.0.0.0/32"), netip.MustParsePrefix("::/128"), netip.MustParsePrefix("255.255.255.255/32"),
 		netip.MustParsePrefix("224.0.0.0/4"), netip.MustParsePrefix("ff00::/8"),
 	}
+	// IPv6 that identifies nobody: IANA special purpose (2001::/23 incl. benchmarking and ORCHID, 6to4, the
+	// documentation range 3fff::/20)
+	specialV6 = []netip.Prefix{netip.MustParsePrefix("2001::/23"), netip.MustParsePrefix("2002::/16"),
+		netip.MustParsePrefix("3fff::/20"), netip.MustParsePrefix("2001:db8::/32"), netip.MustParsePrefix("2a10:77::/32")}
+	// the ipinfo tests' boundary cases: the first global addresses after 2001::/23 and 3fff::/20 (nobody's data)
+	boundaryV6 = []string{"2001:200::1", "3fff:1000::1"}
 	// an address context, as tools/anonymize uses: version numbers like 4.16.1.3 never stand here
 	addrCtx = regexp.MustCompile(`(?:from |"ip": ?"|ip=|inet6? |addr(?:ess)?"?: ?"?|@|[Ll]ocal [Aa]ddress:? |to |src |dst |via |rhost=|Peer |HostName |\[)$`)
 )
@@ -163,6 +169,11 @@ func checkData(s string) string {
 			return "address " + a.String() + " is not a fake one"
 		}
 	}
+	for _, loc := range v6Spans(s) {
+		if p := checkV6(s[loc[0]:loc[1]]); p != "" {
+			return p
+		}
+	}
 	for _, loc := range email.FindAllStringIndex(s, -1) {
 		if loc[0] > 0 && s[loc[0]-1] == '/' { // package ids (pkg:deb/x/name@version), not e-mails
 			continue
@@ -174,6 +185,33 @@ func checkData(s string) string {
 		if !strings.HasSuffix(low, "@example.com") && !strings.HasSuffix(low, "@example.org") &&
 			!strings.HasSuffix(low, ".example") {
 			return "e-mail " + s[loc[0]:loc[1]] + " is not a fake one"
+		}
+	}
+	return ""
+}
+
+// checkV6: a global address outside the ranges nobody owns, or a link-local one whose interface id comes from a
+// real MAC (EUI-64: ...ff:fe...), unless it is one of tools/anonymize's.
+func checkV6(x string) string {
+	if strings.HasPrefix(x, "::") { // [::1]:25 as old ss writes it
+		return ""
+	}
+	a, err := netip.ParseAddr(x)
+	if err != nil {
+		return ""
+	}
+	b := a.As16()
+	switch {
+	case a.IsLinkLocalUnicast():
+		if b[11] == 0xff && b[12] == 0xfe && !strings.HasPrefix(a.String(), fakeLinkLocal) {
+			return "address " + x + " carries a MAC (EUI-64)"
+		}
+	case netip.MustParsePrefix("2000::/3").Contains(a):
+		if slices.Contains(boundaryV6, x) {
+			return ""
+		}
+		if !slices.ContainsFunc(specialV6, func(p netip.Prefix) bool { return p.Contains(a) }) {
+			return "address " + x + " is not a fake one"
 		}
 	}
 	return ""
@@ -336,6 +374,10 @@ func TestGuardCatches(t *testing.T) {
 		`ops@realcorp.io wrote`:                "e-mail ops@realcorp.io",
 		`ops@example.com, a@b.example`:         "",
 		`pkg:deb/ubuntu/libc6@2.35-0ubuntu3.8`: "",
+		`inet6 2a03:b0c0:3:d0::1/64`:           "address 2a03:b0c0:3:d0::1",
+		`inet6 fe80::5054:ff:fe12:3456/64`:     "address fe80::5054:ff:fe12:3456 carries a MAC",
+		`fe80::a0a0:4643:b6a5 fe80::1`:         "",
+		`2a10:77::1 2001:db8::5 2001:2::1 3fff::1 ::1:25 12:34:56 ::ffff:8.8.8.8`: "",
 	} {
 		if got := checkData(in); want == "" && got != "" || want != "" && !strings.HasPrefix(got, want) {
 			t.Errorf("%q: %q, want %q", in, got, want)

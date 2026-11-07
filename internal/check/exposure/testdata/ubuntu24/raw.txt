@@ -3,13 +3,13 @@
 lo inet 127.0.0.1/8
 lo inet6 ::1/128
 eth0 inet 10.77.0.16/24
-eth0 inet6 fe80::a0a0:1:100d/64
+eth0 inet6 fe80::a0a0:3c50:16cb/64
 docker0 inet 172.17.0.1/16
-docker0 inet6 fe80::a0a0:1:1004/64
+docker0 inet6 fe80::a0a0:e4ab:6d5e/64
 br-03897529915b inet 172.18.0.1/16
-br-03897529915b inet6 fe80::a0a0:1:1008/64
-vethec9416a inet6 fe80::a0a0:1:1003/64
-veth09a7ac1 inet6 fe80::a0a0:1:1002/64
+br-03897529915b inet6 fe80::a0a0:441a:effa/64
+vethec9416a inet6 fe80::a0a0:782a:a46c/64
+veth09a7ac1 inet6 fe80::a0a0:94c1:e6fd/64
 
 @@routes@@
 default via 10.77.0.17 dev eth0 proto static 

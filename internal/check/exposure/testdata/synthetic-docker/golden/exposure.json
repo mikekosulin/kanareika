@@ -22,12 +22,12 @@
   },
   {
    "iface": "eth0",
-   "ip": "2a00:1450:4001:82a::200e",
+   "ip": "2a10:77::2",
    "public": true
   },
   {
    "iface": "eth0",
-   "ip": "fe80::c684:76d0:c150",
+   "ip": "fe80::a0a0:47ed:ac3b",
    "public": false
   },
   {
@@ -44,13 +44,13 @@
  "public": [
   "100.21.4.156",
   "100.21.4.157",
-  "2a00:1450:4001:82a::200e",
+  "2a10:77::2",
   "::ffff:8.8.8.8"
  ],
  "unlisted_public": [
   "100.21.4.156",
   "100.21.4.157",
-  "2a00:1450:4001:82a::200e",
+  "2a10:77::2",
   "::ffff:8.8.8.8"
  ],
  "default_route": "default via 10.77.0.14 dev eth0 proto static",
@@ -97,7 +97,7 @@
   },
   {
    "proto": "tcp",
-   "addr": "fe80::c684:76d0:c150",
+   "addr": "fe80::a0a0:47ed:ac3b",
    "port": 7946,
    "process": "dockerd",
    "public": false,

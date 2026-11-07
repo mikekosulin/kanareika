@@ -62,12 +62,12 @@
   "fixed": "",
   "status": "",
   "severity": "HIGH",
-  "title": "Add public IP 2a00:1450:4001:82a::200e to the config",
+  "title": "Add public IP 2a10:77::2 to the config",
   "url": "",
   "target": "present on eth0 but missing in orgs/ — the external scan does not check it",
   "msg": "net.unlisted_ip",
   "args": {
-   "ip": "2a00:1450:4001:82a::200e"
+   "ip": "2a10:77::2"
   },
   "target_msg": "net.unlisted_ip.detail",
   "target_args": {

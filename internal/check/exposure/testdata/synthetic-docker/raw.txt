@@ -4,8 +4,8 @@ lo inet 127.0.0.1/8
 eth0 inet 10.77.0.18/24
 eth1 inet 100.21.4.156/24
 eth1 inet 100.21.4.157/10
-eth0 inet6 2a00:1450:4001:82a::200e/64
-eth0 inet6 fe80::c684:76d0:c150/64
+eth0 inet6 2a10:77::2/64
+eth0 inet6 fe80::a0a0:47ed:ac3b/64
 eth0 inet6 ::ffff:8.8.8.8/128
 docker0 inet 172.17.0.1/16
 bad line here extra
@@ -23,7 +23,7 @@ udp   UNCONN 0      0            0.0.0.0:4789       0.0.0.0:*
 tcp   LISTEN 0      128          0.0.0.0:22         0.0.0.0:*    users:(("sshd",pid=1,fd=3))
 tcp   LISTEN 0      128    100.21.4.156:9100       0.0.0.0:*    users:(("node_exporter",pid=14,fd=3))
 tcp   LISTEN 0      128   127.0.0.53%lo:53         0.0.0.0:*    users:(("systemd-resolve",pid=15,fd=3))
-tcp   LISTEN 0      128   [fe80::c684:76d0:c150%eth0]:7946       [::]:*    users:(("dockerd",pid=16,fd=3))
+tcp   LISTEN 0      128   [fe80::a0a0:47ed:ac3b%eth0]:7946       [::]:*    users:(("dockerd",pid=16,fd=3))
 tcp   LISTEN 0      128          ::1:9000         [::]:*
 tcp   LISTEN 0      128          0.0.0.0:http         [::]:*
 

@@ -17,7 +17,7 @@
   },
   {
    "iface": "eth0",
-   "ip": "fe80::a0a0:1:100e",
+   "ip": "fe80::a0a0:4643:b6a5",
    "public": false
   },
   {
@@ -27,7 +27,7 @@
   },
   {
    "iface": "eth1",
-   "ip": "fe80::a0a0:1:100a",
+   "ip": "fe80::a0a0:89b0:6822",
    "public": false
   },
   {
@@ -37,7 +37,7 @@
   },
   {
    "iface": "tap0",
-   "ip": "fe80::a0a0:1:1009",
+   "ip": "fe80::a0a0:3715:d9ea",
    "public": false
   }
  ],
@@ -161,7 +161,7 @@
   },
   {
    "proto": "udp",
-   "addr": "fe80::a0a0:1:1009",
+   "addr": "fe80::a0a0:3715:d9ea",
    "port": 123,
    "process": "ntpd",
    "public": false,
@@ -169,7 +169,7 @@
   },
   {
    "proto": "udp",
-   "addr": "fe80::a0a0:1:100a",
+   "addr": "fe80::a0a0:4643:b6a5",
    "port": 123,
    "process": "ntpd",
    "public": false,
@@ -177,7 +177,7 @@
   },
   {
    "proto": "udp",
-   "addr": "fe80::a0a0:1:100e",
+   "addr": "fe80::a0a0:89b0:6822",
    "port": 123,
    "process": "ntpd",
    "public": false,

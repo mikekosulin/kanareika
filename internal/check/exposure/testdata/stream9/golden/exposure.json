@@ -17,7 +17,7 @@
   },
   {
    "iface": "eth0",
-   "ip": "fe80::a0a0:1:100b",
+   "ip": "fe80::a0a0:5ee9:1d33",
    "public": false
   },
   {
@@ -27,7 +27,7 @@
   },
   {
    "iface": "docker_gwbridge",
-   "ip": "fe80::a0a0:1:1007",
+   "ip": "fe80::a0a0:d6e6:5bd6",
    "public": false
   },
   {
@@ -37,27 +37,27 @@
   },
   {
    "iface": "vethffb9a14",
-   "ip": "fe80::a0a0:1:1005",
+   "ip": "fe80::a0a0:8ec8:f2",
    "public": false
   },
   {
    "iface": "veth7511122",
-   "ip": "fe80::a0a0:1:1001",
+   "ip": "fe80::a0a0:3fe:d15d",
    "public": false
   },
   {
    "iface": "vethfa0e16f",
-   "ip": "fe80::a0a0:1:1000",
+   "ip": "fe80::a0a0:f222:1480",
    "public": false
   },
   {
    "iface": "veth02f16f6",
-   "ip": "fe80::a0a0:1:100f",
+   "ip": "fe80::a0a0:3fe2:2e96",
    "public": false
   },
   {
    "iface": "vethc1cde6f",
-   "ip": "fe80::a0a0:1:1006",
+   "ip": "fe80::a0a0:58d:5a37",
    "public": false
   }
  ],
