@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// repo root: tests read orgs/_example.yml and orgs/_template.yml from it
+// repo root: tests read orgs/_example.yml and assets/templates/org.yml from it
 var root, _ = filepath.Abs("../..")
 
 // home: an isolated working directory with orgs/acme.yml (the example org). Policy and schema come built in.
@@ -57,7 +57,7 @@ func writeYAML(t *testing.T, path string, m map[string]any) {
 
 // secondOrg: the template as org "beta" with one app host.
 func secondOrg(t *testing.T, p Paths, address string, external []any) {
-	b, err := os.ReadFile(filepath.Join(root, "orgs", "_template.yml"))
+	b, err := os.ReadFile(filepath.Join(root, "assets", "templates", "org.yml"))
 	must(t, err)
 	var d map[string]any
 	must(t, yaml.Unmarshal([]byte(strings.ReplaceAll(string(b), "__ORG_ID__", "beta")), &d))
@@ -183,7 +183,7 @@ func TestConsentExpiry(t *testing.T) {
 }
 
 func envsOrg(t *testing.T, p Paths, mixed bool, external any) {
-	b, err := os.ReadFile(filepath.Join(root, "orgs", "_template.yml"))
+	b, err := os.ReadFile(filepath.Join(root, "assets", "templates", "org.yml"))
 	must(t, err)
 	var d map[string]any
 	must(t, yaml.Unmarshal([]byte(strings.ReplaceAll(string(b), "__ORG_ID__", "gamma")), &d))

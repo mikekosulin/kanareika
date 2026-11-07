@@ -459,7 +459,7 @@ function renderKpis() {
   const rd = S.runData;
   if (!rd) {
     cap.textContent = "";
-    el.innerHTML = `<div class="card" style="grid-column:1/-1"><div class="empty">${t("No runs yet. Run")}: <code>make scan ORG=${esc(S.org)}${S.env !== "default" ? " ENV=" + esc(S.env) : ""}</code></div></div>`;
+    el.innerHTML = `<div class="card" style="grid-column:1/-1"><div class="empty">${t("No runs yet. Run")}: <code>kanareika scan ${esc(S.org)}${S.env !== "default" ? " --env " + esc(S.env) : ""}</code></div></div>`;
     return;
   }
   const c = rd.plan_counts, m = rd.meta;
@@ -483,7 +483,7 @@ function renderKpis() {
       <div class="foot" title="${t("packages")} P1–P3 ${t("past due by")} SLA">${expired ? `<span class="overdue">${t("expired exceptions")}: ${expired}</span>` : `${t("exceptions")}: ${rd.exceptions.length}`}</div></div>
     <div class="card kpi"><div class="label">${icon("arrow-path", "sm")}${t("Updated")}</div>
       <div class="value" style="font-size:18px;margin-top:8px">${esc(ago(m.finished))}</div>
-      <div class="foot" title="${fmt(c.cves)} CVE ${t("total")}${m.feeds_updated ? "" : " · KEV/EPSS " + t("not loaded") + " (make feeds)"}">${m.run_id === "current" ? `${t("of")} ${sources} ${t("runs")}` : esc(dur(m.started, m.finished))} · ${fmtc(c.cves)} CVE</div></div>`;
+      <div class="foot" title="${fmt(c.cves)} CVE ${t("total")}${m.feeds_updated ? "" : " · KEV/EPSS " + t("not loaded") + " (kanareika db update)"}">${m.run_id === "current" ? `${t("of")} ${sources} ${t("runs")}` : esc(dur(m.started, m.finished))} · ${fmtc(c.cves)} CVE</div></div>`;
   cap.textContent = partial(m) ? t("Partial run — no comparison") : rd.prev ? `${t("Packages to update")} · Δ ${t("vs full run")} ${runShort(rd.prev)}` : t("Packages to update");
 }
 

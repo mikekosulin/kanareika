@@ -11,10 +11,13 @@
 ![Dashboard (демо-данные)](docs/dashboard.png)
 
 ```bash
-make bin                     # или скачать kanareika-<os>-<arch> из релиза
-make new-org ORG=myorg       # описать хосты, бастионы и согласие в orgs/myorg.yml
-make feeds && make scan ORG=myorg
-make dashboard               # http://127.0.0.1:8088
+# скачать kanareika-<os>-<arch> из релиза (или: make bin -> dist/kanareika); больше ничего ставить не нужно
+kanareika init                   # orgs/, secrets/, reports/ в текущем каталоге (или --home DIR)
+kanareika org new myorg          # описать хосты, бастионы и согласие в orgs/myorg.yml
+kanareika validate myorg
+kanareika db update              # базы уязвимостей и фиды (закрытый контур: db export / db import)
+kanareika scan myorg
+kanareika serve                  # dashboard на http://127.0.0.1:8088
 ```
 
 - **Уязвимости** — пакеты ОС, образы, jar/lock-файлы через trivy, встроенный в бинарник (скачиваются только его базы, или импортируются офлайн); бэкпорты и наличие исправления

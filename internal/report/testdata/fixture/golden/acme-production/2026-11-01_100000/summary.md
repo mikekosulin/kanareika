@@ -2,7 +2,7 @@
 
 - Hosts: 3 ok, 1 failed
 - Modules: access, docker, exposure, hardening, health, os_packages, software_fs, network_external
-- Trivy 0.58.0, KEV/EPSS as of none (make feeds)
+- Trivy 0.58.0, KEV/EPSS as of none (kanareika db update)
 
 | | P1 | P2 | P3 | P4 | accepted |
 |---|---:|---:|---:|---:|---:|

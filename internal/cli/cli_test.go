@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -20,8 +21,14 @@ func sandbox(t *testing.T) {
 // cli runs the command line and returns the exit code, stdout and stderr.
 func cli(t *testing.T, args ...string) (int, string, string) {
 	t.Helper()
+	return cliIn(t, "", args...)
+}
+
+// cliIn: cli with stdin.
+func cliIn(t *testing.T, stdin string, args ...string) (int, string, string) {
+	t.Helper()
 	var out, errb bytes.Buffer
-	code := execute("v9.9.9-test", args, &out, &errb)
+	code := execute("v9.9.9-test", args, strings.NewReader(stdin), &out, &errb)
 	return code, out.String(), errb.String()
 }
 

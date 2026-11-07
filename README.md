@@ -10,10 +10,13 @@ whether the host is healthy — with rollback-ready fix steps. One binary, one Y
 ![Dashboard (demo data)](docs/dashboard.png)
 
 ```bash
-make bin                     # or download kanareika-<os>-<arch> from the release
-make new-org ORG=myorg       # describe hosts, jump hosts and consent in orgs/myorg.yml
-make feeds && make scan ORG=myorg
-make dashboard               # http://127.0.0.1:8088
+# download kanareika-<os>-<arch> from the release (or: make bin -> dist/kanareika); nothing else to install
+kanareika init                   # orgs/, secrets/, reports/ in the current directory (or --home DIR)
+kanareika org new myorg          # describe hosts, jump hosts and consent in orgs/myorg.yml
+kanareika validate myorg
+kanareika db update              # vulnerability DBs and feeds (isolated network: db export / db import)
+kanareika scan myorg
+kanareika serve                  # dashboard at http://127.0.0.1:8088
 ```
 
 - **Vulnerabilities** — OS packages, images, jars/lockfiles via trivy built into the binary (only its DBs are downloaded, or imported offline); backports and fix

@@ -1,6 +1,6 @@
 # Finding priority: rules are checked top to bottom, the first match wins.
 # Conditions in `when` are ANDed. Available conditions:
-#   kev: true|false            — CVE is in the CISA KEV catalog (make feeds)
+#   kev: true|false            — CVE is in the CISA KEV catalog (kanareika db update)
 #   epss_gte: 0.0..1.0         — EPSS exploitation probability
 #   severity: [CRITICAL, ...]  — severity from Trivy
 #   exposure: [1, 2, 3]        — 1 perimeter, 2 neighbours, 3 internal (orgs/<org>.yml)

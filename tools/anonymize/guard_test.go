@@ -234,8 +234,8 @@ func realNames(t *testing.T) []string {
 	}
 	orgs, _ := l.LoadAll()
 	generic := ""
-	for _, f := range []string{"_example.yml", "_template.yml"} {
-		b, _ := os.ReadFile(filepath.Join(root, "orgs", f))
+	for _, f := range []string{"orgs/_example.yml", "assets/templates/org.yml"} {
+		b, _ := os.ReadFile(filepath.Join(root, f))
 		generic += strings.ToLower(string(b))
 	}
 	seen := map[string]bool{}
@@ -284,7 +284,7 @@ func realNames(t *testing.T) []string {
 // TestEmbedsOnlyAssets: what goes into the binary comes from assets/ only, from directories made for it. A new
 // //go:embed anywhere else (say, of orgs/ or reports/) fails here before it can ship real data.
 func TestEmbedsOnlyAssets(t *testing.T) {
-	allowed := []string{"policy/", "schemas/", "locales/", "web/"}
+	allowed := []string{"policy/", "schemas/", "locales/", "web/", "templates/"}
 	directive := regexp.MustCompile(`(?m)^\s*//go:embed\s+(.+)$`)
 	found := 0
 	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {

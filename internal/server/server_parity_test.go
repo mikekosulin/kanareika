@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/fs"
 	"net/http/httptest"
@@ -24,6 +25,9 @@ import (
 // synthetic home: the org in org.yml, the runs of internal/report/testdata/fixture and the synthetic runs in
 // extra/. Recorded once with the former Python implementation (removed from the repo; the Go port had to match it)
 // and kept as a frozen fixture: a change here is a behaviour change — review it as such.
+
+// -update-page: rewrite the SHA-256 of the HTML page cases (the page changes on purpose; API answers stay frozen).
+var updatePage = flag.Bool("update-page", false, "rewrite the page hashes in testdata/parity/golden.json")
 
 type golden struct {
 	Extra string `json:"extra"` // org/env the extra/ runs go into
@@ -73,8 +77,12 @@ func replay(t *testing.T, home, goldenPath string) {
 		}
 		if c.SHA256 != "" {
 			sum := sha256.Sum256(rec.Body.Bytes())
-			if hex.EncodeToString(sum[:]) != c.SHA256 {
-				diffs = append(diffs, "body differs")
+			if got := hex.EncodeToString(sum[:]); got != c.SHA256 {
+				if *updatePage {
+					b = bytes.ReplaceAll(b, []byte(c.SHA256), []byte(got))
+				} else {
+					diffs = append(diffs, "body differs (page changed on purpose? go test -run Parity -update-page)")
+				}
 			}
 		} else if d := jsonDiff(c.JSON, rec.Body.Bytes()); d != "" {
 			diffs = append(diffs, d)
@@ -82,6 +90,9 @@ func replay(t *testing.T, home, goldenPath string) {
 		if len(diffs) > 0 {
 			t.Errorf("%s: %s", c.Path, strings.Join(diffs, "; "))
 		}
+	}
+	if *updatePage {
+		must(t, os.WriteFile(goldenPath, b, 0o644))
 	}
 }
 

@@ -1,6 +1,6 @@
 # Organization file: `orgs/<id>.yml`
 
-Schema: `assets/schemas/org.schema.json`. Template with comments: `orgs/_template.yml`. Example: `orgs/_example.yml`.
+Schema: `assets/schemas/org.schema.json`. Template with comments: `assets/templates/org.yml` (`kanareika org new <id>` writes it as `orgs/<id>.yml`). Example: `orgs/_example.yml`.
 Files starting with `_` are not loaded.
 
 ## Sections
@@ -59,7 +59,7 @@ external:
 
 `module: true|false` is short for `enabled`. A mapping without `enabled` only tunes settings. Mappings merge
 recursively, **lists are replaced**. `k8s` and `network_external` are allowed only in the org `checks`.
-Check the result with `make show ORG=<id>`.
+Check the result with `kanareika validate <id>` and `kanareika show <id>`.
 
 ## Module settings and defaults
 

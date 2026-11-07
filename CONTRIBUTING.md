@@ -11,6 +11,7 @@ You need Go (the version in `go.mod`) and, for linting, [golangci-lint](https://
 make bin      # dist/kanareika
 make test     # go vet + go test
 make lint     # golangci-lint
+make cover    # coverage per function, dist/coverage.html
 ```
 
 CI also runs `gofmt` and `go test -race`; run `gofmt -l cmd internal assets tools` before pushing.
@@ -33,7 +34,7 @@ The guard in `tools/anonymize` runs with `go test ./...`:
   from your local `orgs/*.yml` (org ids and names, hosts, addresses, jump hosts, external targets, the consent
   document). Your org files never leave your machine, and neither does that list: the check runs where leaks are
   made. More forbidden strings: `KANAREIKA_DENYLIST=<file with one string per line> go test ./tools/anonymize/`;
-- `TestEmbedsOnlyAssets` fails on any `//go:embed` outside `assets/` (policy, schemas, locales, web), so nothing
+- `TestEmbedsOnlyAssets` fails on any `//go:embed` outside `assets/` (policy, schemas, locales, web, templates), so nothing
   else can be built into the binary.
 
 ## Pull requests

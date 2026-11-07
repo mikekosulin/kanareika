@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -39,8 +40,8 @@ type Options struct {
 // Scanner: shared state of one process (paths, log output).
 type Scanner struct {
 	Paths config.Paths
-	Out   *os.File // plan / summary lines (stdout)
-	Err   *os.File // log lines (stderr)
+	Out   io.Writer // plan / summary lines (stdout)
+	Err   io.Writer // log lines (stderr)
 
 	mu       sync.Mutex
 	progress *Progress
