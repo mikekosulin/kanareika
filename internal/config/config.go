@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -88,13 +89,61 @@ func (o *Org) Access() map[string]any  { return mapOf(o.Data["access"]) }
 func (o *Org) Name() string            { s, _ := mapOf(o.Data["org"])["name"].(string); return s }
 func (o *Org) Enabled(m string) bool   { return o.Checks.Enabled(m) }
 
-// Jumps: name -> {address, port, user, jump}.
+// Jumps: name -> {address, port, user, jump}, resolved: address without a port, port as SSH will use it (the
+// jump's port, else the one in its address, else access.port, else 22).
 func (o *Org) Jumps() map[string]map[string]any {
 	out := map[string]map[string]any{}
+	def := intOr(o.Access(), "port", DefaultPort)
 	for k, v := range mapOf(o.Access()["jumps"]) {
-		out[k] = mapOf(v)
+		m := map[string]any{}
+		for kk, vv := range mapOf(v) {
+			m[kk] = vv
+		}
+		host, port, _ := SplitAddress(str(m, "address"))
+		if port == 0 {
+			port = def
+		}
+		m["address"] = host
+		m["port"] = intOr(m, "port", port)
+		out[k] = m
 	}
 	return out
+}
+
+// DefaultPort: SSH's.
+const DefaultPort = 22
+
+// SplitAddress: "host:port" and "[ipv6]:port" give the host and the port; anything else (a name, an IPv4 address,
+// a bare IPv6 address, "[ipv6]") gives the address and 0. A malformed port is an error.
+func SplitAddress(addr string) (string, int, error) {
+	host, port := addr, ""
+	switch {
+	case strings.HasPrefix(addr, "["):
+		end := strings.Index(addr, "]")
+		if end < 0 {
+			return addr, 0, fmt.Errorf("address %q: missing ']'", addr)
+		}
+		host, rest := addr[1:end], addr[end+1:]
+		if rest == "" {
+			return host, 0, nil
+		}
+		if !strings.HasPrefix(rest, ":") {
+			return addr, 0, fmt.Errorf("address %q: expected [ipv6]:port", addr)
+		}
+		return withPort(addr, host, rest[1:])
+	case strings.Count(addr, ":") == 1:
+		host, port, _ = strings.Cut(addr, ":")
+		return withPort(addr, host, port)
+	}
+	return host, 0, nil
+}
+
+func withPort(addr, host, port string) (string, int, error) {
+	n, err := strconv.Atoi(port)
+	if err != nil || n < 1 || n > 65535 || host == "" {
+		return addr, 0, fmt.Errorf("address %q: port must be 1-65535", addr)
+	}
+	return host, n, nil
 }
 
 func (o *Org) Envs() []string {

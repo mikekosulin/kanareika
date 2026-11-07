@@ -226,6 +226,12 @@ func (l *Loader) LoadOrg(path string) (*Org, []string) {
 			errf("jump '%s' refers to unknown jump '%s'", jname, j)
 		}
 	}
+	for _, jname := range keys(jumps) {
+		j := mapOf(jumps[jname])
+		if _, err := portOf(j); err != nil {
+			errf("jump '%s': %v", jname, err)
+		}
+	}
 	for _, jname := range keys(jumps) { // cycles
 		seen := map[string]bool{}
 		for cur := jname; cur != ""; cur = str(mapOf(jumps[cur]), "jump") {
@@ -307,9 +313,17 @@ func (l *Loader) LoadOrg(path string) (*Org, []string) {
 				admin = str(access, "admin_user")
 			}
 			legacy, _ := h["legacy_ssh"].(bool)
+			addr, _, _ := SplitAddress(str(h, "address")) // a malformed address is reported by portOf
+			port, err := portOf(h)
+			if err != nil {
+				errf("host '%s': %v", hname, err)
+			}
+			if port == 0 {
+				port = intOr(group, "port", intOr(access, "port", DefaultPort))
+			}
 			org.Hosts = append(org.Hosts, Host{
 				Org: orgID, Env: env, Name: hname, Group: gname, Role: role,
-				Address: str(h, "address"), Port: intOr(h, "port", 22), User: user,
+				Address: addr, Port: port, User: user,
 				Exposure: intOr(h, "exposure", intOr(group, "exposure", 3)),
 				Jump:     jump, Sudo: sudo, OSHint: str(h, "os"), Checks: checks,
 				Privilege: privilege(h, access), AdminUser: admin, LegacySSH: legacy,
@@ -503,6 +517,23 @@ func (a target) overlaps(b target) bool {
 		return a.name == b.name
 	}
 	return a.prefix.Overlaps(b.prefix)
+}
+
+// portOf: the port a host or jump entry sets explicitly (its "port", else one inside its address), 0 for none;
+// an error when the address is malformed or both are set and disagree.
+func portOf(m map[string]any) (int, error) {
+	_, inAddr, err := SplitAddress(str(m, "address"))
+	if err != nil {
+		return 0, err
+	}
+	explicit := intOr(m, "port", 0)
+	if explicit != 0 && inAddr != 0 && explicit != inAddr {
+		return 0, fmt.Errorf("port %d and address %q disagree", explicit, str(m, "address"))
+	}
+	if explicit != 0 {
+		return explicit, nil
+	}
+	return inAddr, nil
 }
 
 func orgTargets(o *Org) []target {
