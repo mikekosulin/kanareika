@@ -477,7 +477,7 @@
     "users with password": "пользователи с паролем",
     "Hotkeys": "Клавиши",
     "Times in the browser's time zone or in UTC": "Время в часовом поясе браузера или в UTC",
-    "host card": "карточка хоста",
+    "host card": "карточка",
     "Run": "Прогон",
     "a run's errors and log (Runs)": "ошибки и журнал прогона (Прогоны)",
     "failed IPs": "IP неудач",
@@ -505,7 +505,7 @@
     "DB": "База",
     "from the last run": "из последнего прогона",
     "runs merged": "прогонов в сводке",
-    "selected only": "только выбранные",
+    "selected only": "выбранные",
     "Nothing selected yet: space selects an action": "Пока ничего не выбрано: пробел выбирает действие",
     "only the selected actions (ToDo)": "только выбранные действия (Что делать)"
   }
