@@ -63,6 +63,15 @@ header { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; 
 .iconbtn { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; height: 34px; min-width: 34px; padding: 0 8px;
   cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--ink-2); }
 .iconbtn:hover { color: var(--ink); background: var(--surface-2); }
+.menu { position: fixed; z-index: 60; min-width: 160px; padding: 4px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.14); }
+.menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; border: 0; border-radius: 6px;
+  background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.menu button:hover, .menu button:focus-visible { background: var(--surface-2); outline: none; }
+.menu button .code { margin-left: auto; color: var(--muted); font-size: 12px; }
+.menu button[aria-checked="true"] { font-weight: 600; }
+.menu button[aria-checked="true"]::before { content: "✓"; width: 1em; }
+.menu button[aria-checked="false"]::before { content: ""; width: 1em; }
 .iconbtn.xs { height: 24px; min-width: 24px; padding: 0 6px; font-size: 12px; }
 
 main { padding: 22px 24px 48px; display: grid; gap: 20px; max-width: 1600px; margin: 0 auto; }
@@ -232,6 +241,7 @@ dialog.scan .err { color: var(--bad-text); font-size: 13px; min-height: 1em; }
   <div class="spacer"></div>
   <span class="pill" id="livepill"><span class="dot"></span><span>—</span></span>
   <button class="iconbtn" id="lang" data-t-title="Language" style="font-weight:600;font-size:12px"></button>
+  <button class="iconbtn" id="tz" data-t-title="Times in the browser's time zone or in UTC" style="font-weight:600;font-size:12px"></button>
   <button class="iconbtn" id="theme" data-t-title="Theme"></button>
 </header>
 
@@ -319,6 +329,7 @@ function applyStatic() {
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
   document.querySelectorAll("[data-t-title]").forEach((el) => { el.title = t(el.dataset.tTitle); });
   const lb = document.querySelector("#lang"); if (lb) lb.textContent = LANG.toUpperCase();
+  const tb = document.querySelector("#tz"); if (tb) tb.textContent = zoneName();
 }
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const PRIOS = ["P1", "P2", "P3", "P4"];
@@ -363,7 +374,22 @@ function dur(a, b) {
 }
 /* 2026-11-01_204722 -> 01.11 20:47 */
 /* 2026-11-01_204722 -> 2026-11-01 20:47 */
-const runShort = (id) => id === "current" ? t("current") : id ? `${id.slice(0, 10)} ${id.slice(11, 13)}:${id.slice(13, 15)}` : "";
+/* times: in the browser's time zone or in UTC (the tz button; remembered per browser) */
+let UTC = (() => { try { return localStorage.getItem("kn.tz") === "utc"; } catch { return false; } })();
+const tzOpt = () => (UTC ? { timeZone: "UTC" } : {});
+const zoneName = () => UTC ? "UTC"
+  : (new Intl.DateTimeFormat(loc(), { timeZoneName: "short" }).formatToParts(new Date()).find((x) => x.type === "timeZoneName") || {}).value || "";
+function clock(d) {  // YYYY-MM-DD HH:MM in the zone shown
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { ...tzOpt(), year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`;
+}
+// a run id is its start in UTC: 2026-11-01_204722
+const runShort = (id) => {
+  if (id === "current") return t("current");
+  const m = /^(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2})(\d{2})/.exec(id || "");
+  return m ? clock(new Date(Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]))) : (id || "");
+};
 const st = (kind, label, title = "") => {
   const ic = "st-" + { ok: "check-circle", warn: "exclamation-triangle", bad: "x-circle", run: "arrow-path", none: "minus-circle" }[kind];
   return `<span class="st ${kind}" ${title ? `title="${esc(title)}"` : ""}>${icon(ic)}${label ? esc(label) : ""}</span>`;
@@ -474,7 +500,7 @@ function renderLive() {
   if (!live || !["running", "stale"].includes(live.state)) {
     card.hidden = true;
     pill.innerHTML = anyLive ? `<span class="dot live"></span>${t("scan in another environment")}` : `<span class="dot"></span>${t("no scans")}`;
-    pill.title = t("updated") + " " + new Date().toLocaleTimeString(loc());
+    pill.title = t("updated") + " " + new Date().toLocaleTimeString(loc(), tzOpt()) + " " + zoneName();
     return;
   }
   const hosts = Object.entries(live.hosts);
@@ -1138,11 +1164,47 @@ $("#theme").onclick = () => { document.documentElement.dataset.theme = curTheme(
 { const t = store.get("kn.theme", ""); if (t) document.documentElement.dataset.theme = t; themeIcon(); }
 addEventListener("resize", () => { clearTimeout(window._rt); window._rt = setTimeout(renderTrend, 150); });
 
-$("#lang").onclick = () => {
-  LANG = LANGS[(LANGS.indexOf(LANG) + 1) % LANGS.length];
-  try { localStorage.setItem("kn.lang", LANG); } catch {}
-  location.reload();  // labels in constants (tabs, priorities, categories) are built once at load
+$("#tz").onclick = () => {
+  UTC = !UTC;
+  try { localStorage.setItem("kn.tz", UTC ? "utc" : "local"); } catch {}
+  location.reload();  // run names in selects and tables are built from it
 };
+/* language: a menu of the languages under the button, each in its own name */
+const LANG_NAMES = { en: "English", ru: "Русский", zh: "中文" };
+function closeMenu() { document.querySelector(".menu")?.remove(); }
+$("#lang").onclick = (ev) => {
+  ev.stopPropagation();
+  if (document.querySelector(".menu")) return closeMenu();
+  const r = $("#lang").getBoundingClientRect();
+  const m = document.createElement("div");
+  m.className = "menu"; m.setAttribute("role", "menu");
+  m.innerHTML = LANGS.map((l) => `<button role="menuitemradio" aria-checked="${l === LANG}" data-lang="${l}">` +
+    `<span>${esc(LANG_NAMES[l] || l)}</span><span class="code">${l.toUpperCase()}</span></button>`).join("");
+  document.body.append(m);
+  m.style.top = `${r.bottom + 6}px`;
+  m.style.left = `${Math.max(8, Math.min(r.right - m.offsetWidth, innerWidth - m.offsetWidth - 8))}px`;
+  m.onclick = (e) => {
+    const b = e.target.closest("button[data-lang]");
+    if (!b) return;
+    closeMenu();
+    if (b.dataset.lang === LANG) return;
+    LANG = b.dataset.lang;
+    try { localStorage.setItem("kn.lang", LANG); } catch {}
+    location.reload();  // labels in constants (tabs, priorities, categories) are built once at load
+  };
+  m.querySelector('[aria-checked="true"]')?.focus();
+};
+document.addEventListener("click", (e) => { if (!e.target.closest(".menu")) closeMenu(); });
+document.addEventListener("keydown", (e) => {
+  const m = document.querySelector(".menu");
+  if (!m) return;
+  if (e.key === "Escape") { closeMenu(); $("#lang").focus(); }
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    const items = [...m.querySelectorAll("button")], i = items.indexOf(document.activeElement);
+    items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus();
+    e.preventDefault();
+  }
+});
 applyStatic();
 
 renderSkeleton();

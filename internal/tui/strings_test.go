@@ -45,6 +45,16 @@ func uiStrings(t *testing.T) []string {
 				if sel, ok := x.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "T" && len(x.Args) == 1 {
 					add(x.Args[0])
 				}
+				// the host card's helpers translate their first argument
+				if id, ok := x.Fun.(*ast.Ident); ok && slices.Contains([]string{"kv", "section", "usage"}, id.Name) && len(x.Args) > 0 {
+					add(x.Args[0])
+				}
+			case *ast.AssignStmt: // label = "logged in": a row label translated where it is drawn
+				for i, l := range x.Lhs {
+					if id, ok := l.(*ast.Ident); ok && (id.Name == "label" || id.Name == "l") && i < len(x.Rhs) {
+						add(x.Rhs[i])
+					}
+				}
 			case *ast.KeyValueExpr:
 				if k, ok := x.Key.(*ast.Ident); ok && slices.Contains([]string{"title", "label", "what"}, k.Name) {
 					add(x.Value)

@@ -77,7 +77,10 @@ type Model struct {
 	detail  bool
 	help    bool
 	helpOff int
+	host    string // the host whose card the Hosts view shows ("" = the list)
+	hostOff int
 	panels  *panelsDlg
+	langs   *panelsDlg // the language list (L)
 	form    *scanForm
 	open    string // job whose output the Scans view shows
 
@@ -313,7 +316,28 @@ func (m *Model) selectEnv(org, env string) tea.Cmd {
 	return m.fetchEnv()
 }
 
+// latin: keys typed with another keyboard layout, as the same keys on a QWERTY one (й -> q, о -> j): the
+// hotkeys work whatever layout is on. Text (the filter) is never mapped.
+var latin = func() map[rune]rune {
+	m := map[rune]rune{}
+	for _, p := range [][2]string{
+		{"йцукенгшщзхъфывапролджэячсмитьбю.ё", "qwertyuiop[]asdfghjkl;'zxcvbnm,./`"},
+		{"ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,Ё", "QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?~"},
+	} {
+		from, to := []rune(p[0]), []rune(p[1])
+		for i := range from {
+			m[from[i]] = to[i]
+		}
+	}
+	return m
+}()
+
 func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if !m.typing && k.Type == tea.KeyRunes && len(k.Runes) == 1 {
+		if r, ok := latin[k.Runes[0]]; ok {
+			k.Runes = []rune{r}
+		}
+	}
 	s := k.String()
 	if s == "ctrl+c" {
 		return m, tea.Quit
@@ -323,6 +347,10 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	if m.panels != nil {
 		m.panelsKey(s)
+		return m, nil
+	}
+	if m.langs != nil {
+		m.langKey(s)
 		return m, nil
 	}
 	if m.typing {
@@ -342,6 +370,31 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.cur[m.view], m.off[m.view] = 0, 0
 		return m, nil
+	}
+	if m.host != "" && m.view == vHosts && !m.typing && m.form == nil && m.panels == nil && !m.help {
+		switch s {
+		case "up", "k":
+			m.hostOff = max(m.hostOff-1, 0)
+			return m, nil
+		case "down", "j":
+			m.hostOff++
+			return m, nil
+		case "pgup", "ctrl+b":
+			m.hostOff = max(m.hostOff-m.page(), 0)
+			return m, nil
+		case "pgdown", "ctrl+f", "space", " ":
+			m.hostOff += m.page()
+			return m, nil
+		case "home", "g":
+			m.hostOff = 0
+			return m, nil
+		case "end", "G":
+			m.hostOff = 1 << 30
+			return m, nil
+		case "esc", "enter", "backspace":
+			m.host, m.hostOff = "", 0
+			return m, nil
+		}
 	}
 	if m.help {
 		switch s {
@@ -369,7 +422,7 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.runKey = "" // reload the run too
 		return m, m.refresh()
 	case "L":
-		m.nextLang()
+		m.langs = &panelsDlg{cur: max(slices.Index(m.languages(), m.t.lang), 0)}
 	case "o":
 		m.panels = &panelsDlg{cur: 1}
 	case "z":
@@ -400,9 +453,11 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m *Model) setView(v view) {
 	m.view, m.filter, m.detail = v, "", false
+	m.host, m.hostOff = "", 0
 }
 
-func (m *Model) nextLang() {
+// languages: English first, then the others by code.
+func (m *Model) languages() []string {
 	langs := []string{"en"}
 	for l := range m.t.ui {
 		if l != "en" {
@@ -410,7 +465,25 @@ func (m *Model) nextLang() {
 		}
 	}
 	sort.Strings(langs[1:])
-	m.t.lang = langs[(slices.Index(langs, m.t.lang)+1)%len(langs)]
+	return langs
+}
+
+// langNames: each language in its own name, as the language list shows it.
+var langNames = map[string]string{"en": "English", "ru": "Русский", "zh": "中文"}
+
+func (m *Model) langKey(s string) {
+	langs := m.languages()
+	switch s {
+	case "up", "k":
+		m.langs.cur = max(m.langs.cur-1, 0)
+	case "down", "j":
+		m.langs.cur = min(m.langs.cur+1, len(langs)-1)
+	case "enter", " ", "space":
+		m.t.lang = langs[m.langs.cur]
+		m.langs = nil
+	case "esc", "q", "L":
+		m.langs = nil
+	}
 }
 
 func (m *Model) move(d int) {
@@ -479,7 +552,16 @@ func (m *Model) viewKey(s string) tea.Cmd {
 		case "y":
 			return m.copyPrompt(list)
 		}
-	case vHosts, vPackages:
+	case vHosts:
+		switch s {
+		case "p":
+			m.toggleP4()
+		case "enter":
+			if l := m.hostList(); m.cur[vHosts] < len(l) {
+				m.host, m.hostOff = l[m.cur[vHosts]].name, 0
+			}
+		}
+	case vPackages:
 		if s == "p" {
 			m.toggleP4()
 		}

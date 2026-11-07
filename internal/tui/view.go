@@ -170,22 +170,37 @@ func (m *Model) table(cols []col, rows [][]string, width, height int) []string {
 // grid: a table; without a cursor it shows the first rows that fit.
 func (m *Model) grid(cols []col, rows [][]string, width, height int, cursor bool) []string {
 	keep, widths := m.layout(m.view, cols, rows, width)
-	line := func(r int, cells []string) string {
+	// line: a row; the selected one as a bar, its charts (fill columns) keeping their colors on it
+	line := func(r int, cells []string, selected bool) string {
 		var l strings.Builder
 		for _, i := range keep {
 			c := cells[i]
-			if cols[i].fill != nil && r >= 0 {
+			chart := cols[i].fill != nil && r >= 0
+			if chart {
 				c = cols[i].fill(r, widths[i])
 			}
-			l.WriteString(fit(c, widths[i], cols[i].right) + " ")
+			c = fit(c, widths[i], cols[i].right)
+			if selected && !chart {
+				c = sSel.Render(ansi.Strip(c))
+			}
+			l.WriteString(c)
+			if selected {
+				l.WriteString(sSel.Render(" "))
+			} else {
+				l.WriteString(" ")
+			}
 		}
-		return fit(l.String(), width, false)
+		out := l.String()
+		if pad := width - ansi.StringWidth(out); selected && pad > 0 {
+			out += sSel.Render(strings.Repeat(" ", pad))
+		}
+		return fit(out, width, false)
 	}
 	head := make([]string, len(cols))
 	for i, c := range cols {
 		head[i] = sHead.Render(strings.ToUpper(m.t.T(c.title)))
 	}
-	out := []string{line(-1, head)}
+	out := []string{line(-1, head, false)}
 	if len(rows) == 0 {
 		return append(out, sMuted.Render(" "+m.t.T("nothing here")))
 	}
@@ -200,11 +215,7 @@ func (m *Model) grid(cols []col, rows [][]string, width, height int, cursor bool
 		m.off[m.view] = off
 	}
 	for i := off; i < min(off+h, len(rows)); i++ {
-		l := line(i, rows[i])
-		if i == cur {
-			l = sSel.Render(ansi.Strip(l))
-		}
-		out = append(out, l)
+		out = append(out, line(i, rows[i], i == cur))
 	}
 	return out
 }
@@ -519,7 +530,7 @@ func (m *Model) keys(width int) []string {
 	local := map[view][]k{
 		vOrgs:     {{"enter", "open"}},
 		vActions:  {{"space", "select"}, {"a", "select all"}, {"y", "copy task"}, {"enter", "details"}, {"p", "P4"}},
-		vHosts:    {{"p", "P4"}},
+		vHosts:    {{"enter", "host card"}, {"p", "P4"}},
 		vPackages: {{"p", "P4"}},
 		vRuns:     {{"enter", "open"}, {"c", "current state"}},
 		vScans:    {{"enter", "output"}, {"x", "stop"}},
@@ -554,7 +565,9 @@ func (m *Model) main(h int) []string {
 	w := m.w
 	switch {
 	case m.help:
-		return panel(sTitle.Render(m.t.T("Keys")), m.helpView(w-2, h-2), w, h)
+		return panel(sTitle.Render(m.t.T("Hotkeys")), m.helpView(w-2, h-2), w, h)
+	case m.langs != nil:
+		return panel(sTitle.Render(m.t.T("Language")), m.langView(), w, h)
 	case m.panels != nil:
 		return panel(sTitle.Render(m.t.T("Panels"))+sText.Render("("+m.t.T(viewNames[m.view])+")"), m.panelsView(h-2), w, h)
 	case m.form != nil:
@@ -600,6 +613,11 @@ func (m *Model) body(w, h int) (string, []string) {
 		l := m.actions()
 		return m.title(viewNames[vActions], len(l), true), m.actionsView(l, w, h)
 	case vHosts:
+		if m.host != "" && m.rund != nil {
+			lines := m.hostCard(m.host, w)
+			m.hostOff = min(m.hostOff, max(len(lines)-h, 0))
+			return sTitle.Render(m.t.T("Host")) + sText.Render("("+m.host+")"), lines[m.hostOff:]
+		}
 		l := m.hostList()
 		return m.title(viewNames[vHosts], len(l), true), m.hostsView(l, w, h)
 	case vPackages:
@@ -1170,4 +1188,24 @@ func lastSaid(x liveHost) string {
 		return ""
 	}
 	return l
+}
+
+func (m *Model) langView() []string {
+	out := []string{""}
+	for i, l := range m.languages() {
+		mark := "  "
+		if l == m.t.lang {
+			mark = sOK.Render("✓ ")
+		}
+		name := langNames[l]
+		if name == "" {
+			name = l
+		}
+		line := "  " + mark + sText.Render(fit(name, 12, false)) + sMuted.Render(strings.ToUpper(l))
+		if i == m.langs.cur {
+			line = sSel.Render(ansi.Strip(fit(line, 30, false)))
+		}
+		out = append(out, line)
+	}
+	return append(out, "", "  "+sKey.Render("<enter>")+" "+sMuted.Render(m.t.T("choose"))+"  "+sKey.Render("<esc>")+" "+sMuted.Render(m.t.T("close")))
 }

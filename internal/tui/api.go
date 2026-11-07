@@ -111,10 +111,17 @@ type runResp struct {
 	PlanCounts map[string]int            `json:"plan_counts"`
 	Hosts      map[string]map[string]int `json:"hosts"`
 	Facts      map[string]struct {
-		OS string `json:"os"`
+		OS     string   `json:"os"`
+		Kernel []string `json:"kernel"`
 	} `json:"facts"`
 	Actions []action  `json:"actions"`
 	Plan    []planRow `json:"plan"`
+	// per host: what the modules found (health.json, access.json, exposure.json as written)
+	Health    map[string]map[string]any `json:"health"`
+	Access    map[string]map[string]any `json:"access"`
+	Exposure  map[string]map[string]any `json:"exposure"`
+	Other     []map[string]any          `json:"other"`     // findings other than packages
+	Inventory []map[string]any          `json:"inventory"` // facts worth knowing, not to fix
 }
 
 type scanRequest struct {

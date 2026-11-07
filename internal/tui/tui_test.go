@@ -253,7 +253,7 @@ func TestBrowse(t *testing.T) {
 	h.key("tab", "tab", "tab", "tab", "tab", "tab", "tab") // around all views and one more
 	h.has("acme   staging   hosts")
 	h.key("?")
-	h.has("Keys", "OSC 52")
+	h.has("Hotkeys", "OSC 52")
 	h.key("x")
 	h.has("acme   staging   hosts")
 }
@@ -343,11 +343,17 @@ func TestReadOnlyAndLanguages(t *testing.T) {
 	h.has("Отсюда сканы не запускаются")
 	h.key("6")
 	h.has("Отсюда сканы не запускаются")
-	h.key("L") // ru -> zh -> en -> ru: every language in turn
+	h.key("L") // the list of languages, each in its own name, the current one marked
+	h.has("Язык", "English", "✓ Русский", "中文")
+	h.key("down", "enter")
 	h.has("扫描[0]", "此处无法启动扫描")
-	h.key("L")
+	h.key("L", "up", "up", "up", "space")
 	h.has("Scans[0]")
-	h.key("L")
+	h.key("L", "j", "esc") // closed without a choice
+	h.has("Scans[0]")
+	h.key("L", "k", "L")
+	h.has("Scans[0]")
+	h.key("L", "down", "enter")
 	h.has("Сканы[0]")
 	if New(Options{Lang: "xx"}).t.lang != "en" {
 		t.Fatal("unknown language")
