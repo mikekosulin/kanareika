@@ -281,8 +281,14 @@ func TestCloseWhileConnecting(t *testing.T) {
 		t.Fatalf("err %v", err)
 	}
 	<-closed
-	if n, _ := s.stats(); n != 1 {
-		t.Fatalf("logins %d", n)
+	// the server counts the login on its own goroutine, possibly after the client has its answer
+	for i := 0; ; i++ {
+		if n, _ := s.stats(); n == 1 {
+			break
+		} else if i == 500 {
+			t.Fatalf("logins %d", n)
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 

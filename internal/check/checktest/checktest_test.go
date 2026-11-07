@@ -470,7 +470,8 @@ func TestFakeSSH(t *testing.T) {
 	}
 	s := &FakeSSH{Here: d, Case: c}
 	ctx := context.Background()
-	for cmd, want := range map[string]string{"cat /etc/os-release": "ID=debian", "id": "uid=0"} {
+	for _, c := range [][2]string{{"cat /etc/os-release", "ID=debian"}, {"id", "uid=0"}} { // in this order: calls[0] below
+		cmd, want := c[0], c[1]
 		if out, err := s.Run(ctx, webHost, cmd, time.Second, true); out != want || err != nil {
 			t.Errorf("%s: %q %v", cmd, out, err)
 		}

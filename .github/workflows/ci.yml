@@ -60,6 +60,8 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+          # the test job's -race build is the one worth caching; with the same key, this job (done first) took it
+          cache: false
       - name: end to end
         run: tools/e2e/e2e.sh
 
