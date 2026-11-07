@@ -34,3 +34,9 @@ const OrgTemplateID = "__ORG_ID__"
 
 // OrgTemplate: a commented org file with OrgTemplateID where the org id goes (kanareika org new).
 func OrgTemplate() []byte { return append([]byte(nil), orgTemplate...) }
+
+// Repo: where kanareika lives; Issues: where to report a problem (the issue templates ask to strip real data).
+const (
+	Repo   = "https://github.com/mikekosulin/kanareika"
+	Issues = Repo + "/issues/new/choose"
+)

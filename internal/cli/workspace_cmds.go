@@ -125,8 +125,8 @@ func (a *app) versionCmd() *cobra.Command {
 		Short: "versions of kanareika and the embedded trivy",
 		Args:  cobra.NoArgs,
 		Run: func(cmd *cobra.Command, _ []string) {
-			fmt.Fprintf(cmd.OutOrStdout(), "kanareika %s\ntrivy %s\n%s %s/%s\n", a.version, orNone(trivy.Embedded()),
-				runtime.Version(), runtime.GOOS, runtime.GOARCH)
+			fmt.Fprintf(cmd.OutOrStdout(), "kanareika %s\ntrivy %s\n%s %s/%s\n\n%s  (a star helps)\nissues: %s\n", a.version,
+				orNone(trivy.Embedded()), runtime.Version(), runtime.GOOS, runtime.GOARCH, assets.Repo, assets.Issues)
 		},
 	}
 }

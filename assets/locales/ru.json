@@ -490,6 +490,8 @@
     "proto": "прото",
     "root": "root",
     "views: organizations, to do, hosts, packages, changes, access, network, health, exceptions, runs, scans": "экраны: организации, что делать, хосты, пакеты, изменения, доступ, сеть, здоровье, исключения, прогоны, сканы",
-    "errors and log": "ошибки, журнал"
+    "errors and log": "ошибки, журнал",
+    "Like it? Star it on GitHub": "Нравится? Поставьте звезду на GitHub",
+    "Something wrong? Report an issue on GitHub (no real data, please)": "Что-то не так? Сообщите о проблеме на GitHub (без реальных данных)"
   }
 }

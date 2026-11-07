@@ -1,0 +1,29 @@
+name: Feature request
+description: Something kanareika should check, show or do.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help
+      description: How you would like it to work. Which interface (TUI, web, commands, MCP) if it matters.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+  - type: checkboxes
+    id: clean
+    attributes:
+      label: Before posting
+      options:
+        - label: Examples use placeholders (web-01, 192.0.2.10, acme), not real hosts or organizations.
+          required: true

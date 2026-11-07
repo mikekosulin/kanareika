@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/mikekosulin/kanareika/assets"
 )
 
 // Palette: the web page's priority colors on a dark terminal, k9s-like chrome.
@@ -1008,7 +1009,11 @@ func (m *Model) helpView(w, h int) []string {
 			out = append(out, " "+sKey.Render(fit(k, kw, false))+" "+sText.Render(t))
 		}
 	}
-	out = append(out, " "+sMuted.Render(m.t.T("any key closes this")))
+	out = append(out, "",
+		" "+sBrand.Render("★ ")+sText.Render(m.t.T("Like it? Star it on GitHub"))+"  "+sKey.Render(assets.Repo),
+		" "+sErr.Render("! ")+sText.Render(m.t.T("Something wrong? Report an issue on GitHub (no real data, please)"))+"  "+sKey.Render(assets.Issues),
+		"",
+		" "+sMuted.Render(m.t.T("any key closes this")))
 	m.helpOff = min(m.helpOff, max(len(out)-h, 0))
 	return out[m.helpOff:]
 }
