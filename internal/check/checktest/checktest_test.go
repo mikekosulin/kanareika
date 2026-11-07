@@ -515,7 +515,7 @@ func TestFakeTrivy(t *testing.T) {
 
 	got, err := tr(ctx, []string{"rootfs", stage, filepath.Join(out, "image.tar"), "/", "/nonexistent-kanareika"},
 		filepath.Join(out, "r.json"), 90*time.Second)
-	if err != nil || string(got) != `{"root":"`+stage+`"}` {
+	if err != nil || string(got) != `{"root":"`+filepath.ToSlash(stage)+`"}` { // written into JSON with /
 		t.Errorf("staged: %q %v", got, err)
 	}
 	if b, err := os.ReadFile(filepath.Join(out, "r.json.gz")); err != nil || string(gunzip(b)) != string(got) {
@@ -647,7 +647,7 @@ func replayCase(t *testing.T) (*Replay, func(*check.Ctx, ReplayRun, string) ([]f
 		ctx.Log("%s: %s in %s 0a1b2c3d-0000-4000-8000-00000000abcd (12s)", h.Name, osr, ctx.RunDir)
 		_ = os.WriteFile(filepath.Join(out, "x.txt"), []byte("written to "+ctx.RunDir), 0o644)
 		rep, err := trivyHook(ctx, []string{"rootfs", stage}, filepath.Join(out, "rootfs.json"), 10*time.Minute)
-		if err != nil || !strings.Contains(string(rep), stage) {
+		if err != nil || !strings.Contains(string(rep), filepath.ToSlash(stage)) {
 			return nil, fmt.Errorf("trivy: %q %w", rep, err)
 		}
 		g := check.Base(h, "demo")
