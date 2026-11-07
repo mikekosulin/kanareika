@@ -116,12 +116,9 @@ func port(s string) (int, error) {
 	return n, nil
 }
 
-// TopPorts: nmap's default list (--top-ports 1000).
+// TopPorts: nmap's default list (--top-ports 1000). topPorts is a constant that parses (TestParsePorts checks it).
 func TopPorts() []int {
-	p, err := ParsePorts(topPorts)
-	if err != nil {
-		panic(err)
-	}
+	p, _ := ParsePorts(topPorts)
 	return p
 }
 
@@ -154,7 +151,9 @@ func Addresses(ctx context.Context, t string) ([]netip.Addr, error) {
 	if len(addrs) == 0 {
 		return nil, fmt.Errorf("%s: no IPv4 address", t)
 	}
-	return addrs[:1], nil
+	// the resolver may give an IPv4 address in its 16-byte form (::ffff:a.b.c.d): it would print so in findings and
+	// on nmap's command line
+	return []netip.Addr{addrs[0].Unmap()}, nil
 }
 
 // Scan: open TCP ports per address (sorted), by full connect. A refused connection is closed, no answer within the

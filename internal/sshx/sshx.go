@@ -65,7 +65,7 @@ func New(org *config.Org, p config.Paths) (*OrgSSH, error) {
 		if u == "" {
 			u = o.user
 		}
-		o.jumps[name] = jump{name: name, address: str(j, "address"), port: intOr(j, "port", 22), user: u,
+		o.jumps[name] = jump{name: name, address: str(j, "address"), port: jumpPort(j), user: u,
 			via: str(j, "jump")}
 	}
 
@@ -174,10 +174,20 @@ func (o *OrgSSH) jumpTarget(name string) (target, error) {
 }
 
 // client returns the cached connection for t, connecting (through its jump chain) when there is none or it died.
+// chainKey: the hosts a connection is being made through (the context of nested client calls).
+type chainKey struct{}
+
 func (o *OrgSSH) client(ctx context.Context, t target, depth int) (*ssh.Client, error) {
-	if depth > 16 { // config rejects cycles; this only stops a hand-built Org from recursing forever
+	// config rejects cycles and long chains; these stop a hand-built Org. The cycle check comes before the entry's
+	// lock: a host reached again through its own jumps would otherwise wait on the lock it holds.
+	seen, _ := ctx.Value(chainKey{}).([]string)
+	if slices.Contains(seen, t.key) {
+		return nil, fmt.Errorf("%s: jump chain cycle", t.label)
+	}
+	if depth > 16 {
 		return nil, fmt.Errorf("%s: jump chain too long", t.label)
 	}
+	ctx = context.WithValue(ctx, chainKey{}, append(slices.Clip(seen), t.key))
 	o.mu.Lock()
 	if o.closed {
 		o.mu.Unlock()
@@ -354,12 +364,13 @@ func keepalive(c *ssh.Client, done <-chan struct{}, every time.Duration, maxMiss
 
 func str(m map[string]any, k string) string { s, _ := m[k].(string); return s }
 
-func intOr(m map[string]any, k string, def int) int {
-	switch v := m[k].(type) {
+// jumpPort: m's "port" (YAML gives an int, JSON a float), 22 when it has none.
+func jumpPort(m map[string]any) int {
+	switch v := m["port"].(type) {
 	case int:
 		return v
 	case float64:
 		return int(v)
 	}
-	return def
+	return 22
 }
