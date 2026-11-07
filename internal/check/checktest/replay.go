@@ -79,6 +79,9 @@ func (n *Norm) S(s string) string {
 	return uuidRE.ReplaceAllString(s, "UUID")
 }
 
+// P normalizes a local path argument: S, and the OS's separators as the recordings have them (made on Unix).
+func (n *Norm) P(s string) string { return filepath.ToSlash(n.S(s)) }
+
 // Digest: sha256 of data, normalized first when it is text.
 func (n *Norm) Digest(data []byte) string {
 	if utf8.Valid(data) {
@@ -116,6 +119,7 @@ func listing(root string, n *Norm) map[string]string {
 			return err
 		}
 		rel, _ := filepath.Rel(root, p)
+		rel = filepath.ToSlash(rel) // the recordings were made on Unix
 		switch {
 		case d.Type()&fs.ModeSymlink != 0:
 			l, _ := os.Readlink(p)
@@ -197,18 +201,18 @@ func FakeTrivy(here string, c *Replay, n *Norm, calls *[]any) TrivyFunc {
 				continue
 			}
 			if st.IsDir() {
-				target[n.S(a)] = listing(a, n)
+				target[n.P(a)] = listing(a, n)
 				stage = a
 			} else {
 				data, _ := os.ReadFile(a)
-				target[n.S(a)] = n.Digest(data)
+				target[n.P(a)] = n.Digest(data)
 			}
 		}
 		normArgs := make([]any, len(args))
 		for i, a := range args {
-			normArgs[i] = n.S(a)
+			normArgs[i] = n.P(a)
 		}
-		*calls = append(*calls, map[string]any{"args": normArgs, "output": n.S(output),
+		*calls = append(*calls, map[string]any{"args": normArgs, "output": n.P(output),
 			"timeout": int(timeout.Seconds()), "target": target})
 		e, ok := c.Trivy[filepath.Base(output)]
 		if !ok {

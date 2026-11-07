@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -235,6 +236,9 @@ func rawKey(t *testing.T, s ssh.Signer) any {
 }
 
 func TestJumpChain(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the test sshd runs the commands with sh: Unix")
+	}
 	p := config.PathsAt(t.TempDir())
 	user, pemb := edKey(t)
 	writeSecret(t, p, "t1/id", pemb)

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -271,7 +272,7 @@ func TestPruneEdgeCases(t *testing.T) {
 	if gone, err := Prune(p, filepath.Join(t.TempDir(), "missing"), 1, 1, false); err != nil || gone == nil || len(gone) != 0 {
 		t.Errorf("missing env: %v %v", gone, err)
 	}
-	if _, err := Prune(p, regularFile(t), 1, 1, false); err == nil {
+	if _, err := Prune(p, regularFile(t), 1, 1, false); err == nil && runtime.GOOS != "windows" { // Windows: not there
 		t.Error("env is a regular file")
 	}
 

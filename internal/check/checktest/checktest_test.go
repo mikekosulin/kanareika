@@ -190,7 +190,7 @@ func TestCasesFailures(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(d, "testdata", "a", "case.json"), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		run(t, "", func(tb testing.TB) { Cases(tb) }).expect(t, true, "is a directory")
+		run(t, "", func(tb testing.TB) { Cases(tb) }).expect(t, true, errIsDir)
 	})
 	t.Run("bad json", func(t *testing.T) {
 		inDir(t, map[string]string{"testdata/a/case.json": `{`})
@@ -215,10 +215,10 @@ func TestRead(t *testing.T) {
 		t.Errorf("packed: %q", got)
 	}
 	for name, want := range map[string]string{
-		"missing.txt": "no such file",
+		"missing.txt": errNoFile,
 		"bad.txt":     "gzip: invalid header",
 		"cut.txt":     "unexpected EOF",
-		"dir.txt":     "is a directory",
+		"dir.txt":     errIsDir,
 	} {
 		run(t, "", func(tb testing.TB) { Read(tb, name) }).expect(t, true, want)
 	}
@@ -248,7 +248,7 @@ func TestOrg(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(d, "testdata", "org.json"), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		run(t, "", func(tb testing.TB) { Org(tb) }).expect(t, true, "is a directory")
+		run(t, "", func(tb testing.TB) { Org(tb) }).expect(t, true, errIsDir)
 	})
 	t.Run("bad json", func(t *testing.T) {
 		inDir(t, map[string]string{"testdata/org.json": `[1]`})
@@ -586,7 +586,7 @@ func TestLoadReplays(t *testing.T) {
 		t.Errorf("%+v", cs)
 	}
 	inDir(t, nil)
-	run(t, "", func(tb testing.TB) { LoadReplays(tb) }).expect(t, true, "no such file")
+	run(t, "", func(tb testing.TB) { LoadReplays(tb) }).expect(t, true, errNoFile)
 	inDir(t, map[string]string{"testdata/python.json": `{"cases":{}}`})
 	run(t, "", func(tb testing.TB) { LoadReplays(tb) }).expect(t, true, "cannot unmarshal object")
 }
@@ -746,12 +746,12 @@ func TestRunReplayFatal(t *testing.T) {
 	}
 	t.Run("temp dir gone", func(t *testing.T) {
 		run(t, filepath.Join(t.TempDir(), "gone"), func(tb testing.TB) { RunReplay(tb, c, nil, setHook, call) }).
-			expect(t, true, "no such file")
+			expect(t, true, errNoFile)
 	})
 	t.Run("temp dir is a file", func(t *testing.T) {
 		p := filepath.Join(t.TempDir(), "file")
 		files(t, filepath.Dir(p), map[string]string{"file": ""})
-		run(t, p, func(tb testing.TB) { RunReplay(tb, c, nil, setHook, call) }).expect(t, true, "not a directory")
+		run(t, p, func(tb testing.TB) { RunReplay(tb, c, nil, setHook, call) }).expect(t, true, errNotDir)
 	})
 	t.Run("normalization breaks the JSON", func(t *testing.T) {
 		run(t, "", func(tb testing.TB) { RunReplay(tb, c, nil, setHook, call, [2]string{"web-01", `"`}) }).

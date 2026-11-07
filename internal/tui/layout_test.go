@@ -153,7 +153,7 @@ func TestSettingsFile(t *testing.T) {
 	must(t, os.WriteFile(blocker, nil, 0o600))
 	h := newHarness(t, Options{Org: "acme", Env: "production", Settings: filepath.Join(blocker, "tui.json")}, true)
 	h.key("2", "p")
-	h.has("not a directory")
+	h.has(errNotDir)
 }
 
 // TestWideScript: Chinese takes two cells a character; every frame is still exactly the terminal's size.

@@ -36,6 +36,7 @@ docker run -d --name "$id-target" --network "$id" --network-alias target-01 \
 
 step "runner: debian with the binary"
 mkdir -p "$work/home" "$work/cache" "$work/tmp"
+chmod 1777 "$work/tmp" # a /tmp for the container's users (apt runs as _apt), as a real one is
 # the caches and temp files (vulnerability DB ~1 GB) live on the host, not in the container's layer
 docker run -d --name "$id-runner" --network "$id" -p 127.0.0.1::8088 \
 	-v "$work/kanareika:/usr/local/bin/kanareika:ro" -v "$work/home:/work" -v "$work/cache:/root/.cache" -v "$work/tmp:/tmp" -w /work \

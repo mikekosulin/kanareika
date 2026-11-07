@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -162,6 +163,9 @@ func TestExtractFailures(t *testing.T) {
 		"hard link to a dir":   {[]member{{name: "d/", typ: tar.TypeDir}, {name: "h", typ: tar.TypeLink, link: "d"}}, syscall.EISDIR},
 	} {
 		t.Run(name, func(t *testing.T) {
+			if errors.Is(c.want, syscall.EISDIR) && runtime.GOOS == "windows" {
+				t.Skip("EISDIR is Unix's")
+			}
 			if _, err := extract(t, tarOf(t, c.ms...)); !errors.Is(err, c.want) {
 				t.Errorf("err = %v, want %v", err, c.want)
 			}
@@ -207,6 +211,9 @@ func TestExtractAbsFailures(t *testing.T) {
 
 // Nothing resolves (not even the root): the path comes back as it is.
 func TestRealpathNothingResolves(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("remote paths are Unix paths; filepath here is the local one")
+	}
 	swap(t, &evalSymlinks, func(string) (string, error) { return "", fs.ErrNotExist })
 	if p, err := realpath("/srv/app/../lib"); err != nil || p != "/srv/lib" {
 		t.Errorf("realpath = %q, %v", p, err)

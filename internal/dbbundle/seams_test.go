@@ -108,7 +108,7 @@ func TestImportFileInTheWay(t *testing.T) {
 		dst := t.TempDir()
 		b := bundle(t, entry{name: "trivy-db/a", body: "x", typ: tar.TypeReg}, second)
 		if _, err := Import(b, []Part{{"trivy-db", filepath.Join(dst, "db")}}); err == nil ||
-			!strings.Contains(err.Error(), "not a directory") {
+			!strings.Contains(err.Error(), errNotDir) {
 			t.Errorf("%s: %v", name, err)
 		}
 		if left, _ := filepath.Glob(filepath.Join(dst, "*")); len(left) != 0 {

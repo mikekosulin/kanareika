@@ -179,7 +179,7 @@ func TestCurrentErrors(t *testing.T) {
 		}
 		busy(t, home)
 		s, _ := newTestServer(home)
-		wantToolError(t, s, "get_summary", staging, "is a directory")
+		wantToolError(t, s, "get_summary", staging, errIsDir)
 	})
 	t.Run("broken view.json", func(t *testing.T) {
 		home := fixtureHome(t)

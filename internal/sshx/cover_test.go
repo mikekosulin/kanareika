@@ -87,7 +87,7 @@ func TestNewErrors(t *testing.T) {
 	writeSecret(t, p, "t1/id", pemb)
 	org := loadOrg(t, p, map[string]any{"user": "audit", "key": "t1/id"}, hosts)
 	must(t, os.WriteFile(p.Reports, nil, 0o644))
-	if _, err := New(org, p); err == nil || !strings.Contains(err.Error(), "not a directory") {
+	if _, err := New(org, p); err == nil || !strings.Contains(err.Error(), errNotDir) {
 		t.Fatalf("reports is a file: %v", err)
 	}
 
@@ -313,6 +313,9 @@ func TestExecRefused(t *testing.T) {
 
 // TestKilledBySignal: a command that dies of a signal exits 255, like ssh(1).
 func TestKilledBySignal(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the test sshd kills a sh process: Unix")
+	}
 	_, o, h := setupWith(t)
 	_, err := o.Run(ctx, h, "echo before; kill -9 $$", 5*time.Second, true)
 	if err == nil || !strings.HasPrefix(err.Error(), "h1: exit 255") {

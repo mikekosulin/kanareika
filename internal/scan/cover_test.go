@@ -246,7 +246,7 @@ func TestRunDirErrors(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "env")
 	must(t, os.WriteFile(file, nil, 0o644))
 	if rc := e.scanner().run(context.Background(), o, config.DefaultEnv, sel, Options{}, p, nil, file); rc != 1 ||
-		!strings.Contains(e.out.String(), "not a directory") {
+		!strings.Contains(e.out.String(), errNotDir) {
 		t.Fatalf("rc %d\n%s", rc, e.out)
 	}
 

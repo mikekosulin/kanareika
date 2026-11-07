@@ -75,7 +75,7 @@ func TestWorkspaceErrors(t *testing.T) {
 
 	// secrets/<id> is a file: the org file is written, its secrets directory is not
 	write(t, filepath.Join(home(), "secrets", "beta"), "")
-	if code, _, errs := cli(t, "org", "new", "beta"); code != 1 || !strings.Contains(errs, "not a directory") {
+	if code, _, errs := cli(t, "org", "new", "beta"); code != 1 || !strings.Contains(errs, errNotDir) {
 		t.Fatal(code, errs)
 	}
 	// a name too long for the file system
@@ -299,7 +299,7 @@ func TestPruneSelectionAndErrors(t *testing.T) {
 	// an environment directory that is a file
 	must(t, os.MkdirAll(filepath.Join(home(), "reports", "beta"), 0o755))
 	write(t, filepath.Join(home(), "reports", "beta", "default"), "")
-	if code, _, errs := cli(t, "prune", "beta"); code != 1 || !strings.Contains(errs, "not a directory") {
+	if code, _, errs := cli(t, "prune", "beta"); code != 1 || !strings.Contains(errs, errNotDir) {
 		t.Fatal(code, errs)
 	}
 }
