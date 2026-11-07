@@ -26,8 +26,15 @@ may only hold fake addresses, names and e-mails:
 - run real captures through `go run ./tools/anonymize <dir>` and review the diff; raw captures that must stay real go
   to `testdata/local/` (git-ignored).
 
-`TestTestdataIsAnonymized` checks this on every CI run. Locally you can add your own forbidden strings:
-`KANAREIKA_DENYLIST=<file with one string per line> go test ./tools/anonymize/`.
+The guard in `tools/anonymize` runs with `go test ./...`:
+
+- `TestNoRealData` checks every file that is or could be committed: data files (testdata, the assets embedded into
+  the binary, docs, examples) may only hold fake addresses and e-mails, and no file may contain a name or address
+  from your local `orgs/*.yml` (org ids and names, hosts, addresses, jump hosts, external targets, the consent
+  document). Your org files never leave your machine, and neither does that list: the check runs where leaks are
+  made. More forbidden strings: `KANAREIKA_DENYLIST=<file with one string per line> go test ./tools/anonymize/`;
+- `TestEmbedsOnlyAssets` fails on any `//go:embed` outside `assets/` (policy, schemas, locales, web), so nothing
+  else can be built into the binary.
 
 ## Pull requests
 

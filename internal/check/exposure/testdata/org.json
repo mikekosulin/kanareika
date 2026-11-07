@@ -11,8 +11,8 @@
   {"name": "synthetic-named", "address": "app.example.org", "env": "synthetic"}
  ],
  "jumps": {
-  "prod-bastion": {"address": "100.21.0.2"},
-  "stg-bastion": {"address": "100.21.0.10"}
+  "jump-a": {"address": "100.21.0.2"},
+  "jump-b": {"address": "100.21.0.10"}
  },
  "external": {
   "production": ["100.21.0.7", "100.21.0.2", "100.21.0.4", "100.21.0.3", "100.21.0.5", "100.21.0.6",
