@@ -46,16 +46,28 @@ func execute(version string, args []string, stdin io.Reader, stdout, stderr io.W
 		Short: "Read-only vulnerability audit of our servers, per organization",
 		Long: `Agentless, read-only security audit of servers over SSH, one YAML per organization.
 
+Three interfaces over the same data:
+  kanareika            full-screen terminal interface (TUI); same as "kanareika tui"
+  kanareika web        web interface at http://127.0.0.1:8088
+  kanareika <command>  commands, for scripts and cron (below)
+
 Start:   kanareika init && kanareika org new acme   (then describe hosts in orgs/acme.yml)
 Check:   kanareika validate acme
 Scan:    kanareika db update && kanareika scan acme
-Look:    kanareika serve                             (dashboard; scans can be started there too)
 
 The working directory holds orgs/, secrets/, reports/ (and optional policy/ overrides): the current
 directory, or KANAREIKA_HOME, or --home.`,
 		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		// no command: the TUI in a terminal, the help elsewhere (a script must never hang on a screen)
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if !isTerminal() {
+				return cmd.Help()
+			}
+			return a.tuiRun(cmd, tuiFlags{})
+		},
+		Args: cobra.NoArgs,
 		PersistentPreRunE: func(*cobra.Command, []string) error {
 			home := a.home
 			if home == "" {
@@ -74,7 +86,7 @@ directory, or KANAREIKA_HOME, or --home.`,
 	}
 	root.PersistentFlags().StringVar(&a.home, "home", "", "working directory with orgs/, secrets/, reports/ (default: KANAREIKA_HOME, else the current directory)")
 	root.AddCommand(a.initCmd(), a.orgCmd(), a.validateCmd(), a.showCmd(), a.migrateCmd(), a.helperCmd(),
-		a.scanCmd(), a.historyCmd(), a.diffCmd(), a.pruneCmd(), a.dbCmd(), a.feedsCmd(), a.serveCmd(), a.mcpCmd(),
+		a.scanCmd(), a.historyCmd(), a.diffCmd(), a.pruneCmd(), a.dbCmd(), a.feedsCmd(), a.webCmd(), a.tuiCmd(), a.mcpCmd(),
 		a.versionCmd())
 	root.SetArgs(args)
 	root.SetIn(stdin)

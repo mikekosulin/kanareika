@@ -460,3 +460,20 @@ func TestServe(t *testing.T) {
 		t.Fatal("listened on a busy port")
 	}
 }
+
+func TestSession(t *testing.T) {
+	s, h := newTest(t, Options{Scan: (&fakeScan{}).run})
+	r := do(h, "GET", "/api/session", nil, nil)
+	var d struct {
+		CSRF  string `json:"csrf"`
+		Scans bool   `json:"scans"`
+	}
+	must(t, json.Unmarshal([]byte(r.body), &d))
+	if r.code != 200 || d.CSRF != s.csrf || !d.Scans {
+		t.Fatal(r.code, r.body)
+	}
+	_, h2 := newTest(t, Options{Token: "t"})
+	if r := do(h2, "GET", "/api/session", nil, nil); r.code != 401 {
+		t.Fatal("session without the access token:", r.code)
+	}
+}

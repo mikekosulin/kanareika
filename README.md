@@ -16,15 +16,20 @@ kanareika org new myorg          # describe hosts, jump hosts and consent in org
 kanareika validate myorg
 kanareika db update              # vulnerability DBs and feeds (isolated network: db export / db import)
 kanareika scan myorg
-kanareika serve                  # dashboard at http://127.0.0.1:8088; scans can be started there too
+kanareika                        # terminal interface (TUI): findings, hosts, runs, scans
+kanareika web                    # web interface at http://127.0.0.1:8088; scans can be started there too
 ```
+
+Three interfaces over the same data and rules: the TUI (`kanareika`, k9s-style; `?` shows the keys), the web
+(`kanareika web`) and commands for scripts and cron (`kanareika --help`). The TUI can also attach to a remote
+`kanareika web`: `kanareika tui --url http://host:8088 --token …`.
 
 - **Vulnerabilities** — OS packages, images, jars/lockfiles via trivy built into the binary (only its DBs are downloaded, or imported offline); backports and fix
   availability verified on the host; **P1–P4** by KEV, EPSS, exposure and pre-auth RCE.
 - **Access & exposure** — SSH password login per user, keys, logins and attackers, open ports, firewalls, external scan.
 - **Health** — kernel errors, disks, memory, time sync, pending reboots.
 - **Fixing** — pick actions → a ready task for an engineer or AI agent (apply / verify / rollback); MCP for agents.
-- **Safe by design** — read-only, per-org isolation, changed host keys refused, consent required, localhost dashboard.
+- **Safe by design** — read-only, per-org isolation, changed host keys refused, consent required, web interface on localhost only.
 
 Details: [docs/org-file.md](docs/org-file.md) · `kanareika --help`
 

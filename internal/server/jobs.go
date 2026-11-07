@@ -323,3 +323,10 @@ func (s *Server) apiScanOptions(q query) (any, error) {
 	}
 	return map[string]any{"hosts": hosts, "groups": groups, "modules": config.Modules}, nil
 }
+
+// apiSession: GET /api/session -> {csrf, scans} for API clients other than the page (kanareika tui). Same-origin
+// only, like the page that carries the same token: other sites can't read it (no CORS, Host checked on localhost,
+// the access token when set).
+func (s *Server) apiSession(w http.ResponseWriter, _ *http.Request) {
+	sendJSON(w, http.StatusOK, map[string]any{"csrf": s.csrf, "scans": s.jobs != nil})
+}

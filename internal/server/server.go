@@ -162,6 +162,7 @@ func (s *Server) Handler() http.Handler {
 		r.Get(path, s.api(fn))
 	}
 	r.Get("/api/scan-options", s.api(s.apiScanOptions))
+	r.Get("/api/session", s.apiSession)
 	r.Get("/api/jobs", s.apiJobs)
 	r.With(s.csrfCheck).Post("/api/scan", s.apiScan)
 	r.With(s.csrfCheck).Post("/api/jobs/{id}/cancel", s.apiCancel)

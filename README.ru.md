@@ -17,8 +17,13 @@ kanareika org new myorg          # описать хосты, бастионы �
 kanareika validate myorg
 kanareika db update              # базы уязвимостей и фиды (закрытый контур: db export / db import)
 kanareika scan myorg
-kanareika serve                  # dashboard на http://127.0.0.1:8088; сканы можно запускать и оттуда
+kanareika                        # интерфейс в терминале (TUI): находки, хосты, прогоны, сканы
+kanareika web                    # веб-интерфейс на http://127.0.0.1:8088; сканы можно запускать и оттуда
 ```
+
+Три интерфейса поверх одних данных и правил: TUI (`kanareika`, в духе k9s; `?` показывает клавиши), веб
+(`kanareika web`) и команды для скриптов и cron (`kanareika --help`). TUI умеет подключаться и к удалённому
+`kanareika web`: `kanareika tui --url http://host:8088 --token …`.
 
 - **Уязвимости** — пакеты ОС, образы, jar/lock-файлы через trivy, встроенный в бинарник (скачиваются только его базы, или импортируются офлайн); бэкпорты и наличие исправления
   проверяются на хосте; приоритеты **P1–P4** по KEV, EPSS, доступности снаружи и pre-auth RCE.

@@ -26,15 +26,15 @@ func TestServe(t *testing.T) {
 		_, _ = io.WriteString(out, "listening\n")
 		return nil
 	}
-	code, _, errs := cli(t, "serve")
+	code, _, errs := cli(t, "web")
 	if code != 0 || host != "127.0.0.1" || port != 8088 || srv == nil || !strings.Contains(errs, "listening") {
 		t.Fatal(code, host, port, errs)
 	}
-	if code, _, _ := cli(t, "serve", "--host", "0.0.0.0", "--port", "9000", "--token", "x", "--no-scans"); code != 0 ||
+	if code, _, _ := cli(t, "web", "--host", "0.0.0.0", "--port", "9000", "--token", "x", "--no-scans"); code != 0 ||
 		host != "0.0.0.0" || port != 9000 {
 		t.Fatal(code, host, port)
 	}
-	if code, _, _ := cli(t, "serve", "extra"); code != 1 {
+	if code, _, _ := cli(t, "web", "extra"); code != 1 {
 		t.Fatal("arguments are refused")
 	}
 }
