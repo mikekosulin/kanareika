@@ -27,6 +27,12 @@ import (
 	"github.com/mikekosulin/kanareika/internal/trivy"
 )
 
+// prepare / prepareOffline: trivy's DBs before a run (downloaded, or only checked); tests replace them.
+var (
+	prepare        = trivy.Prepare
+	prepareOffline = trivy.PrepareOffline
+)
+
 // Options of one scan run.
 type Options struct {
 	Groups, Hosts, Modules []string
@@ -202,12 +208,12 @@ func (s *Scanner) Org(ctx context.Context, o *config.Org, env string, opt Option
 		return 1
 	}
 	if opt.Offline {
-		if err := trivy.PrepareOffline(s.log); err != nil {
+		if err := prepareOffline(s.log); err != nil {
 			return refuse(err)
 		}
 	} else {
 		s.log("trivy: updating vulnerability DB ...")
-		if err := trivy.Prepare(ctx, s.log); err != nil {
+		if err := prepare(ctx, s.log); err != nil {
 			return refuse(err)
 		}
 	}

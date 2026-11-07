@@ -131,18 +131,3 @@ func (f *Finding) DueOr() string {
 	}
 	return *f.Due
 }
-
-// Port of an exposure finding (args.port), "" when not set.
-func (f *Finding) Port() string {
-	switch v := f.Args["port"].(type) {
-	case float64:
-		return json.Number(formatInt(v)).String()
-	case int:
-		return json.Number(formatInt(float64(v))).String()
-	case string:
-		return v
-	}
-	return ""
-}
-
-func formatInt(v float64) string { b, _ := json.Marshal(int64(v)); return string(b) }

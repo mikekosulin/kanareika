@@ -289,6 +289,9 @@ func fetchEPSS(ctx context.Context, url string) (map[string]float64, error) {
 	return out, nil
 }
 
+// ipdbURL: the DB-IP Lite file of a kind (city, asn) and month; tests point it at a local server.
+var ipdbURL = "https://download.db-ip.com/free/dbip-%s-lite-%s.mmdb.gz"
+
 // UpdateIPDB: DB-IP Lite (CC-BY 4.0, https://db-ip.com) — offline country/city + ASN, so IP lookups never leave the
 // machine. Files: FeedsDir()/dbip-city.mmdb, dbip-asn.mmdb. Returns kind -> month downloaded; a kind that could not
 // be fetched (this month's file may not be published yet, then last month's is tried) is missing.
@@ -299,7 +302,7 @@ func UpdateIPDB(ctx context.Context) map[string]string {
 	months := []string{today.Format("2006-01"), today.AddDate(0, 0, -today.Day()).Format("2006-01")}
 	for _, kind := range []string{"city", "asn"} {
 		for _, m := range months {
-			url := fmt.Sprintf("https://download.db-ip.com/free/dbip-%s-lite-%s.mmdb.gz", kind, m)
+			url := fmt.Sprintf(ipdbURL, kind, m)
 			if err := download(ctx, url, filepath.Join(dir, "dbip-"+kind+".mmdb")); err != nil {
 				continue
 			}

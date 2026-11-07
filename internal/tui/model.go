@@ -12,6 +12,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mikekosulin/kanareika/internal/i18n"
 )
 
 type view int
@@ -92,7 +93,7 @@ func New(o Options) *Model {
 		o.Tick = func(d time.Duration) tea.Cmd { return tea.Tick(d, func(t time.Time) tea.Msg { return tickMsg(t) }) }
 	}
 	m := &Model{c: o.Client, now: o.Now, every: o.Tick, clip: o.Clip, org: o.Org, env: o.Env, view: vActions, sel: map[string]bool{},
-		t: &tr{lang: "en", ui: loadUI()}, set: loadSettings(o.Settings), setPath: o.Settings}
+		t: &tr{lang: "en", ui: i18n.UI()}, set: loadSettings(o.Settings), setPath: o.Settings}
 	if o.Lang != "" && (o.Lang == "en" || m.t.ui[o.Lang] != nil) {
 		m.t.lang = o.Lang
 	}

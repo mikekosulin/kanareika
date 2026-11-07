@@ -21,6 +21,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/mikekosulin/kanareika/internal/config"
+	"github.com/mikekosulin/kanareika/internal/i18n"
 	"github.com/mikekosulin/kanareika/internal/report"
 	"github.com/mikekosulin/kanareika/internal/server"
 )
@@ -424,7 +425,7 @@ func TestRemoteClient(t *testing.T) {
 func asAPIError(err error, out **APIError) bool { return errors.As(err, out) }
 
 func TestTexts(t *testing.T) {
-	tt := &tr{lang: "ru", ui: loadUI(), catalog: map[string]map[string]string{
+	tt := &tr{lang: "ru", ui: i18n.UI(), catalog: map[string]map[string]string{
 		"act.x": {"en": "Update {n}", "ru": "Обновить {n} ({what})"},
 		"w":     {"en": "pkgs", "ru": "пакеты"},
 	}}

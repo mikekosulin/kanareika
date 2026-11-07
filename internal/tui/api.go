@@ -1,14 +1,10 @@
 package tui
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/fs"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/mikekosulin/kanareika/assets"
 )
 
 // The parts of the API answers the TUI shows (the web page reads the same).
@@ -161,24 +157,6 @@ type tr struct {
 	lang    string
 	ui      map[string]map[string]string // lang -> English -> translation
 	catalog map[string]map[string]string // message key -> lang -> text (finding and action titles)
-}
-
-func loadUI() map[string]map[string]string {
-	out := map[string]map[string]string{}
-	files, _ := fs.Glob(assets.Locales(), "*.json")
-	for _, f := range files {
-		b, err := fs.ReadFile(assets.Locales(), f)
-		if err != nil {
-			continue
-		}
-		var l struct {
-			UI map[string]string `json:"ui"`
-		}
-		if json.Unmarshal(b, &l) == nil && len(l.UI) > 0 {
-			out[strings.TrimSuffix(f, ".json")] = l.UI
-		}
-	}
-	return out
 }
 
 // T translates an interface string.

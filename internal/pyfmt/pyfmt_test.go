@@ -118,3 +118,17 @@ func TestTruthy(t *testing.T) {
 		}
 	}
 }
+
+func TestStr(t *testing.T) {
+	for _, c := range []struct {
+		v    any
+		want string
+	}{
+		{nil, "None"}, {"x", "x"}, {true, "True"}, {false, "False"}, {float64(3), "3"}, {2.5, "2.5"},
+		{1e16, "1e+16"}, {float32(4), "4"}, {7, "7"}, {[]int{1}, "[1]"},
+	} {
+		if got := Str(c.v); got != c.want {
+			t.Errorf("Str(%#v) = %q, want %q", c.v, got, c.want)
+		}
+	}
+}
