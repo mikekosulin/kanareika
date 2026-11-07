@@ -137,7 +137,7 @@ td .tag + .tag { margin-left: 4px; }  /* inside flex containers the gap does thi
 .tabs button[aria-selected=true] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
 .tabs button[aria-selected=true] .ic { color: var(--ink); }
 .tabs .n { color: var(--muted); font-weight: 400; font-size: 12px; }
-.tabsbar { display: flex; align-items: flex-end; gap: 12px; border-bottom: 1px solid var(--grid);
+.tabsbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0 12px; border-bottom: 1px solid var(--grid);
   position: sticky; top: var(--hdr, 57px); z-index: 6; background: var(--surface); margin: -18px -20px 0; padding: 8px 20px 0; border-radius: 12px 12px 0 0; }
 .stickybar { position: sticky; top: calc(var(--hdr, 53px) + var(--tabsh, 44px)); z-index: 5; background: var(--surface);
   margin: 0 -20px 6px; padding: 14px 20px 4px; border-bottom: 1px solid var(--grid); }
@@ -145,7 +145,8 @@ td .tag + .tag { margin-left: 4px; }  /* inside flex containers the gap does thi
 .flow th { top: calc(var(--hdr, 53px) + var(--tabsh, 44px) + var(--filth, 0px)); }
 #tabbody { padding-top: 16px; }
 #tabbody > .stickybar:first-child { margin-top: -16px; }
-.tabsbar .tabs { border-bottom: 0; margin: 0; flex: 1; min-width: 0; }
+/* the tabs take what they need; when the filters do not fit next to them they go to a line below (never hide a tab) */
+.tabsbar .tabs { border-bottom: 0; margin: 0; flex: 1 1 auto; min-width: 0; }
 .hostpick { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px; height: 32px; padding: 0 4px 0 9px; border: 1px solid var(--border);
   border-radius: 99px; color: var(--ink-2); flex: none; }
 .hostpick.on { border-color: var(--ink-2); background: var(--surface-3); color: var(--ink); }
