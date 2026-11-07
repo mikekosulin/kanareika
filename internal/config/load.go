@@ -10,11 +10,14 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 	"gopkg.in/yaml.v3"
 
 	"github.com/mikekosulin/kanareika/assets"
@@ -28,16 +31,19 @@ type Loader struct {
 	profiles map[string]any
 }
 
+const schemaID = "urn:kanareika:org.schema.json"
+
 func NewLoader(p Paths) (*Loader, error) {
 	raw, err := readJSON(p, "schemas/org.schema.json")
 	if err != nil {
 		return nil, err
 	}
 	c := jsonschema.NewCompiler()
-	if err := c.AddResource("org.schema.json", raw); err != nil {
+	// an absolute id of its own: a relative one resolves against the working directory, which then shows in errors
+	if err := c.AddResource(schemaID, raw); err != nil {
 		return nil, err
 	}
-	sch, err := c.Compile("org.schema.json")
+	sch, err := c.Compile(schemaID)
 	if err != nil {
 		return nil, fmt.Errorf("schemas/org.schema.json: %w", err)
 	}
@@ -115,8 +121,8 @@ func (l *Loader) loadProfiles() (map[string]any, error) {
 		},
 	}
 	c := jsonschema.NewCompiler()
-	_ = c.AddResource("profiles.json", sub)
-	sch, err := c.Compile("profiles.json")
+	_ = c.AddResource("urn:kanareika:profiles.json", sub)
+	sch, err := c.Compile("urn:kanareika:profiles.json")
 	if err != nil {
 		return nil, err
 	}
@@ -126,25 +132,32 @@ func (l *Loader) loadProfiles() (map[string]any, error) {
 	return mapOf(data), nil
 }
 
+// schemaErrors: one line per failed check, "where: what" (<root> for the document), deepest causes only (the
+// "validation failed" of their parents says nothing).
 func schemaErrors(err error) []string {
 	var ve *jsonschema.ValidationError
 	if !errors.As(err, &ve) {
 		return []string{err.Error()}
 	}
+	p := message.NewPrinter(language.English)
 	var out []string
-	for _, u := range ve.BasicOutput().Errors {
-		if u.Error == nil || u.Error.String() == "" || strings.HasPrefix(u.Error.String(), "validation failed") {
-			continue
+	var walk func(e *jsonschema.ValidationError)
+	walk = func(e *jsonschema.ValidationError) {
+		if len(e.Causes) > 0 {
+			for _, c := range e.Causes {
+				walk(c)
+			}
+			return
 		}
-		loc := strings.TrimPrefix(u.InstanceLocation, "/")
+		loc := strings.Join(e.InstanceLocation, "/")
 		if loc == "" {
 			loc = "<root>"
 		}
-		out = append(out, loc+": "+u.Error.String())
+		if line := loc + ": " + e.ErrorKind.LocalizedString(p); !slices.Contains(out, line) {
+			out = append(out, line)
+		}
 	}
-	if len(out) == 0 {
-		out = []string{ve.Error()}
-	}
+	walk(ve)
 	return out
 }
 
