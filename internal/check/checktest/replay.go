@@ -137,7 +137,7 @@ func listing(root string, n *Norm) map[string]string {
 		switch {
 		case d.Type()&fs.ModeSymlink != 0:
 			l, _ := os.Readlink(p)
-			out[rel] = "-> " + l
+			out[rel] = "-> " + filepath.ToSlash(l) // Windows writes ..\app for ../app
 		case d.IsDir():
 			out[rel+"/"] = "dir"
 		default:
