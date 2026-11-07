@@ -18,7 +18,7 @@
 <sub>演示数据，均为虚构。</sub>
 
 ```bash
-# 从 Release 下载 kanareika-<os>-<arch>（Linux、macOS、Windows），无需安装其他任何东西
+brew install mikekosulin/tap/kanareika   # macOS、Linux；或从 Release 下载二进制文件（含 Windows）
 kanareika init                   # 在当前目录创建 orgs/、secrets/、reports/（或 --home DIR）
 kanareika org new myorg          # 主机、跳板机和授权：orgs/myorg.yml
 kanareika validate myorg

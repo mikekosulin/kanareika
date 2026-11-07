@@ -19,7 +19,7 @@
 <sub>Демо-данные, выдуманные.</sub>
 
 ```bash
-# скачать kanareika-<os>-<arch> из релиза (Linux, macOS, Windows); больше ничего не нужно
+brew install mikekosulin/tap/kanareika   # macOS, Linux; или бинарник из релиза (и для Windows)
 kanareika init                   # orgs/, secrets/, reports/ здесь (или --home DIR)
 kanareika org new myorg          # хосты, бастионы и согласие: orgs/myorg.yml
 kanareika validate myorg

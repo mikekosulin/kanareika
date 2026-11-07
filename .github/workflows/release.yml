@@ -79,3 +79,33 @@ jobs:
           case "$TAG" in *-*) prerelease="--prerelease" ;; esac
           gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --title "kanareika $TAG" \
             --generate-notes --verify-tag $prerelease
+
+  # The Homebrew tap (github.com/mikekosulin/homebrew-tap): Formula/kanareika.rb for this release, so
+  # `brew install mikekosulin/tap/kanareika` gets it. Needs the HOMEBREW_TAP_TOKEN secret (a fine-grained token
+  # with contents write on that repository only); without it this step says so and the release stands.
+  homebrew:
+    needs: release
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Update the formula
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then echo "::notice::HOMEBREW_TAP_TOKEN is not set: the tap is not updated"; exit 0; fi
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern SHA256SUMS --dir "$RUNNER_TEMP"
+          git clone -q "https://x-access-token:${TAP_TOKEN}@github.com/mikekosulin/homebrew-tap.git" "$RUNNER_TEMP/tap"
+          mkdir -p "$RUNNER_TEMP/tap/Formula"
+          packaging/homebrew/formula.sh "$TAG" "$RUNNER_TEMP/SHA256SUMS" > "$RUNNER_TEMP/tap/Formula/kanareika.rb"
+          cd "$RUNNER_TEMP/tap"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/kanareika.rb
+          git diff --cached --quiet || { git commit -qm "kanareika $TAG"; git push -q origin HEAD; }

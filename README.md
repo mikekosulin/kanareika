@@ -19,7 +19,7 @@ stays on your machine.
 <sub>Demo data, made up.</sub>
 
 ```bash
-# download kanareika-<os>-<arch> from the release (Linux, macOS, Windows); nothing else to install
+brew install mikekosulin/tap/kanareika   # macOS, Linux; or a binary from the release (Windows too)
 kanareika init                   # orgs/, secrets/, reports/ here (or --home DIR)
 kanareika org new myorg          # hosts, jump hosts and consent: orgs/myorg.yml
 kanareika validate myorg
