@@ -95,9 +95,8 @@ func New(org *config.Org, p config.Paths) (*OrgSSH, error) {
 		return nil, err
 	}
 	if key == "" {
-		if sock := os.Getenv("SSH_AUTH_SOCK"); sock == "" || !isSocket(sock) {
-			return nil, fmt.Errorf("%s: no access.key and no ssh-agent (SSH_AUTH_SOCK): "+
-				"start ssh-agent and ssh-add your key", org.ID)
+		if agentPath() == "" {
+			return nil, fmt.Errorf("%s: no access.key and no ssh-agent (%s): start it and ssh-add your key", org.ID, agentHint)
 		}
 		return o, nil
 	}
@@ -286,7 +285,7 @@ func (o *OrgSSH) clientConfig(t target) (*ssh.ClientConfig, func(), error) {
 		// IdentitiesOnly: with access.key only that key is offered, never the agent's
 		signers = func() ([]ssh.Signer, error) { return []ssh.Signer{o.signer}, nil } //nolint:unparam // ssh.PublicKeysCallback's signature
 	} else {
-		ac, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
+		ac, err := dialAgent(agentPath())
 		if err != nil {
 			return nil, nil, fmt.Errorf("%s: ssh-agent: %w", o.org.ID, err)
 		}
@@ -351,11 +350,6 @@ func keepalive(c *ssh.Client, done <-chan struct{}, every time.Duration, maxMiss
 			}
 		}
 	}
-}
-
-func isSocket(p string) bool {
-	st, err := os.Stat(p)
-	return err == nil && st.Mode()&os.ModeSocket != 0
 }
 
 func str(m map[string]any, k string) string { s, _ := m[k].(string); return s }

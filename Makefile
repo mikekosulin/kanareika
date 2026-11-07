@@ -12,7 +12,7 @@ VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 # the embedded trivy reports its own version (otherwise "dev")
 TRIVY_VERSION := $(shell go list -m -f '{{.Version}}' github.com/aquasecurity/trivy | sed 's/^v//')
 LDFLAGS := -s -w -X main.version=$(VERSION) -X github.com/aquasecurity/trivy/pkg/version/app.ver=$(TRIVY_VERSION)
-PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64
+PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64
 
 .PHONY: bin test cover lint check cross clean FORCE
 

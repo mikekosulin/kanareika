@@ -17,7 +17,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/mikekosulin/kanareika/internal/config"
@@ -48,19 +47,10 @@ func EnvLock(env string, wait bool) (*Lock, error) {
 	if err != nil {
 		return nil, err
 	}
-	how := syscall.LOCK_EX
-	if !wait {
-		how |= syscall.LOCK_NB
-	}
-	for {
-		err = syscall.Flock(int(f.Fd()), how)
-		if !errors.Is(err, syscall.EINTR) {
-			break
-		}
-	}
-	if err != nil {
+	busy, err := lockFile(f, wait)
+	if err != nil || busy {
 		f.Close()
-		if errors.Is(err, syscall.EWOULDBLOCK) {
+		if busy {
 			return nil, &Busy{Env: env}
 		}
 		return nil, err
@@ -69,7 +59,7 @@ func EnvLock(env string, wait bool) (*Lock, error) {
 }
 
 func (l *Lock) Unlock() error {
-	_ = syscall.Flock(int(l.f.Fd()), syscall.LOCK_UN)
+	_ = unlockFile(l.f)
 	return l.f.Close()
 }
 

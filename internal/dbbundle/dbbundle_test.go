@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -180,6 +181,10 @@ func TestImportRefuses(t *testing.T) {
 
 // TestPermissionErrors: unreadable sources and unwritable targets fail cleanly, leaving nothing behind.
 func TestPermissionErrors(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("permission bits: Unix")
+	}
 	if os.Geteuid() == 0 {
 		t.Skip("root ignores permissions")
 	}

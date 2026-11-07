@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -259,6 +260,9 @@ func signerPEM(t *testing.T, priv any) (ssh.Signer, []byte) {
 // t.TempDir(): unix socket paths are limited to ~100 bytes on macOS.
 func startAgent(t *testing.T, keys ...any) {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the test agent listens on a unix socket; Windows' agent is the OpenSSH pipe")
+	}
 	dir, err := os.MkdirTemp("", "kna")
 	must(t, err)
 	t.Cleanup(func() { os.RemoveAll(dir) })

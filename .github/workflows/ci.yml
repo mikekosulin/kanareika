@@ -1,5 +1,6 @@
 # Tests on every push to main and every pull request; also called by the release workflow before building.
 #   test  gofmt, go vet, go test -race (incl. the check that test data holds no real data)
+#   windows  go test on Windows (the Unix-only cases skip themselves)
 #   lint  golangci-lint
 # Actions are pinned to full commit SHAs (the comment is the release); Dependabot keeps them current.
 name: CI
@@ -33,6 +34,20 @@ jobs:
         run: go vet ./...
       - name: go test
         run: go test -race -count=1 ./...
+
+  windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: go vet
+        run: go vet ./...
+      - name: go test
+        run: go test -count=1 ./...
 
   lint:
     runs-on: ubuntu-24.04

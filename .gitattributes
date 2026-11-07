@@ -1,0 +1,5 @@
+# LF everywhere, Windows checkouts included: golden files, embedded assets and hashes compare bytes.
+* text=auto eol=lf
+*.gz binary
+*.tar binary
+*.png binary

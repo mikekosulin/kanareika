@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        goos: [linux, darwin]
+        goos: [linux, darwin, windows]
         goarch: [amd64, arm64]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -42,7 +42,8 @@ jobs:
         run: |
           mkdir -p dist
           TRIVY_VERSION="$(go list -m -f '{{.Version}}' github.com/aquasecurity/trivy | sed 's/^v//')"
-          go build -trimpath -ldflags "-s -w -X main.version=${VERSION} -X github.com/aquasecurity/trivy/pkg/version/app.ver=${TRIVY_VERSION}" -o "dist/kanareika-${GOOS}-${GOARCH}" ./cmd/kanareika
+          EXT=""; [ "$GOOS" = windows ] && EXT=.exe
+          go build -trimpath -ldflags "-s -w -X main.version=${VERSION} -X github.com/aquasecurity/trivy/pkg/version/app.ver=${TRIVY_VERSION}" -o "dist/kanareika-${GOOS}-${GOARCH}${EXT}" ./cmd/kanareika
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: kanareika-${{ matrix.goos }}-${{ matrix.goarch }}
