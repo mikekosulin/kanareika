@@ -57,7 +57,8 @@ func (a *app) tuiRun(cmd *cobra.Command, f tuiFlags) error {
 	if f.lang == "" {
 		f.lang = langFromEnv()
 	}
-	m := tui.New(tui.Options{Client: c, Lang: f.lang, Org: f.org, Env: f.env, Clip: cmd.OutOrStdout()})
+	m := tui.New(tui.Options{Client: c, Lang: f.lang, Org: f.org, Env: f.env, Clip: cmd.OutOrStdout(),
+		Settings: tui.DefaultSettingsPath()})
 	return runTUI(m, cmd.InOrStdin(), cmd.OutOrStdout())
 }
 

@@ -20,7 +20,8 @@ kanareika                        # terminal interface (TUI): findings, hosts, ru
 kanareika web                    # web interface at http://127.0.0.1:8088; scans can be started there too
 ```
 
-Three interfaces over the same data and rules: the TUI (`kanareika`, k9s-style; `?` shows the keys), the web
+Three interfaces over the same data and rules: the TUI (`kanareika`, k9s-style; `?` shows the keys, `o` sets up the panels, kept in
+`~/.config/kanareika/tui.json` or the OS equivalent), the web
 (`kanareika web`) and commands for scripts and cron (`kanareika --help`). The TUI can also attach to a remote
 `kanareika web`: `kanareika tui --url http://host:8088 --token …`.
 

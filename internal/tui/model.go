@@ -38,6 +38,8 @@ type Options struct {
 	Clip   io.Writer // where the OSC 52 clipboard sequence goes (the terminal); nil: no copying
 	Now    func() time.Time
 	Tick   func(time.Duration) tea.Cmd // the refresh timer; nil: tea.Tick (tests stop it)
+	// Settings: the file the panel layout is kept in (DefaultSettingsPath); "": not kept.
+	Settings string
 }
 
 // Model: the bubbletea model of the whole interface.
@@ -62,16 +64,19 @@ type Model struct {
 	scanOK bool
 	loaded bool
 
-	cur    [nViews]int
-	off    [nViews]int
-	filter string
-	typing bool // the filter line has the keyboard
-	showP4 bool
-	sel    map[string]bool // selected action ids
-	detail bool
-	help   bool
-	form   *scanForm
-	open   string // job whose output the Scans view shows
+	cur     [nViews]int
+	off     [nViews]int
+	filter  string
+	typing  bool // the filter line has the keyboard
+	set     Settings
+	setPath string
+	sel     map[string]bool // selected action ids
+	detail  bool
+	help    bool
+	helpOff int
+	panels  *panelsDlg
+	form    *scanForm
+	open    string // job whose output the Scans view shows
 
 	toast   string
 	toastAt time.Time
@@ -87,7 +92,7 @@ func New(o Options) *Model {
 		o.Tick = func(d time.Duration) tea.Cmd { return tea.Tick(d, func(t time.Time) tea.Msg { return tickMsg(t) }) }
 	}
 	m := &Model{c: o.Client, now: o.Now, every: o.Tick, clip: o.Clip, org: o.Org, env: o.Env, view: vActions, sel: map[string]bool{},
-		t: &tr{lang: "en", ui: loadUI()}}
+		t: &tr{lang: "en", ui: loadUI()}, set: loadSettings(o.Settings), setPath: o.Settings}
 	if o.Lang != "" && (o.Lang == "en" || m.t.ui[o.Lang] != nil) {
 		m.t.lang = o.Lang
 	}
@@ -309,6 +314,10 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.form != nil {
 		return m, m.formKey(s)
 	}
+	if m.panels != nil {
+		m.panelsKey(s)
+		return m, nil
+	}
 	if m.typing {
 		switch s {
 		case "enter":
@@ -328,7 +337,14 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	if m.help {
-		m.help = false
+		switch s {
+		case "up", "k":
+			m.helpOff = max(m.helpOff-1, 0)
+		case "down", "j":
+			m.helpOff++
+		default:
+			m.help, m.helpOff = false, 0
+		}
 		return m, nil
 	}
 	switch s {
@@ -347,6 +363,8 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.refresh()
 	case "L":
 		m.nextLang()
+	case "o":
+		m.panels = &panelsDlg{cur: 1}
 	case "/":
 		m.typing = true
 	case "esc":
@@ -446,12 +464,15 @@ func (m *Model) viewKey(s string) tea.Cmd {
 				}
 			}
 		case "p":
-			m.showP4 = !m.showP4
-			m.move(0)
+			m.toggleP4()
 		case "enter":
 			m.detail = !m.detail
 		case "y":
 			return m.copyPrompt(list)
+		}
+	case vHosts, vPackages:
+		if s == "p" {
+			m.toggleP4()
 		}
 	case vRuns:
 		switch s {
@@ -570,6 +591,75 @@ func (m *Model) startScan() tea.Cmd {
 	})
 }
 
+// --- panel settings -----------------------------------------------------------------------------------------------
+
+type panelsDlg struct{ cur int }
+
+func (m *Model) toggleP4() {
+	m.set.ShowP4 = !m.set.ShowP4
+	m.move(0)
+	m.saveSettings()
+}
+
+func (m *Model) saveSettings() {
+	if err := saveSettings(m.setPath, m.set); err != nil {
+		m.err = err.Error()
+	}
+}
+
+var headerNames = map[string]string{headerAuto: "auto", headerFull: "six lines", headerCompact: "one line", headerOff: "hidden"}
+
+// panelItems: the settings dialog's lines (value of a column item: its title, the setting key).
+func (m *Model) panelItems() []formItem {
+	items := []formItem{{kind: itemHead, label: "Layout"},
+		{kind: itemChoice, label: "header", value: headerNames[m.set.Header]},
+		{kind: itemFlag, label: "show P4 too", on: m.set.ShowP4},
+		{kind: itemHead, label: "Columns"}}
+	for _, c := range viewCols[m.view] {
+		if c.drop > 0 {
+			items = append(items, formItem{kind: itemColumn, label: c.title, on: !m.set.hidden(m.view, c.key())})
+		}
+	}
+	return items
+}
+
+func (m *Model) panelsKey(s string) {
+	items := m.panelItems()
+	d := m.panels
+	step := func(dir int) {
+		for i := d.cur + dir; i >= 0 && i < len(items); i += dir {
+			if items[i].kind != itemHead {
+				d.cur = i
+				return
+			}
+		}
+	}
+	switch s {
+	case "esc", "q", "o":
+		m.panels = nil
+	case "up", "k", "shift+tab":
+		step(-1)
+	case "down", "j", "tab":
+		step(1)
+	case " ", "space", "enter", "x", "right", "l", "left", "h":
+		it := items[d.cur]
+		switch it.kind {
+		case itemChoice:
+			dir := 1
+			if s == "left" || s == "h" {
+				dir = len(headerModes) - 1
+			}
+			m.set.Header = headerModes[(slices.Index(headerModes, m.set.Header)+dir)%len(headerModes)]
+		case itemFlag:
+			m.set.ShowP4 = !m.set.ShowP4
+			m.move(0)
+		case itemColumn:
+			m.set.toggle(m.view, it.label)
+		}
+		m.saveSettings()
+	}
+}
+
 // --- scan form ----------------------------------------------------------------------------------------------------
 
 type itemKind int
@@ -580,6 +670,8 @@ const (
 	itemModule
 	itemFlag
 	itemStart
+	itemChoice // panel settings: one of several values
+	itemColumn // panel settings: a column on or off
 )
 
 type formItem struct {
@@ -678,7 +770,7 @@ func (m *Model) actions() []action {
 	}
 	var out []action
 	for _, a := range m.rund.Actions {
-		if !m.showP4 && (a.Priority == "P4" || a.Priority == "") {
+		if !m.set.ShowP4 && (a.Priority == "P4" || a.Priority == "") {
 			continue
 		}
 		if m.match(append([]string{m.t.title(a), a.Detail, a.Cat, a.Priority}, a.Hosts...)...) {
@@ -723,7 +815,7 @@ func (m *Model) packages() []planRow {
 	}
 	var out []planRow
 	for _, p := range m.rund.Plan {
-		if !m.showP4 && (p.Priority == "P4" || p.Priority == "") {
+		if !m.set.ShowP4 && (p.Priority == "P4" || p.Priority == "") {
 			continue
 		}
 		if m.match(p.Host, p.Pkg, p.Target, p.Priority) {

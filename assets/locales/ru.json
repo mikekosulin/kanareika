@@ -286,7 +286,7 @@
     "days": "дней",
     "who": "кто",
     "No login data": "Нет данных о входах",
-    "Keys": "Ключи",
+    "Keys": "Клавиши",
     "whose": "чей",
     "no comment": "без комментария",
     "No keys or no access": "Ключей нет или нет прав",
@@ -422,6 +422,20 @@
     "Org": "Орг.",
     "Env": "Окруж.",
     "Data": "Данные",
-    "Trivy": "Trivy"
+    "Trivy": "Trivy",
+    "Panels": "Панели",
+    "Layout": "Вид",
+    "Columns": "Колонки",
+    "header": "шапка",
+    "close": "закрыть",
+    "panels": "панели",
+    "chart": "график",
+    "auto": "авто",
+    "one line": "одна строка",
+    "hidden": "скрыта",
+    "make the terminal bigger": "увеличьте окно терминала",
+    "panels: header, columns of this view (kept between sessions)": "панели: шапка, колонки этого экрана (сохраняются между запусками)",
+    "KEV": "KEV",
+    "six lines": "шесть строк"
   }
 }

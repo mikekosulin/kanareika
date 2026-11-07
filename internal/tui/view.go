@@ -80,32 +80,97 @@ func fit(s string, w int, right bool) string {
 	return s + pad
 }
 
-// col: a table column; width 0 = takes the rest.
+// col: a table column. Columns are as wide as their content (up to width); a narrow terminal drops them by drop.
 type col struct {
 	title string
-	width int
+	width int // the widest it gets; 0: flexible, takes the rest
 	right bool
+	min   int                         // flexible: the narrowest it is still of use (default 12)
+	drop  int                         // dropped when there is no room, the higher first; 0: never. >0 can be switched off
+	fill  func(row, width int) string // drawn at its final width (bars)
+}
+
+func (c col) key() string { return c.title }
+
+// layout: which columns fit in width and how wide each is.
+func (m *Model) layout(v view, cols []col, rows [][]string, width int) (keep, widths []int) {
+	natural := make([]int, len(cols))
+	for i, c := range cols {
+		if m.set.hidden(v, c.key()) && c.drop > 0 {
+			continue
+		}
+		keep = append(keep, i)
+		n := ansi.StringWidth(m.t.T(c.title))
+		switch {
+		case c.fill != nil:
+			n = max(c.width, c.min)
+		default:
+			for _, r := range rows {
+				n = max(n, ansi.StringWidth(r[i]))
+			}
+		}
+		if c.width > 0 {
+			n = min(n, c.width)
+		}
+		if c.width == 0 {
+			n = max(c.minW(), 1)
+		}
+		natural[i] = n
+	}
+	need := func() int {
+		t := 0
+		for _, i := range keep {
+			t += natural[i] + 1
+		}
+		return t
+	}
+	for need() > width {
+		worst := -1
+		for _, i := range keep {
+			if cols[i].drop > 0 && (worst < 0 || cols[i].drop > cols[worst].drop) {
+				worst = i
+			}
+		}
+		if worst < 0 {
+			break
+		}
+		keep = slices.DeleteFunc(keep, func(i int) bool { return i == worst })
+	}
+	flex := 0
+	for _, i := range keep {
+		if cols[i].width == 0 {
+			flex++
+		}
+	}
+	rest := width - need()
+	widths = make([]int, len(cols))
+	for _, i := range keep {
+		widths[i] = natural[i]
+		if cols[i].width == 0 && rest > 0 {
+			widths[i] += rest / flex
+		}
+	}
+	return keep, widths
+}
+
+func (c col) minW() int {
+	if c.min > 0 {
+		return c.min
+	}
+	return 12
 }
 
 // table: rows under headers in width cells and height lines, the cursor row a full-width bar kept in view.
 func (m *Model) table(cols []col, rows [][]string, width, height int) []string {
-	fixed := 0
-	flex := 0
-	for _, c := range cols {
-		fixed += c.width + 1
-		if c.width == 0 {
-			flex++
-		}
-	}
-	rest := max(width-fixed, 6)
-	line := func(cells []string) string {
+	keep, widths := m.layout(m.view, cols, rows, width)
+	line := func(r int, cells []string) string {
 		var l strings.Builder
-		for i, c := range cols {
-			w := c.width
-			if w == 0 {
-				w = rest / max(flex, 1)
+		for _, i := range keep {
+			c := cells[i]
+			if cols[i].fill != nil && r >= 0 {
+				c = cols[i].fill(r, widths[i])
 			}
-			l.WriteString(fit(cells[i], w, c.right) + " ")
+			l.WriteString(fit(c, widths[i], cols[i].right) + " ")
 		}
 		return fit(l.String(), width, false)
 	}
@@ -113,7 +178,7 @@ func (m *Model) table(cols []col, rows [][]string, width, height int) []string {
 	for i, c := range cols {
 		head[i] = sHead.Render(strings.ToUpper(m.t.T(c.title)))
 	}
-	out := []string{line(head)}
+	out := []string{line(-1, head)}
 	if len(rows) == 0 {
 		return append(out, sMuted.Render(" "+m.t.T("nothing here")))
 	}
@@ -125,7 +190,7 @@ func (m *Model) table(cols []col, rows [][]string, width, height int) []string {
 	}
 	m.off[m.view] = off
 	for i := off; i < min(off+h, len(rows)); i++ {
-		l := line(rows[i])
+		l := line(i, rows[i])
 		if i == cur {
 			l = sSel.Render(ansi.Strip(l))
 		}
@@ -155,17 +220,48 @@ func panel(title string, content []string, w, h int) []string {
 	return append(out, sFrame.Render("└"+strings.Repeat("─", inner)+"┘"))
 }
 
-const headerH = 6
+const (
+	headerH      = 6 // lines of the full header
+	minW, minH   = 40, 8
+	fullW, fullH = 80, 24 // the auto header is full from this size up
+)
 
-func (m *Model) bodyHeight() int { return max(m.h-headerH-1-2, 3) } // inside the panel
+// headerMode: the header actually drawn (the setting, or by size when auto).
+func (m *Model) headerMode() string {
+	if m.set.Header != headerAuto {
+		return m.set.Header
+	}
+	if m.w >= fullW && m.h >= fullH {
+		return headerFull
+	}
+	return headerCompact
+}
+
+func (m *Model) headerLines() []string {
+	switch m.headerMode() {
+	case headerFull:
+		return m.header()
+	case headerCompact:
+		return []string{m.compactHeader()}
+	}
+	return nil
+}
+
+func (m *Model) bodyHeight() int { return max(m.h-len(m.headerLines())-1-2, 3) } // inside the panel
 
 // View: exactly the terminal's size, every line clipped, so nothing ever wraps or scrolls.
 func (m *Model) View() string {
 	if m.w == 0 || m.h == 0 {
 		return ""
 	}
-	lines := append(m.header(), m.main()...)
-	lines = append(lines, m.crumbs())
+	var lines []string
+	if m.w < minW || m.h < minH {
+		lines = m.tooSmall()
+	} else {
+		hd := m.headerLines()
+		lines = append(slices.Clip(hd), m.main(m.h-len(hd)-1)...)
+		lines = append(lines, m.crumbs())
+	}
 	for len(lines) < m.h {
 		lines = append(lines, "")
 	}
@@ -176,22 +272,38 @@ func (m *Model) View() string {
 	return strings.Join(lines, "\n")
 }
 
+func (m *Model) tooSmall() []string {
+	msg := []string{sBrand.Render("Kanareika"), sMuted.Render(fmt.Sprintf("%d×%d < %d×%d", m.w, m.h, minW, minH)),
+		sMuted.Render(m.t.T("make the terminal bigger"))}
+	out := make([]string, max((m.h-len(msg))/2, 0))
+	for _, l := range msg {
+		out = append(out, strings.Repeat(" ", max((m.w-ansi.StringWidth(l))/2, 0))+l)
+	}
+	return out
+}
+
 // --- header: context, priority gauges, keys, logo -------------------------------------------------------------------
 
 func (m *Model) header() []string {
 	info := m.info()
-	gauges := m.gauges()
-	keys := m.keys()
 	showLogo := m.w >= 150
-	infoW, gaugeW := 40, 30
 	logoW := 0
 	if showLogo {
 		logoW = ansi.StringWidth(logo[0]) + 2
 	}
-	keysW := max(m.w-infoW-gaugeW-logoW-2, 0)
-	if m.w < 100 {
-		gaugeW, keysW = 0, max(m.w-infoW-logoW, 0)
+	infoW, gaugeW := 40, 30
+	switch {
+	case m.w < fullW:
+		infoW, gaugeW = 34, 0
+	case m.w < 100:
+		infoW, gaugeW = 34, 22
 	}
+	keysW := max(m.w-infoW-gaugeW-logoW, 0)
+	if gaugeW > 0 {
+		keysW -= 2
+	}
+	gauges := m.gauges(gaugeW - 12)
+	keys := m.keys(keysW)
 	out := make([]string, headerH)
 	for i := range out {
 		l := fit(get(info, i), infoW-2, false) + "  "
@@ -210,6 +322,57 @@ func (m *Model) header() []string {
 		out[i] = l
 	}
 	return out
+}
+
+// compactHeader: the header in one line: where, P1..P4, the scan, which data; what doesn't fit is left out
+// (least needed first), the help key at the right.
+func (m *Model) compactHeader() string {
+	type part struct {
+		text string
+		rank int // lower: kept longer
+	}
+	var parts []part
+	parts = append(parts, part{sBrand.Render("Kanareika"), 5})
+	if m.org != "" {
+		env := m.env
+		if env == "default" {
+			env = m.t.T("all")
+		}
+		parts = append(parts, part{sBold.Render(m.org) + sMuted.Render("/") + sBold.Render(env), 0})
+	}
+	if m.run != "" {
+		parts = append(parts, part{sText.Render(m.t.runShort(m.run)), 4})
+	}
+	if m.rund != nil {
+		pc := m.rund.PlanCounts
+		var c []string
+		for _, p := range []string{"P1", "P2", "P3", "P4"} {
+			c = append(c, prio(p)+" "+count(p, pc[p], true))
+		}
+		parts = append(parts, part{strings.Join(c, " "), 1})
+	}
+	if s := m.scanState(); s != "" {
+		parts = append(parts, part{s, 2})
+	}
+	help := sKey.Render("<?>") + " " + sMuted.Render(m.t.T("help"))
+	join := func(ps []part) string {
+		t := make([]string, len(ps))
+		for i, p := range ps {
+			t[i] = p.text
+		}
+		return " " + strings.Join(t, sDim.Render(" │ "))
+	}
+	for rank := 5; rank > 0; rank-- {
+		if ansi.StringWidth(join(parts))+ansi.StringWidth(help)+3 <= m.w {
+			break
+		}
+		parts = slices.DeleteFunc(parts, func(p part) bool { return p.rank == rank })
+	}
+	l := join(parts)
+	if room := m.w - ansi.StringWidth(help) - 1; ansi.StringWidth(l)+2 <= room {
+		return fit(l, room, false) + help + " "
+	}
+	return l
 }
 
 func get(l []string, i int) string {
@@ -240,20 +403,8 @@ func (m *Model) info() []string {
 	if m.run != "" {
 		data = sText.Render(m.t.runShort(m.run))
 	}
-	if l := m.envd.Live; l != nil && (l.State == "running" || l.State == "stale") {
-		fin := 0
-		for _, h := range l.Hosts {
-			switch h.State {
-			case "ok", "warn", "failed", "skipped":
-				fin++
-			}
-		}
-		scan = sRun.Render(fmt.Sprintf("%s %d/%d", m.t.T("running"), fin, len(l.Hosts)))
-		if l.State == "stale" {
-			scan = sErr.Render(m.t.T("scan not responding"))
-		}
-	} else if n := m.runningJobs(); n > 0 {
-		scan = sRun.Render(fmt.Sprintf("%s: %d", m.t.T("running"), n))
+	if st := m.scanState(); st != "" {
+		scan = st
 	}
 	trivy := sDim.Render("-")
 	if m.rund != nil && m.rund.Meta.TrivyVersion != "" {
@@ -263,6 +414,27 @@ func (m *Model) info() []string {
 		}
 	}
 	return []string{kv("Org", org), kv("Env", env), kv("Data", data), kv("Scan", scan), kv("Trivy", trivy)}
+}
+
+// scanState: a scan running in this env (or scans started here), "" when none.
+func (m *Model) scanState() string {
+	if l := m.envd.Live; l != nil && (l.State == "running" || l.State == "stale") {
+		if l.State == "stale" {
+			return sErr.Render(m.t.T("scan not responding"))
+		}
+		fin := 0
+		for _, h := range l.Hosts {
+			switch h.State {
+			case "ok", "warn", "failed", "skipped":
+				fin++
+			}
+		}
+		return sRun.Render(fmt.Sprintf("%s %d/%d", m.t.T("running"), fin, len(l.Hosts)))
+	}
+	if n := m.runningJobs(); n > 0 {
+		return sRun.Render(fmt.Sprintf("%s: %d", m.t.T("running"), n))
+	}
+	return ""
 }
 
 func (m *Model) runningJobs() int {
@@ -276,8 +448,8 @@ func (m *Model) runningJobs() int {
 }
 
 // gauges: P1..P4 of the data on screen as bars, btop style.
-func (m *Model) gauges() []string {
-	if m.rund == nil {
+func (m *Model) gauges(barW int) []string {
+	if m.rund == nil || barW <= 0 {
 		return nil
 	}
 	pc := m.rund.PlanCounts
@@ -285,7 +457,6 @@ func (m *Model) gauges() []string {
 	for _, p := range []string{"P1", "P2", "P3", "P4"} {
 		top = max(top, pc[p])
 	}
-	const barW = 18
 	var out []string
 	for _, p := range []string{"P1", "P2", "P3", "P4"} {
 		n := pc[p]
@@ -296,10 +467,10 @@ func (m *Model) gauges() []string {
 	return append(out, sMuted.Render(fmt.Sprintf("   %d CVE", pc["cves"])))
 }
 
-// keys: k9s-style hints in columns, for the view on screen.
-func (m *Model) keys() []string {
+// keys: k9s-style hints in columns, for the view on screen; what doesn't fit in width ends with <?> help.
+func (m *Model) keys(width int) []string {
 	type k struct{ key, what string }
-	global := []k{{"1-6", "views"}, {"/", "filter"}, {"r", "refresh"}, {"L", "language"}, {"?", "help"}, {"q", "quit"}}
+	global := []k{{"1-6", "views"}, {"/", "filter"}, {"o", "panels"}, {"r", "refresh"}, {"L", "language"}, {"q", "quit"}}
 	local := map[view][]k{
 		vOrgs:     {{"enter", "open"}},
 		vActions:  {{"space", "select"}, {"a", "select all"}, {"y", "copy task"}, {"enter", "details"}, {"p", "P4"}},
@@ -312,8 +483,14 @@ func (m *Model) keys() []string {
 		local = append(local, k{"s", "scan"})
 	}
 	all := append(slices.Clip(local), global...)
+	const colW = 19
 	rows := headerH
-	colW := 19
+	if fit := rows * max(width/colW, 0); fit < len(all)+1 {
+		all = all[:max(fit-1, 0)]
+	}
+	if width >= colW {
+		all = append(all, k{"?", "help"})
+	}
 	var out []string
 	for r := 0; r < rows; r++ {
 		var l strings.Builder
@@ -328,12 +505,13 @@ func (m *Model) keys() []string {
 
 // --- main panel -------------------------------------------------------------------------------------------------------
 
-func (m *Model) main() []string {
-	h := m.h - headerH - 1
+func (m *Model) main(h int) []string {
 	w := m.w
 	switch {
 	case m.help:
-		return panel(sTitle.Render(m.t.T("Keys")), m.helpView(), w, h)
+		return panel(sTitle.Render(m.t.T("Keys")), m.helpView(w-2, h-2), w, h)
+	case m.panels != nil:
+		return panel(sTitle.Render(m.t.T("Panels"))+sText.Render("("+m.t.T(viewNames[m.view])+")"), m.panelsView(h-2), w, h)
 	case m.form != nil:
 		return panel(sTitle.Render(m.t.T("Scan"))+sText.Render("("+m.form.org+"/"+m.form.env+")"), m.formView(h-2), w, h)
 	case !m.loaded:
@@ -389,6 +567,26 @@ func (m *Model) body(w, h int) (string, []string) {
 	return m.title(viewNames[vScans], len(m.jobs.Jobs), false), m.scansView(w, h)
 }
 
+// viewCols: the columns of each view, in the order of its cells. drop: what goes first on a narrow terminal.
+var viewCols = [nViews][]col{
+	vOrgs: {{title: "Organization", width: 20}, {title: "environment", width: 16}, {title: "hosts", width: 6, right: true, drop: 3},
+		{title: "P1", width: 4, right: true}, {title: "P2", width: 4, right: true, drop: 2}, {title: "P3", width: 4, right: true, drop: 2},
+		{title: "last run", width: 17, drop: 4}, {title: "state", width: 10, drop: 5}, {title: "name", min: 10, drop: 6}},
+	vActions: {{width: 1}, {width: 2}, {title: "due by", width: 10, drop: 2}, {title: "action", min: 20},
+		{title: "hosts", width: 26, drop: 3}, {title: "CVE", width: 4, right: true, drop: 1}},
+	vHosts: {{title: "host", width: 26}, {title: "OS", width: 32, drop: 3}, {title: "P1", width: 4, right: true},
+		{title: "P2", width: 4, right: true}, {title: "P3", width: 4, right: true, drop: 1}, {title: "P4", width: 4, right: true, drop: 1},
+		{title: "CVE", width: 5, right: true, drop: 2}, {title: "chart", min: 8, drop: 4}},
+	vPackages: {{width: 2}, {title: "host", width: 20, drop: 3}, {title: "where", width: 28, drop: 4}, {title: "package", min: 12},
+		{title: "installed", width: 20, drop: 5}, {title: "fixed in", width: 20}, {title: "CVE", width: 4, right: true, drop: 2},
+		{title: "KEV", width: 3, drop: 1}, {title: "due by", width: 10, drop: 6}},
+	vRuns: {{title: "run", width: 18}, {title: "state", width: 14}, {title: "kind", width: 10, drop: 3},
+		{title: "hosts ok", width: 9, right: true, drop: 2}, {title: "P1", width: 4, right: true}, {title: "P2", width: 4, right: true, drop: 1},
+		{title: "P3", width: 4, right: true, drop: 1}},
+	vScans: {{title: "environment", width: 24}, {title: "state", width: 22}, {title: "started", width: 12, drop: 1},
+		{title: "scope", min: 10, drop: 2}},
+}
+
 func (m *Model) noData() []string {
 	if m.org == "" {
 		return []string{"", " " + sMuted.Render(m.t.T("no organizations")+": ") + sKey.Render("kanareika org new <id>")}
@@ -433,8 +631,7 @@ func (m *Model) orgsView(list []envItem, w, h int) []string {
 		rows = append(rows, []string{name, env, fmt.Sprint(it.e.Hosts), count("P1", pc["P1"], known),
 			count("P2", pc["P2"], known), count("P3", pc["P3"], known), last, state, sMuted.Render(it.name)})
 	}
-	return m.table([]col{{"Organization", 16, false}, {"environment", 14, false}, {"hosts", 6, true}, {"P1", 4, true},
-		{"P2", 4, true}, {"P3", 4, true}, {"last run", 17, false}, {"state", 10, false}, {"name", 0, false}}, rows, w, h)
+	return m.table(viewCols[vOrgs], rows, w, h)
 }
 
 func (m *Model) actionsView(list []action, w, h int) []string {
@@ -461,8 +658,7 @@ func (m *Model) actionsView(list []action, w, h int) []string {
 		rows = append(rows, []string{box, prio(a.Priority), sMuted.Render(a.Due), tags + sText.Render(m.t.title(a)),
 			sText.Render(hostsCell(a.Hosts)), cves})
 	}
-	cols := []col{{"", 1, false}, {"", 2, false}, {"due by", 10, false}, {"action", 0, false}, {"hosts", 26, false},
-		{"CVE", 4, true}}
+	cols := viewCols[vActions]
 	if !m.detail || len(list) == 0 {
 		return m.table(cols, rows, w, h)
 	}
@@ -523,10 +719,11 @@ func (m *Model) hostsView(list []hostItem, w, h int) []string {
 	for _, x := range list {
 		c := x.counts
 		rows = append(rows, []string{sBold.Render(x.name), sText.Render(x.os), count("P1", c["P1"], true), count("P2", c["P2"], true),
-			count("P3", c["P3"], true), count("P4", c["P4"], true), fmt.Sprint(c["cves"]), stack(c, top, 24)})
+			count("P3", c["P3"], true), count("P4", c["P4"], true), fmt.Sprint(c["cves"]), ""})
 	}
-	return m.table([]col{{"host", 26, false}, {"OS", 0, false}, {"P1", 4, true}, {"P2", 4, true}, {"P3", 4, true},
-		{"P4", 4, true}, {"CVE", 5, true}, {"", 24, false}}, rows, w, h)
+	cols := slices.Clone(viewCols[vHosts])
+	cols[len(cols)-1].fill = func(r, w int) string { return stack(list[r].counts, top, w) }
+	return m.table(cols, rows, w, h)
 }
 
 func (m *Model) packagesView(list []planRow, w, h int) []string {
@@ -546,8 +743,7 @@ func (m *Model) packagesView(list []planRow, w, h int) []string {
 		rows = append(rows, []string{prio(p.Priority), sText.Render(p.Host), sMuted.Render(target), sBold.Render(p.Pkg),
 			sMuted.Render(p.Installed), sOK.Render(p.Fixed), fmt.Sprint(p.CVEs), kev, sMuted.Render(p.Due)})
 	}
-	return m.table([]col{{"", 2, false}, {"host", 16, false}, {"where", 22, false}, {"package", 0, false},
-		{"installed", 18, false}, {"fixed in", 18, false}, {"CVE", 4, true}, {"", 3, false}, {"due by", 10, false}}, rows, w, h)
+	return m.table(viewCols[vPackages], rows, w, h)
 }
 
 func (m *Model) runsView(list []runInfo, w, h int) []string {
@@ -575,8 +771,7 @@ func (m *Model) runsView(list []runInfo, w, h int) []string {
 		rows = append(rows, []string{name, state, kind, fmt.Sprintf("%d/%d", r.HostsTotal-r.HostsFailed, r.HostsTotal),
 			count("P1", r.PlanCounts["P1"], known), count("P2", r.PlanCounts["P2"], known), count("P3", r.PlanCounts["P3"], known)})
 	}
-	return m.table([]col{{"run", 18, false}, {"state", 14, false}, {"kind", 10, false}, {"hosts ok", 9, true},
-		{"P1", 4, true}, {"P2", 4, true}, {"P3", 4, true}}, rows, w, h)
+	return m.table(viewCols[vRuns], rows, w, h)
 }
 
 func (m *Model) scansView(w, h int) []string {
@@ -636,8 +831,7 @@ func (m *Model) scansView(w, h int) []string {
 			sMuted.Render(m.t.T("to start a scan of"))+" "+sText.Render(m.org+"/"+m.env))
 	}
 	listH := min(len(rows)+1, max((h-len(out))/3, 3))
-	out = append(out, m.table([]col{{"environment", 24, false}, {"state", 22, false}, {"started", 12, false},
-		{"scope", 0, false}}, rows, w, listH)...)
+	out = append(out, m.table(viewCols[vScans], rows, w, listH)...)
 	for _, j := range m.jobs.Jobs {
 		if j.ID != m.open {
 			continue
@@ -694,27 +888,73 @@ func (m *Model) formView(h int) []string {
 		sMuted.Render(m.t.T("Start"))+"  "+sKey.Render("<esc>")+" "+sMuted.Render(m.t.T("Cancel")))
 }
 
-func (m *Model) helpView() []string {
-	rows := [][2]string{
-		{"1-6, tab, left/right", "views: organizations, to do, hosts, packages, runs, scans"},
-		{"up/down, j/k, pgup/pgdn, g/G", "move"},
-		{"enter", "open (an environment, a run, details, a scan's output)"},
-		{"/", "filter the list; esc clears"},
-		{"space, a", "select an action, select all"},
-		{"y", "copy the fix task for the selected actions (terminal clipboard, OSC 52)"},
-		{"p", "show P4 too"},
-		{"s", "start a scan of this environment"},
-		{"x", "stop the scan under the cursor (Scans)"},
-		{"c", "back to the current state (Runs)"},
-		{"L", "language"},
-		{"r", "refresh"},
-		{"q, ctrl+c", "quit"},
+var helpRows = [][2]string{
+	{"1-6, tab, left/right", "views: organizations, to do, hosts, packages, runs, scans"},
+	{"up/down, j/k, pgup/pgdn, g/G", "move"},
+	{"enter", "open (an environment, a run, details, a scan's output)"},
+	{"/", "filter the list; esc clears"},
+	{"space, a", "select an action, select all"},
+	{"y", "copy the fix task for the selected actions (terminal clipboard, OSC 52)"},
+	{"p", "show P4 too"},
+	{"s", "start a scan of this environment"},
+	{"x", "stop the scan under the cursor (Scans)"},
+	{"c", "back to the current state (Runs)"},
+	{"o", "panels: header, columns of this view (kept between sessions)"},
+	{"L", "language"},
+	{"r", "refresh"},
+	{"q, ctrl+c", "quit"},
+}
+
+// helpView: the keys; scrolls (up/down) when the terminal is low.
+func (m *Model) helpView(w, h int) []string {
+	kw := min(30, max(w/3, 10))
+	var out []string
+	for _, r := range helpRows {
+		text := strings.Split(ansi.Wordwrap(m.t.T(r[1]), max(w-kw-3, 10), ""), "\n")
+		for i, t := range text {
+			k := ""
+			if i == 0 {
+				k = r[0]
+			}
+			out = append(out, " "+sKey.Render(fit(k, kw, false))+" "+sText.Render(t))
+		}
 	}
-	out := []string{""}
-	for _, r := range rows {
-		out = append(out, "  "+sKey.Render(fit(r[0], 30, false))+" "+sText.Render(m.t.T(r[1])))
+	out = append(out, " "+sMuted.Render(m.t.T("any key closes this")))
+	m.helpOff = min(m.helpOff, max(len(out)-h, 0))
+	return out[m.helpOff:]
+}
+
+// panelsView: the layout settings: the header, P4, the columns of the view on screen.
+func (m *Model) panelsView(h int) []string {
+	var lines []string
+	for i, it := range m.panelItems() {
+		var l string
+		switch it.kind {
+		case itemHead:
+			l = " " + sLabel.Render(m.t.T(it.label))
+		case itemChoice:
+			l = "   " + sText.Render(m.t.T(it.label)+": ") + sBold.Render("< "+m.t.T(it.value)+" >")
+		default:
+			box := sDim.Render("[ ]")
+			if it.on {
+				box = sBrand.Render("[x]")
+			}
+			l = "   " + box + " " + sText.Render(m.t.T(it.label))
+		}
+		if i == m.panels.cur && it.kind != itemHead {
+			l = sSel.Render(ansi.Strip(l))
+		}
+		lines = append(lines, l)
 	}
-	return append(out, "", "  "+sMuted.Render(m.t.T("any key closes this")))
+	h = max(h-2, 3)
+	if off := m.panels.cur - h + 1; off > 0 {
+		lines = lines[off:]
+	}
+	if len(lines) > h {
+		lines = lines[:h]
+	}
+	return append(lines, "", " "+sKey.Render("<space>")+" "+sMuted.Render(m.t.T("toggle"))+"  "+sKey.Render("<esc>")+" "+
+		sMuted.Render(m.t.T("close")))
 }
 
 // crumbs: the bottom line: where you are, k9s style, and the last message.
