@@ -68,6 +68,9 @@ One binary, nothing else to install, three interfaces.
 - **Dependencies with known vulnerabilities**: Go 1.27.3 (13 standard library issues on called paths: net/http,
   HTTP/2, crypto/tls, crypto/x509, html/template, os), `golang.org/x/net`, `go-jose`, `klauspost/compress`;
   govulncheck now reports none on called code. trivy is 0.76.2.
+- A jump host reached again through its own jumps (possible only in a hand-built configuration) hung the scan;
+  it is an error now. A name resolved to an IPv4-mapped address showed as `::ffff:…` in findings and nmap's
+  command line.
 - `kanareika validate` printed some schema errors as the validator's raw text with a path on your disk; now
   `access/port: got string, want integer`.
 
@@ -82,4 +85,5 @@ One binary, nothing else to install, three interfaces.
   documentation one; only `assets/` is embedded in the binary.
 - CI tests on Windows and runs a Linux end-to-end check (`tools/e2e/e2e.sh`): the Linux binary scans a real
   sshd container, then `history` and the web API read the result.
-- Coverage across the repository is shown as a badge, from every push to `main`.
+- Every statement is covered by tests (100%, measured per package and across the repository); the tests never
+  read the user's trivy cache, feeds or home directories. Coverage is shown as a badge, from every push to `main`.
