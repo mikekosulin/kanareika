@@ -8,11 +8,15 @@ Agentless, read-only security audit of your servers over SSH: what to patch firs
 whether the hosts are healthy — with fix steps that can be rolled back. One binary, one YAML per organization; the data
 stays on your machine.
 
-**Terminal interface** — the main one: `kanareika`. What to fix first, by priority and due date; hosts, packages, access, network, health, runs and scans on tabs `1`–`0`, `S`.
+### Terminal interface
+
+Run `kanareika`. It opens on ToDo: what to fix first, most urgent at the top.
 
 ![Demo data, made up.](docs/screenshots/tui-en.png)
 
-**Web interface** — `kanareika web`, when a browser is handier or the team looks together: the same data, plus the trend of the last 30 runs.
+### Web interface
+
+Run `kanareika web` for the same data in a browser, with the trend of the last 30 runs.
 
 ![Demo data, made up.](docs/screenshots/web-en.png)
 
@@ -47,9 +51,7 @@ kanareika web                    # web interface, http://127.0.0.1:8088
 - **Safe by design** — read-only, organizations isolated, changed host keys refused, no scan without consent, the web
   interface on localhost only (or with a token).
 
-English, Русский, 中文 in every interface. Details: [docs/org-file.md](docs/org-file.md) · [CHANGELOG](CHANGELOG.md)
-
 Like it? [Star it](https://github.com/mikekosulin/kanareika) · Something wrong? [Open an issue](https://github.com/mikekosulin/kanareika/issues/new/choose)
 (no real hosts or addresses, please) · Vulnerability? [Report privately](SECURITY.md)
 
-[MIT](LICENSE) · [Contributing](CONTRIBUTING.md)
+[Org file reference](docs/org-file.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT](LICENSE)

@@ -7,11 +7,15 @@
 无需代理、只读的服务器安全审计（通过 SSH）：先修什么、谁能登录、什么暴露在外、主机是否健康——并给出可回滚的修复步骤。
 一个二进制文件，每个组织一个 YAML，数据只留在你的机器上。
 
-**终端界面** —— 主要界面：`kanareika`。按优先级和期限列出先修什么；主机、软件包、访问、网络、健康、运行记录和扫描分布在标签 `1`–`0`、`S` 上。
+### 终端界面
+
+运行 `kanareika`。默认打开“待办”：最紧急的排在最前面。
 
 ![演示数据，均为虚构。](docs/screenshots/tui-zh.png)
 
-**Web 界面** —— `kanareika web`，适合用浏览器或团队一起查看：数据相同，另有最近 30 次运行的趋势。
+### Web 界面
+
+运行 `kanareika web`：在浏览器中查看相同的数据，以及最近 30 次运行的趋势。
 
 ![演示数据，均为虚构。](docs/screenshots/web-zh.png)
 
@@ -45,9 +49,7 @@ kanareika web                    # Web 界面，http://127.0.0.1:8088
 - **修复** — 选中的操作会生成一份现成的任务，交给工程师或 AI 智能体：执行、验证、回滚。
 - **安全设计** — 只读；组织之间相互隔离；主机密钥变化即拒绝连接；未获授权不扫描；Web 界面仅限 localhost（或使用令牌）。
 
-所有界面均支持 English、Русский、中文。详情：[docs/org-file.md](docs/org-file.md) · [CHANGELOG](CHANGELOG.md)
-
 喜欢吗？[点个星](https://github.com/mikekosulin/kanareika) · 有问题？[提交 issue](https://github.com/mikekosulin/kanareika/issues/new/choose)
 （请勿包含真实主机或地址）· 发现漏洞？[私下报告](SECURITY.md)
 
-[MIT](LICENSE) · [参与贡献](CONTRIBUTING.md)
+[组织文件格式](docs/org-file.md) · [更新日志](CHANGELOG.md) · [参与贡献](CONTRIBUTING.md) · [MIT](LICENSE)
