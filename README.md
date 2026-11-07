@@ -16,7 +16,7 @@ make feeds && make scan ORG=myorg
 make dashboard               # http://127.0.0.1:8088
 ```
 
-- **Vulnerabilities** — OS packages, images, jars/lockfiles via trivy (fetched automatically); backports and fix
+- **Vulnerabilities** — OS packages, images, jars/lockfiles via trivy built into the binary (only its DBs are downloaded, or imported offline); backports and fix
   availability verified on the host; **P1–P4** by KEV, EPSS, exposure and pre-auth RCE.
 - **Access & exposure** — SSH password login per user, keys, logins and attackers, open ports, firewalls, external scan.
 - **Health** — kernel errors, disks, memory, time sync, pending reboots.

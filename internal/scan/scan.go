@@ -32,6 +32,7 @@ type Options struct {
 	DryRun                 bool
 	IgnoreWindow           bool
 	Parallel               int
+	Offline                bool   // use the cached vulnerability DBs, never download (isolated networks)
 	Version                string // kanareika version, stored in run.json
 }
 
@@ -199,9 +200,15 @@ func (s *Scanner) Org(ctx context.Context, o *config.Org, env string, opt Option
 		fmt.Fprintf(s.Out, "  ! %v\n  %s: refusing to scan\n", err, o.ID)
 		return 1
 	}
-	s.log("trivy: updating vulnerability DB ...")
-	if err := trivy.Prepare(ctx, s.log); err != nil {
-		return refuse(err)
+	if opt.Offline {
+		if err := trivy.PrepareOffline(s.log); err != nil {
+			return refuse(err)
+		}
+	} else {
+		s.log("trivy: updating vulnerability DB ...")
+		if err := trivy.Prepare(ctx, s.log); err != nil {
+			return refuse(err)
+		}
 	}
 	conn, err := sshx.New(o, s.Paths)
 	if err != nil {

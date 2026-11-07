@@ -11,6 +11,9 @@
 
 BIN := dist/kanareika
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+# the embedded trivy reports its own version (otherwise "dev")
+TRIVY_VERSION := $(shell go list -m -f '{{.Version}}' github.com/aquasecurity/trivy | sed 's/^v//')
+LDFLAGS := -s -w -X main.version=$(VERSION) -X github.com/aquasecurity/trivy/pkg/version/app.ver=$(TRIVY_VERSION)
 RUN := ./$(BIN)
 
 ENV_ARG = $(if $(ENV),--env $(ENV))
@@ -22,7 +25,7 @@ bin: $(BIN)
 
 # always rebuilt (cheap: go caches); the version comes from git
 $(BIN): FORCE
-	@CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$(VERSION)" -o $(BIN) ./cmd/kanareika
+	@CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/kanareika
 FORCE:
 
 test:

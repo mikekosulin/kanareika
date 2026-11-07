@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mikekosulin/kanareika/internal/config"
-	"github.com/mikekosulin/kanareika/internal/priority"
 	"github.com/mikekosulin/kanareika/internal/report"
 	"github.com/mikekosulin/kanareika/internal/scan"
 )
@@ -28,6 +27,7 @@ func (a *app) scanCmd() *cobra.Command {
 		orgIDs, groups, hosts, modules []string
 		env                            string
 		all, dryRun, ignoreWindow      bool
+		offline                        bool
 		parallel                       int
 	)
 	c := &cobra.Command{
@@ -72,7 +72,7 @@ func (a *app) scanCmd() *cobra.Command {
 				}
 				for _, e := range envList {
 					rc |= s.Org(ctx, o, e, scan.Options{Groups: groups, Hosts: hosts, Modules: modules, DryRun: dryRun,
-						IgnoreWindow: ignoreWindow, Parallel: parallel, Version: a.version})
+						IgnoreWindow: ignoreWindow, Parallel: parallel, Offline: offline, Version: a.version})
 					if ctx.Err() != nil {
 						return fail(130, "interrupted")
 					}
@@ -94,6 +94,8 @@ func (a *app) scanCmd() *cobra.Command {
 	f.BoolVar(&dryRun, "dry-run", false, "show what would run, connect nowhere")
 	f.BoolVar(&ignoreWindow, "ignore-window", false, "scan outside consent.window")
 	f.IntVar(&parallel, "parallel", 4, "hosts in parallel within one org")
+	f.BoolVar(&offline, "offline", os.Getenv("KANAREIKA_OFFLINE") != "",
+		"don't download vulnerability DBs, use what `db update`/`db import` left (env KANAREIKA_OFFLINE=1)")
 	return c
 }
 
@@ -269,33 +271,4 @@ func (a *app) pruneCmd() *cobra.Command {
 	f.IntVar(&keepPartial, "keep-partial", report.KeepDefault, "partial runs to keep (default: policy/settings.yml)")
 	f.BoolVar(&dryRun, "dry-run", false, "show what would be deleted")
 	return c
-}
-
-func (a *app) feedsCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "feeds",
-		Short: "download CISA KEV and EPSS for prioritization (and the offline IP database)",
-		RunE: func(*cobra.Command, []string) error {
-			pol, err := priority.LoadPolicy(a.paths)
-			if err != nil {
-				return err
-			}
-			ctx, stop := interruptible()
-			defer stop()
-			st, err := priority.UpdateFeeds(ctx, pol)
-			if err != nil {
-				return err
-			}
-			city, asn := st.IPDBCity, st.IPDBASN
-			if city == "" {
-				city = "none"
-			}
-			if asn == "" {
-				asn = "none"
-			}
-			fmt.Printf("KEV: %d CVEs, EPSS: %d scores, IP DB (DB-IP Lite): city %s, asn %s -> %s\n",
-				st.KEV, st.EPSS, city, asn, priority.FeedsDir())
-			return nil
-		},
-	}
 }

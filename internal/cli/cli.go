@@ -5,6 +5,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -32,7 +33,9 @@ type app struct {
 }
 
 // Execute runs the CLI and returns the process exit code.
-func Execute(version string, args []string) int {
+func Execute(version string, args []string) int { return execute(version, args, os.Stdout, os.Stderr) }
+
+func execute(version string, args []string, stdout, stderr io.Writer) int {
 	a := &app{version: version, paths: config.NewPaths()}
 	root := &cobra.Command{
 		Use:           "kanareika",
@@ -42,8 +45,10 @@ func Execute(version string, args []string) int {
 		SilenceErrors: true,
 	}
 	root.AddCommand(a.validateCmd(), a.showCmd(), a.migrateCmd(), a.helperCmd(),
-		a.scanCmd(), a.historyCmd(), a.diffCmd(), a.pruneCmd(), a.feedsCmd(), a.serveCmd(), a.mcpCmd())
+		a.scanCmd(), a.historyCmd(), a.diffCmd(), a.pruneCmd(), a.dbCmd(), a.feedsCmd(), a.serveCmd(), a.mcpCmd())
 	root.SetArgs(args)
+	root.SetOut(stdout)
+	root.SetErr(stderr)
 	err := root.Execute()
 	var ee *exitError
 	switch {
@@ -51,11 +56,11 @@ func Execute(version string, args []string) int {
 		return 0
 	case errors.As(err, &ee):
 		if ee.msg != "" {
-			fmt.Fprintln(os.Stderr, ee.msg)
+			fmt.Fprintln(stderr, ee.msg)
 		}
 		return ee.code
 	default:
-		fmt.Fprintln(os.Stderr, "error:", err)
+		fmt.Fprintln(stderr, "error:", err)
 		return 1
 	}
 }

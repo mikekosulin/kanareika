@@ -1,8 +1,6 @@
 package trivy
 
 import (
-	"archive/tar"
-	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
@@ -141,47 +139,6 @@ func TestRun(t *testing.T) {
 	}
 	fake(t, `exit 1`)
 	if v := Version(ctx); v != "?" {
-		t.Fatal(v)
-	}
-}
-
-func TestAssetAndExtract(t *testing.T) {
-	for _, c := range [][3]string{{"linux", "amd64", "trivy_0.75.0_Linux-64bit.tar.gz"},
-		{"linux", "arm64", "trivy_0.75.0_Linux-ARM64.tar.gz"}, {"darwin", "arm64", "trivy_0.75.0_macOS-ARM64.tar.gz"},
-		{"darwin", "amd64", "trivy_0.75.0_macOS-64bit.tar.gz"}} {
-		if a, err := asset(c[0], c[1]); err != nil || a != c[2] {
-			t.Error(c, a, err)
-		}
-	}
-	if _, err := asset("windows", "amd64"); err == nil {
-		t.Error("windows")
-	}
-	var buf bytes.Buffer
-	zw := gzip.NewWriter(&buf)
-	tw := tar.NewWriter(zw)
-	for _, e := range [][2]string{{"LICENSE", "text"}, {"contrib/trivy", "nope"}, {"trivy", "#!binary"}} {
-		must(t, tw.WriteHeader(&tar.Header{Name: e[0], Mode: 0o644, Size: int64(len(e[1])), Typeflag: tar.TypeReg}))
-		_, _ = tw.Write([]byte(e[1]))
-	}
-	must(t, tw.Close())
-	must(t, zw.Close())
-	dest := filepath.Join(t.TempDir(), "trivy-x")
-	must(t, extract(&buf, dest))
-	b, _ := os.ReadFile(dest)
-	st, _ := os.Stat(dest)
-	if string(b) != "#!binary" || st.Mode().Perm() != 0o755 {
-		t.Fatal(string(b), st.Mode())
-	}
-}
-
-// KANAREIKA_TEST_DOWNLOAD=1: really download the pinned release for this platform (network).
-func TestInstallDownload(t *testing.T) {
-	if os.Getenv("KANAREIKA_TEST_DOWNLOAD") == "" {
-		t.Skip("set KANAREIKA_TEST_DOWNLOAD=1")
-	}
-	dest := filepath.Join(t.TempDir(), "trivy-"+Pinned)
-	must(t, install(context.Background(), dest, runtime.GOOS, runtime.GOARCH))
-	if v := versionOf(context.Background(), dest); v != Pinned {
 		t.Fatal(v)
 	}
 }
