@@ -108,7 +108,7 @@ report directory and history. An org with several environments needs --env (or -
 	f.BoolVar(&ignoreWindow, "ignore-window", false, "scan outside consent.window")
 	f.IntVar(&parallel, "parallel", 4, "hosts in parallel within one org")
 	f.BoolVar(&offline, "offline", os.Getenv("KANAREIKA_OFFLINE") != "",
-		"don't download vulnerability DBs, use what `db update`/`db import` left (env KANAREIKA_OFFLINE=1)")
+		"don't download vulnerability DBs, use what db update or db import left (env KANAREIKA_OFFLINE=1)")
 	return c
 }
 

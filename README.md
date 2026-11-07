@@ -7,7 +7,7 @@
 Agentless, read-only security audit of your servers over SSH: what to patch first, who can get in, what is exposed,
 whether the host is healthy — with rollback-ready fix steps. One binary, one YAML per organization, data stays local.
 
-![Dashboard (demo data)](docs/dashboard.png)
+![Web interface (demo data)](docs/dashboard.png)
 
 ```bash
 # download kanareika-<os>-<arch> from the release (or: make bin -> dist/kanareika); nothing else to install
@@ -30,7 +30,7 @@ Three interfaces over the same data and rules: the TUI (`kanareika`, k9s-style; 
 - **Access & exposure** — SSH password login per user, keys, logins and attackers, open ports, firewalls, external scan.
 - **Health** — kernel errors, disks, memory, time sync, pending reboots.
 - **Fixing** — pick actions → a ready task for an engineer or AI agent (apply / verify / rollback); MCP for agents.
-- **Safe by design** — read-only, per-org isolation, changed host keys refused, consent required, web interface on localhost only.
+- **Safe by design** — read-only, per-org isolation, changed host keys refused, consent required, web interface on localhost only (or with a token).
 
 Details: [docs/org-file.md](docs/org-file.md) · `kanareika --help`
 
