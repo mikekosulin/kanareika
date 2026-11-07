@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -184,6 +185,10 @@ func TestRunExternalWithoutNmap(t *testing.T) {
 
 // With nmap: it gets only the open ports and the found addresses; its XML gives the service and version.
 func TestRunExternalWithNmap(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("a shell script stands in for nmap")
+	}
 	open, closed := local(t, 2)
 	dir := t.TempDir()
 	argsFile := filepath.Join(dir, "args")

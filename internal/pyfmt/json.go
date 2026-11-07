@@ -76,10 +76,7 @@ func (o Obj) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		k, err := Marshal(kv.K)
-		if err != nil {
-			return nil, err
-		}
+		k, _ := Marshal(kv.K) // a string always encodes
 		v, err := Marshal(kv.V)
 		if err != nil {
 			return nil, err

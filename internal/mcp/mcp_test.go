@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/mikekosulin/kanareika/internal/config"
+	"github.com/mikekosulin/kanareika/internal/prompt"
 	"github.com/mikekosulin/kanareika/internal/remediate"
 )
 
@@ -53,7 +54,15 @@ func checkParity(t *testing.T, root string) {
 		t.Fatal(err)
 	}
 	reqs := nonBlank(string(in))
-	got, exp := strings.Split(strings.TrimSuffix(out.String(), "\n"), "\n"), strings.Split(strings.TrimSuffix(string(want), "\n"), "\n")
+	// newer than the recordings: the rule in fix tasks and the sentence in the instructions that hosts' text is data
+	body := out.String()
+	for _, lang := range []string{"en", "ru", "zh"} {
+		b, _ := json.Marshal("\n" + prompt.Boundary(lang))
+		body = strings.ReplaceAll(body, strings.Trim(string(b), `"`), "")
+	}
+	b, _ := json.Marshal(instructionsData)
+	body = strings.ReplaceAll(body, strings.Trim(string(b), `"`), "")
+	got, exp := strings.Split(strings.TrimSuffix(body, "\n"), "\n"), strings.Split(strings.TrimSuffix(string(want), "\n"), "\n")
 	if len(got) != len(exp) {
 		t.Fatalf("%d responses, want %d", len(got), len(exp))
 	}

@@ -173,10 +173,8 @@ func (s *Server) Serve(ctx context.Context, in io.Reader, out io.Writer) error {
 			if resp == nil {
 				continue
 			}
-			b, err := pyfmt.MarshalLine(resp, false)
-			if err != nil {
-				return err
-			}
+			// resp holds only strings and values decoded from JSON (tool results are already text): it always marshals
+			b, _ := pyfmt.MarshalLine(resp, false)
 			b = append(b, '\n')
 			if _, err := w.Write(b); err != nil {
 				return err

@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -26,20 +27,27 @@ import (
 	"github.com/mikekosulin/kanareika/internal/trivy"
 )
 
+// prepare / prepareOffline: trivy's DBs before a run (downloaded, or only checked); tests replace them.
+var (
+	prepare        = trivy.Prepare
+	prepareOffline = trivy.PrepareOffline
+)
+
 // Options of one scan run.
 type Options struct {
 	Groups, Hosts, Modules []string
 	DryRun                 bool
 	IgnoreWindow           bool
 	Parallel               int
+	Offline                bool   // use the cached vulnerability DBs, never download (isolated networks)
 	Version                string // kanareika version, stored in run.json
 }
 
 // Scanner: shared state of one process (paths, log output).
 type Scanner struct {
 	Paths config.Paths
-	Out   *os.File // plan / summary lines (stdout)
-	Err   *os.File // log lines (stderr)
+	Out   io.Writer // plan / summary lines (stdout)
+	Err   io.Writer // log lines (stderr)
 
 	mu       sync.Mutex
 	progress *Progress
@@ -199,9 +207,15 @@ func (s *Scanner) Org(ctx context.Context, o *config.Org, env string, opt Option
 		fmt.Fprintf(s.Out, "  ! %v\n  %s: refusing to scan\n", err, o.ID)
 		return 1
 	}
-	s.log("trivy: updating vulnerability DB ...")
-	if err := trivy.Prepare(ctx, s.log); err != nil {
-		return refuse(err)
+	if opt.Offline {
+		if err := prepareOffline(s.log); err != nil {
+			return refuse(err)
+		}
+	} else {
+		s.log("trivy: updating vulnerability DB ...")
+		if err := prepare(ctx, s.log); err != nil {
+			return refuse(err)
+		}
 	}
 	conn, err := sshx.New(o, s.Paths)
 	if err != nil {
@@ -392,7 +406,7 @@ func facts(ctx *check.Ctx, h config.Host) (check.Facts, error) {
 func (s *Scanner) host(ctx *check.Ctx, h config.Host, modules []string) ([]finding.Finding, string, []string) {
 	out := filepath.Join(ctx.RunDir, "hosts", h.Name)
 	_ = os.MkdirAll(out, 0o755)
-	s.track(h.Name, HostUpdate{State: "running", Module: ptr("connect")})
+	s.track(h.Name, HostUpdate{State: "running", Module: ptr("connect"), Steps: len(modules)})
 	f, err := facts(ctx, h)
 	if err != nil {
 		msg := err.Error()
@@ -417,14 +431,14 @@ func (s *Scanner) host(ctx *check.Ctx, h config.Host, modules []string) ([]findi
 	s.log("%s: %s (%s)", h.Name, pretty, f.Hostname)
 	var all []finding.Finding
 	var errs []string
-	for _, m := range modules {
+	for i, m := range modules {
 		fn, ok := HostModules[m]
 		if !ok || fn == nil {
 			errs = append(errs, m+": not implemented yet")
 			continue
 		}
 		s.log("%s: %s ...", h.Name, m)
-		s.track(h.Name, HostUpdate{Module: ptr(m)})
+		s.track(h.Name, HostUpdate{Module: ptr(m), Step: i + 1})
 		res, err := fn(ctx, h, h.Checks[m], out, f)
 		if err != nil {
 			s.log("%s: %s: %v", h.Name, m, err)
@@ -438,6 +452,6 @@ func (s *Scanner) host(ctx *check.Ctx, h config.Host, modules []string) ([]findi
 	if len(errs) > 0 {
 		state = "warn"
 	}
-	s.track(h.Name, HostUpdate{State: state, Module: ptr("")})
+	s.track(h.Name, HostUpdate{State: state, Module: ptr(""), Step: len(modules)})
 	return all, "", errs
 }

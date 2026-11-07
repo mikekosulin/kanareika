@@ -63,6 +63,15 @@ header { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; 
 .iconbtn { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; height: 34px; min-width: 34px; padding: 0 8px;
   cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--ink-2); }
 .iconbtn:hover { color: var(--ink); background: var(--surface-2); }
+.menu { position: fixed; z-index: 60; min-width: 160px; padding: 4px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.14); }
+.menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; border: 0; border-radius: 6px;
+  background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.menu button:hover, .menu button:focus-visible { background: var(--surface-2); outline: none; }
+.menu button .code { margin-left: auto; color: var(--muted); font-size: 12px; }
+.menu button[aria-checked="true"] { font-weight: 600; }
+.menu button[aria-checked="true"]::before { content: "✓"; width: 1em; }
+.menu button[aria-checked="false"]::before { content: ""; width: 1em; }
 .iconbtn.xs { height: 24px; min-width: 24px; padding: 0 6px; font-size: 12px; }
 
 main { padding: 22px 24px 48px; display: grid; gap: 20px; max-width: 1600px; margin: 0 auto; }
@@ -128,7 +137,7 @@ td .tag + .tag { margin-left: 4px; }  /* inside flex containers the gap does thi
 .tabs button[aria-selected=true] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
 .tabs button[aria-selected=true] .ic { color: var(--ink); }
 .tabs .n { color: var(--muted); font-weight: 400; font-size: 12px; }
-.tabsbar { display: flex; align-items: flex-end; gap: 12px; border-bottom: 1px solid var(--grid);
+.tabsbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0 12px; border-bottom: 1px solid var(--grid);
   position: sticky; top: var(--hdr, 57px); z-index: 6; background: var(--surface); margin: -18px -20px 0; padding: 8px 20px 0; border-radius: 12px 12px 0 0; }
 .stickybar { position: sticky; top: calc(var(--hdr, 53px) + var(--tabsh, 44px)); z-index: 5; background: var(--surface);
   margin: 0 -20px 6px; padding: 14px 20px 4px; border-bottom: 1px solid var(--grid); }
@@ -136,7 +145,8 @@ td .tag + .tag { margin-left: 4px; }  /* inside flex containers the gap does thi
 .flow th { top: calc(var(--hdr, 53px) + var(--tabsh, 44px) + var(--filth, 0px)); }
 #tabbody { padding-top: 16px; }
 #tabbody > .stickybar:first-child { margin-top: -16px; }
-.tabsbar .tabs { border-bottom: 0; margin: 0; flex: 1; min-width: 0; }
+/* the tabs take what they need; when the filters do not fit next to them they go to a line below (never hide a tab) */
+.tabsbar .tabs { border-bottom: 0; margin: 0; flex: 1 1 auto; min-width: 0; }
 .hostpick { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px; height: 32px; padding: 0 4px 0 9px; border: 1px solid var(--border);
   border-radius: 99px; color: var(--ink-2); flex: none; }
 .hostpick.on { border-color: var(--ink-2); background: var(--surface-3); color: var(--ink); }
@@ -207,6 +217,19 @@ pre.log { margin: 10px 0 0; max-height: 260px; overflow: auto; background: var(-
 .pkgtable { margin: 8px 0 2px; border: 1px solid var(--grid); border-radius: 8px; overflow: hidden; }
 .pkgtable td, .pkgtable th { padding: 6px 10px; font-size: 12px; }
 .pkgtable th { position: static; }
+dialog.scan { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--ink); padding: 18px 20px; width: min(560px, calc(100vw - 32px)); }
+dialog.scan::backdrop { background: rgba(0,0,0,.35); }
+dialog.scan h2 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+dialog.scan fieldset { border: 1px solid var(--grid); border-radius: 8px; margin: 0 0 12px; padding: 8px 12px; }
+dialog.scan legend { color: var(--muted); font-size: 12px; padding: 0 4px; }
+dialog.scan .opts { display: flex; flex-wrap: wrap; gap: 6px 14px; max-height: 150px; overflow: auto; }
+dialog.scan label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+dialog.scan .acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+dialog.scan .err { color: var(--bad-text); font-size: 13px; min-height: 1em; }
+.jobs .job { border-top: 1px solid var(--grid); padding: 10px 0; }
+.jobs .job:first-of-type { border-top: 0; padding-top: 0; }
+.jobs .job .h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.jobs .job .h .grow { flex: 1; }
 </style>
 </head>
 <body>
@@ -215,15 +238,22 @@ pre.log { margin: 10px 0 0; max-height: 260px; overflow: auto; background: var(-
   <label class="ctl" data-t-title="Organization"><span data-icon="server-stack"></span><select id="org"></select></label>
   <div class="seg" id="envs" role="group"></div>
   <label class="ctl" data-t-title="Which data to show"><span data-icon="clock"></span><select id="run"></select></label>
+  <button class="iconbtn" id="scanbtn" hidden data-t-title="Start a scan of this environment"><span data-icon="arrow-path"></span><span data-t="Scan"></span></button>
   <div class="spacer"></div>
   <span class="pill" id="livepill"><span class="dot"></span><span>—</span></span>
   <button class="iconbtn" id="lang" data-t-title="Language" style="font-weight:600;font-size:12px"></button>
+  <button class="iconbtn" id="tz" data-t-title="Times in the browser's time zone or in UTC" style="font-weight:600;font-size:12px"></button>
   <button class="iconbtn" id="theme" data-t-title="Theme"></button>
+  <a class="iconbtn" id="gh-star" href="https://github.com/mikekosulin/kanareika" target="_blank" rel="noopener noreferrer"
+    data-t-title="Like it? Star it on GitHub" style="text-decoration:none;font-size:15px">★</a>
+  <a class="iconbtn" id="gh-issue" href="https://github.com/mikekosulin/kanareika/issues/new/choose" target="_blank" rel="noopener noreferrer"
+    data-t-title="Something wrong? Report an issue on GitHub (no real data, please)"><span data-icon="exclamation-triangle"></span></a>
 </header>
 
 <main>
   <div id="cfgerrors"></div>
   <section class="card live" id="livecard" hidden></section>
+  <section class="card jobs" id="jobscard" hidden></section>
   <section class="kpis" id="kpis"></section>
   <div class="caption" id="kpicaption"></div>
   <section class="row2">
@@ -249,13 +279,33 @@ pre.log { margin: 10px 0 0; max-height: 260px; overflow: auto; background: var(-
   </footer>
 </main>
 <div class="tooltip" id="tip"></div>
+<dialog class="scan" id="scandlg">
+  <form method="dialog" id="scanform">
+    <h2><span data-icon="arrow-path"></span><span data-t="Scan"></span> <span class="muted" id="scanwhat"></span></h2>
+    <fieldset><legend data-t="Hosts (none selected: all)"></legend><div class="opts" id="scanhosts"></div></fieldset>
+    <fieldset><legend data-t="Modules (none selected: all enabled)"></legend><div class="opts" id="scanmods"></div></fieldset>
+    <fieldset><legend data-t="Options"></legend><div class="opts">
+      <label><input type="checkbox" name="dry_run"><span data-t="dry run: show the plan, connect nowhere"></span></label>
+      <label><input type="checkbox" name="ignore_window"><span data-t="ignore the consent time window"></span></label>
+      <label><input type="checkbox" name="offline"><span data-t="offline: don't download vulnerability DBs"></span></label>
+    </div></fieldset>
+    <div class="err" id="scanerr"></div>
+    <div class="acts"><button class="iconbtn" value="cancel" formnovalidate data-t="Cancel"></button><button class="btn" id="scango" value="go" data-t="Start"></button></div>
+  </form>
+</dialog>
 
 <script>
 "use strict";
 /* i18n. UI strings: English in the code, translations keyed by the English text (gettext style), from locales/<lang>.json.
    Finding/action texts come from the server catalog (/api/i18n) by message key, see L(). */
 const UI = /*I18N_UI*/{};  // locales/<lang>.json "ui", inlined by the server
-let LANG = (() => { try { return localStorage.getItem("kn.lang") || "en"; } catch { return "en"; } })();
+const LANGS = ["en", ...Object.keys(UI).filter((l) => l !== "en").sort()];
+let LANG = (() => {
+  let l = "";
+  try { l = localStorage.getItem("kn.lang") || ""; } catch {}
+  if (!l) l = (navigator.language || "en").slice(0, 2).toLowerCase();  // the browser's language when not chosen
+  return LANGS.includes(l) ? l : "en";
+})();
 let CATALOG = {};
 const t = (s) => (UI[LANG] && UI[LANG][s]) || s;
 function L(o, field = "title") {
@@ -284,11 +334,12 @@ function applyStatic() {
   document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
   document.querySelectorAll("[data-t-title]").forEach((el) => { el.title = t(el.dataset.tTitle); });
   const lb = document.querySelector("#lang"); if (lb) lb.textContent = LANG.toUpperCase();
+  const tb = document.querySelector("#tz"); if (tb) tb.textContent = zoneName();
 }
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const PRIOS = ["P1", "P2", "P3", "P4"];
 const PNAME = { P1: "P1 · " + t("urgent"), P2: "P2", P3: "P3", P4: "P4 · " + t("background") };
-const loc = () => (LANG === "ru" ? "ru-RU" : "en-GB");
+const loc = () => ({ ru: "ru-RU", zh: "zh-CN" })[LANG] || "en-GB";
 const fmt = (n) => (n ?? 0).toLocaleString(loc());
 const fmtc = (n) => (n ?? 0) >= 10000 ? new Intl.NumberFormat(loc(), { notation: "compact", maximumFractionDigits: 0 }).format(n) : fmt(n);
 const store = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
@@ -305,9 +356,17 @@ async function api(path) {
   if (!r.ok) throw new Error(`${r.status} ${path}`);
   return r.json();
 }
+const CSRF = /*CSRF*/"";  // filled in by the server: state-changing requests carry it
+async function post(path, body) {
+  const r = await fetch(path, { method: "POST", cache: "no-store", headers: { "Content-Type": "application/json", "X-Kanareika-CSRF": CSRF }, body: JSON.stringify(body || {}) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || `${r.status} ${path}`);
+  return d;
+}
 function ago(iso) {
   if (!iso) return "—";
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (Number.isNaN(s)) return "—";
   if (s < 60) return t("just now");
   if (s < 3600) return `${Math.round(s / 60)} ${t("min ago")}`;
   if (s < 86400) return `${Math.round(s / 3600)} ${t("h ago")}`;
@@ -320,7 +379,22 @@ function dur(a, b) {
 }
 /* 2026-11-01_204722 -> 01.11 20:47 */
 /* 2026-11-01_204722 -> 2026-11-01 20:47 */
-const runShort = (id) => id === "current" ? t("current") : id ? `${id.slice(0, 10)} ${id.slice(11, 13)}:${id.slice(13, 15)}` : "";
+/* times: in the browser's time zone or in UTC (the tz button; remembered per browser) */
+let UTC = (() => { try { return localStorage.getItem("kn.tz") === "utc"; } catch { return false; } })();
+const tzOpt = () => (UTC ? { timeZone: "UTC" } : {});
+const zoneName = () => UTC ? "UTC"
+  : (new Intl.DateTimeFormat(loc(), { timeZoneName: "short" }).formatToParts(new Date()).find((x) => x.type === "timeZoneName") || {}).value || "";
+function clock(d) {  // YYYY-MM-DD HH:MM in the zone shown
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { ...tzOpt(), year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`;
+}
+// a run id is its start in UTC: 2026-11-01_204722
+const runShort = (id) => {
+  if (id === "current") return t("current");
+  const m = /^(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2})(\d{2})/.exec(id || "");
+  return m ? clock(new Date(Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]))) : (id || "");
+};
 const st = (kind, label, title = "") => {
   const ic = "st-" + { ok: "check-circle", warn: "exclamation-triangle", bad: "x-circle", run: "arrow-path", none: "minus-circle" }[kind];
   return `<span class="st ${kind}" ${title ? `title="${esc(title)}"` : ""}>${icon(ic)}${label ? esc(label) : ""}</span>`;
@@ -395,6 +469,7 @@ async function loadEnv(keepRun) {
     : `<option value="">${t("no runs")}</option>`;
   $("#run").value = S.run || "";
   renderLive();
+  renderJobs();
   renderTrend();
   const stale = !S.runData || S.runData.meta.org !== S.org || S.runData.meta.env !== S.env
     || (S.run === "current" ? S.runData.meta.run_id !== "current" || S.runData.meta.last_run !== done.at(-1)?.run_id : S.runData.meta.run_id !== S.run);
@@ -430,7 +505,7 @@ function renderLive() {
   if (!live || !["running", "stale"].includes(live.state)) {
     card.hidden = true;
     pill.innerHTML = anyLive ? `<span class="dot live"></span>${t("scan in another environment")}` : `<span class="dot"></span>${t("no scans")}`;
-    pill.title = t("updated") + " " + new Date().toLocaleTimeString(loc());
+    pill.title = t("updated") + " " + new Date().toLocaleTimeString(loc(), tzOpt()) + " " + zoneName();
     return;
   }
   const hosts = Object.entries(live.hosts);
@@ -453,13 +528,80 @@ function renderLive() {
     <pre class="log mono">${esc((live.log_tail || []).slice(-12).join("\n"))}</pre>`;
 }
 
+/* ---------------- scans started from the dashboard ---------------- */
+S.jobs = { enabled: false, list: [], open: null };
+const JST = { running: ["run", "running"], done: ["ok", "done"], failed: ["bad", "finished with errors"], cancelled: ["none", "cancelled"] };
+async function loadJobs() {
+  const d = await api("/api/jobs");
+  S.jobs.enabled = d.enabled; S.jobs.list = d.jobs || [];
+  $("#scanbtn").hidden = !d.enabled || !S.org;
+  renderJobs();
+  return S.jobs.list.some((j) => j.state === "running");
+}
+function renderJobs() {
+  const card = $("#jobscard");
+  const list = S.jobs.list.filter((j) => j.request.org === S.org && j.request.env === S.env).slice(0, 5);
+  if (!list.length) { card.hidden = true; return; }
+  if (!S.jobs.open || !list.some((j) => j.id === S.jobs.open)) S.jobs.open = list[0].id;
+  const scope = (r) => [r.hosts?.join(", "), r.groups?.join(", "), r.modules?.join("+"), r.dry_run ? t("dry run") : ""].filter(Boolean).join(" · ");
+  card.hidden = false;
+  card.innerHTML = `<h2>${icon("arrow-path")}${t("Scans started here")}</h2>` + list.map((j) => `
+    <div class="job">
+      <div class="h">${st(...[JST[j.state]?.[0] || "none", t(JST[j.state]?.[1] || j.state)])}
+        <span>${esc(ago(j.started))}${j.finished ? " · " + esc(dur(j.started, j.finished)) : ""}${j.state === "failed" ? ` · ${t("exit code")} ${j.code}` : ""}</span>
+        <span class="muted trunc">${esc(scope(j.request))}</span><span class="grow"></span>
+        ${j.state === "running" ? `<button class="iconbtn xs" data-jcancel="${esc(j.id)}">${t("Stop")}</button>` : ""}
+        <button class="linkbtn" data-jopen="${esc(j.id)}">${S.jobs.open === j.id ? t("hide") : t("output")}</button></div>
+      ${S.jobs.open === j.id ? `<pre class="log mono">${j.dropped ? `… ${j.dropped} ${t("lines")}\n` : ""}${esc(j.output.join("\n")) || "&nbsp;"}</pre>` : ""}
+    </div>`).join("");
+  card.querySelectorAll("[data-jopen]").forEach((b) => b.onclick = () => { S.jobs.open = S.jobs.open === b.dataset.jopen ? "-" : b.dataset.jopen; renderJobs(); });
+  card.querySelectorAll("[data-jcancel]").forEach((b) => b.onclick = async () => { b.disabled = true; try { await post(`/api/jobs/${encodeURIComponent(b.dataset.jcancel)}/cancel`); } catch {} pollJobs(); });
+  const pre = card.querySelector("pre"); if (pre) pre.scrollTop = pre.scrollHeight;
+}
+let jobTimer;
+async function pollJobs() {
+  clearTimeout(jobTimer);
+  let running = false;
+  try { running = await loadJobs(); } catch {}
+  if (running) jobTimer = setTimeout(pollJobs, 1500);
+  else if (S.jobs._was) tick();  // a scan just ended: show its results
+  S.jobs._was = running;
+}
+async function openScan() {
+  const dlg = $("#scandlg"), f = $("#scanform");
+  f.reset(); $("#scanerr").textContent = "";
+  $("#scanwhat").textContent = `${S.org}${S.env !== "default" ? " / " + S.env : ""}`;
+  const o = await api(`/api/scan-options?org=${encodeURIComponent(S.org)}&env=${encodeURIComponent(S.env)}`);
+  const box = (name, v) => `<label><input type="checkbox" name="${name}" value="${esc(v)}"><span class="mono">${esc(v)}</span></label>`;
+  $("#scanhosts").innerHTML = o.hosts.map((h) => box("host", h)).join("");
+  $("#scanmods").innerHTML = o.modules.map((m) => box("module", m)).join("");
+  dlg.showModal();
+}
+$("#scanbtn").onclick = () => openScan().catch((e) => alertErr(e));
+const alertErr = (e) => { $("#livepill").innerHTML = `<span class="dot" style="background:var(--bad)"></span>${esc(e.message)}`; };
+$("#scanform").onsubmit = async (ev) => {
+  if (ev.submitter?.value !== "go") return;
+  ev.preventDefault();
+  const f = $("#scanform"), all = (n) => [...f.querySelectorAll(`input[name=${n}]:checked`)].map((i) => i.value);
+  const req = { org: S.org, env: S.env, hosts: all("host"), modules: all("module"),
+    dry_run: f.dry_run.checked, ignore_window: f.ignore_window.checked, offline: f.offline.checked };
+  $("#scango").disabled = true;
+  try {
+    const j = await post("/api/scan", req);
+    S.jobs.open = j.id;
+    $("#scandlg").close();
+    pollJobs();
+  } catch (e) { $("#scanerr").textContent = e.message; }
+  finally { $("#scango").disabled = false; }
+};
+
 /* ---------------- KPIs ---------------- */
 function renderKpis() {
   const el = $("#kpis"), cap = $("#kpicaption");
   const rd = S.runData;
   if (!rd) {
     cap.textContent = "";
-    el.innerHTML = `<div class="card" style="grid-column:1/-1"><div class="empty">${t("No runs yet. Run")}: <code>make scan ORG=${esc(S.org)}${S.env !== "default" ? " ENV=" + esc(S.env) : ""}</code></div></div>`;
+    el.innerHTML = `<div class="card" style="grid-column:1/-1"><div class="empty">${t("No runs yet. Run")}: <code>kanareika scan ${esc(S.org)}${S.env !== "default" ? " --env " + esc(S.env) : ""}</code></div></div>`;
     return;
   }
   const c = rd.plan_counts, m = rd.meta;
@@ -483,7 +625,7 @@ function renderKpis() {
       <div class="foot" title="${t("packages")} P1–P3 ${t("past due by")} SLA">${expired ? `<span class="overdue">${t("expired exceptions")}: ${expired}</span>` : `${t("exceptions")}: ${rd.exceptions.length}`}</div></div>
     <div class="card kpi"><div class="label">${icon("arrow-path", "sm")}${t("Updated")}</div>
       <div class="value" style="font-size:18px;margin-top:8px">${esc(ago(m.finished))}</div>
-      <div class="foot" title="${fmt(c.cves)} CVE ${t("total")}${m.feeds_updated ? "" : " · KEV/EPSS " + t("not loaded") + " (make feeds)"}">${m.run_id === "current" ? `${t("of")} ${sources} ${t("runs")}` : esc(dur(m.started, m.finished))} · ${fmtc(c.cves)} CVE</div></div>`;
+      <div class="foot" title="${fmt(c.cves)} CVE ${t("total")}${m.feeds_updated ? "" : " · KEV/EPSS " + t("not loaded") + " (kanareika db update)"}">${m.run_id === "current" ? (sources === 1 ? t("from the last run") : `${t("runs merged")}: ${sources}`) : esc(dur(m.started, m.finished))} · ${fmtc(c.cves)} CVE</div></div>`;
   cap.textContent = partial(m) ? t("Partial run — no comparison") : rd.prev ? `${t("Packages to update")} · Δ ${t("vs full run")} ${runShort(rd.prev)}` : t("Packages to update");
 }
 
@@ -552,7 +694,8 @@ function renderTrend() {
     out += `<g class="col" data-i="${i}"><rect x="${L + slot * i}" y="${T}" width="${slot}" height="${H - T - B}" fill="${sel ? "var(--surface-2)" : "transparent"}"/>`
       + `<g ${r.now ? 'opacity=".55"' : ""}>${segs}</g>`
       + (total ? `<text x="${cx}" y="${y(total) - 5}" text-anchor="middle" font-size="11" fill="var(--ink-2)">${fmtc(total)}</text>` : "") + `</g>`;
-    if (i % every === 0 || i === bars.length - 1)
+    // every n-th label and the last one; a regular one too close to the last gives way (they would overlap)
+    if (i === bars.length - 1 || (i % every === 0 && bars.length - 1 - i >= Math.max(2, every * 0.6)))
       out += `<text x="${cx}" y="${H - 7}" text-anchor="middle" font-size="11" fill="${sel || r.now ? "var(--ink)" : "var(--muted)"}">${esc(r.label)}</text>`;
   });
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
@@ -626,7 +769,7 @@ async function enrichIps(root) {
 
 /* ---------------- tabs ---------------- */
 const TABS = [
-  ["actions", t("To do"), "wrench-screwdriver"], ["plan", t("Packages"), "archive-box"], ["diff", t("Changes"), "arrows-right-left"],
+  ["actions", t("ToDo"), "wrench-screwdriver"], ["plan", t("Packages"), "archive-box"], ["diff", t("Changes"), "arrows-right-left"],
   ["access", t("Access"), "key"], ["exposure", t("Network"), "globe-alt"], ["health", t("Health"), "heart"],
   ["exceptions", t("Exceptions"), "shield-check"], ["errors", t("Errors"), "exclamation-triangle"], ["log", t("Log"), "document-text"],
 ];
@@ -885,7 +1028,7 @@ function drawDaily(svg, daily) {
     const x = L + slot * i + (slot - bw) / 2, h = v ? Math.max(2, y(0) - y(v)) : 0;
     out += `<g class="col" data-i="${i}"><rect x="${L + slot * i}" y="${T}" width="${slot}" height="${H - T - B}" fill="transparent"/>`
       + (h ? `<path d="M${x},${y(0)} V${y(0) - h + Math.min(2, h)} Q${x},${y(0) - h} ${x + Math.min(2, bw / 2)},${y(0) - h} H${x + bw - Math.min(2, bw / 2)} Q${x + bw},${y(0) - h} ${x + bw},${y(0) - h + Math.min(2, h)} V${y(0)} Z" fill="var(--p2)"/>` : "") + `</g>`;
-    if (i % 7 === 0 || i === days.length - 1) out += `<text x="${L + slot * i + slot / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--muted)">${days[i].slice(5)}</text>`;
+    if (i === days.length - 1 || (i % 7 === 0 && days.length - 1 - i >= 4)) out += `<text x="${L + slot * i + slot / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--muted)">${days[i].slice(5)}</text>`;
   });
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   svg.innerHTML = out;
@@ -1027,18 +1170,54 @@ $("#theme").onclick = () => { document.documentElement.dataset.theme = curTheme(
 { const t = store.get("kn.theme", ""); if (t) document.documentElement.dataset.theme = t; themeIcon(); }
 addEventListener("resize", () => { clearTimeout(window._rt); window._rt = setTimeout(renderTrend, 150); });
 
-$("#lang").onclick = () => {
-  LANG = LANG === "en" ? "ru" : "en";
-  try { localStorage.setItem("kn.lang", LANG); } catch {}
-  location.reload();  // labels in constants (tabs, priorities, categories) are built once at load
+$("#tz").onclick = () => {
+  UTC = !UTC;
+  try { localStorage.setItem("kn.tz", UTC ? "utc" : "local"); } catch {}
+  location.reload();  // run names in selects and tables are built from it
 };
+/* language: a menu of the languages under the button, each in its own name */
+const LANG_NAMES = { en: "English", ru: "Русский", zh: "中文" };
+function closeMenu() { document.querySelector(".menu")?.remove(); }
+$("#lang").onclick = (ev) => {
+  ev.stopPropagation();
+  if (document.querySelector(".menu")) return closeMenu();
+  const r = $("#lang").getBoundingClientRect();
+  const m = document.createElement("div");
+  m.className = "menu"; m.setAttribute("role", "menu");
+  m.innerHTML = LANGS.map((l) => `<button role="menuitemradio" aria-checked="${l === LANG}" data-lang="${l}">` +
+    `<span>${esc(LANG_NAMES[l] || l)}</span><span class="code">${l.toUpperCase()}</span></button>`).join("");
+  document.body.append(m);
+  m.style.top = `${r.bottom + 6}px`;
+  m.style.left = `${Math.max(8, Math.min(r.right - m.offsetWidth, innerWidth - m.offsetWidth - 8))}px`;
+  m.onclick = (e) => {
+    const b = e.target.closest("button[data-lang]");
+    if (!b) return;
+    closeMenu();
+    if (b.dataset.lang === LANG) return;
+    LANG = b.dataset.lang;
+    try { localStorage.setItem("kn.lang", LANG); } catch {}
+    location.reload();  // labels in constants (tabs, priorities, categories) are built once at load
+  };
+  m.querySelector('[aria-checked="true"]')?.focus();
+};
+document.addEventListener("click", (e) => { if (!e.target.closest(".menu")) closeMenu(); });
+document.addEventListener("keydown", (e) => {
+  const m = document.querySelector(".menu");
+  if (!m) return;
+  if (e.key === "Escape") { closeMenu(); $("#lang").focus(); }
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    const items = [...m.querySelectorAll("button")], i = items.indexOf(document.activeElement);
+    items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus();
+    e.preventDefault();
+  }
+});
 applyStatic();
 
 renderSkeleton();
 let timer;
 async function tick() {
   clearTimeout(timer);
-  try { await loadOrgs(); renderEnvs(); await loadEnv(true); }
+  try { await loadOrgs(); renderEnvs(); await loadEnv(true); if (await loadJobs()) pollJobs(); }
   catch { $("#livepill").innerHTML = `<span class="dot" style="background:var(--bad)"></span>${t("offline")}`; }
   timer = setTimeout(tick, S.envData?.live?.state === "running" ? 3000 : 15000);
 }

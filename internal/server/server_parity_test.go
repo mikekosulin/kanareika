@@ -5,12 +5,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/fs"
+	"maps"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -24,6 +27,9 @@ import (
 // synthetic home: the org in org.yml, the runs of internal/report/testdata/fixture and the synthetic runs in
 // extra/. Recorded once with the former Python implementation (removed from the repo; the Go port had to match it)
 // and kept as a frozen fixture: a change here is a behaviour change — review it as such.
+
+// -update-page: rewrite the SHA-256 of the HTML page cases (the page changes on purpose; API answers stay frozen).
+var updatePage = flag.Bool("update-page", false, "rewrite the page hashes in testdata/parity/golden.json")
 
 type golden struct {
 	Extra string `json:"extra"` // org/env the extra/ runs go into
@@ -72,17 +78,47 @@ func replay(t *testing.T, home, goldenPath string) {
 			}
 		}
 		if c.SHA256 != "" {
-			sum := sha256.Sum256(rec.Body.Bytes())
-			if hex.EncodeToString(sum[:]) != c.SHA256 {
-				diffs = append(diffs, "body differs")
+			// the page carries a CSRF token fresh per server: hashed with the placeholder back in its place
+			body := bytes.Replace(rec.Body.Bytes(), []byte(`"`+s.csrf+`"`), []byte(`/*CSRF*/""`), 1)
+			sum := sha256.Sum256(body)
+			if got := hex.EncodeToString(sum[:]); got != c.SHA256 {
+				if *updatePage {
+					b = bytes.ReplaceAll(b, []byte(c.SHA256), []byte(got))
+				} else {
+					diffs = append(diffs, "body differs (page changed on purpose? go test -run Parity -update-page)")
+				}
 			}
-		} else if d := jsonDiff(c.JSON, rec.Body.Bytes()); d != "" {
+		} else if d := jsonDiff(c.JSON, pythonLangs(c.JSON, rec.Body.Bytes())); d != "" {
 			diffs = append(diffs, d)
 		}
 		if len(diffs) > 0 {
 			t.Errorf("%s: %s", c.Path, strings.Join(diffs, "; "))
 		}
 	}
+	if *updatePage {
+		must(t, os.WriteFile(goldenPath, b, 0o644))
+	}
+}
+
+// pythonLangs: an /api/i18n answer cut to the languages Python had (languages added since are checked by
+// i18n's TestLocalesComplete); other answers as they are.
+func pythonLangs(want, got []byte) []byte {
+	var w, g struct {
+		Langs    []string                     `json:"langs"`
+		Messages map[string]map[string]string `json:"messages"`
+	}
+	if json.Unmarshal(want, &w) != nil || json.Unmarshal(got, &g) != nil || w.Langs == nil || g.Langs == nil {
+		return got
+	}
+	g.Langs = slices.DeleteFunc(g.Langs, func(l string) bool { return !slices.Contains(w.Langs, l) })
+	for _, m := range g.Messages {
+		maps.DeleteFunc(m, func(l, _ string) bool { return !slices.Contains(w.Langs, l) })
+	}
+	b, err := json.Marshal(g)
+	if err != nil {
+		return got
+	}
+	return b
 }
 
 // installExtra copies testdata/parity/extra into an environment, with __NOW__ set to the current time (a

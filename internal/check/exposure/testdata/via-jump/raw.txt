@@ -3,7 +3,7 @@
 lo inet 127.0.0.1/8
 lo inet6 ::1/128
 eth0 inet 10.77.0.5/24
-eth0 inet6 fe80::a0a0:1:100c/64
+eth0 inet6 fe80::a0a0:d63:69b8/64
 
 @@routes@@
 default via 10.77.0.19 dev eth0 proto dhcp src 10.77.0.5 metric 100 

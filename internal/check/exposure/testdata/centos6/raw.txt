@@ -5,13 +5,13 @@ lo inet 127.0.0.1/8
 lo inet6 ::1/128
 eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu
 eth0 inet 10.77.0.20/24
-eth0 inet6 fe80::a0a0:1:100e/64
+eth0 inet6 fe80::a0a0:4643:b6a5/64
 eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu
 eth1 inet 100.21.0.3/29
-eth1 inet6 fe80::a0a0:1:100a/64
+eth1 inet6 fe80::a0a0:89b0:6822/64
 tap0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu
 tap0 inet 10.77.0.21/24
-tap0 inet6 fe80::a0a0:1:1009/64
+tap0 inet6 fe80::a0a0:3715:d9ea/64
 
 @@routes@@
 169.254.169.254 via 10.77.0.19 dev eth0  proto static 
@@ -28,10 +28,10 @@ udp    UNCONN     0      0         100.21.0.3:123                   *:*      use
 udp    UNCONN     0      0             10.77.0.20:123                   *:*      users:(("ntpd",1899,19))
 udp    UNCONN     0      0              127.0.0.1:123                   *:*      users:(("ntpd",1899,18))
 udp    UNCONN     0      0                      *:123                   *:*      users:(("ntpd",1899,16))
-udp    UNCONN     0      0      fe80::a0a0:1:1009:123                  :::*      users:(("ntpd",1899,27))
+udp    UNCONN     0      0      fe80::a0a0:3715:d9ea:123                  :::*      users:(("ntpd",1899,27))
 udp    UNCONN     0      0                    ::1:123                  :::*      users:(("ntpd",1899,24))
-udp    UNCONN     0      0      fe80::a0a0:1:100e:123                  :::*      users:(("ntpd",1899,23))
-udp    UNCONN     0      0      fe80::a0a0:1:100a:123                  :::*      users:(("ntpd",1899,22))
+udp    UNCONN     0      0      fe80::a0a0:4643:b6a5:123                  :::*      users:(("ntpd",1899,23))
+udp    UNCONN     0      0      fe80::a0a0:89b0:6822:123                  :::*      users:(("ntpd",1899,22))
 udp    UNCONN     0      0                     :::123                  :::*      users:(("ntpd",1899,17))
 tcp    LISTEN     0      1                      *:1194                  *:*      users:(("openvpn",21206,3))
 tcp    LISTEN     0      128                   :::9100                 :::*      users:(("node_exporter",1916,3))

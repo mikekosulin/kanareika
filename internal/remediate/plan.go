@@ -323,6 +323,8 @@ var md = map[string]map[string]string{
 		"irrev": "IRREVERSIBLE", "manual": "Manual (no ready recipe)", "order": "Do one host first, verify, then the rest. Backups: {dir} on each host."},
 	"ru": {"title": "Шаги исправления", "connect": "Подключение", "apply": "Применить (под root)", "verify": "Проверить", "rollback": "Откатить",
 		"irrev": "НЕОБРАТИМО", "manual": "Вручную (готового рецепта нет)", "order": "Сначала один хост, проверка, потом остальные. Резервные копии: {dir} на каждом хосте."},
+	"zh": {"title": "修复步骤", "connect": "连接", "apply": "应用（以 root 身份）", "verify": "验证", "rollback": "回滚",
+		"irrev": "不可逆", "manual": "手动（无现成方案）", "order": "先处理一台主机并验证，再处理其余主机。备份：每台主机上的 {dir}。"},
 }
 
 // RenderMarkdown: the plan as a section of a task (prompt) or a ticket; "" for an empty plan.

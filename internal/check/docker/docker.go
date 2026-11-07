@@ -425,19 +425,21 @@ func gunzipOrRename(src, dst string) error {
 		f.Close()
 		return os.Rename(src, dst)
 	}
-	defer f.Close()
 	zr, err := gzip.NewReader(br)
 	if err != nil {
+		f.Close()
 		return err
 	}
 	out, err := os.Create(dst)
 	if err != nil {
+		f.Close()
 		return err
 	}
 	_, err = io.Copy(out, zr)
 	if cerr := out.Close(); err == nil {
 		err = cerr
 	}
+	f.Close() // before the remove: Windows does not delete a file that is open
 	if err != nil {
 		return err
 	}

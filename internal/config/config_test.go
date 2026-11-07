@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -10,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// repo root: tests read orgs/_example.yml and orgs/_template.yml from it
+// repo root: tests read orgs/_example.yml and assets/templates/org.yml from it
 var root, _ = filepath.Abs("../..")
 
 // home: an isolated working directory with orgs/acme.yml (the example org). Policy and schema come built in.
@@ -56,7 +57,7 @@ func writeYAML(t *testing.T, path string, m map[string]any) {
 
 // secondOrg: the template as org "beta" with one app host.
 func secondOrg(t *testing.T, p Paths, address string, external []any) {
-	b, err := os.ReadFile(filepath.Join(root, "orgs", "_template.yml"))
+	b, err := os.ReadFile(filepath.Join(root, "assets", "templates", "org.yml"))
 	must(t, err)
 	var d map[string]any
 	must(t, yaml.Unmarshal([]byte(strings.ReplaceAll(string(b), "__ORG_ID__", "beta")), &d))
@@ -182,7 +183,7 @@ func TestConsentExpiry(t *testing.T) {
 }
 
 func envsOrg(t *testing.T, p Paths, mixed bool, external any) {
-	b, err := os.ReadFile(filepath.Join(root, "orgs", "_template.yml"))
+	b, err := os.ReadFile(filepath.Join(root, "assets", "templates", "org.yml"))
 	must(t, err)
 	var d map[string]any
 	must(t, yaml.Unmarshal([]byte(strings.ReplaceAll(string(b), "__ORG_ID__", "gamma")), &d))
@@ -285,5 +286,121 @@ func TestCurrentFilesNeedNoMigration(t *testing.T) {
 	orgs, _ := loadAll(t, home(t))
 	if len(orgs[0].Migrated) != 0 {
 		t.Fatal(orgs[0].Migrated)
+	}
+}
+
+func TestSplitAddress(t *testing.T) {
+	for in, want := range map[string]struct {
+		host string
+		port int
+		err  bool
+	}{
+		"192.0.2.1":          {"192.0.2.1", 0, false},
+		"192.0.2.1:2222":     {"192.0.2.1", 2222, false},
+		"web.example.org:22": {"web.example.org", 22, false},
+		"web.example.org":    {"web.example.org", 0, false},
+		"2001:db8::1":        {"2001:db8::1", 0, false},
+		"[2001:db8::1]":      {"2001:db8::1", 0, false},
+		"[2001:db8::1]:2200": {"2001:db8::1", 2200, false},
+		"[2001:db8::1":       {"", 0, true},
+		"[2001:db8::1]2200":  {"", 0, true},
+		"192.0.2.1:ssh":      {"", 0, true},
+		"192.0.2.1:0":        {"", 0, true},
+		"192.0.2.1:70000":    {"", 0, true},
+		":22":                {"", 0, true},
+		"[2001:db8::1]:x":    {"", 0, true},
+	} {
+		h, p, err := SplitAddress(in)
+		if (err != nil) != want.err || !want.err && (h != want.host || p != want.port) {
+			t.Errorf("%s: %q %d %v", in, h, p, err)
+		}
+	}
+}
+
+// TestPorts: host port > port in the address > group port > access.port > 22; jumps likewise without the group.
+func TestPorts(t *testing.T) {
+	p := home(t)
+	f := filepath.Join(p.Orgs, "acme.yml")
+	d := readYAML(t, f)
+	acc := mapOf(d["access"])
+	acc["port"] = 2022
+	groups := mapOf(d["groups"])
+	mapOf(groups["app"])["port"] = 2200
+	front := mapOf(mapOf(groups["front"])["hosts"])
+	mapOf(front["web-01"])["address"] = "192.0.2.11:2211"
+	mapOf(front["web-02"])["port"] = 2212
+	mapOf(mapOf(acc["jumps"])["inner-bastion"])["address"] = "[2001:db8::5]:2205"
+	writeYAML(t, f, d)
+	orgs, errs := loadAll(t, p)
+	if len(errs) != 0 {
+		t.Fatal(errs)
+	}
+	got := map[string]string{}
+	for _, h := range orgs[0].Hosts {
+		got[h.Name] = h.Address + " " + strconv.Itoa(h.Port)
+	}
+	for name, want := range map[string]string{"web-01": "192.0.2.11 2211", "web-02": "192.0.2.12 2212",
+		"app-01": "192.0.2.21 2200", "swm-01": "192.0.2.31 2022"} {
+		if got[name] != want {
+			t.Errorf("%s: %q, want %q", name, got[name], want)
+		}
+	}
+	j := orgs[0].Jumps()
+	if j["bastion"]["port"] != 2222 || j["bastion"]["address"] != "203.0.113.5" { // its own port
+		t.Error(j["bastion"])
+	}
+	if j["inner-bastion"]["port"] != 2205 || j["inner-bastion"]["address"] != "2001:db8::5" {
+		t.Error(j["inner-bastion"])
+	}
+	if raw := mapOf(mapOf(mapOf(orgs[0].Data["access"])["jumps"])["inner-bastion"]); raw["address"] != "[2001:db8::5]:2205" {
+		t.Error("the org data was rewritten:", raw)
+	}
+
+	// without access.port everything falls back to 22
+	delete(acc, "port")
+	delete(mapOf(groups["app"]), "port")
+	mapOf(mapOf(acc["jumps"])["inner-bastion"])["address"] = "192.0.2.5"
+	writeYAML(t, f, d)
+	orgs, _ = loadAll(t, p)
+	if orgs[0].Jumps()["inner-bastion"]["port"] != 22 {
+		t.Fatal(orgs[0].Jumps())
+	}
+	for _, h := range orgs[0].Hosts {
+		if h.Name == "app-01" && h.Port != 22 {
+			t.Fatal(h)
+		}
+	}
+}
+
+func TestPortErrors(t *testing.T) {
+	for name, edit := range map[string]func(d map[string]any){
+		"host disagrees": func(d map[string]any) {
+			h := mapOf(mapOf(mapOf(mapOf(d["groups"])["front"])["hosts"])["web-01"])
+			h["address"], h["port"] = "192.0.2.11:2211", 2212
+		},
+		"host malformed": func(d map[string]any) {
+			mapOf(mapOf(mapOf(mapOf(d["groups"])["front"])["hosts"])["web-01"])["address"] = "192.0.2.11:ssh"
+		},
+		"jump disagrees": func(d map[string]any) {
+			mapOf(mapOf(mapOf(d["access"])["jumps"])["bastion"])["address"] = "203.0.113.5:22"
+		},
+	} {
+		p := home(t)
+		f := filepath.Join(p.Orgs, "acme.yml")
+		d := readYAML(t, f)
+		edit(d)
+		writeYAML(t, f, d)
+		if _, errs := loadAll(t, p); !hasErr(errs, "port") {
+			t.Errorf("%s: %v", name, errs)
+		}
+	}
+	// the same: an address with the same port as `port` is fine
+	p := home(t)
+	f := filepath.Join(p.Orgs, "acme.yml")
+	d := readYAML(t, f)
+	mapOf(mapOf(mapOf(d["access"])["jumps"])["bastion"])["address"] = "203.0.113.5:2222"
+	writeYAML(t, f, d)
+	if _, errs := loadAll(t, p); len(errs) != 0 {
+		t.Fatal(errs)
 	}
 }

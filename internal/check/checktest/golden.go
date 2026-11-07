@@ -66,7 +66,7 @@ func (c Case) ConfigHost() config.Host {
 }
 
 // NowTime: the pinned local clock ("now" as naive wall time).
-func (c Case) NowTime(t *testing.T) time.Time {
+func (c Case) NowTime(t testing.TB) time.Time {
 	n, err := time.Parse("2006-01-02T15:04:05", c.Now)
 	if err != nil {
 		t.Fatal(err)
@@ -75,7 +75,7 @@ func (c Case) NowTime(t *testing.T) time.Time {
 }
 
 // Cases: every testdata/<case> of the calling package.
-func Cases(t *testing.T) []Case {
+func Cases(t testing.TB) []Case {
 	dirs, err := filepath.Glob("testdata/*/case.json")
 	if err != nil || len(dirs) == 0 {
 		t.Fatalf("no cases: %v", err)
@@ -96,7 +96,7 @@ func Cases(t *testing.T) []Case {
 }
 
 // Read a case file, transparently from <name>.gz.
-func Read(t *testing.T, path string) string {
+func Read(t testing.TB, path string) string {
 	b, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		f, err2 := os.Open(path + ".gz")
@@ -117,7 +117,7 @@ func Read(t *testing.T, path string) string {
 }
 
 // Org from testdata/org.json (nil without one), as the Python harness built it.
-func Org(t *testing.T) *config.Org {
+func Org(t testing.TB) *config.Org {
 	b, err := os.ReadFile("testdata/org.json")
 	if os.IsNotExist(err) {
 		return nil
@@ -146,7 +146,7 @@ type Module func(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, 
 
 // Check runs mod on case c with the recorded inputs (file names in call order) and compares findings, the files it
 // wrote, its log and the commands it ran with the Python goldens.
-func Check(t *testing.T, c Case, mod Module, inputs ...string) {
+func Check(t testing.TB, c Case, mod Module, inputs ...string) {
 	t.Helper()
 	r := &Runner{}
 	for _, in := range inputs {
@@ -225,16 +225,14 @@ var goOnly = []string{"kev", "epss", "priority", "due", "accepted", "exception"}
 // CompareFindings: same findings in the same order, field by field as JSON. Python's empty "args": {} and the Go
 // zero-valued prioritization fields are not differences (encoding/json omits empty maps; the report layer sets
 // the rest).
-func CompareFindings(t *testing.T, got []finding.Finding, wantJSON string) {
+func CompareFindings(t testing.TB, got []finding.Finding, wantJSON string) {
 	t.Helper()
 	b, err := json.Marshal(got)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var g, w []map[string]any
-	if err := json.Unmarshal(b, &g); err != nil {
-		t.Fatal(err)
-	}
+	_ = json.Unmarshal(b, &g) // b is json.Marshal of findings: always a valid array of objects, never an error here
 	if err := json.Unmarshal([]byte(wantJSON), &w); err != nil {
 		t.Fatal(err)
 	}

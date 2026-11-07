@@ -11,9 +11,21 @@ You need Go (the version in `go.mod`) and, for linting, [golangci-lint](https://
 make bin      # dist/kanareika
 make test     # go vet + go test
 make lint     # golangci-lint
+make cover    # coverage per function, dist/coverage.html
 ```
 
-CI also runs `gofmt` and `go test -race`; run `gofmt -l cmd internal assets tools` before pushing.
+CI also runs `gofmt` and `go test -race`; run `gofmt -l cmd internal assets tools` before pushing. It tests on
+Windows too, and runs the Linux end-to-end check: `tools/e2e/e2e.sh` (needs Docker; downloads the vulnerability DB,
+about 1 GB on the host) builds the Linux binary, scans a Debian container over SSH and reads the result through
+`history` and the web API. Everything in it is made up and removed afterwards.
+
+## Screenshots
+
+`docs/screenshots/{tui,web}-{en,ru,zh}.png` are the README's, one per language, from demo data only (they are
+published). `go run ./tools/demo -out <dir>` writes it: a month of daily runs of a made-up organization. The TUI
+ones come from `go run ./tools/screenshots -home <dir> -lang <lang> -org acme -env production -size 150x26 -keys 2`,
+a colored frame rendered as HTML and captured in a browser; the web ones from `kanareika web` on the same directory,
+1600 px wide, dark theme. The demo data is also the quickest way to try the interfaces out.
 
 ## Test data must be fake
 
@@ -26,8 +38,15 @@ may only hold fake addresses, names and e-mails:
 - run real captures through `go run ./tools/anonymize <dir>` and review the diff; raw captures that must stay real go
   to `testdata/local/` (git-ignored).
 
-`TestTestdataIsAnonymized` checks this on every CI run. Locally you can add your own forbidden strings:
-`KANAREIKA_DENYLIST=<file with one string per line> go test ./tools/anonymize/`.
+The guard in `tools/anonymize` runs with `go test ./...`:
+
+- `TestNoRealData` checks every file that is or could be committed: data files (testdata, the assets embedded into
+  the binary, docs, examples) may only hold fake addresses and e-mails, and no file may contain a name or address
+  from your local `orgs/*.yml` (org ids and names, hosts, addresses, jump hosts, external targets, the consent
+  document). Your org files never leave your machine, and neither does that list: the check runs where leaks are
+  made. More forbidden strings: `KANAREIKA_DENYLIST=<file with one string per line> go test ./tools/anonymize/`;
+- `TestEmbedsOnlyAssets` fails on any `//go:embed` outside `assets/` (policy, schemas, locales, web, templates), so nothing
+  else can be built into the binary.
 
 ## Pull requests
 

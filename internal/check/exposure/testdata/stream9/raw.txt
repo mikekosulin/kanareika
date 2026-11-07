@@ -3,15 +3,15 @@
 lo inet 127.0.0.1/8
 lo inet6 ::1/128
 eth0 inet 10.77.0.16/24
-eth0 inet6 fe80::a0a0:1:100b/64
+eth0 inet6 fe80::a0a0:5ee9:1d33/64
 docker_gwbridge inet 172.18.0.1/16
-docker_gwbridge inet6 fe80::a0a0:1:1007/64
+docker_gwbridge inet6 fe80::a0a0:d6e6:5bd6/64
 docker0 inet 172.17.0.1/16
-vethffb9a14 inet6 fe80::a0a0:1:1005/64
-veth7511122 inet6 fe80::a0a0:1:1001/64
-vethfa0e16f inet6 fe80::a0a0:1:1000/64
-veth02f16f6 inet6 fe80::a0a0:1:100f/64
-vethc1cde6f inet6 fe80::a0a0:1:1006/64
+vethffb9a14 inet6 fe80::a0a0:8ec8:f2/64
+veth7511122 inet6 fe80::a0a0:3fe:d15d/64
+vethfa0e16f inet6 fe80::a0a0:f222:1480/64
+veth02f16f6 inet6 fe80::a0a0:3fe2:2e96/64
+vethc1cde6f inet6 fe80::a0a0:58d:5a37/64
 
 @@routes@@
 default via 10.77.0.17 dev eth0 

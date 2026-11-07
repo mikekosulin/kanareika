@@ -28,10 +28,7 @@ func parseQS(raw string) query {
 		if !ok || v == "" {
 			continue
 		}
-		k, v = unquotePlus(k), unquotePlus(v)
-		if v == "" {
-			continue
-		}
+		k, v = unquotePlus(k), unquotePlus(v) // v stays non-empty: unquoting never empties a string
 		q[k] = append(q[k], v)
 	}
 	return q

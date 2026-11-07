@@ -22,6 +22,9 @@ import (
 // trivyRun is trivy.Run; tests swap it for recorded reports.
 var trivyRun = trivy.Run
 
+// listFiles is Files; tests swap it to reach its error path (the staging dir Extract just wrote is always walkable).
+var listFiles = Files
+
 // Strings: a YAML list of strings (anything else counts as empty, as `cfg.get(k) or []` did for falsy values).
 func Strings(v any) []string {
 	var out []string
@@ -100,7 +103,7 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 	if err := Extract(archive, stage); err != nil { // rejects absolute paths, .., device files, links outside
 		return nil, err
 	}
-	files, err := Files(stage)
+	files, err := listFiles(stage)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +126,8 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 		if rel == "" {
 			rel = f.Target
 		}
-		f.Target = "/" + strings.TrimLeft(strings.TrimPrefix(rel, stage), "/")
+		// trivy may write the path with \ or / on Windows: both sides as /, the host's separator
+		f.Target = "/" + strings.TrimLeft(strings.TrimPrefix(filepath.ToSlash(rel), filepath.ToSlash(stage)), "/")
 	}
 	return findings, nil
 }
@@ -151,7 +155,7 @@ func Files(root string) ([]string, error) {
 		}
 		if st, err := os.Stat(p); err == nil && st.Mode().IsRegular() {
 			rel, _ := filepath.Rel(root, p)
-			out = append(out, rel)
+			out = append(out, filepath.ToSlash(rel)) // paths on the scanned host: / whatever OS runs this
 		}
 		return nil
 	})

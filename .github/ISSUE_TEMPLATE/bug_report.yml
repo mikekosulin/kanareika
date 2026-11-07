@@ -1,0 +1,73 @@
+name: Bug report
+description: Something works wrong — a crash, a wrong finding or priority, a scan that fails, a broken screen.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. **Remove real data before posting**: host names, addresses, organization names,
+        keys and anything from `orgs/`, `secrets/` or `reports/`. Replace them with placeholders (`web-01`,
+        `192.0.2.10`, `acme`). Security vulnerabilities go to
+        [private reporting](https://github.com/mikekosulin/kanareika/security/advisories/new), not here.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The output of `kanareika version` (first two lines).
+      placeholder: kanareika v0.3.0 · trivy 0.76.2
+    validations:
+      required: true
+  - type: dropdown
+    id: interface
+    attributes:
+      label: Where
+      options:
+        - Terminal interface (TUI)
+        - Web interface (kanareika web)
+        - A command (scan, db, validate, …)
+        - MCP server
+        - Report or data (findings, priorities, fix plan)
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Your OS (where kanareika runs)
+      options: [Linux, macOS, Windows, Other]
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Scanned host OS (if it matters)
+      placeholder: Debian 12, CentOS Stream 9, Ubuntu 18.04 …
+  - type: textarea
+    id: steps
+    attributes:
+      label: What you did
+      description: Commands, keys pressed, or clicks — enough to reproduce it.
+      placeholder: |
+        1. kanareika scan acme --env production
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: Error text, a screenshot (with real data blurred), the relevant log lines.
+    validations:
+      required: true
+  - type: checkboxes
+    id: clean
+    attributes:
+      label: Before posting
+      options:
+        - label: I removed real host names, addresses, organization names and keys from everything above.
+          required: true

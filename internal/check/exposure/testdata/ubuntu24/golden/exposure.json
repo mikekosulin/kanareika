@@ -17,7 +17,7 @@
   },
   {
    "iface": "eth0",
-   "ip": "fe80::a0a0:1:100d",
+   "ip": "fe80::a0a0:3c50:16cb",
    "public": false
   },
   {
@@ -27,7 +27,7 @@
   },
   {
    "iface": "docker0",
-   "ip": "fe80::a0a0:1:1004",
+   "ip": "fe80::a0a0:e4ab:6d5e",
    "public": false
   },
   {
@@ -37,17 +37,17 @@
   },
   {
    "iface": "br-03897529915b",
-   "ip": "fe80::a0a0:1:1008",
+   "ip": "fe80::a0a0:441a:effa",
    "public": false
   },
   {
    "iface": "vethec9416a",
-   "ip": "fe80::a0a0:1:1003",
+   "ip": "fe80::a0a0:782a:a46c",
    "public": false
   },
   {
    "iface": "veth09a7ac1",
-   "ip": "fe80::a0a0:1:1002",
+   "ip": "fe80::a0a0:94c1:e6fd",
    "public": false
   }
  ],

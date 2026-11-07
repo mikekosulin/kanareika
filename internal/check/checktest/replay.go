@@ -71,13 +71,30 @@ var uuidRE = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}
 // Norm replaces temp paths with tokens and UUIDs with "UUID", as the recording did.
 type Norm struct{ Roots [][2]string }
 
-// S normalizes a string.
+// S normalizes a string: each root (as written, with / and, inside JSON, with \\ for \) becomes its token, and on
+// Windows the separators after a token become / as the recordings have them.
 func (n *Norm) S(s string) string {
 	for _, r := range n.Roots {
 		s = strings.ReplaceAll(s, r[0], r[1])
+		if windowsPaths {
+			s = strings.ReplaceAll(s, strings.ReplaceAll(r[0], `\`, `\\`), r[1])
+			s = strings.ReplaceAll(s, strings.ReplaceAll(r[0], `\`, "/"), r[1])
+		}
+	}
+	if windowsPaths {
+		s = afterToken.ReplaceAllStringFunc(s, func(m string) string { return strings.ReplaceAll(strings.ReplaceAll(m, `\\`, "/"), `\`, "/") })
 	}
 	return uuidRE.ReplaceAllString(s, "UUID")
 }
+
+// windowsPaths: local paths use \ (tests of the harness switch it to see both ways).
+var windowsPaths = filepath.Separator == '\\'
+
+// afterToken: a path under a token ($OUT\hosts\x, or $OUT\\hosts\\x inside JSON).
+var afterToken = regexp.MustCompile(`\$[A-Z]+(?:\\{1,2}[^\s"'\\]+)+`)
+
+// P normalizes a local path argument: S, and the OS's separators as the recordings have them (made on Unix).
+func (n *Norm) P(s string) string { return filepath.ToSlash(n.S(s)) }
 
 // Digest: sha256 of data, normalized first when it is text.
 func (n *Norm) Digest(data []byte) string {
@@ -116,10 +133,11 @@ func listing(root string, n *Norm) map[string]string {
 			return err
 		}
 		rel, _ := filepath.Rel(root, p)
+		rel = filepath.ToSlash(rel) // the recordings were made on Unix
 		switch {
 		case d.Type()&fs.ModeSymlink != 0:
 			l, _ := os.Readlink(p)
-			out[rel] = "-> " + l
+			out[rel] = "-> " + filepath.ToSlash(l) // Windows writes ..\app for ../app
 		case d.IsDir():
 			out[rel+"/"] = "dir"
 		default:
@@ -197,18 +215,18 @@ func FakeTrivy(here string, c *Replay, n *Norm, calls *[]any) TrivyFunc {
 				continue
 			}
 			if st.IsDir() {
-				target[n.S(a)] = listing(a, n)
+				target[n.P(a)] = listing(a, n)
 				stage = a
 			} else {
 				data, _ := os.ReadFile(a)
-				target[n.S(a)] = n.Digest(data)
+				target[n.P(a)] = n.Digest(data)
 			}
 		}
 		normArgs := make([]any, len(args))
 		for i, a := range args {
-			normArgs[i] = n.S(a)
+			normArgs[i] = n.P(a)
 		}
-		*calls = append(*calls, map[string]any{"args": normArgs, "output": n.S(output),
+		*calls = append(*calls, map[string]any{"args": normArgs, "output": n.P(output),
 			"timeout": int(timeout.Seconds()), "target": target})
 		e, ok := c.Trivy[filepath.Base(output)]
 		if !ok {
@@ -223,7 +241,8 @@ func FakeTrivy(here string, c *Replay, n *Norm, calls *[]any) TrivyFunc {
 		}
 		text := gunzip(raw)
 		if stage != "" {
-			text = bytes.ReplaceAll(text, []byte("@STAGE@"), []byte(stage))
+			// with / even on Windows: the report is JSON (a \ would be an escape there), and the paths read back the same
+			text = bytes.ReplaceAll(text, []byte("@STAGE@"), []byte(filepath.ToSlash(stage)))
 		}
 		if err := os.WriteFile(output+".gz", gzipBytes(text), 0o644); err != nil {
 			return nil, err
@@ -253,7 +272,7 @@ func HostOf(spec map[string]any) config.Host {
 }
 
 // asJSON: v through JSON, for comparing values decoded from Python with Go ones.
-func asJSON(t *testing.T, v any) any {
+func asJSON(t testing.TB, v any) any {
 	t.Helper()
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -267,7 +286,7 @@ func asJSON(t *testing.T, v any) any {
 }
 
 // LoadReplays reads the cases of testdata/python.json.
-func LoadReplays(t *testing.T) []Replay {
+func LoadReplays(t testing.TB) []Replay {
 	t.Helper()
 	b, err := os.ReadFile("testdata/python.json")
 	if err != nil {
@@ -286,7 +305,7 @@ var timing = regexp.MustCompile(`\(\d+s\)`)
 
 // RunReplay replays c: setTrivy installs the fake trivy and returns a restore func; call runs one module run; roots:
 // more (path, token) normalizations.
-func RunReplay(t *testing.T, c *Replay, org *config.Org, setTrivy func(TrivyFunc) func(),
+func RunReplay(t testing.TB, c *Replay, org *config.Org, setTrivy func(TrivyFunc) func(),
 	call func(ctx *check.Ctx, r ReplayRun, out string) ([]finding.Finding, error), roots ...[2]string) {
 	t.Helper()
 	here, _ := filepath.Abs("testdata")

@@ -1,6 +1,6 @@
 # Organization file: `orgs/<id>.yml`
 
-Schema: `assets/schemas/org.schema.json`. Template with comments: `orgs/_template.yml`. Example: `orgs/_example.yml`.
+Schema: `assets/schemas/org.schema.json`. Template with comments: `assets/templates/org.yml` (`kanareika org new <id>` writes it as `orgs/<id>.yml`). Example: `orgs/_example.yml`.
 Files starting with `_` are not loaded.
 
 ## Sections
@@ -19,13 +19,18 @@ Files starting with `_` are not loaded.
 | `access.key` | no | key path in `secrets/`; without it the ssh-agent is used |
 | `access.known_hosts` | no | pinned host keys in `secrets/`; learned keys go to `reports/<org>/known_hosts` |
 | `access.host_key_checking` | no (`accept-new`) | `strict` — connect only to already known keys. A changed key is never accepted |
+| `access.port` | no (22) | default SSH port of every host and jump host |
 | `access.jumps.<name>` | no | `address`, `port`, `user`, `jump` (chains) |
 | `checks` | no | org-level checks (below) |
-| `groups.<name>` | yes | `env`, `role`, `exposure`, `jump`, `checks`, `hosts` |
+| `groups.<name>` | yes | `env`, `role`, `exposure`, `jump`, `port` (SSH port of its hosts), `checks`, `hosts` |
 | `groups.<g>.hosts.<name>` | yes | `address`, `port`, `user`, `privilege`, `admin_user`, `legacy_ssh` (allow ssh-rsa for an old OpenSSH, this host only), `os`, `exposure`, `jump`, `checks`, `notes` |
 | `k8s[]` | no | `name`, `env`, `kubeconfig`, `context`, `namespaces`, `exposure` |
 | `external` | no | list of IPs/CIDRs/domains/URLs; with environments a map `env: [list]` |
 | `exceptions[]` | no | `id`, `hosts`, `package`, `reason`, `owner`, `review_by`, `until_available` |
+
+SSH port of a host: its `port`, else the one in its `address` (`192.0.2.10:2222`, `[2001:db8::10]:2222`), else the
+group's `port`, else `access.port`, else 22. Jump hosts likewise, without the group. A `port` that disagrees with
+the address is an error.
 
 Roles (`role`, defaults to the group name): `front`, `app`, `swarm_manager`, `swarm_worker`, `k8s_node`, `mongo`, `internal`.
 `exposure`: 1 — perimeter (reachable from the internet), 2 — neighbours, 3 — internal only.
@@ -54,7 +59,7 @@ external:
 
 `module: true|false` is short for `enabled`. A mapping without `enabled` only tunes settings. Mappings merge
 recursively, **lists are replaced**. `k8s` and `network_external` are allowed only in the org `checks`.
-Check the result with `make show ORG=<id>`.
+Check the result with `kanareika validate <id>` and `kanareika show <id>`.
 
 ## Module settings and defaults
 

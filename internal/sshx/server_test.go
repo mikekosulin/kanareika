@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -41,6 +42,12 @@ type testServer struct {
 	hang    bool       // never answer global requests (keepalives), like a peer behind a dead network path
 	kex     []string   // server key exchanges; nil = x/crypto defaults
 
+	noSession   bool   // refuse session channels
+	noExec      bool   // refuse exec requests
+	hangForward bool   // never answer direct-tcpip channel opens, like a bastion whose connection is gone
+	onAuth      func() // called on every public key offered, before it is checked
+	onGlobal    func() // called on every global request (keepalive) a hanging server ignores
+
 	mu       sync.Mutex
 	conns    []*ssh.ServerConn
 	logins   int
@@ -64,6 +71,9 @@ func newServer(t *testing.T, name string, hostKey ssh.Signer, authKey ssh.Public
 func (s *testServer) config() *ssh.ServerConfig {
 	cfg := &ssh.ServerConfig{
 		PublicKeyCallback: func(_ ssh.ConnMetadata, k ssh.PublicKey) (*ssh.Permissions, error) {
+			if s.onAuth != nil {
+				s.onAuth()
+			}
 			if string(k.Marshal()) == string(s.authKey.Marshal()) {
 				return nil, nil
 			}
@@ -108,6 +118,9 @@ func (s *testServer) serve() {
 			if s.hang {
 				go func() {
 					for range reqs {
+						if s.onGlobal != nil {
+							s.onGlobal()
+						}
 					}
 				}()
 			} else {
@@ -116,8 +129,15 @@ func (s *testServer) serve() {
 			for nch := range chans {
 				switch nch.ChannelType() {
 				case "session":
+					if s.noSession {
+						nch.Reject(ssh.Prohibited, "no sessions")
+						continue
+					}
 					go s.session(nch)
 				case "direct-tcpip":
+					if s.hangForward {
+						continue // neither accepted nor rejected
+					}
 					go s.forward(nch)
 				default:
 					nch.Reject(ssh.UnknownChannelType, "no")
@@ -139,8 +159,8 @@ func (s *testServer) session(nch ssh.NewChannel) {
 		case "exec":
 			var p struct{ Command string }
 			ssh.Unmarshal(req.Payload, &p)
-			req.Reply(!started, nil)
-			if started {
+			req.Reply(!started && !s.noExec, nil)
+			if started || s.noExec {
 				continue
 			}
 			started = true
@@ -152,9 +172,20 @@ func (s *testServer) session(nch ssh.NewChannel) {
 				code := 0
 				if err := cmd.Run(); err != nil {
 					var ee *exec.ExitError
-					if errors.As(err, &ee) && ee.ExitCode() >= 0 {
+					isExit := errors.As(err, &ee)
+					switch {
+					case isExit && ee.ExitCode() >= 0:
 						code = ee.ExitCode()
-					} else {
+					case isExit && ctx.Err() == nil: // died of a signal, as sshd reports it
+						ch.SendRequest("exit-signal", false, ssh.Marshal(struct {
+							Signal     string
+							CoreDumped bool
+							Error      string
+							Lang       string
+						}{Signal: "KILL"}))
+						ch.Close()
+						return
+					default:
 						code = 255
 					}
 				}
@@ -259,6 +290,9 @@ func signerPEM(t *testing.T, priv any) (ssh.Signer, []byte) {
 // t.TempDir(): unix socket paths are limited to ~100 bytes on macOS.
 func startAgent(t *testing.T, keys ...any) {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the test agent listens on a unix socket; Windows' agent is the OpenSSH pipe")
+	}
 	dir, err := os.MkdirTemp("", "kna")
 	must(t, err)
 	t.Cleanup(func() { os.RemoveAll(dir) })

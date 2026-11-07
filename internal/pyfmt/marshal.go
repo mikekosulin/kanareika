@@ -66,8 +66,6 @@ func MarshalIndent(v any) ([]byte, error) {
 		return nil, err
 	}
 	var out bytes.Buffer
-	if err := json.Indent(&out, b, "", " "); err != nil {
-		return nil, err
-	}
+	_ = json.Indent(&out, b, "", " ") // b is Marshal output: always valid JSON
 	return out.Bytes(), nil
 }

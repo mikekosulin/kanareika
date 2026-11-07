@@ -23,8 +23,15 @@ import (
 	"github.com/mikekosulin/kanareika/internal/pyfmt"
 )
 
-// UserAgent: some feeds reject the default client UA.
-const UserAgent = "github.com/mikekosulin/kanareika/0.1 (+vulnerability audit)"
+// UserAgent: some feeds reject the default client UA. SetVersion puts the running version in it.
+var UserAgent = userAgent("dev")
+
+func userAgent(version string) string {
+	return "github.com/mikekosulin/kanareika/" + strings.TrimPrefix(version, "v") + " (+vulnerability audit)"
+}
+
+// SetVersion: the version the downloads announce.
+func SetVersion(version string) { UserAgent = userAgent(version) }
 
 // FeedsDir: KANAREIKA_FEEDS_DIR, else the user cache dir (the Docker image sets the variable to /data/feeds).
 func FeedsDir() string {
@@ -50,9 +57,12 @@ type Policy struct {
 	EPSSURL string
 }
 
+// policyFile reads a policy file; tests replace it (the built-in fallback never fails otherwise).
+var policyFile = config.Policy
+
 // LoadPolicy: policy/priority.yml of the working directory, else the built-in one.
 func LoadPolicy(p config.Paths) (*Policy, error) {
-	b, err := config.Policy(p, "priority.yml")
+	b, err := policyFile(p, "priority.yml")
 	if err != nil {
 		return nil, err
 	}
@@ -289,6 +299,9 @@ func fetchEPSS(ctx context.Context, url string) (map[string]float64, error) {
 	return out, nil
 }
 
+// ipdbURL: the DB-IP Lite file of a kind (city, asn) and month; tests point it at a local server.
+var ipdbURL = "https://download.db-ip.com/free/dbip-%s-lite-%s.mmdb.gz"
+
 // UpdateIPDB: DB-IP Lite (CC-BY 4.0, https://db-ip.com) — offline country/city + ASN, so IP lookups never leave the
 // machine. Files: FeedsDir()/dbip-city.mmdb, dbip-asn.mmdb. Returns kind -> month downloaded; a kind that could not
 // be fetched (this month's file may not be published yet, then last month's is tried) is missing.
@@ -299,7 +312,7 @@ func UpdateIPDB(ctx context.Context) map[string]string {
 	months := []string{today.Format("2006-01"), today.AddDate(0, 0, -today.Day()).Format("2006-01")}
 	for _, kind := range []string{"city", "asn"} {
 		for _, m := range months {
-			url := fmt.Sprintf("https://download.db-ip.com/free/dbip-%s-lite-%s.mmdb.gz", kind, m)
+			url := fmt.Sprintf(ipdbURL, kind, m)
 			if err := download(ctx, url, filepath.Join(dir, "dbip-"+kind+".mmdb")); err != nil {
 				continue
 			}

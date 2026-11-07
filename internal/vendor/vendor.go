@@ -17,6 +17,7 @@
 package vendor
 
 import (
+	"cmp"
 	"regexp"
 	"strconv"
 	"strings"
@@ -98,19 +99,9 @@ func isDigits(s string) bool { return s != "" && s[0] >= '0' && s[0] <= '9' }
 func cmpNum(a, b string) int {
 	a, b = strings.TrimLeft(a, "0"), strings.TrimLeft(b, "0")
 	if len(a) != len(b) {
-		return sign(len(a) - len(b))
+		return cmp.Compare(len(a), len(b))
 	}
 	return strings.Compare(a, b)
-}
-
-func sign(n int) int {
-	switch {
-	case n > 0:
-		return 1
-	case n < 0:
-		return -1
-	}
-	return 0
 }
 
 func cmpPart(a, b string) int {
@@ -170,7 +161,7 @@ func Vercmp(a, b string) int {
 	ea, va, ra := split(a)
 	eb, vb, rb := split(b)
 	if ea != eb {
-		return sign(ea - eb)
+		return cmp.Compare(ea, eb)
 	}
 	if c := cmpPart(va, vb); c != 0 {
 		return c

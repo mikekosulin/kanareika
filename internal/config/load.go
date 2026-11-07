@@ -10,11 +10,14 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 	"gopkg.in/yaml.v3"
 
 	"github.com/mikekosulin/kanareika/assets"
@@ -28,16 +31,20 @@ type Loader struct {
 	profiles map[string]any
 }
 
+const schemaID = "urn:kanareika:org.schema.json"
+
+// defaultsFS: the built-in policy and schema files; tests replace it.
+var defaultsFS = assets.Defaults
+
 func NewLoader(p Paths) (*Loader, error) {
 	raw, err := readJSON(p, "schemas/org.schema.json")
 	if err != nil {
 		return nil, err
 	}
 	c := jsonschema.NewCompiler()
-	if err := c.AddResource("org.schema.json", raw); err != nil {
-		return nil, err
-	}
-	sch, err := c.Compile("org.schema.json")
+	// an absolute id of its own: a relative one resolves against the working directory, which then shows in errors
+	_ = c.AddResource(schemaID, raw) // a fresh compiler and a constant absolute id: it cannot fail
+	sch, err := c.Compile(schemaID)
 	if err != nil {
 		return nil, fmt.Errorf("schemas/org.schema.json: %w", err)
 	}
@@ -53,12 +60,12 @@ func Policy(p Paths, name string) ([]byte, error) {
 	if b, err := os.ReadFile(filepath.Join(p.Policy, name)); err == nil {
 		return b, nil
 	}
-	return fs.ReadFile(assets.Defaults(), "policy/"+name)
+	return fs.ReadFile(defaultsFS(), "policy/"+name)
 }
 
 // readJSON: a built-in file (the org schema belongs to the binary that implements it).
 func readJSON(_ Paths, rel string) (any, error) {
-	b, err := fs.ReadFile(assets.Defaults(), rel)
+	b, err := fs.ReadFile(defaultsFS(), rel)
 	if err != nil {
 		return nil, err
 	}
@@ -115,8 +122,8 @@ func (l *Loader) loadProfiles() (map[string]any, error) {
 		},
 	}
 	c := jsonschema.NewCompiler()
-	_ = c.AddResource("profiles.json", sub)
-	sch, err := c.Compile("profiles.json")
+	_ = c.AddResource("urn:kanareika:profiles.json", sub)
+	sch, err := c.Compile("urn:kanareika:profiles.json")
 	if err != nil {
 		return nil, err
 	}
@@ -126,25 +133,32 @@ func (l *Loader) loadProfiles() (map[string]any, error) {
 	return mapOf(data), nil
 }
 
+// schemaErrors: one line per failed check, "where: what" (<root> for the document), deepest causes only (the
+// "validation failed" of their parents says nothing).
 func schemaErrors(err error) []string {
 	var ve *jsonschema.ValidationError
 	if !errors.As(err, &ve) {
 		return []string{err.Error()}
 	}
+	p := message.NewPrinter(language.English)
 	var out []string
-	for _, u := range ve.BasicOutput().Errors {
-		if u.Error == nil || u.Error.String() == "" || strings.HasPrefix(u.Error.String(), "validation failed") {
-			continue
+	var walk func(e *jsonschema.ValidationError)
+	walk = func(e *jsonschema.ValidationError) {
+		if len(e.Causes) > 0 {
+			for _, c := range e.Causes {
+				walk(c)
+			}
+			return
 		}
-		loc := strings.TrimPrefix(u.InstanceLocation, "/")
+		loc := strings.Join(e.InstanceLocation, "/")
 		if loc == "" {
 			loc = "<root>"
 		}
-		out = append(out, loc+": "+u.Error.String())
+		if line := loc + ": " + e.ErrorKind.LocalizedString(p); !slices.Contains(out, line) {
+			out = append(out, line)
+		}
 	}
-	if len(out) == 0 {
-		out = []string{ve.Error()}
-	}
+	walk(ve)
 	return out
 }
 
@@ -224,6 +238,12 @@ func (l *Loader) LoadOrg(path string) (*Org, []string) {
 	for _, jname := range keys(jumps) {
 		if j := str(mapOf(jumps[jname]), "jump"); j != "" && jumps[j] == nil {
 			errf("jump '%s' refers to unknown jump '%s'", jname, j)
+		}
+	}
+	for _, jname := range keys(jumps) {
+		j := mapOf(jumps[jname])
+		if _, err := portOf(j); err != nil {
+			errf("jump '%s': %v", jname, err)
 		}
 	}
 	for _, jname := range keys(jumps) { // cycles
@@ -307,9 +327,17 @@ func (l *Loader) LoadOrg(path string) (*Org, []string) {
 				admin = str(access, "admin_user")
 			}
 			legacy, _ := h["legacy_ssh"].(bool)
+			addr, _, _ := SplitAddress(str(h, "address")) // a malformed address is reported by portOf
+			port, err := portOf(h)
+			if err != nil {
+				errf("host '%s': %v", hname, err)
+			}
+			if port == 0 {
+				port = intOr(group, "port", intOr(access, "port", DefaultPort))
+			}
 			org.Hosts = append(org.Hosts, Host{
 				Org: orgID, Env: env, Name: hname, Group: gname, Role: role,
-				Address: str(h, "address"), Port: intOr(h, "port", 22), User: user,
+				Address: addr, Port: port, User: user,
 				Exposure: intOr(h, "exposure", intOr(group, "exposure", 3)),
 				Jump:     jump, Sudo: sudo, OSHint: str(h, "os"), Checks: checks,
 				Privilege: privilege(h, access), AdminUser: admin, LegacySSH: legacy,
@@ -503,6 +531,23 @@ func (a target) overlaps(b target) bool {
 		return a.name == b.name
 	}
 	return a.prefix.Overlaps(b.prefix)
+}
+
+// portOf: the port a host or jump entry sets explicitly (its "port", else one inside its address), 0 for none;
+// an error when the address is malformed or both are set and disagree.
+func portOf(m map[string]any) (int, error) {
+	_, inAddr, err := SplitAddress(str(m, "address"))
+	if err != nil {
+		return 0, err
+	}
+	explicit := intOr(m, "port", 0)
+	if explicit != 0 && inAddr != 0 && explicit != inAddr {
+		return 0, fmt.Errorf("port %d and address %q disagree", explicit, str(m, "address"))
+	}
+	if explicit != 0 {
+		return explicit, nil
+	}
+	return inAddr, nil
 }
 
 func orgTargets(o *Org) []target {

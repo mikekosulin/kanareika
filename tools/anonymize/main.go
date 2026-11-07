@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -51,7 +52,7 @@ type mapper struct {
 
 var (
 	ipv4    = regexp.MustCompile(`(?:\d{1,3}\.){3}\d{1,3}`)
-	ipv6    = regexp.MustCompile(`(?i)\b(?:[0-9a-f]{1,4}:){2,7}[0-9a-f]{1,4}\b|(?i)\b(?:[0-9a-f]{1,4}:){1,6}:[0-9a-f]{0,4}\b`)
+	ipv6    = regexp.MustCompile(`(?i)[0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,7}`) // a whole run; v6Spans checks it
 	email   = regexp.MustCompile(`[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}`)
 	sshKey  = regexp.MustCompile(`(ssh-ed25519|ssh-rsa|ssh-dss|ecdsa-sha2-nistp(?:256|384|521)|sk-[a-z0-9@.-]+) (AAAA[0-9A-Za-z+/]+=*)`)
 	fprint  = regexp.MustCompile(`SHA256:[0-9A-Za-z+/]{43}`)
@@ -60,6 +61,15 @@ var (
 	cidr    = regexp.MustCompile(`^/\d{1,2}\b`)
 	docNets = []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24"), netip.MustParsePrefix("198.51.100.0/24"),
 		netip.MustParsePrefix("203.0.113.0/24"), netip.MustParsePrefix("2001:db8::/32")}
+)
+
+// Fakes are recognizable, so a second run leaves them alone: link-local addresses start with fakeLinkLocal, MACs
+// with 02:00: (locally administered), fingerprints with SHA256:anon. SSH keys are the exception: a public key has
+// no room for a mark, so a rerun swaps fake keys for new fake ones (harmless, but a diff).
+const (
+	fakeLinkLocal = "fe80::a0a0:"
+	fakeMAC       = "02:00:"
+	fakeFP        = "SHA256:anon"
 )
 
 // fake ranges: private -> 10.77.0.0/16, public -> 100.21.0.0/16 (global, so "public" logic still triggers),
@@ -82,7 +92,7 @@ func (m *mapper) fakeIP(real string) {
 		f = fmt.Sprintf("100.21.%d.%d", m.nPub/250, m.nPub%250+1)
 	case a.IsLinkLocalUnicast(): // fe80::<MAC-derived>
 		h := sha256.Sum256([]byte(real))
-		f = fmt.Sprintf("fe80::%x:%x", uint16(h[0])<<8|uint16(h[1]), uint16(h[2])<<8|uint16(h[3]))
+		f = fmt.Sprintf("%s%x:%x", fakeLinkLocal, uint16(h[0])<<8|uint16(h[1]), uint16(h[2])<<8|uint16(h[3]))
 	default:
 		m.nPub6++
 		f = fmt.Sprintf("2a10:77::%x", m.nPub6)
@@ -100,10 +110,11 @@ func keep(a netip.Addr) bool {
 		return true
 	}
 	switch a.String() { // bases of the private blocks (10.0.0.0/8 …): generic, and recipes use them
-	case "10.0.0.0", "192.168.0.0", "172.16.0.0", "100.64.0.0", "169.254.0.0":
+	case "10.0.0.0", "192.168.0.0", "172.16.0.0", "100.64.0.0", "169.254.0.0", "fe80::":
 		return true
 	}
-	if a.Is4() && netip.MustParsePrefix("10.77.0.0/16").Contains(a) || netip.MustParsePrefix("100.21.0.0/16").Contains(a) {
+	if a.Is4() && netip.MustParsePrefix("10.77.0.0/16").Contains(a) || netip.MustParsePrefix("100.21.0.0/16").Contains(a) ||
+		netip.MustParsePrefix("2a10:77::/32").Contains(a) || strings.HasPrefix(a.String(), fakeLinkLocal) {
 		return true // already fake
 	}
 	for _, p := range docNets {
@@ -120,10 +131,10 @@ func (m *mapper) fakeKey(kind, blob string) string {
 	}
 	var pub ssh.PublicKey
 	switch {
-	case kind == "ssh-ed25519" || strings.HasPrefix(kind, "sk-"):
+	case kind == "ssh-ed25519" || kind == "ssh-dss" || strings.HasPrefix(kind, "sk-"): // written back as ssh-ed25519
 		p, _, _ := ed25519.GenerateKey(rand.Reader)
 		pub, _ = ssh.NewPublicKey(p)
-	case kind == "ssh-rsa" || kind == "ssh-dss":
+	case kind == "ssh-rsa":
 		k, _ := rsa.GenerateKey(rand.Reader, 2048)
 		pub, _ = ssh.NewPublicKey(&k.PublicKey)
 	default:
@@ -133,9 +144,6 @@ func (m *mapper) fakeKey(kind, blob string) string {
 		pub, _ = ssh.NewPublicKey(&k.PublicKey)
 	}
 	f := base64.StdEncoding.EncodeToString(pub.Marshal())
-	if kind != pub.Type() { // keep the declared type next to it
-		f = blob[:0] + f
-	}
 	m.keys[blob] = f
 	return f
 }
@@ -156,22 +164,25 @@ func (m *mapper) rewrite(s string) string {
 		return kind + " " + m.fakeKey(g[1], g[2])
 	})
 	s = fprint.ReplaceAllStringFunc(s, func(x string) string {
+		if strings.HasPrefix(x, fakeFP) {
+			return x
+		}
 		if f, ok := m.fps[x]; ok {
 			return f
 		}
-		f := "SHA256:" + randomish(x, 43)
+		f := fakeFP + randomish(x, 43-len(fakeFP)+len("SHA256:"))
 		m.fps[x] = f
 		return f
 	})
 	s = mac.ReplaceAllStringFunc(s, func(x string) string {
-		if strings.EqualFold(x, "00:00:00:00:00:00") || strings.EqualFold(x, "ff:ff:ff:ff:ff:ff") {
+		if strings.EqualFold(x, "00:00:00:00:00:00") || strings.EqualFold(x, "ff:ff:ff:ff:ff:ff") || strings.HasPrefix(strings.ToLower(x), fakeMAC) {
 			return x
 		}
 		if f, ok := m.macs[strings.ToLower(x)]; ok {
 			return f
 		}
 		h := sha256.Sum256([]byte(x))
-		f := fmt.Sprintf("02:00:%02x:%02x:%02x:%02x", h[0], h[1], h[2], h[3])
+		f := fmt.Sprintf(fakeMAC+"%02x:%02x:%02x:%02x", h[0], h[1], h[2], h[3])
 		m.macs[strings.ToLower(x)] = f
 		return f
 	})
@@ -195,12 +206,26 @@ func (m *mapper) rewrite(s string) string {
 		}
 		return x
 	})
-	s = ipv6.ReplaceAllStringFunc(s, func(x string) string {
-		if f, ok := m.ips[strings.ToLower(x)]; ok {
-			return f
+	var b strings.Builder
+	last := 0
+	for _, loc := range v6Spans(s) {
+		x := strings.ToLower(s[loc[0]:loc[1]])
+		f, ok := m.ips[x]
+		if !ok { // ss writes address:port without brackets: fe80::1:123
+			if addr, port, cut := portSuffix(x); cut {
+				if f, ok = m.ips[addr]; ok {
+					f += ":" + port
+				}
+			}
 		}
-		return x
-	})
+		if ok {
+			b.WriteString(s[last:loc[0]])
+			b.WriteString(f)
+			last = loc[1]
+		}
+	}
+	b.WriteString(s[last:])
+	s = b.String()
 	// 4. names: organizations, hosts, people, domains
 	for _, w := range m.words {
 		s = replaceFold(s, w[0], w[1])
@@ -270,11 +295,47 @@ func (m *mapper) collect(s string) {
 			m.fakeIP(x)
 		}
 	}
-	for _, x := range ipv6.FindAllString(s, -1) {
-		if a, err := netip.ParseAddr(x); err == nil && !keep(a) && (a.IsGlobalUnicast() || a.IsLinkLocalUnicast()) {
-			m.fakeIP(strings.ToLower(x))
+	var cands []string
+	for _, loc := range v6Spans(s) {
+		cands = append(cands, strings.ToLower(s[loc[0]:loc[1]]))
+	}
+	for _, x := range cands {
+		if strings.HasPrefix(x, "::") { // ::1:25 in ss output is [::1]:25; real addresses don't start with ::
+			continue
+		}
+		if addr, _, cut := portSuffix(x); cut && slices.Contains(cands, addr) {
+			continue // the same address with a port after it (ss)
+		}
+		if a, _ := netip.ParseAddr(x); !keep(a) && (a.IsGlobalUnicast() || a.IsLinkLocalUnicast()) {
+			m.fakeIP(x)
 		}
 	}
+}
+
+// portSuffix: fe80::1:123 -> fe80::1, 123 when the last group is all decimal digits.
+func portSuffix(x string) (addr, port string, ok bool) {
+	i := strings.LastIndexByte(x, ':')
+	if i <= 0 || i == len(x)-1 || strings.Trim(x[i+1:], "0123456789") != "" || x[i-1] == ':' {
+		return "", "", false
+	}
+	return x[:i], x[i+1:], true
+}
+
+// v6Spans: IPv6 addresses in s, whole (fe80::5054:ff:fe12:3456, not its first half) and not inside a longer word
+// (times like 12:34:56 and MACs are no addresses).
+func v6Spans(s string) [][2]int {
+	var out [][2]int
+	for _, loc := range ipv6.FindAllStringIndex(s, -1) {
+		if loc[0] > 0 {
+			if r, _ := utf8.DecodeLastRuneInString(s[:loc[0]]); unicode.IsLetter(r) || unicode.IsDigit(r) || r == '.' {
+				continue
+			}
+		}
+		if a, err := netip.ParseAddr(s[loc[0]:loc[1]]); err == nil && a.Is6() && !a.Is4In6() {
+			out = append(out, [2]int{loc[0], loc[1]})
+		}
+	}
+	return out
 }
 
 func read(path string) (string, bool, error) {
@@ -309,11 +370,20 @@ func write(path, s string) error {
 	return os.WriteFile(path, buf.Bytes(), 0o644)
 }
 
-func main() {
-	dry := flag.Bool("dry-run", false, "show what would change, write nothing")
-	orgsDir := flag.String("orgs", "orgs", "where the real org files are (names to replace come from them)")
-	extra := flag.String("extra", "", "more words to replace, comma separated (word or word=replacement)")
-	flag.Parse()
+// exit: os.Exit, swapped by the test of main.
+var exit = os.Exit
+
+func main() { exit(run(os.Args[1:], os.Stderr)) }
+
+func run(args []string, stderr io.Writer) int {
+	fl := flag.NewFlagSet("anonymize", flag.ContinueOnError)
+	fl.SetOutput(stderr)
+	dry := fl.Bool("dry-run", false, "show what would change, write nothing")
+	orgsDir := fl.String("orgs", "orgs", "where the real org files are (names to replace come from them)")
+	extra := fl.String("extra", "", "more words to replace, comma separated (word or word=replacement)")
+	if err := fl.Parse(args); err != nil {
+		return 2
+	}
 	m := &mapper{ips: map[string]string{}, emails: map[string]string{}, keys: map[string]string{},
 		fps: map[string]string{}, macs: map[string]string{}}
 
@@ -359,7 +429,7 @@ func main() {
 	sort.Slice(m.words, func(i, j int) bool { return len(m.words[i][0]) > len(m.words[j][0]) })
 
 	var files []string
-	for _, root := range flag.Args() {
+	for _, root := range fl.Args() {
 		_ = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
@@ -377,11 +447,11 @@ func main() {
 	for _, f := range files {
 		s, ok, err := read(f)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, f, err)
-			os.Exit(1)
+			fmt.Fprintln(stderr, f, err)
+			return 1
 		}
 		if !ok {
-			fmt.Fprintln(os.Stderr, "skipped (binary):", f)
+			fmt.Fprintln(stderr, "skipped (binary):", f)
 			continue
 		}
 		texts[f] = s
@@ -417,11 +487,12 @@ func main() {
 		changed++
 		if !*dry {
 			if err := write(f, out); err != nil {
-				fmt.Fprintln(os.Stderr, f, err)
-				os.Exit(1)
+				fmt.Fprintln(stderr, f, err)
+				return 1
 			}
 		}
 	}
-	fmt.Fprintf(os.Stderr, "files: %d, changed: %d; addresses %d, e-mails %d, ssh keys %d, fingerprints %d, MACs %d, names %d\n",
+	fmt.Fprintf(stderr, "files: %d, changed: %d; addresses %d, e-mails %d, ssh keys %d, fingerprints %d, MACs %d, names %d\n",
 		len(files), changed, len(m.ips), len(m.emails), len(m.keys), len(m.fps), len(m.macs), len(m.words))
+	return 0
 }

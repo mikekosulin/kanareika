@@ -11,14 +11,14 @@
   {"name": "synthetic-named", "address": "app.example.org", "env": "synthetic"}
  ],
  "jumps": {
-  "prod-bastion": {"address": "100.21.0.2"},
-  "stg-bastion": {"address": "100.21.0.10"}
+  "jump-a": {"address": "100.21.0.2"},
+  "jump-b": {"address": "100.21.0.10"}
  },
  "external": {
   "production": ["100.21.0.7", "100.21.0.2", "100.21.0.4", "100.21.0.3", "100.21.0.5", "100.21.0.6",
                  "100.21.0.8", "100.21.0.9"],
   "staging": ["100.21.0.10"],
-  "synthetic": ["93.184.216.0/255.255.255.0", "https://[2a00:1450:4001:82b::1]:443/", "web.example.org", "198.51.100.0/24"],
-  "no-hosts-env": ["2a00:1450:4001:82a::200e"]
+  "synthetic": ["93.184.216.0/255.255.255.0", "https://[2a10:77::1]:443/", "web.example.org", "198.51.100.0/24"],
+  "no-hosts-env": ["2a10:77::2"]
  }
 }

@@ -33,6 +33,7 @@ access:
   # key: __ORG_ID__/id_ed25519   # key file in secrets/. Without it the host's ssh-agent is used (recommended)
   # known_hosts: __ORG_ID__/known_hosts   # pinned host keys (in secrets/); learned keys go to reports/<org>/known_hosts
   host_key_checking: accept-new  # strict — only keys from known_hosts above and already learned ones
+  # port: 22                     # default SSH port of every host and jump host
   jumps:                         # jump hosts (bastions); chains via `jump`
     bastion:
       address: 192.0.2.1
@@ -56,11 +57,12 @@ groups:                          # host groups; the group name is the role unles
     role: app                    # front | app | swarm_manager | swarm_worker | k8s_node | mongo | internal
     exposure: 2                  # 1 perimeter / 2 neighbours / 3 internal; can be overridden per host
     jump: bastion                # jump host for all hosts of the group (if needed)
+    # port: 22                   # SSH port of the group's hosts (default: access.port, else 22)
     # checks:
     #   docker: false
     hosts:
       app-01:
-        address: 192.0.2.10
+        address: 192.0.2.10        # or 192.0.2.10:2222 / [2001:db8::10]:2222 to set the SSH port too
         os: ubuntu-22.04         # informational; the real OS is detected during the scan
         # port: 22
         # exposure: 1

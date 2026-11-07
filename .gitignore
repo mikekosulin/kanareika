@@ -8,10 +8,9 @@ kubeconfig*
 .env
 .vault_pass
 
-# organizations are local: only the example and the template are tracked
+# organizations are local: only the example is tracked (the template is assets/templates/org.yml)
 orgs/*
 !orgs/_example.yml
-!orgs/_template.yml
 
 # scan results
 reports/*

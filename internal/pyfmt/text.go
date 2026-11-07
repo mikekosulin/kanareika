@@ -132,10 +132,11 @@ func Float(s string) (float64, error) {
 	if !pyFloatRe.MatchString(t) {
 		return 0, errors.New("could not convert string to float: " + strconv.Quote(s))
 	}
-	f, err := strconv.ParseFloat(strings.ReplaceAll(t, "_", ""), 64)
-	if err != nil && !errors.Is(err, strconv.ErrRange) { // Python overflows to inf / underflows to 0 silently
-		return 0, err
+	if strings.Contains(strings.ToLower(t), "nan") { // float("-nan") is nan in Python; Go's parser takes no sign there
+		return math.NaN(), nil
 	}
+	// the pattern lets through only what ParseFloat reads; out of range it gives ±Inf or 0, as Python does silently
+	f, _ := strconv.ParseFloat(strings.ReplaceAll(t, "_", ""), 64)
 	return f, nil
 }
 

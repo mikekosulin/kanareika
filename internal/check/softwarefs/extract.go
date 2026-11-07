@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -58,19 +59,33 @@ func pyRepr(s string) string {
 	return "'" + strings.ReplaceAll(strings.ReplaceAll(s, `\`, `\\`), "'", `\'`) + "'"
 }
 
+// absLink: a link target that is absolute: on the scanned host (a Unix path: /etc/passwd), or locally (C:\x, \x
+// on Windows). filepath.IsAbs alone takes /etc/passwd for relative on Windows, and Join puts it inside the
+// destination while the link itself would point at the root of the drive.
+func absLink(l string) bool {
+	return path.IsAbs(l) || filepath.IsAbs(l) || filepath.VolumeName(l) != "" || strings.HasPrefix(l, `\`)
+}
+
 func inside(p, dest string) bool {
 	return p == dest || strings.HasPrefix(p, dest+string(filepath.Separator))
 }
 
+// absPath and evalSymlinks are filepath.Abs and filepath.EvalSymlinks; tests swap them to reach the error paths (a
+// lost working directory, an unresolvable root).
+var (
+	absPath      = filepath.Abs
+	evalSymlinks = filepath.EvalSymlinks
+)
+
 // realpath: os.path.realpath — symlinks resolved as far as the path exists, the rest cleaned lexically.
 func realpath(p string) (string, error) {
-	p, err := filepath.Abs(p)
+	p, err := absPath(p)
 	if err != nil {
 		return "", err
 	}
 	rest := ""
 	for cur := p; ; {
-		if r, err := filepath.EvalSymlinks(cur); err == nil {
+		if r, err := evalSymlinks(cur); err == nil {
 			return filepath.Join(r, rest), nil
 		}
 		parent := filepath.Dir(cur)
@@ -102,7 +117,7 @@ func extractOne(tr *tar.Reader, hdr *tar.Header, dest string) error {
 	}
 	path := filepath.Join(dest, name)
 	if hdr.Typeflag == tar.TypeLink || hdr.Typeflag == tar.TypeSymlink {
-		if filepath.IsAbs(hdr.Linkname) {
+		if absLink(hdr.Linkname) {
 			return fmt.Errorf("%s is a link to an absolute path", pyRepr(orig))
 		}
 		var lt string

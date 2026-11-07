@@ -308,7 +308,7 @@ func Summary(meta *Meta, findings []finding.Finding) string {
 	}
 	feeds := deref(meta.FeedsUpdated)
 	if feeds == "" {
-		feeds = "none (make feeds)"
+		feeds = "none (kanareika db update)"
 	}
 	lines := []string{
 		fmt.Sprintf("# %s / %s — scan %s", meta.Org, meta.Env, meta.RunID),

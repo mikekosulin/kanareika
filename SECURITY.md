@@ -24,8 +24,10 @@ What to expect:
 In scope — anything where Kanareika itself weakens the hosts it audits or the machine it runs on, for example:
 
 - a scan that changes state on a host (it must stay read-only), or runs commands beyond what the docs describe;
-- SSH host key checking bypassed, credentials or keys leaked into reports, logs or the dashboard;
-- the dashboard or the MCP server reachable beyond localhost, or exploitable from a page in the browser;
+- SSH host key checking bypassed, credentials or keys leaked into reports, logs or the web interface;
+- the web interface (`kanareika web`) or the MCP server reachable beyond localhost without `--token`, or exploitable from a page in the
+  browser (for example starting a scan from another site: scans need the page's CSRF token, and on localhost only
+  requests addressed to a loopback name are answered);
 - data from one organization showing up in another's reports;
 - a malicious host or container image making Kanareika execute code on the auditor's machine.
 

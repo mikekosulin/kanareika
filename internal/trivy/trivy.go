@@ -1,8 +1,8 @@
 // Package trivy wraps the trivy binary: vulnerability matching for SBOMs, filesystems, images and clusters.
 //
-// kanareika manages trivy itself: a pinned version, downloaded once from the official GitHub release for this
-// platform, checked against the release's checksums and cached under the user cache dir. KANAREIKA_TRIVY names an
-// explicit binary instead (the Docker image ships its own). Trivy's own settings (TRIVY_CACHE_DIR for the
+// trivy is linked into kanareika (package engine) and runs as a child process of kanareika itself, so there is
+// nothing else to install; only its vulnerability DBs are downloaded (see Prepare, Offline and package-level db
+// helpers). KANAREIKA_TRIVY names an external trivy binary instead. Trivy's own settings (TRIVY_CACHE_DIR for the
 // vulnerability DBs, ...) pass through the environment untouched.
 package trivy
 
@@ -42,13 +42,13 @@ func tail(s string, n int) string {
 }
 
 func command(ctx context.Context, timeout time.Duration, args ...string) (stdout, stderr string, err error) {
-	bin, err := Binary(ctx)
+	bin, prefix, err := Binary()
 	if err != nil {
 		return "", "", err
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd := exec.CommandContext(ctx, bin, append(prefix, args...)...)
 	var o, e bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &o, &e
 	err = cmd.Run()
@@ -97,6 +97,9 @@ func (k dbKind) repositories() []string {
 	return k.repos
 }
 
+// CacheDir: trivy's cache dir, where its vulnerability DBs live ("" when there is no user cache dir).
+func CacheDir() string { return trivyCacheDir() }
+
 // trivyCacheDir: trivy's cache dir (TRIVY_CACHE_DIR, else <user cache dir>/trivy, as trivy itself picks it).
 func trivyCacheDir() string {
 	if d := os.Getenv("TRIVY_CACHE_DIR"); d != "" {
@@ -110,6 +113,21 @@ func trivyCacheDir() string {
 }
 
 // cachedAt: when the cached copy of k was downloaded; zero if there is none.
+// nextUpdate: when trivy publishes the next build (metadata.json NextUpdate); zero when unknown.
+func (k dbKind) nextUpdate() time.Time {
+	dir := trivyCacheDir()
+	if dir == "" {
+		return time.Time{}
+	}
+	data, err := os.ReadFile(filepath.Join(dir, k.name, "metadata.json"))
+	if err != nil {
+		return time.Time{}
+	}
+	var m struct{ NextUpdate time.Time }
+	_ = json.Unmarshal(data, &m)
+	return m.NextUpdate
+}
+
 func (k dbKind) cachedAt() time.Time {
 	dir := trivyCacheDir()
 	if dir == "" {
@@ -185,6 +203,53 @@ func Prepare(ctx context.Context, logf func(string, ...any)) error {
 	return nil
 }
 
+// ErrNoDB: offline and a vulnerability DB was never downloaded or imported.
+var ErrNoDB = errors.New("no trivy vulnerability DB: run `kanareika db update` with network access, " +
+	"or `kanareika db import <bundle>` with a bundle made by `kanareika db export`")
+
+// PrepareOffline: use the cached DBs as they are, without touching the network; ErrNoDB when one is missing.
+func PrepareOffline(logf func(string, ...any)) error {
+	for _, k := range dbKinds {
+		at := k.cachedAt()
+		if at.IsZero() {
+			return fmt.Errorf("trivy %s: %w", k.name, ErrNoDB)
+		}
+		if logf != nil {
+			logf("trivy %s: offline, using the copy from %s (%s old)", k.name, at.UTC().Format("2006-01-02 15:04Z"),
+				time.Since(at).Round(time.Hour))
+		}
+	}
+	prepared.Store(true)
+	return nil
+}
+
+// DBInfo: one vulnerability DB in the cache.
+type DBInfo struct {
+	Name    string    `json:"name"`    // "db", "java-db"
+	Dir     string    `json:"dir"`     // where it is (or would be)
+	Updated time.Time `json:"updated"` // zero: not downloaded
+	// Next: when the next build of this DB is published (trivy's metadata); after it, a newer one is out
+	Next time.Time `json:"next_update"`
+}
+
+// Outdated: a newer build has been published since this one (or there is none yet).
+func (d DBInfo) Outdated(now time.Time) bool {
+	return d.Updated.IsZero() || !d.Next.IsZero() && now.After(d.Next)
+}
+
+// DBStatus: the cached DBs, in a fixed order.
+func DBStatus() []DBInfo {
+	out := make([]DBInfo, 0, len(dbKinds))
+	for _, k := range dbKinds {
+		dir := ""
+		if c := trivyCacheDir(); c != "" {
+			dir = filepath.Join(c, k.name)
+		}
+		out = append(out, DBInfo{Name: k.name, Dir: dir, Updated: k.cachedAt(), Next: k.nextUpdate()})
+	}
+	return out
+}
+
 // Run trivy with JSON output into output; the raw report is kept next to it as output.gz (raw trivy output
 // carries full CVE descriptions — hundreds of MB per host) and returned.
 func Run(ctx context.Context, args []string, output string, timeout time.Duration) ([]byte, error) {
@@ -241,17 +306,13 @@ func gzipFile(path string, data []byte) error {
 	return err
 }
 
-// RunReport: Run, decoded as an fs / image / rootfs / sbom report.
-func RunReport(ctx context.Context, args []string, output string, timeout time.Duration) (*Report, error) {
-	data, err := Run(ctx, args, output, timeout)
-	if err != nil {
-		return nil, err
-	}
-	return ParseReport(data)
-}
-
 // Version of the trivy kanareika runs, "?" when it can't be asked.
 func Version(ctx context.Context) string {
+	if os.Getenv("KANAREIKA_TRIVY") == "" {
+		if v := Embedded(); v != "" {
+			return v
+		}
+	}
 	out, _, err := command(ctx, 30*time.Second, "--version", "--format", "json")
 	if err != nil {
 		return "?"
@@ -432,13 +493,4 @@ func VulnFindings(r *Report, base finding.Finding) []finding.Finding {
 		}
 	}
 	return out
-}
-
-// cacheDir: <user cache>/kanareika.
-func cacheDir() string {
-	base, err := os.UserCacheDir()
-	if err != nil {
-		base = os.TempDir()
-	}
-	return filepath.Join(base, "kanareika")
 }
