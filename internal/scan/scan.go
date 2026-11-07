@@ -406,7 +406,7 @@ func facts(ctx *check.Ctx, h config.Host) (check.Facts, error) {
 func (s *Scanner) host(ctx *check.Ctx, h config.Host, modules []string) ([]finding.Finding, string, []string) {
 	out := filepath.Join(ctx.RunDir, "hosts", h.Name)
 	_ = os.MkdirAll(out, 0o755)
-	s.track(h.Name, HostUpdate{State: "running", Module: ptr("connect")})
+	s.track(h.Name, HostUpdate{State: "running", Module: ptr("connect"), Steps: len(modules)})
 	f, err := facts(ctx, h)
 	if err != nil {
 		msg := err.Error()
@@ -431,14 +431,14 @@ func (s *Scanner) host(ctx *check.Ctx, h config.Host, modules []string) ([]findi
 	s.log("%s: %s (%s)", h.Name, pretty, f.Hostname)
 	var all []finding.Finding
 	var errs []string
-	for _, m := range modules {
+	for i, m := range modules {
 		fn, ok := HostModules[m]
 		if !ok || fn == nil {
 			errs = append(errs, m+": not implemented yet")
 			continue
 		}
 		s.log("%s: %s ...", h.Name, m)
-		s.track(h.Name, HostUpdate{Module: ptr(m)})
+		s.track(h.Name, HostUpdate{Module: ptr(m), Step: i + 1})
 		res, err := fn(ctx, h, h.Checks[m], out, f)
 		if err != nil {
 			s.log("%s: %s: %v", h.Name, m, err)
@@ -452,6 +452,6 @@ func (s *Scanner) host(ctx *check.Ctx, h config.Host, modules []string) ([]findi
 	if len(errs) > 0 {
 		state = "warn"
 	}
-	s.track(h.Name, HostUpdate{State: state, Module: ptr("")})
+	s.track(h.Name, HostUpdate{State: state, Module: ptr(""), Step: len(modules)})
 	return all, "", errs
 }

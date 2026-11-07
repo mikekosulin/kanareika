@@ -17,6 +17,8 @@ type hostStatus struct {
 	Module *string `json:"module"`
 	Last   string  `json:"last"`
 	Errors int     `json:"errors"`
+	Step   int     `json:"step,omitempty"`  // modules started on the host so far
+	Steps  int     `json:"steps,omitempty"` // modules planned for it
 }
 
 // Progress: live state of a running scan in <run>/status.json + run.log, read by the dashboard.
@@ -121,9 +123,10 @@ func (p *Progress) Line(msg string) {
 
 // HostUpdate: state/module/errors of one host; nil leaves a field unchanged ("" module = none).
 type HostUpdate struct {
-	State  string
-	Module *string
-	Errors *int
+	State       string
+	Module      *string
+	Errors      *int
+	Step, Steps int // 0: unchanged
 }
 
 func (p *Progress) Host(name string, u HostUpdate) {
@@ -146,6 +149,12 @@ func (p *Progress) Host(name string, u HostUpdate) {
 	}
 	if u.Errors != nil {
 		h.Errors = *u.Errors
+	}
+	if u.Step > 0 {
+		h.Step = u.Step
+	}
+	if u.Steps > 0 {
+		h.Steps = u.Steps
 	}
 	p.write()
 }
@@ -171,6 +180,8 @@ func (p *Progress) Finish(state string, extra map[string]any) {
 	for _, h := range p.hosts {
 		if h.State == "pending" || h.State == "running" {
 			h.State = "skipped"
+		} else if h.Steps > 0 {
+			h.Step = h.Steps
 		}
 		h.Module = nil
 	}

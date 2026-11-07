@@ -110,6 +110,9 @@ func newHarness(t *testing.T, o Options, scans bool) *harness {
 	if o.Now == nil {
 		o.Now = func() time.Time { return time.Date(2026, 11, 7, 12, 0, 0, 0, time.UTC) }
 	}
+	if o.Zone == nil {
+		o.Zone = time.UTC
+	}
 	h := &harness{t: t, m: New(o), clip: clip, scan: sc}
 	h.m.Update(tea.WindowSizeMsg{Width: 160, Height: 40})
 	h.run(h.m.Init())
@@ -466,7 +469,7 @@ func TestLiveScan(t *testing.T) {
 		t.Fatal("busy")
 	}
 	h.key("6")
-	h.has("running 3/5", "Scan running", "os_packages", "trivy sbom", "3/5")
+	h.has("running 60% · 3/5", "Scan running", "os_packages", "trivy sbom", "3/5")
 	h.m.envd.Live.State = "stale"
 	h.has("scan not responding")
 	h.m.envd.Live = nil

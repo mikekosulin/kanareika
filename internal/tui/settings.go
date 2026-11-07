@@ -23,7 +23,9 @@ var headerModes = []string{headerAuto, headerFull, headerCompact, headerOff}
 type Settings struct {
 	Header string              `json:"header,omitempty"`
 	ShowP4 bool                `json:"show_p4,omitempty"`
-	Hidden map[string][]string `json:"hidden,omitempty"` // view -> column keys switched off
+	NoTabs bool                `json:"no_tabs,omitempty"` // the line of view tabs under the header
+	UTC    bool                `json:"utc,omitempty"`     // times in UTC instead of the system's zone
+	Hidden map[string][]string `json:"hidden,omitempty"`  // view -> column keys switched off
 }
 
 // DefaultSettingsPath: <user config dir>/kanareika/tui.json ("" when there is no such dir).

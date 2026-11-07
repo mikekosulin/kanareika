@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -91,9 +92,9 @@ func TestPanels(t *testing.T) {
 	h.key("left") // back to one line
 	h.has("header: < one line >")
 
-	h.key("down", "space") // P4
+	h.key("down", "down", "space") // P4 (past the tabs)
 	h.has("[x] show P4 too")
-	h.key("down", "space", "down", "x", "k", "up", "up", "up", "up") // OS and P3 off; up stops at the first item
+	h.key("down", "down", "space", "down", "x", "k", "up", "up", "up", "up", "up", "up") // OS and P3 off; up stops at the first item
 	h.has("[ ] OS", "[ ] P3")
 	h.key("esc")
 	h.has("Hosts(acme/production)", "CHART", "<?> help")
@@ -120,7 +121,7 @@ func TestPanels(t *testing.T) {
 	h2.has(" P4 ")
 
 	// switched back on, the column returns and the view's entry leaves the file
-	h2.key("3", "o", "down", "down", "space", "q")
+	h2.key("3", "o", "down", "down", "down", "down", "space", "q")
 	h2.has("Debian")
 	h2.key("p") // P4 off from the Hosts view too
 	b, _ = os.ReadFile(path)
@@ -168,4 +169,62 @@ func TestWideScript(t *testing.T) {
 	h.size(120, 30)
 	h.key("2")
 	h.has("组织", "<?>")
+}
+
+// TestTabsAndZone: the tab line shows the views and marks the open one; it and the time zone are panel settings
+// (z switches the zone directly); run times follow the zone.
+func TestTabsAndZone(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tui.json")
+	h := newHarness(t, Options{Org: "acme", Env: "production", Settings: path, Zone: time.FixedZone("MSK", 3*3600)}, true)
+	h.size(120, 30)
+	h.key("5")
+	h.has(" 1 Organizations ", " 2 To do ", " 5 Runs ", "2026-11-02 14:00") // the run of 11:00 UTC, in MSK
+	h.size(44, 20)
+	h.has(" 5 Runs ", " 1 ")
+	h.hasNot("Organizations ")
+	h.size(120, 30)
+
+	h.key("z")
+	h.has("2026-11-02 11:00", "times in UTC")
+	h.key("2")
+	h.has("UTC")
+	h.key("o", "down", "down", "down", "space") // the zone from the settings: back to the system's
+	h.has("time zone: < system >")
+	h.key("up", "up", "space", "esc") // tabs off
+	h.hasNot(" 1 Organizations ")
+	b, _ := os.ReadFile(path)
+	if !strings.Contains(string(b), `"no_tabs": true`) || strings.Contains(string(b), `"utc"`) {
+		t.Fatalf("%s", b)
+	}
+	h2 := newHarness(t, Options{Org: "acme", Env: "production", Settings: path, Zone: time.UTC}, true)
+	h2.size(120, 30)
+	h2.hasNot(" 1 Organizations ")
+	h2.size(120, 11) // too low for tabs anyway
+	h2.screen()
+}
+
+// TestLiveProgress: modules done, counts by state, time spent and left; the host lines say what each is doing.
+func TestLiveProgress(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
+	h.m.envd.Live = &liveInfo{State: "running", Started: "2026-11-07T11:50:00Z", Hosts: map[string]liveHost{
+		"web-01": {State: "ok", Step: 4, Steps: 4}, "db-01": {State: "running", Module: "os_packages", Last: "os_packages: 117 packages", Step: 2, Steps: 4},
+		"app-01": {State: "failed", Errors: 2, Step: 1, Steps: 4, Last: "unreachable"}, "new-01": {State: "pending"}}}
+	h.size(140, 30)
+	h.key("6")
+	// web-01 1 + app-01 1 + db-01 (2-0.5)/4 of 4 hosts: 59%; 10 min spent
+	h.has("Scan running acme/production", " 59% ", "✓1", "✗1", "▸1", "2/4 hosts", "10m0s", "~6m51s left", " 6 Scans ● ",
+		"os_packages", "2/4", "117 packages", "unreachable")
+	s := h.screen()
+	if strings.Index(s, "db-01") > strings.Index(s, "new-01") || strings.Index(s, "new-01") > strings.Index(s, "app-01") {
+		t.Fatalf("running, then waiting, then finished:\n%s", s)
+	}
+	h.size(44, 24) // the bar goes to a line of its own; the bars per host give way
+	h.has("10m0s", " 59% ")
+	h.hasNot("MODULES")
+	if lastSaid(liveHost{Module: "docker", Last: "docker ..."}) != "" || lastSaid(liveHost{Last: "x"}) != "x" {
+		t.Fatal("lastSaid")
+	}
+	if bar(0.5, 0) != "" || !strings.Contains(bar(2, 3), "███") {
+		t.Fatal("bar")
+	}
 }

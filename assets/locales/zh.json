@@ -436,6 +436,16 @@
     "make the terminal bigger": "请放大终端窗口",
     "panels: header, columns of this view (kept between sessions)": "面板：标题栏、此视图的列（会话间保留）",
     "KEV": "KEV",
-    "six lines": "六行"
+    "six lines": "六行",
+    "err": "错误",
+    "left": "剩余",
+    "module": "模块",
+    "modules": "模块进度",
+    "times in": "时间显示为",
+    "view tabs": "视图标签",
+    "system": "系统",
+    "interrupted": "已中断",
+    "stale": "无响应",
+    "times in the system's time zone or in UTC": "时间按系统时区或 UTC 显示"
   }
 }

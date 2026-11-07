@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -162,6 +164,11 @@ func (c col) minW() int {
 
 // table: rows under headers in width cells and height lines, the cursor row a full-width bar kept in view.
 func (m *Model) table(cols []col, rows [][]string, width, height int) []string {
+	return m.grid(cols, rows, width, height, true)
+}
+
+// grid: a table; without a cursor it shows the first rows that fit.
+func (m *Model) grid(cols []col, rows [][]string, width, height int, cursor bool) []string {
 	keep, widths := m.layout(m.view, cols, rows, width)
 	line := func(r int, cells []string) string {
 		var l strings.Builder
@@ -183,12 +190,15 @@ func (m *Model) table(cols []col, rows [][]string, width, height int) []string {
 		return append(out, sMuted.Render(" "+m.t.T("nothing here")))
 	}
 	h := max(height-1, 1)
-	cur := min(m.cur[m.view], len(rows)-1)
-	off := min(m.off[m.view], cur)
-	if cur >= off+h {
-		off = cur - h + 1
+	cur, off := -1, 0
+	if cursor {
+		cur = min(m.cur[m.view], len(rows)-1)
+		off = min(m.off[m.view], cur)
+		if cur >= off+h {
+			off = cur - h + 1
+		}
+		m.off[m.view] = off
 	}
-	m.off[m.view] = off
 	for i := off; i < min(off+h, len(rows)); i++ {
 		l := line(i, rows[i])
 		if i == cur {
@@ -247,7 +257,45 @@ func (m *Model) headerLines() []string {
 	return nil
 }
 
-func (m *Model) bodyHeight() int { return max(m.h-len(m.headerLines())-1-2, 3) } // inside the panel
+func (m *Model) bodyHeight() int { return max(m.h-len(m.headerLines())-len(m.tabLines())-1-2, 3) } // inside the panel
+
+// tabLines: the view tabs, unless switched off (o) or the terminal is too low for them.
+func (m *Model) tabLines() []string {
+	if m.set.NoTabs || m.h < 12 {
+		return nil
+	}
+	return []string{m.tabs()}
+}
+
+// tabs: 1 Organizations  2 To do ... with the open one highlighted; numbers only for the others when the line is
+// narrow. A scan running shows on the Scans tab.
+func (m *Model) tabs() string {
+	label := func(v view, full bool) string {
+		n := strconv.Itoa(int(v) + 1)
+		name := m.t.T(viewNames[v])
+		if v == vScans && m.busy() {
+			name += " ●"
+		}
+		if v == m.view {
+			return sCrumb.Render(n + " " + name)
+		}
+		if !full {
+			return " " + sKey.Render(n) + " "
+		}
+		return " " + sKey.Render(n) + " " + sMuted.Render(name) + " "
+	}
+	var l string
+	for _, full := range []bool{true, false} {
+		parts := make([]string, nViews)
+		for v := range nViews {
+			parts[v] = label(v, full)
+		}
+		if l = " " + strings.Join(parts, " "); ansi.StringWidth(l) <= m.w {
+			break
+		}
+	}
+	return l
+}
 
 // View: exactly the terminal's size, every line clipped, so nothing ever wraps or scrolls.
 func (m *Model) View() string {
@@ -258,7 +306,7 @@ func (m *Model) View() string {
 	if m.w < minW || m.h < minH {
 		lines = m.tooSmall()
 	} else {
-		hd := m.headerLines()
+		hd := append(slices.Clip(m.headerLines()), m.tabLines()...)
 		lines = append(slices.Clip(hd), m.main(m.h-len(hd)-1)...)
 		lines = append(lines, m.crumbs())
 	}
@@ -402,6 +450,9 @@ func (m *Model) info() []string {
 	}
 	if m.run != "" {
 		data = sText.Render(m.t.runShort(m.run))
+		if m.run != "current" {
+			data += sMuted.Render(" " + m.t.zoneName(m.now()))
+		}
 	}
 	if st := m.scanState(); st != "" {
 		scan = st
@@ -422,14 +473,8 @@ func (m *Model) scanState() string {
 		if l.State == "stale" {
 			return sErr.Render(m.t.T("scan not responding"))
 		}
-		fin := 0
-		for _, h := range l.Hosts {
-			switch h.State {
-			case "ok", "warn", "failed", "skipped":
-				fin++
-			}
-		}
-		return sRun.Render(fmt.Sprintf("%s %d/%d", m.t.T("running"), fin, len(l.Hosts)))
+		p := progressOf(l)
+		return sRun.Render(fmt.Sprintf("%s %d%% · %d/%d", m.t.T("running"), int(p.frac*100), p.finished, len(l.Hosts)))
 	}
 	if n := m.runningJobs(); n > 0 {
 		return sRun.Render(fmt.Sprintf("%s: %d", m.t.T("running"), n))
@@ -777,29 +822,7 @@ func (m *Model) runsView(list []runInfo, w, h int) []string {
 func (m *Model) scansView(w, h int) []string {
 	var out []string
 	if l := m.envd.Live; l != nil && (l.State == "running" || l.State == "stale") {
-		names := make([]string, 0, len(l.Hosts))
-		fin := 0
-		for n, x := range l.Hosts {
-			names = append(names, n)
-			switch x.State {
-			case "ok", "warn", "failed", "skipped":
-				fin++
-			}
-		}
-		sort.Strings(names)
-		barW := max(w-40, 10)
-		fill := fin * barW / max(len(names), 1)
-		out = append(out, " "+sBold.Render(m.t.T("Scan running"))+sMuted.Render(" "+m.org+"/"+m.env+" ")+
-			sRun.Render(strings.Repeat("■", fill))+sDim.Render(strings.Repeat("■", barW-fill))+sText.Render(fmt.Sprintf(" %d/%d", fin, len(names))))
-		for _, n := range names {
-			x := l.Hosts[n]
-			st := map[string]string{"running": sRun.Render(">"), "ok": sOK.Render("+"), "warn": lipgloss.NewStyle().Foreground(cP["P3"]).Render("!"),
-				"failed": sErr.Render("x")}[x.State]
-			if st == "" {
-				st = sDim.Render(".")
-			}
-			out = append(out, fmt.Sprintf("  %s %s %s %s", st, sBold.Render(fit(n, 20, false)), sMuted.Render(fit(x.Module, 14, false)), sMuted.Render(x.Last)))
-		}
+		out = append(out, m.liveView(l, w, h/2)...)
 		out = append(out, "")
 	}
 	if !m.scanOK && len(m.jobs.Jobs) == 0 {
@@ -843,6 +866,11 @@ func (m *Model) scansView(w, h int) []string {
 		}
 		out = append(out, sFrame.Render(fit("─ "+m.t.T("output")+" ", w, false)))
 		for _, l := range lines {
+			if w < 100 { // [12:00:01] web-01: ... -> web-01: ...
+				if i := strings.Index(l, "] "); strings.HasPrefix(l, "[") && i > 0 && i < 12 {
+					l = l[i+2:]
+				}
+			}
 			out = append(out, " "+sText.Render(l))
 		}
 	}
@@ -900,6 +928,7 @@ var helpRows = [][2]string{
 	{"x", "stop the scan under the cursor (Scans)"},
 	{"c", "back to the current state (Runs)"},
 	{"o", "panels: header, columns of this view (kept between sessions)"},
+	{"z", "times in the system's time zone or in UTC"},
 	{"L", "language"},
 	{"r", "refresh"},
 	{"q, ctrl+c", "quit"},
@@ -977,6 +1006,168 @@ func (m *Model) crumbs() string {
 		l += "  " + sOK.Render(m.toast)
 	case len(m.orgs.Errors) > 0:
 		l += "  " + sErr.Render(fmt.Sprintf("%s: %d (kanareika validate)", m.t.T("Config errors"), len(m.orgs.Errors)))
+	}
+	return l
+}
+
+// --- live scan -----------------------------------------------------------------------------------------------------
+
+type progress struct {
+	frac                                   float64 // modules done of all planned (finished hosts when unknown)
+	finished, ok, warn, failed, running, n int
+	elapsed, left                          time.Duration // left: 0 when it can't be told yet
+}
+
+// progressOf: how far a scan is. A host counts by its modules (the one running as half done) when the scan reports
+// them, else as 0 or 1.
+func progressOf(l *liveInfo) progress {
+	p := progress{n: len(l.Hosts)}
+	done := 0.0
+	for _, h := range l.Hosts {
+		switch h.State {
+		case "ok":
+			p.ok++
+		case "warn":
+			p.warn++
+		case "failed":
+			p.failed++
+		case "running":
+			p.running++
+		}
+		switch {
+		case h.State == "ok" || h.State == "warn" || h.State == "failed" || h.State == "skipped":
+			p.finished++
+			done++
+		case h.Steps > 0 && h.Step > 0:
+			done += (float64(h.Step) - 0.5) / float64(h.Steps)
+		}
+	}
+	if p.n > 0 {
+		p.frac = max(0, min(done/float64(p.n), 1))
+	}
+	return p
+}
+
+// liveView: the scan running in this environment: a bar with the share of modules done, counts by state, time
+// spent and left; then a line per host (state, its modules as a bar, the module, the last thing it said).
+func (m *Model) liveView(l *liveInfo, w, h int) []string {
+	p := progressOf(l)
+	if at, err := time.Parse(time.RFC3339, l.Started); err == nil {
+		p.elapsed = m.now().Sub(at).Truncate(time.Second)
+		if p.frac > 0.05 && p.frac < 1 {
+			p.left = time.Duration(float64(p.elapsed) * (1 - p.frac) / p.frac).Round(time.Second)
+		}
+	}
+	head := " " + sBold.Render(m.t.T("Scan running")) + sMuted.Render(" "+m.org+"/"+m.env)
+	pct := fmt.Sprintf(" %3d%%", int(p.frac*100))
+	counts := " " + sOK.Render(fmt.Sprintf("✓%d", p.ok)) + " " + lipgloss.NewStyle().Foreground(cP["P3"]).Render(fmt.Sprintf("!%d", p.warn)) +
+		" " + sErr.Render(fmt.Sprintf("✗%d", p.failed)) + " " + sRun.Render(fmt.Sprintf("▸%d", p.running)) +
+		sMuted.Render(fmt.Sprintf(" %d/%d %s", p.finished, p.n, m.t.T("hosts")))
+	times := ""
+	if p.elapsed > 0 {
+		times = sMuted.Render(" " + p.elapsed.String())
+		if p.left > 0 {
+			times += sMuted.Render(" · ~" + p.left.String() + " " + m.t.T("left"))
+		}
+	}
+	if l.State == "stale" {
+		times += " " + sErr.Render(m.t.T("scan not responding"))
+	}
+	var out []string
+	if barW := w - ansi.StringWidth(head+pct+counts+times) - 1; barW >= 10 { // all in one line
+		out = append(out, head+" "+bar(p.frac, barW)+pct+counts+times)
+	} else { // the bar on a line of its own
+		out = append(out, head+times, " "+bar(p.frac, max(w-ansi.StringWidth(pct+counts)-2, 4))+pct+counts)
+	}
+
+	names := make([]string, 0, len(l.Hosts))
+	for n := range l.Hosts {
+		names = append(names, n)
+	}
+	sort.Slice(names, func(i, j int) bool { // running first, then waiting, then finished; by name within
+		a, b := stateRank(l.Hosts[names[i]].State), stateRank(l.Hosts[names[j]].State)
+		if a != b {
+			return a < b
+		}
+		return names[i] < names[j]
+	})
+	rows := make([][]string, 0, len(names))
+	for _, n := range names {
+		x := l.Hosts[n]
+		st := map[string]string{"running": sRun.Render("▸"), "ok": sOK.Render("✓"), "warn": lipgloss.NewStyle().Foreground(cP["P3"]).Render("!"),
+			"failed": sErr.Render("✗"), "skipped": sDim.Render("-")}[x.State]
+		if st == "" {
+			st = sDim.Render("·")
+		}
+		steps, errs := "", ""
+		if x.Steps > 0 {
+			steps = fmt.Sprintf("%d/%d", min(x.Step, x.Steps), x.Steps)
+		}
+		if x.Errors > 0 {
+			errs = sErr.Render(strconv.Itoa(x.Errors))
+		}
+		rows = append(rows, []string{st, sBold.Render(n), "", sMuted.Render(steps), sText.Render(x.Module), errs, sMuted.Render(lastSaid(x))})
+	}
+	cols := []col{{width: 1}, {title: "host", width: 24}, {title: "modules", width: 12, min: 6, drop: 3},
+		{width: 5, right: true, drop: 4}, {title: "module", width: 14, drop: 2}, {title: "err", width: 3, right: true, drop: 1},
+		{title: "last", min: 16}}
+	cols[2].fill = func(r, w int) string {
+		x := l.Hosts[names[r]]
+		if x.Steps == 0 {
+			return ""
+		}
+		f := float64(x.Step) / float64(x.Steps)
+		if x.State == "running" && x.Step > 0 {
+			f = (float64(x.Step) - 0.5) / float64(x.Steps)
+		}
+		return bar(f, w)
+	}
+	return append(out, m.grid(cols, rows, w, max(h-len(out), 2), false)...)
+}
+
+func stateRank(s string) int {
+	switch s {
+	case "running":
+		return 0
+	case "pending", "":
+		return 1
+	case "failed":
+		return 2
+	case "warn":
+		return 3
+	}
+	return 4
+}
+
+// bar: a share as a w-cell bar, eighths of a cell at its edge.
+func bar(f float64, w int) string {
+	if w <= 0 {
+		return ""
+	}
+	f = max(0, min(f, 1))
+	cells := f * float64(w)
+	full := int(cells)
+	part := ""
+	if full < w {
+		if e := int((cells - float64(full)) * 8); e > 0 {
+			part = string([]rune("▏▎▍▌▋▊▉")[e-1])
+		}
+	}
+	empty := w - full - ansi.StringWidth(part)
+	return sRun.Render(strings.Repeat("█", full)+part) + sDim.Render(strings.Repeat("░", max(empty, 0)))
+}
+
+// lastSaid: the host's last log line without the module name it starts with (the module has its own column);
+// "" for the bare "module ..." of a module starting.
+func lastSaid(x liveHost) string {
+	l := x.Last
+	if x.Module != "" {
+		if r, ok := strings.CutPrefix(l, x.Module); ok {
+			l = strings.TrimPrefix(strings.TrimPrefix(r, ":"), " ")
+		}
+	}
+	if l == "..." {
+		return ""
 	}
 	return l
 }

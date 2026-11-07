@@ -41,6 +41,7 @@ type Options struct {
 	Tick   func(time.Duration) tea.Cmd // the refresh timer; nil: tea.Tick (tests stop it)
 	// Settings: the file the panel layout is kept in (DefaultSettingsPath); "": not kept.
 	Settings string
+	Zone     *time.Location // the system's time zone; nil: time.Local (tests fix it)
 }
 
 // Model: the bubbletea model of the whole interface.
@@ -71,6 +72,7 @@ type Model struct {
 	typing  bool // the filter line has the keyboard
 	set     Settings
 	setPath string
+	sysZone *time.Location
 	sel     map[string]bool // selected action ids
 	detail  bool
 	help    bool
@@ -92,8 +94,12 @@ func New(o Options) *Model {
 	if o.Tick == nil {
 		o.Tick = func(d time.Duration) tea.Cmd { return tea.Tick(d, func(t time.Time) tea.Msg { return tickMsg(t) }) }
 	}
+	if o.Zone == nil {
+		o.Zone = time.Local
+	}
 	m := &Model{c: o.Client, now: o.Now, every: o.Tick, clip: o.Clip, org: o.Org, env: o.Env, view: vActions, sel: map[string]bool{},
-		t: &tr{lang: "en", ui: i18n.UI()}, set: loadSettings(o.Settings), setPath: o.Settings}
+		t: &tr{lang: "en", ui: i18n.UI()}, set: loadSettings(o.Settings), setPath: o.Settings, sysZone: o.Zone}
+	m.applyZone()
 	if o.Lang != "" && (o.Lang == "en" || m.t.ui[o.Lang] != nil) {
 		m.t.lang = o.Lang
 	}
@@ -366,6 +372,8 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.nextLang()
 	case "o":
 		m.panels = &panelsDlg{cur: 1}
+	case "z":
+		m.toggleZone()
 	case "/":
 		m.typing = true
 	case "esc":
@@ -602,19 +610,40 @@ func (m *Model) toggleP4() {
 	m.saveSettings()
 }
 
+// applyZone: times in UTC or in the system's zone, as set.
+func (m *Model) applyZone() {
+	m.t.zone = m.sysZone
+	if m.set.UTC {
+		m.t.zone = time.UTC
+	}
+}
+
+func (m *Model) toggleZone() {
+	m.set.UTC = !m.set.UTC
+	m.applyZone()
+	m.say(m.t.T("times in") + " " + m.t.zoneName(m.now()))
+	m.saveSettings()
+}
+
 func (m *Model) saveSettings() {
 	if err := saveSettings(m.setPath, m.set); err != nil {
 		m.err = err.Error()
 	}
 }
 
+// zoneNames: the time zone setting as the panel settings show it.
+var zoneNames = map[bool]string{false: "system", true: "UTC"}
+
 var headerNames = map[string]string{headerAuto: "auto", headerFull: "six lines", headerCompact: "one line", headerOff: "hidden"}
 
 // panelItems: the settings dialog's lines (value of a column item: its title, the setting key).
 func (m *Model) panelItems() []formItem {
+	zone := zoneNames[m.set.UTC]
 	items := []formItem{{kind: itemHead, label: "Layout"},
 		{kind: itemChoice, label: "header", value: headerNames[m.set.Header]},
-		{kind: itemFlag, label: "show P4 too", on: m.set.ShowP4},
+		{kind: itemFlag, label: "view tabs", value: "tabs", on: !m.set.NoTabs},
+		{kind: itemFlag, label: "show P4 too", value: "p4", on: m.set.ShowP4},
+		{kind: itemChoice, label: "time zone", value: zone},
 		{kind: itemHead, label: "Columns"}}
 	for _, c := range viewCols[m.view] {
 		if c.drop > 0 {
@@ -646,14 +675,22 @@ func (m *Model) panelsKey(s string) {
 		it := items[d.cur]
 		switch it.kind {
 		case itemChoice:
+			if it.label == "time zone" {
+				m.toggleZone()
+				return
+			}
 			dir := 1
 			if s == "left" || s == "h" {
 				dir = len(headerModes) - 1
 			}
 			m.set.Header = headerModes[(slices.Index(headerModes, m.set.Header)+dir)%len(headerModes)]
 		case itemFlag:
-			m.set.ShowP4 = !m.set.ShowP4
-			m.move(0)
+			if it.value == "tabs" {
+				m.set.NoTabs = !m.set.NoTabs
+			} else {
+				m.set.ShowP4 = !m.set.ShowP4
+				m.move(0)
+			}
 		case itemColumn:
 			m.set.toggle(m.view, it.label)
 		}

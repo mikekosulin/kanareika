@@ -43,6 +43,8 @@ type liveHost struct {
 	Module string `json:"module"`
 	Last   string `json:"last"`
 	Errors int    `json:"errors"`
+	Step   int    `json:"step"`
+	Steps  int    `json:"steps"`
 }
 
 type liveInfo struct {
@@ -155,6 +157,7 @@ type i18nResp struct {
 // tr: interface strings, keyed by the English text as in the web page (assets/locales/<lang>.json "ui").
 type tr struct {
 	lang    string
+	zone    *time.Location               // where times are shown (the system's zone or UTC)
 	ui      map[string]map[string]string // lang -> English -> translation
 	catalog map[string]map[string]string // message key -> lang -> text (finding and action titles)
 }
@@ -225,13 +228,32 @@ func (t *tr) ago(iso string, now time.Time) string {
 	return fmt.Sprintf("%d %s", int(s.Hours()/24+.5), t.T("d ago"))
 }
 
-// runShort: 2026-11-01_204722 -> 2026-11-01 20:47; "current" translated.
+// runShort: a run id (its start in UTC, 2026-11-01_204722) as 2026-11-01 20:47 in the zone shown; "current"
+// translated.
 func (t *tr) runShort(id string) string {
 	if id == "current" || id == "" {
 		return t.T("Current state")
 	}
-	if len(id) >= 15 {
-		return id[:10] + " " + id[11:13] + ":" + id[13:15]
+	at, err := time.ParseInLocation("2006-01-02_150405", id, time.UTC)
+	if err != nil {
+		return id
 	}
-	return id
+	return t.clock(at)
+}
+
+// clock: a moment as date and minute in the zone shown.
+func (t *tr) clock(at time.Time) string {
+	z := t.zone
+	if z == nil {
+		z = time.UTC
+	}
+	return at.In(z).Format("2006-01-02 15:04")
+}
+
+// zoneName: UTC, or the system zone's abbreviation (MSK, CET) at now.
+func (t *tr) zoneName(now time.Time) string {
+	if t.zone == nil || t.zone == time.UTC {
+		return "UTC"
+	}
+	return now.In(t.zone).Format("MST")
 }

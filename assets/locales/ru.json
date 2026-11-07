@@ -436,6 +436,16 @@
     "make the terminal bigger": "увеличьте окно терминала",
     "panels: header, columns of this view (kept between sessions)": "панели: шапка, колонки этого экрана (сохраняются между запусками)",
     "KEV": "KEV",
-    "six lines": "шесть строк"
+    "six lines": "шесть строк",
+    "err": "ошиб.",
+    "left": "осталось",
+    "module": "модуль",
+    "modules": "модули",
+    "times in": "время в",
+    "view tabs": "вкладки экранов",
+    "system": "системный",
+    "interrupted": "прерван",
+    "stale": "не отвечает",
+    "times in the system's time zone or in UTC": "время в системном часовом поясе или в UTC"
   }
 }
