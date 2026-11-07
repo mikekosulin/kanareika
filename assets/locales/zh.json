@@ -212,7 +212,6 @@
     "Some data was not readable — needs": "部分数据无法读取 — 需要",
     "or": "或",
     "Copy": "复制",
-    "to do": "待办",
     "kernel": "内核",
     "end of life": "停止支持",
     "OS packages": "系统软件包",
@@ -418,7 +417,6 @@
     "to start a scan of": "以开始扫描",
     "toggle": "切换",
     "views": "视图",
-    "views: organizations, to do, hosts, packages, runs, scans": "视图：组织、待办、主机、软件包、运行记录、扫描",
     "Org": "组织",
     "Env": "环境",
     "Data": "数据",
@@ -489,9 +487,9 @@
     "only ports open to the outside (Network)": "仅显示对外开放的端口（网络）",
     "proto": "协议",
     "root": "root",
-    "views: organizations, to do, hosts, packages, changes, access, network, health, exceptions, runs, scans": "视图：组织、待办、主机、软件包、变化、访问、网络、健康、例外、运行、扫描",
     "errors and log": "错误与日志",
     "Like it? Star it on GitHub": "喜欢吗？在 GitHub 上点个星",
-    "Something wrong? Report an issue on GitHub (no real data, please)": "有问题？在 GitHub 上提交 issue（请勿包含真实数据）"
+    "Something wrong? Report an issue on GitHub (no real data, please)": "有问题？在 GitHub 上提交 issue（请勿包含真实数据）",
+    "views: organizations, ToDo, hosts, packages, changes, access, network, health, exceptions, runs, scans": "视图：组织、待办、主机、软件包、变化、访问、网络、健康、例外、运行、扫描"
   }
 }

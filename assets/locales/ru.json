@@ -212,7 +212,6 @@
     "Some data was not readable — needs": "Часть данных не прочитана — нужен",
     "or": "или",
     "Copy": "Скопировать",
-    "to do": "что делать",
     "kernel": "ядро",
     "end of life": "без поддержки",
     "OS packages": "пакеты ОС",
@@ -418,7 +417,6 @@
     "to start a scan of": "чтобы запустить скан",
     "toggle": "переключить",
     "views": "экраны",
-    "views: organizations, to do, hosts, packages, runs, scans": "экраны: организации, что делать, хосты, пакеты, прогоны, сканы",
     "Org": "Орг.",
     "Env": "Окруж.",
     "Data": "Данные",
@@ -489,9 +487,9 @@
     "only ports open to the outside (Network)": "только порты, открытые снаружи (Сеть)",
     "proto": "прото",
     "root": "root",
-    "views: organizations, to do, hosts, packages, changes, access, network, health, exceptions, runs, scans": "экраны: организации, что делать, хосты, пакеты, изменения, доступ, сеть, здоровье, исключения, прогоны, сканы",
     "errors and log": "ошибки, журнал",
     "Like it? Star it on GitHub": "Нравится? Поставьте звезду на GitHub",
-    "Something wrong? Report an issue on GitHub (no real data, please)": "Что-то не так? Сообщите о проблеме на GitHub (без реальных данных)"
+    "Something wrong? Report an issue on GitHub (no real data, please)": "Что-то не так? Сообщите о проблеме на GitHub (без реальных данных)",
+    "views: organizations, ToDo, hosts, packages, changes, access, network, health, exceptions, runs, scans": "экраны: организации, ToDo, хосты, пакеты, изменения, доступ, сеть, здоровье, исключения, прогоны, сканы"
   }
 }

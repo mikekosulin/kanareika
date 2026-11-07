@@ -279,7 +279,7 @@ func (m *Model) tabLines() []string {
 	return []string{m.tabs()}
 }
 
-// tabs: 1 Organizations  2 To do ... with the open one highlighted; numbers only for the others when the line is
+// tabs: 1 Organizations  2 ToDo ... with the open one highlighted; numbers only for the others when the line is
 // narrow. A scan running shows on the Scans tab.
 func (m *Model) tabs() string {
 	label := func(v view, full bool) string {
@@ -976,7 +976,7 @@ func (m *Model) formView(h int) []string {
 }
 
 var helpRows = [][2]string{
-	{"1-9, 0, S, tab", "views: organizations, to do, hosts, packages, changes, access, network, health, exceptions, runs, scans"},
+	{"1-9, 0, S, tab", "views: organizations, ToDo, hosts, packages, changes, access, network, health, exceptions, runs, scans"},
 	{"up/down, j/k, pgup/pgdn, g/G", "move"},
 	{"enter", "open (an environment, a run, details, a scan's output)"},
 	{"/", "filter the list; esc clears"},
