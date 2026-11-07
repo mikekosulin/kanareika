@@ -1,5 +1,7 @@
 # The scan target of the Linux end-to-end check: a Debian host with sshd and a read-only audit user
 # (key login only, as the provisioner sets it up). The public key is mounted at run time.
+# trivy:ignore:DS-0002 sshd starts as root, as on the servers it stands for; logins are the unprivileged audit user
+# trivy:ignore:DS-0026 a throwaway target that lives for one test run: nothing watches its health
 FROM debian:12-slim
 RUN apt-get update \
  && apt-get install -y --no-install-recommends openssh-server procps iproute2 \
