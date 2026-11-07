@@ -84,6 +84,7 @@ type Model struct {
 	setPath string
 	sysZone *time.Location
 	sel     map[string]bool // selected action ids
+	onlySel bool            // ToDo lists only the selected actions (v)
 	detail  bool
 	help    bool
 	helpOff int
@@ -640,6 +641,12 @@ func (m *Model) viewKey(s string) tea.Cmd {
 			}
 		case "p":
 			m.toggleP4()
+		case "v":
+			m.onlySel = !m.onlySel
+			m.cur[vActions], m.off[vActions] = 0, 0
+			if m.onlySel && len(m.sel) == 0 {
+				m.say(m.t.T("Nothing selected yet: space selects an action"))
+			}
 		case "enter":
 			m.detail = !m.detail
 		case "y":
@@ -1007,7 +1014,10 @@ func (m *Model) actions() []action {
 	}
 	var out []action
 	for _, a := range m.rund.Actions {
-		if !m.set.ShowP4 && (a.Priority == "P4" || a.Priority == "") {
+		if m.onlySel && !m.sel[a.ID] {
+			continue
+		}
+		if !m.set.ShowP4 && !m.onlySel && (a.Priority == "P4" || a.Priority == "") {
 			continue
 		}
 		if m.match(append([]string{m.t.title(a), a.Detail, a.Cat, a.Priority}, a.Hosts...)...) {

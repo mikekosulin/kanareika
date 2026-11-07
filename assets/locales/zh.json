@@ -504,6 +504,9 @@
     "check for newer vulnerability DBs and download them (kanareika db update)": "检查并下载更新的漏洞库（kanareika db update）",
     "DB": "漏洞库",
     "from the last run": "来自最近一次运行",
-    "runs merged": "合并的运行"
+    "runs merged": "合并的运行",
+    "selected only": "仅已选",
+    "Nothing selected yet: space selects an action": "尚未选择：按空格选择操作",
+    "only the selected actions (ToDo)": "仅显示已选操作（待办）"
   }
 }

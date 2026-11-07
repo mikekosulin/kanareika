@@ -575,7 +575,7 @@ func (m *Model) keys(width int) []string {
 		{"q", "quit"}}
 	local := map[view][]k{
 		vOrgs:       {{"enter", "open"}},
-		vActions:    {{"space", "select"}, {"a", "select all"}, {"y", "copy task"}, {"enter", "details"}, {"p", "P4"}},
+		vActions:    {{"space", "select"}, {"a", "select all"}, {"v", "selected only"}, {"y", "copy task"}, {"enter", "details"}, {"p", "P4"}},
 		vHosts:      {{"enter", "host card"}, {"p", "P4"}},
 		vPackages:   {{"p", "P4"}},
 		vChanges:    {{"/", "filter"}},
@@ -662,7 +662,14 @@ func (m *Model) body(w, h int) (string, []string) {
 		return m.title(viewNames[vOrgs], len(l), false), m.orgsView(l, w, h)
 	case vActions:
 		l := m.actions()
-		return m.title(viewNames[vActions], len(l), true), m.actionsView(l, w, h)
+		t := m.title(viewNames[vActions], len(l), true)
+		if len(m.sel) > 0 || m.onlySel {
+			t += sBrand.Render(fmt.Sprintf(" ●%d", len(m.sel)))
+			if m.onlySel {
+				t += " " + sKey.Render("<v>") + sMuted.Render(" "+m.t.T("selected only"))
+			}
+		}
+		return t, m.actionsView(l, w, h)
 	case vHosts:
 		if m.host != "" && m.rund != nil {
 			lines := m.hostCard(m.host, w)
@@ -1023,6 +1030,7 @@ var helpRows = [][2]string{
 	{"enter", "open (an environment, a run, details, a scan's output)"},
 	{"/", "filter the list; esc clears"},
 	{"space, a", "select an action, select all"},
+	{"v", "only the selected actions (ToDo)"},
 	{"y", "copy the fix task for the selected actions (terminal clipboard, OSC 52)"},
 	{"p", "show P4 too"},
 	{"s", "start a scan of this environment"},

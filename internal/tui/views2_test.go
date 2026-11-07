@@ -111,3 +111,16 @@ func TestAnalysisViewsRich(t *testing.T) {
 }
 
 func m0() *Model { return New(Options{}) }
+
+// TestOnlySelected: v lists only the selected actions (P4 among them too), the title counts them.
+func TestOnlySelected(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
+	h.key("v")
+	h.has("Nothing selected yet", "ToDo(acme/production)[0]", "<v> selected only")
+	h.key("v", "space", "down", "space") // two selected
+	h.has("●2")
+	h.key("v")
+	h.has("ToDo(acme/production)[2]", "<v> selected only")
+	h.key("v")
+	h.has("ToDo(acme/production)[13]", "●2")
+}

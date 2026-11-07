@@ -504,6 +504,9 @@
     "check for newer vulnerability DBs and download them (kanareika db update)": "проверить, нет ли новых баз уязвимостей, и скачать их (kanareika db update)",
     "DB": "База",
     "from the last run": "из последнего прогона",
-    "runs merged": "прогонов в сводке"
+    "runs merged": "прогонов в сводке",
+    "selected only": "только выбранные",
+    "Nothing selected yet: space selects an action": "Пока ничего не выбрано: пробел выбирает действие",
+    "only the selected actions (ToDo)": "только выбранные действия (Что делать)"
   }
 }
