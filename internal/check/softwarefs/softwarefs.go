@@ -126,7 +126,8 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 		if rel == "" {
 			rel = f.Target
 		}
-		f.Target = "/" + strings.TrimLeft(strings.TrimPrefix(rel, stage), "/")
+		// trivy may write the path with \ or / on Windows: both sides as /, the host's separator
+		f.Target = "/" + strings.TrimLeft(strings.TrimPrefix(filepath.ToSlash(rel), filepath.ToSlash(stage)), "/")
 	}
 	return findings, nil
 }

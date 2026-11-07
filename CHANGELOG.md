@@ -68,6 +68,10 @@ One binary, nothing else to install, three interfaces.
 - **Dependencies with known vulnerabilities**: Go 1.27.3 (13 standard library issues on called paths: net/http,
   HTTP/2, crypto/tls, crypto/x509, html/template, os), `golang.org/x/net`, `go-jose`, `klauspost/compress`;
   govulncheck now reports none on called code. trivy is 0.76.2.
+- **Run from Windows**: a link to an absolute path inside a host's archive (`/etc/passwd`) was not refused and
+  could point outside the unpacking directory; saved Docker images were not checked (removed while still open);
+  software_fs paths came out with `\`. Fix tasks and MCP results now mark what hosts report as data, not
+  instructions to an agent.
 - A jump host reached again through its own jumps (possible only in a hand-built configuration) hung the scan;
   it is an error now. A name resolved to an IPv4-mapped address showed as `::ffff:…` in findings and nmap's
   command line.

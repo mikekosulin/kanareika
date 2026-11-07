@@ -301,3 +301,15 @@ func write(t *testing.T, p string) {
 		t.Fatal(err)
 	}
 }
+
+// TestAbsLink: links to absolute paths are refused whatever OS unpacks: the host's /etc/passwd (which Windows'
+// filepath takes for relative), and Windows' own forms.
+func TestAbsLink(t *testing.T) {
+	win := runtime.GOOS == "windows" // a drive letter is only a drive there (a:b is a fine name on Linux)
+	for l, want := range map[string]bool{"/etc/passwd": true, `\Windows\x`: true, `C:\x`: win, "c:/x": win, "a:b": win,
+		"lib/x.jar": false, "../x": false, "x": false, "": false} {
+		if absLink(l) != want {
+			t.Errorf("absLink(%q) = %v", l, !want)
+		}
+	}
+}

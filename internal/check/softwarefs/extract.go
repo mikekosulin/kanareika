@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -56,6 +57,13 @@ func pyRepr(s string) string {
 		return `"` + s + `"`
 	}
 	return "'" + strings.ReplaceAll(strings.ReplaceAll(s, `\`, `\\`), "'", `\'`) + "'"
+}
+
+// absLink: a link target that is absolute: on the scanned host (a Unix path: /etc/passwd), or locally (C:\x, \x
+// on Windows). filepath.IsAbs alone takes /etc/passwd for relative on Windows, and Join puts it inside the
+// destination while the link itself would point at the root of the drive.
+func absLink(l string) bool {
+	return path.IsAbs(l) || filepath.IsAbs(l) || filepath.VolumeName(l) != "" || strings.HasPrefix(l, `\`)
 }
 
 func inside(p, dest string) bool {
@@ -109,7 +117,7 @@ func extractOne(tr *tar.Reader, hdr *tar.Header, dest string) error {
 	}
 	path := filepath.Join(dest, name)
 	if hdr.Typeflag == tar.TypeLink || hdr.Typeflag == tar.TypeSymlink {
-		if filepath.IsAbs(hdr.Linkname) {
+		if absLink(hdr.Linkname) {
 			return fmt.Errorf("%s is a link to an absolute path", pyRepr(orig))
 		}
 		var lt string
