@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mikekosulin/kanareika/internal/config"
+	"github.com/mikekosulin/kanareika/internal/priority"
 )
 
 // exitError carries an exit code through cobra.
@@ -40,6 +41,7 @@ func Execute(version string, args []string) int {
 }
 
 func execute(version string, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	priority.SetVersion(version)
 	a := &app{version: version}
 	root := &cobra.Command{
 		Use:   "kanareika",

@@ -209,3 +209,12 @@ func TestTruthy(t *testing.T) {
 		t.Fatal("collections")
 	}
 }
+
+func TestUserAgentVersion(t *testing.T) {
+	old := UserAgent
+	t.Cleanup(func() { UserAgent = old })
+	SetVersion("v0.3.0")
+	if UserAgent != "github.com/mikekosulin/kanareika/0.3.0 (+vulnerability audit)" {
+		t.Fatal(UserAgent)
+	}
+}

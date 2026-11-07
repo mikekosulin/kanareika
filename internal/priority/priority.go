@@ -23,8 +23,15 @@ import (
 	"github.com/mikekosulin/kanareika/internal/pyfmt"
 )
 
-// UserAgent: some feeds reject the default client UA.
-const UserAgent = "github.com/mikekosulin/kanareika/0.1 (+vulnerability audit)"
+// UserAgent: some feeds reject the default client UA. SetVersion puts the running version in it.
+var UserAgent = userAgent("dev")
+
+func userAgent(version string) string {
+	return "github.com/mikekosulin/kanareika/" + strings.TrimPrefix(version, "v") + " (+vulnerability audit)"
+}
+
+// SetVersion: the version the downloads announce.
+func SetVersion(version string) { UserAgent = userAgent(version) }
 
 // FeedsDir: KANAREIKA_FEEDS_DIR, else the user cache dir (the Docker image sets the variable to /data/feeds).
 func FeedsDir() string {

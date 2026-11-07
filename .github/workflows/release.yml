@@ -1,4 +1,4 @@
-# A release on every semver tag (v0.1.0, v1.2.3, v1.0.0-rc.1): tests, static binaries for linux/darwin × amd64/arm64
+# A release on every semver tag (v0.1.0, v1.2.3, v1.0.0-rc.1): tests, static binaries for linux/darwin/windows × amd64/arm64
 # (CGO off, version from the tag), SHA256SUMS, build provenance attestations, a GitHub release with generated notes.
 #   git tag -s v0.1.0 -m "v0.1.0" && git push origin v0.1.0
 # Verify a download: gh attestation verify kanareika-linux-amd64 --repo mikekosulin/kanareika

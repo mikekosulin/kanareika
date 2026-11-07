@@ -3,7 +3,7 @@
 Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor version may break things; each
 break is listed under **Breaking** with what to do instead.
 
-## 0.3.0
+## 0.3.0 — 2026-11-07
 
 One binary, nothing else to install, three interfaces.
 
