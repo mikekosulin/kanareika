@@ -55,7 +55,7 @@ One binary, nothing else to install, three interfaces.
 - **Chinese (zh)**: findings, actions, fix plans, the agent task, the web page, the TUI and MCP (`lang=zh`).
   The web page has a language menu and starts in the browser's; a button shows times in UTC or the browser's zone.
   Tests check that every string either interface shows is translated in every language.
-- **Homebrew**: `brew install mikekosulin/tap/kanareika`; releases update the formula in the tap.
+- **Homebrew**: `brew install mikekosulin/tap/kanareika`; the tap follows new releases by itself.
 - **GitHub from every interface**: star and report-an-issue links in the web page, the TUI's help and
   `kanareika version`; issue forms (bugs, features) that ask to strip real data; vulnerabilities go to private
   reporting; a pull request template.
