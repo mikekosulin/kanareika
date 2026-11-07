@@ -370,7 +370,10 @@ func write(path, s string) error {
 	return os.WriteFile(path, buf.Bytes(), 0o644)
 }
 
-func main() { os.Exit(run(os.Args[1:], os.Stderr)) }
+// exit: os.Exit, swapped by the test of main.
+var exit = os.Exit
+
+func main() { exit(run(os.Args[1:], os.Stderr)) }
 
 func run(args []string, stderr io.Writer) int {
 	fl := flag.NewFlagSet("anonymize", flag.ContinueOnError)

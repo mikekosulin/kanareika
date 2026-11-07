@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"slices"
 	"testing"
 )
@@ -26,5 +27,19 @@ func TestRun(t *testing.T) {
 		if rc := run(args); rc != 3 || !slices.Equal(cliArgs, args) || engineArgs != nil {
 			t.Fatal(args, rc, cliArgs, engineArgs)
 		}
+	}
+}
+
+func TestMainEntry(t *testing.T) {
+	oldCLI, oldExit, oldArgs := cliMain, exit, os.Args
+	t.Cleanup(func() { cliMain, exit, os.Args = oldCLI, oldExit, oldArgs })
+	var got []string
+	cliMain = func(_ string, a []string) int { got = a; return 5 }
+	code := -1
+	exit = func(c int) { code = c }
+	os.Args = []string{"kanareika", "history", "--org", "acme"}
+	main()
+	if code != 5 || !slices.Equal(got, []string{"history", "--org", "acme"}) {
+		t.Fatal(code, got)
 	}
 }

@@ -86,9 +86,7 @@ func (f *Finding) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	var all map[string]json.RawMessage
-	if err := json.Unmarshal(b, &all); err != nil {
-		return err
-	}
+	_ = json.Unmarshal(b, &all) // b just decoded into a struct: it is an object or null, never an error here
 	for _, k := range known {
 		delete(all, k)
 	}
@@ -104,9 +102,7 @@ func (f Finding) MarshalJSON() ([]byte, error) {
 		return b, err
 	}
 	var all map[string]json.RawMessage
-	if err := json.Unmarshal(b, &all); err != nil {
-		return nil, err
-	}
+	_ = json.Unmarshal(b, &all) // b is json.Marshal of a struct: always an object
 	extra := maps.Clone(f.Extra)
 	maps.Copy(extra, all)
 	return json.Marshal(extra)

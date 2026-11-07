@@ -28,6 +28,16 @@ import (
 	"github.com/mikekosulin/kanareika/internal/report"
 )
 
+// seams for tests: main's fatal exit, and the file system and loaders failing midway
+var (
+	fatal         = log.Fatal
+	mkdirAll      = os.MkdirAll
+	writeFile     = os.WriteFile
+	newLoader     = config.NewLoader
+	loadPolicy    = priority.LoadPolicy
+	updateCurrent = report.UpdateCurrent
+)
+
 func main() {
 	out := flag.String("out", "kanareika-demo", "directory to write (created; must be empty or new)")
 	end := flag.String("end", time.Now().UTC().Format(time.DateOnly), "the day of the last run")
@@ -35,10 +45,10 @@ func main() {
 	flag.Parse()
 	last, err := time.Parse(time.DateOnly, *end)
 	if err != nil {
-		log.Fatal(err)
+		fatal(err)
 	}
 	if err := generate(*out, last, *days); err != nil {
-		log.Fatal(err)
+		fatal(err)
 	}
 	fmt.Printf("demo data in %s\nKANAREIKA_FEEDS_DIR=%s kanareika --home %s\n", *out, filepath.Join(*out, "feeds"), *out)
 }
@@ -85,14 +95,14 @@ func generate(out string, last time.Time, days int) error {
 	}
 	paths := config.PathsAt(out)
 	for _, d := range []string{paths.Orgs, paths.Secrets, paths.Reports, filepath.Join(out, "feeds")} {
-		if err := os.MkdirAll(d, 0o755); err != nil {
+		if err := mkdirAll(d, 0o755); err != nil {
 			return err
 		}
 	}
-	if err := os.WriteFile(filepath.Join(paths.Orgs, "acme.yml"), []byte(orgFile(last)), 0o644); err != nil {
+	if err := writeFile(filepath.Join(paths.Orgs, "acme.yml"), []byte(orgFile(last)), 0o644); err != nil {
 		return err
 	}
-	l, err := config.NewLoader(paths)
+	l, err := newLoader(paths)
 	if err != nil {
 		return err
 	}
@@ -100,7 +110,7 @@ func generate(out string, last time.Time, days int) error {
 	if len(errs) > 0 {
 		return fmt.Errorf("demo org: %v", errs)
 	}
-	pol, err := priority.LoadPolicy(paths)
+	pol, err := loadPolicy(paths)
 	if err != nil {
 		return err
 	}
@@ -123,7 +133,7 @@ func generate(out string, last time.Time, days int) error {
 	if err := writeJSON(filepath.Join(out, "feeds", "epss.json"), feeds.EPSS); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(out, "feeds", "updated"), []byte(feeds.Updated), 0o644); err != nil {
+	if err := writeFile(filepath.Join(out, "feeds", "updated"), []byte(feeds.Updated), 0o644); err != nil {
 		return err
 	}
 
@@ -135,7 +145,7 @@ func generate(out string, last time.Time, days int) error {
 				return err
 			}
 		}
-		if _, err := report.UpdateCurrent(envDir, true, false); err != nil {
+		if _, err := updateCurrent(envDir, true, false); err != nil {
 			return err
 		}
 	}
@@ -246,7 +256,7 @@ func saveRun(r *rand.Rand, envDir string, org *config.Org, env string, day, days
 		Selection: report.Selection{Groups: []string{}, Hosts: []string{}, Modules: []string{}}, Modules: modules,
 		HostsScanned: names, HostsOK: len(names) - failed.Len(), ModulesByHost: byHost, HostsFailed: failed,
 		ModuleErrors: pyfmt.Ordered[[]string]{}, FeedsUpdated: &fu}
-	if err := os.MkdirAll(runDir, 0o755); err != nil {
+	if err := mkdirAll(runDir, 0o755); err != nil {
 		return err
 	}
 	return report.SaveRun(runDir, meta, fs)
@@ -254,7 +264,7 @@ func saveRun(r *rand.Rand, envDir string, org *config.Org, env string, day, days
 
 // writeHostFiles: what the modules write per host: facts, access, exposure, health.
 func writeHostFiles(r *rand.Rand, dir string, h host, day int) error {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := mkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 	pw := h.exposure == 1 && day < 24
@@ -384,5 +394,5 @@ func writeJSON(path string, v any) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, b, 0o644)
+	return writeFile(path, b, 0o644)
 }

@@ -62,15 +62,22 @@ func inside(p, dest string) bool {
 	return p == dest || strings.HasPrefix(p, dest+string(filepath.Separator))
 }
 
+// absPath and evalSymlinks are filepath.Abs and filepath.EvalSymlinks; tests swap them to reach the error paths (a
+// lost working directory, an unresolvable root).
+var (
+	absPath      = filepath.Abs
+	evalSymlinks = filepath.EvalSymlinks
+)
+
 // realpath: os.path.realpath — symlinks resolved as far as the path exists, the rest cleaned lexically.
 func realpath(p string) (string, error) {
-	p, err := filepath.Abs(p)
+	p, err := absPath(p)
 	if err != nil {
 		return "", err
 	}
 	rest := ""
 	for cur := p; ; {
-		if r, err := filepath.EvalSymlinks(cur); err == nil {
+		if r, err := evalSymlinks(cur); err == nil {
 			return filepath.Join(r, rest), nil
 		}
 		parent := filepath.Dir(cur)

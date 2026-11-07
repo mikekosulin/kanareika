@@ -101,19 +101,10 @@ func Quote(s string) string {
 	if s == "" {
 		return "''"
 	}
-	if safe.MatchString(s) && isASCII(s) {
+	if safe.MatchString(s) { // RE2's \w is ASCII-only, so a match is already plain ASCII
 		return s
 	}
 	return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'"
-}
-
-func isASCII(s string) bool {
-	for i := 0; i < len(s); i++ {
-		if s[i] >= 0x80 {
-			return false
-		}
-	}
-	return true
 }
 
 // Render replaces @P:op@ placeholders in a script with the host-specific privileged command. Ops that take

@@ -22,6 +22,9 @@ import (
 // trivyRun is trivy.Run; tests swap it for recorded reports.
 var trivyRun = trivy.Run
 
+// listFiles is Files; tests swap it to reach its error path (the staging dir Extract just wrote is always walkable).
+var listFiles = Files
+
 // Strings: a YAML list of strings (anything else counts as empty, as `cfg.get(k) or []` did for falsy values).
 func Strings(v any) []string {
 	var out []string
@@ -100,7 +103,7 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 	if err := Extract(archive, stage); err != nil { // rejects absolute paths, .., device files, links outside
 		return nil, err
 	}
-	files, err := Files(stage)
+	files, err := listFiles(stage)
 	if err != nil {
 		return nil, err
 	}

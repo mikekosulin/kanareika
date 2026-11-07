@@ -16,6 +16,11 @@ func sandbox(t *testing.T) {
 	t.Setenv("TRIVY_CACHE_DIR", filepath.Join(t.TempDir(), "trivy"))
 	t.Setenv("KANAREIKA_TRIVY", "")
 	t.Setenv("KANAREIKA_OFFLINE", "")
+	// the user's config and cache dirs (TUI settings, trivy's default cache) stay out of reach
+	userHome := t.TempDir()
+	t.Setenv("HOME", userHome)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(userHome, ".config"))
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(userHome, ".cache"))
 }
 
 // cli runs the command line and returns the exit code, stdout and stderr.

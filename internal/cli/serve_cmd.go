@@ -13,6 +13,9 @@ import (
 	"github.com/mikekosulin/kanareika/internal/server"
 )
 
+// newServer is server.New; tests replace it.
+var newServer = server.New
+
 // serveFunc is (*server.Server).Serve; tests replace it.
 var serveFunc = func(ctx context.Context, s *server.Server, host string, port int, out io.Writer) error {
 	return s.Serve(ctx, host, port, out)
@@ -53,7 +56,7 @@ The TUI can connect to it too: kanareika tui --url http://host:8088 --token ...`
 			if !noScans {
 				opts.Scan = a.dashboardScan
 			}
-			s, err := server.New(opts)
+			s, err := newServer(opts)
 			if err != nil {
 				return err
 			}

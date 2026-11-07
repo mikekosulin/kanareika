@@ -38,6 +38,13 @@ func (e *Busy) Error() string { return "a scan is already running in " + e.Env }
 // races a scan (the dashboard waits; a second scan refuses).
 type Lock struct{ f *os.File }
 
+// flock, rename and policy are seams for tests: failures that real files cannot produce.
+var (
+	flock  = lockFile
+	rename = os.Rename
+	policy = config.Policy
+)
+
 // EnvLock takes the lock; wait=false returns *Busy instead of blocking.
 func EnvLock(env string, wait bool) (*Lock, error) {
 	if err := os.MkdirAll(env, 0o755); err != nil {
@@ -47,7 +54,7 @@ func EnvLock(env string, wait bool) (*Lock, error) {
 	if err != nil {
 		return nil, err
 	}
-	busy, err := lockFile(f, wait)
+	busy, err := flock(f, wait)
 	if err != nil || busy {
 		f.Close()
 		if busy {
@@ -255,7 +262,7 @@ func writeAtomic(path string, write func(io.Writer) error) error {
 		err = os.Chmod(tmp.Name(), 0o644)
 	}
 	if err == nil {
-		err = os.Rename(tmp.Name(), path)
+		err = rename(tmp.Name(), path)
 	}
 	if err != nil {
 		os.Remove(tmp.Name())
@@ -293,7 +300,7 @@ const KeepDefault = -1
 
 func retention(p config.Paths) (keepFull, keepPartial int) {
 	keepFull, keepPartial = 12, 30
-	b, err := config.Policy(p, "settings.yml")
+	b, err := policy(p, "settings.yml")
 	if err != nil {
 		return
 	}

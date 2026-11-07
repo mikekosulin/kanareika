@@ -1,12 +1,18 @@
 package main
 
 import (
+	"errors"
+	"flag"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/mikekosulin/kanareika/internal/config"
+	"github.com/mikekosulin/kanareika/internal/priority"
 	"github.com/mikekosulin/kanareika/internal/report"
 )
 
@@ -57,5 +63,144 @@ func TestGenerate(t *testing.T) {
 	}
 	if err := generate(out, last, 6); err == nil {
 		t.Fatal("wrote into a non-empty directory")
+	}
+}
+
+// TestPasswordAuthFixed: over a longer month the exposed hosts allow passwords at first, and the finding is gone
+// in the last six days.
+func TestPasswordAuthFixed(t *testing.T) {
+	t.Setenv("KANAREIKA_FEEDS_DIR", t.TempDir())
+	out := filepath.Join(t.TempDir(), "demo")
+	if err := generate(out, time.Date(2026, 11, 8, 0, 0, 0, 0, time.UTC), 8); err != nil {
+		t.Fatal(err)
+	}
+	env := filepath.Join(out, "reports", "acme", "production")
+	has := func(run string) bool {
+		_, fs, err := report.LoadRun(filepath.Join(env, run))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range fs {
+			if f.ID == "ssh-password-auth" && f.Host == "web-01" {
+				return true
+			}
+		}
+		return false
+	}
+	if !has("2026-11-01_030000") || has("2026-11-08_030000") {
+		t.Fatal("ssh-password-auth not on day 0 or still on the last day")
+	}
+}
+
+// TestGenerateErrors: whatever fails midway is reported, not swallowed.
+func TestGenerateErrors(t *testing.T) {
+	boom := errors.New("boom")
+	failMkdir := func(suffix string) func(string, os.FileMode) error {
+		return func(p string, m os.FileMode) error {
+			if strings.HasSuffix(p, suffix) {
+				return boom
+			}
+			return os.MkdirAll(p, m)
+		}
+	}
+	failWrite := func(suffix string) func(string, []byte, os.FileMode) error {
+		return func(p string, b []byte, m os.FileMode) error {
+			if strings.HasSuffix(p, suffix) {
+				return boom
+			}
+			return os.WriteFile(p, b, m)
+		}
+	}
+	cases := []struct {
+		name string
+		set  func()
+		want string
+	}{
+		{"mkdir orgs", func() { mkdirAll = failMkdir("orgs") }, "boom"},
+		{"mkdir run", func() { mkdirAll = failMkdir("_030000") }, "boom"},
+		{"mkdir host", func() { mkdirAll = failMkdir("web-01") }, "boom"},
+		{"org file", func() { writeFile = failWrite("acme.yml") }, "boom"},
+		{"kev", func() { writeFile = failWrite("kev.json") }, "boom"},
+		{"epss", func() { writeFile = failWrite("epss.json") }, "boom"},
+		{"updated", func() { writeFile = failWrite("updated") }, "boom"},
+		{"host file", func() { writeFile = failWrite("access.json") }, "boom"},
+		{"bad org", func() {
+			writeFile = func(p string, b []byte, m os.FileMode) error {
+				if strings.HasSuffix(p, "acme.yml") {
+					b = []byte("org: {}\n")
+				}
+				return os.WriteFile(p, b, m)
+			}
+		}, "demo org:"},
+		{"loader", func() { newLoader = func(config.Paths) (*config.Loader, error) { return nil, boom } }, "boom"},
+		{"policy", func() { loadPolicy = func(config.Paths) (*priority.Policy, error) { return nil, boom } }, "boom"},
+		{"current", func() { updateCurrent = func(string, bool, bool) (string, error) { return "", boom } }, "boom"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			restore(t)
+			t.Setenv("KANAREIKA_FEEDS_DIR", t.TempDir())
+			c.set()
+			err := generate(filepath.Join(t.TempDir(), "demo"), time.Date(2026, 11, 8, 0, 0, 0, 0, time.UTC), 2)
+			if err == nil || !strings.Contains(err.Error(), c.want) {
+				t.Fatalf("%v, want %q", err, c.want)
+			}
+		})
+	}
+	if err := writeJSON(filepath.Join(t.TempDir(), "x.json"), make(chan int)); err == nil {
+		t.Fatal("a channel written as JSON")
+	}
+}
+
+// restore puts the seams back after the test.
+func restore(t *testing.T) {
+	m, w, l, p, u, f := mkdirAll, writeFile, newLoader, loadPolicy, updateCurrent, fatal
+	t.Cleanup(func() { mkdirAll, writeFile, newLoader, loadPolicy, updateCurrent, fatal = m, w, l, p, u, f })
+}
+
+type fatalErr string
+
+// runMain runs main with these arguments; a fatal error comes back as a string.
+func runMain(t *testing.T, args ...string) (stdout, fatalMsg string) {
+	t.Helper()
+	restore(t)
+	oldArgs, oldFlags, oldOut := os.Args, flag.CommandLine, os.Stdout
+	t.Cleanup(func() { os.Args, flag.CommandLine, os.Stdout = oldArgs, oldFlags, oldOut })
+	os.Args = append([]string{"demo"}, args...)
+	flag.CommandLine = flag.NewFlagSet("demo", flag.ContinueOnError)
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = w
+	fatal = func(v ...any) { panic(fatalErr(fmt.Sprint(v...))) }
+	func() {
+		defer func() {
+			if e, ok := recover().(fatalErr); ok {
+				fatalMsg = string(e)
+			}
+		}()
+		main()
+	}()
+	w.Close()
+	b, _ := io.ReadAll(r)
+	return string(b), fatalMsg
+}
+
+func TestMainFunc(t *testing.T) {
+	t.Setenv("KANAREIKA_FEEDS_DIR", t.TempDir())
+	out := filepath.Join(t.TempDir(), "demo")
+	stdout, msg := runMain(t, "-out", out, "-end", "2026-11-08", "-days", "2")
+	if msg != "" || !strings.Contains(stdout, "demo data in "+out) || !strings.Contains(stdout, "KANAREIKA_FEEDS_DIR="+filepath.Join(out, "feeds")) {
+		t.Fatalf("%q %q", stdout, msg)
+	}
+	if _, err := os.Stat(filepath.Join(out, "reports", "acme", "staging", "2026-11-08_030000", "run.json")); err != nil {
+		t.Fatal(err)
+	}
+	if _, msg := runMain(t, "-out", out, "-end", "yesterday"); !strings.Contains(msg, "cannot parse") {
+		t.Fatalf("bad -end: %q", msg)
+	}
+	if _, msg := runMain(t, "-out", out, "-end", "2026-11-08"); !strings.Contains(msg, "is not empty") {
+		t.Fatalf("non-empty -out: %q", msg)
 	}
 }

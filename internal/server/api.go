@@ -235,7 +235,7 @@ func (s *Server) view(dir string) ([]byte, error) {
 		v := report.BuildView(dir, meta, findings, prev)
 		meta.PlanCounts = &v.PlanCounts
 		v.Meta = meta
-		if body, err = pyfmt.Marshal(v); err != nil {
+		if body, err = marshalView(v); err != nil {
 			return nil, err
 		}
 		// best effort, as before: a read-only reports/ still gets the view, just not stored
@@ -249,6 +249,9 @@ func (s *Server) view(dir string) ([]byte, error) {
 	s.views = append(s.views, cachedView{key, body})
 	return body, nil
 }
+
+// marshalView encodes a rebuilt view (a variable so tests can make it fail).
+var marshalView = pyfmt.Marshal
 
 // storedView: view.json if it is usable as is: valid, and of the current version (any version for current/).
 func storedView(path string, current bool) ([]byte, bool) {

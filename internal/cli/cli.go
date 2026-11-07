@@ -35,6 +35,9 @@ type app struct {
 	paths   config.Paths
 }
 
+// absPath is filepath.Abs; tests replace it (it fails only when the current directory is unreachable).
+var absPath = filepath.Abs
+
 // Execute runs the CLI and returns the process exit code.
 func Execute(version string, args []string) int {
 	return execute(version, args, os.Stdin, os.Stdout, os.Stderr)
@@ -78,7 +81,7 @@ directory, or KANAREIKA_HOME, or --home.`,
 			if home == "" {
 				home = "."
 			}
-			abs, err := filepath.Abs(home)
+			abs, err := absPath(home)
 			if err != nil {
 				return err
 			}
@@ -133,13 +136,16 @@ func oneOrg(args []string, flag string) (string, error) {
 	return "", fail(1, "specify one org: <org> or --org <org>")
 }
 
+// loadAll is (*config.Loader).LoadAll; tests replace it.
+var loadAll = (*config.Loader).LoadAll
+
 // load validates ALL orgs: a cross-org address overlap blocks every scan. Unknown org ids are an error.
 func (a *app) load(ids []string, stderr io.Writer) ([]*config.Org, map[string]*config.Org, error) {
 	l, err := config.NewLoader(a.paths)
 	if err != nil {
 		return nil, nil, fail(2, "config error:\n%v", err)
 	}
-	orgs, errs := l.LoadAll()
+	orgs, errs := loadAll(l)
 	if len(errs) > 0 {
 		return nil, nil, fail(2, "validation failed:\n  - %s", strings.Join(errs, "\n  - "))
 	}

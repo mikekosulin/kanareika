@@ -57,9 +57,12 @@ type Policy struct {
 	EPSSURL string
 }
 
+// policyFile reads a policy file; tests replace it (the built-in fallback never fails otherwise).
+var policyFile = config.Policy
+
 // LoadPolicy: policy/priority.yml of the working directory, else the built-in one.
 func LoadPolicy(p config.Paths) (*Policy, error) {
-	b, err := config.Policy(p, "priority.yml")
+	b, err := policyFile(p, "priority.yml")
 	if err != nil {
 		return nil, err
 	}

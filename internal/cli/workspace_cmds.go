@@ -20,6 +20,12 @@ import (
 // orgIDRE: what an org id may be (it names files and directories).
 var orgIDRE = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
+// File operations that do not fail on a working disk; tests replace them.
+var (
+	chmod    = os.Chmod
+	openFile = os.OpenFile
+)
+
 // workspace: create the directories of a working directory; secrets/ readable by the owner only.
 func workspace(p config.Paths) error {
 	for _, d := range []struct {
@@ -30,7 +36,7 @@ func workspace(p config.Paths) error {
 			return err
 		}
 		if d.mode == 0o700 {
-			if err := os.Chmod(d.path, d.mode); err != nil {
+			if err := chmod(d.path, d.mode); err != nil {
 				return err
 			}
 		}
@@ -49,7 +55,7 @@ leave this machine (and are git-ignored in the kanareika repository).`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			p := a.paths
 			if len(args) == 1 {
-				abs, err := filepath.Abs(args[0])
+				abs, err := absPath(args[0])
 				if err != nil {
 					return err
 				}
@@ -96,7 +102,7 @@ func (a *app) orgNewCmd() *cobra.Command {
 			}
 			path := filepath.Join(a.paths.Orgs, id+".yml")
 			body := bytes.ReplaceAll(assets.OrgTemplate(), []byte(assets.OrgTemplateID), []byte(id))
-			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+			f, err := openFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 			if errors.Is(err, fs.ErrExist) {
 				return fail(1, "%s already exists", path)
 			} else if err != nil {

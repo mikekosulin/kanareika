@@ -102,17 +102,20 @@ func New(o Options) (*Server, error) {
 		return nil, err
 	}
 	s.page = bytes.Replace(s.page, []byte(`/*CSRF*/""`), []byte(`"`+s.csrf+`"`), 1)
-	if s.logo, err = fs.ReadFile(assets.Web(), "logo.png"); err != nil {
+	if s.logo, err = fs.ReadFile(webFS(), "logo.png"); err != nil {
 		return nil, err
 	}
 	s.reload()
 	return s, nil
 }
 
+// webFS and localesFS: where the page and the UI strings come from (variables so tests can break them).
+var webFS, localesFS = assets.Web, assets.Locales
+
 // page: index.html with the /*I18N_UI*/{} placeholder replaced by the UI strings of every language, encoded
 // as Python's json.dumps did ("</" escaped so a string cannot close the script tag).
 func page() ([]byte, error) {
-	html, err := fs.ReadFile(assets.Web(), "index.html")
+	html, err := fs.ReadFile(webFS(), "index.html")
 	if err != nil {
 		return nil, err
 	}
@@ -126,13 +129,13 @@ func page() ([]byte, error) {
 
 // uiJSON: {lang: ui} for the locales that have UI strings, in file name order, keys as in the files.
 func uiJSON() (string, error) {
-	files, err := fs.Glob(assets.Locales(), "*.json")
+	files, err := fs.Glob(localesFS(), "*.json")
 	if err != nil {
 		return "", err
 	}
 	all := pyfmt.Obj{}
 	for _, f := range files { // Glob sorts
-		b, err := fs.ReadFile(assets.Locales(), f)
+		b, err := fs.ReadFile(localesFS(), f)
 		if err != nil {
 			return "", err
 		}

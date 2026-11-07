@@ -328,9 +328,6 @@ func analyze(h config.Host, org *config.Org, raw string) ([]finding.Finding, pyf
 	if strings.Contains(state, "running") { // also matches "not running": kept as the Python module had it
 		v := s["firewalld"]
 		fw["firewalld"] = &v
-	} else if strings.Contains(state, "not running") {
-		v := "not running"
-		fw["firewalld"] = &v
 	}
 	for _, k := range []string{"nft", "iptables", "ufw"} {
 		if ok(s[k]) {

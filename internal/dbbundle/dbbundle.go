@@ -31,6 +31,13 @@ type Part struct {
 // maxFile: a single file larger than this is refused on import (trivy's DB is ~1 GB uncompressed today).
 var maxFile int64 = 16 << 30
 
+// Seams for tests: where Export's gzip stream goes, how a file's bytes are copied in, how Import swaps directories.
+var (
+	exportTo = func(f *os.File) io.Writer { return f }
+	copyFile = io.Copy
+	rename   = os.Rename
+)
+
 // Export writes the parts that exist into a gzip'd tar at dst (atomically: a temp file, then rename) and returns
 // the names of the parts written. A part whose directory is missing is skipped; none at all is an error.
 func Export(dst string, parts []Part) ([]string, error) {
@@ -40,7 +47,7 @@ func Export(dst string, parts []Part) ([]string, error) {
 	}
 	defer os.Remove(tmp.Name())
 	defer tmp.Close()
-	zw := gzip.NewWriter(tmp)
+	zw := gzip.NewWriter(exportTo(tmp))
 	tw := tar.NewWriter(zw)
 	var written []string
 	for _, p := range parts {
@@ -78,10 +85,7 @@ func addDir(tw *tar.Writer, p Part) error {
 		if err != nil {
 			return err
 		}
-		rel, err := filepath.Rel(p.Dir, fp)
-		if err != nil {
-			return err
-		}
+		rel, _ := filepath.Rel(p.Dir, fp) // fp is p.Dir or a path WalkDir joined under it: always relative to it
 		name := path.Join(p.Name, filepath.ToSlash(rel))
 		info, err := d.Info()
 		if err != nil {
@@ -102,7 +106,7 @@ func addDir(tw *tar.Writer, p Part) error {
 			return err
 		}
 		defer f.Close()
-		_, err = io.Copy(tw, f)
+		_, err = copyFile(tw, f)
 		return err
 	})
 }
@@ -182,11 +186,11 @@ func Import(src string, parts []Part) ([]string, error) {
 		dst := byName[top].Dir
 		old := dst + ".old"
 		_ = os.RemoveAll(old)
-		if err := os.Rename(dst, old); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := rename(dst, old); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return done, err
 		}
-		if err := os.Rename(dir, dst); err != nil {
-			_ = os.Rename(old, dst)
+		if err := rename(dir, dst); err != nil {
+			_ = rename(old, dst)
 			return done, err
 		}
 		delete(staged, top)

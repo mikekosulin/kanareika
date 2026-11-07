@@ -33,6 +33,9 @@ type Loader struct {
 
 const schemaID = "urn:kanareika:org.schema.json"
 
+// defaultsFS: the built-in policy and schema files; tests replace it.
+var defaultsFS = assets.Defaults
+
 func NewLoader(p Paths) (*Loader, error) {
 	raw, err := readJSON(p, "schemas/org.schema.json")
 	if err != nil {
@@ -40,9 +43,7 @@ func NewLoader(p Paths) (*Loader, error) {
 	}
 	c := jsonschema.NewCompiler()
 	// an absolute id of its own: a relative one resolves against the working directory, which then shows in errors
-	if err := c.AddResource(schemaID, raw); err != nil {
-		return nil, err
-	}
+	_ = c.AddResource(schemaID, raw) // a fresh compiler and a constant absolute id: it cannot fail
 	sch, err := c.Compile(schemaID)
 	if err != nil {
 		return nil, fmt.Errorf("schemas/org.schema.json: %w", err)
@@ -59,12 +60,12 @@ func Policy(p Paths, name string) ([]byte, error) {
 	if b, err := os.ReadFile(filepath.Join(p.Policy, name)); err == nil {
 		return b, nil
 	}
-	return fs.ReadFile(assets.Defaults(), "policy/"+name)
+	return fs.ReadFile(defaultsFS(), "policy/"+name)
 }
 
 // readJSON: a built-in file (the org schema belongs to the binary that implements it).
 func readJSON(_ Paths, rel string) (any, error) {
-	b, err := fs.ReadFile(assets.Defaults(), rel)
+	b, err := fs.ReadFile(defaultsFS(), rel)
 	if err != nil {
 		return nil, err
 	}

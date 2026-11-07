@@ -253,7 +253,7 @@ func HostOf(spec map[string]any) config.Host {
 }
 
 // asJSON: v through JSON, for comparing values decoded from Python with Go ones.
-func asJSON(t *testing.T, v any) any {
+func asJSON(t testing.TB, v any) any {
 	t.Helper()
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -267,7 +267,7 @@ func asJSON(t *testing.T, v any) any {
 }
 
 // LoadReplays reads the cases of testdata/python.json.
-func LoadReplays(t *testing.T) []Replay {
+func LoadReplays(t testing.TB) []Replay {
 	t.Helper()
 	b, err := os.ReadFile("testdata/python.json")
 	if err != nil {
@@ -286,7 +286,7 @@ var timing = regexp.MustCompile(`\(\d+s\)`)
 
 // RunReplay replays c: setTrivy installs the fake trivy and returns a restore func; call runs one module run; roots:
 // more (path, token) normalizations.
-func RunReplay(t *testing.T, c *Replay, org *config.Org, setTrivy func(TrivyFunc) func(),
+func RunReplay(t testing.TB, c *Replay, org *config.Org, setTrivy func(TrivyFunc) func(),
 	call func(ctx *check.Ctx, r ReplayRun, out string) ([]finding.Finding, error), roots ...[2]string) {
 	t.Helper()
 	here, _ := filepath.Abs("testdata")

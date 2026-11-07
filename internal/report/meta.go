@@ -57,9 +57,7 @@ func (m *Meta) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	var all map[string]json.RawMessage
-	if err := json.Unmarshal(b, &all); err != nil {
-		return err
-	}
+	_ = json.Unmarshal(b, &all) // b decoded into a struct above: an object or null, so it decodes as a map too
 	for _, k := range metaKnown {
 		delete(all, k)
 	}
@@ -83,9 +81,7 @@ func (m Meta) MarshalJSON() ([]byte, error) {
 		return b, err
 	}
 	var all map[string]json.RawMessage
-	if err := json.Unmarshal(b, &all); err != nil {
-		return nil, err
-	}
+	_ = json.Unmarshal(b, &all) // b is a marshalled struct: always an object
 	extra := maps.Clone(m.Extra)
 	maps.Copy(extra, all)
 	return pyfmt.Marshal(extra)

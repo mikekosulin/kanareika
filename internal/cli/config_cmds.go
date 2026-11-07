@@ -94,6 +94,9 @@ func (a *app) showCmd() *cobra.Command {
 	return c
 }
 
+// migrateFile is config.MigrateFile; tests replace it (no migration exists while the format is at version 1).
+var migrateFile = config.MigrateFile
+
 func (a *app) migrateCmd() *cobra.Command {
 	var dryRun bool
 	c := &cobra.Command{
@@ -106,7 +109,7 @@ func (a *app) migrateCmd() *cobra.Command {
 			}
 			changed := 0
 			for _, f := range files {
-				steps, err := config.MigrateFile(f, dryRun)
+				steps, err := migrateFile(f, dryRun)
 				if err != nil {
 					return fail(1, "%s: %v", f, err)
 				}

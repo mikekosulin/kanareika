@@ -23,6 +23,12 @@ import (
 	"github.com/mikekosulin/kanareika/internal/tui"
 )
 
+// seams for tests: main's fatal exit, and a server that fails to start
+var (
+	fatal     = log.Fatal
+	newServer = server.New
+)
+
 func main() {
 	home := flag.String("home", ".", "working directory with orgs/ and reports/ (demo data)")
 	lang := flag.String("lang", "en", "interface language")
@@ -33,7 +39,7 @@ func main() {
 	at := flag.String("now", "", "the time it is, RFC 3339 (default: now)")
 	flag.Parse()
 	if err := run(os.Stdout, *home, *lang, *org, *env, *size, *keys, *at); err != nil {
-		log.Fatal(err)
+		fatal(err)
 	}
 }
 
@@ -51,7 +57,7 @@ func run(out io.Writer, home, lang, org, env, size, keys, at string) error {
 		now = t
 	}
 	lipgloss.SetColorProfile(termenv.TrueColor)
-	s, err := server.New(server.Options{Paths: config.PathsAt(home), Log: log.New(io.Discard, "", 0)})
+	s, err := newServer(server.Options{Paths: config.PathsAt(home), Log: log.New(io.Discard, "", 0)})
 	if err != nil {
 		return err
 	}

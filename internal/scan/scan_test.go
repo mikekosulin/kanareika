@@ -42,6 +42,7 @@ type target struct {
 	hostKey ssh.Signer
 	mu      sync.Mutex
 	cmds    []string
+	facts   string // answer to the facts query; "" = a Debian 12 host
 }
 
 func newTarget(t *testing.T, user ssh.PublicKey) *target {
@@ -98,9 +99,13 @@ func (tg *target) session(ch ssh.Channel, reqs <-chan *ssh.Request) {
 		cmd := string(r.Payload[4:])
 		tg.mu.Lock()
 		tg.cmds = append(tg.cmds, cmd)
+		facts := tg.facts
 		tg.mu.Unlock()
+		if facts == "" {
+			facts = "PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"\nID=debian\nVERSION_ID=\"12\"\n@@Linux 6.1.0 x86_64\n@@fake-01\n@@"
+		}
 		if strings.Contains(cmd, "os-release") {
-			fmt.Fprint(ch, "PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"\nID=debian\nVERSION_ID=\"12\"\n@@Linux 6.1.0 x86_64\n@@fake-01\n@@")
+			fmt.Fprint(ch, facts)
 		}
 		_, _ = ch.SendRequest("exit-status", false, ssh.Marshal(struct{ C uint32 }{0}))
 		return

@@ -26,13 +26,16 @@ type locale struct {
 var (
 	once sync.Once
 	data map[string]locale
+	// localesFS: where the locale files come from; tests replace it.
+	localesFS = assets.Locales
 )
 
 func load() {
 	data = map[string]locale{}
-	files, _ := fs.Glob(assets.Locales(), "*.json")
+	fsys := localesFS()
+	files, _ := fs.Glob(fsys, "*.json")
 	for _, f := range files {
-		b, err := fs.ReadFile(assets.Locales(), f)
+		b, err := fs.ReadFile(fsys, f)
 		if err != nil {
 			continue
 		}

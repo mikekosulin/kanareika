@@ -56,10 +56,7 @@ func saveSettings(path string, s Settings) error {
 	if path == "" {
 		return nil
 	}
-	b, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		return err
-	}
+	b, _ := json.MarshalIndent(s, "", "  ") // strings, bools and a map of string slices: always encodes
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil && !errors.Is(err, fs.ErrExist) {
 		return err
 	}

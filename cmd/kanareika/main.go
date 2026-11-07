@@ -16,6 +16,7 @@ var version = "dev"
 var (
 	cliMain    = cli.Execute
 	engineMain = engine.Main
+	exit       = os.Exit // tests replace it to run main() in-process
 )
 
 // run: `kanareika __trivy ...` is the embedded trivy (started by kanareika itself), anything else is the CLI.
@@ -26,4 +27,4 @@ func run(args []string) int {
 	return cliMain(version, args)
 }
 
-func main() { os.Exit(run(os.Args[1:])) }
+func main() { exit(run(os.Args[1:])) }

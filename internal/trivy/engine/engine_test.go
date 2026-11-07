@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"os"
+	"reflect"
 	"slices"
 	"testing"
 
+	"github.com/aquasecurity/trivy/pkg/log"
 	"github.com/aquasecurity/trivy/pkg/types"
 )
 
@@ -53,5 +55,12 @@ func TestRealVersion(t *testing.T) {
 	t.Cleanup(func() { os.Args = oldArgs })
 	if code := Main([]string{"--version", "--format", "json", "--cache-dir", t.TempDir()}); code != 0 {
 		t.Fatal(code)
+	}
+}
+
+// TestFatalIsTrivys: unreplaced, fatal is trivy's own log.Fatal (logs to stderr and exits 1, so it is not called).
+func TestFatalIsTrivys(t *testing.T) {
+	if reflect.ValueOf(fatal).Pointer() != reflect.ValueOf(log.Fatal).Pointer() {
+		t.Fatal("fatal is not log.Fatal")
 	}
 }

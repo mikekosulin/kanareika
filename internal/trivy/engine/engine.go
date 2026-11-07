@@ -43,4 +43,4 @@ func Main(args []string) int {
 }
 
 // fatal is log.Fatal (which exits); tests replace it.
-var fatal = func(msg string, args ...any) { log.Fatal(msg, args...) }
+var fatal = log.Fatal

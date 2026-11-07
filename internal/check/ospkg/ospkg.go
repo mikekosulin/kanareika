@@ -26,6 +26,13 @@ import (
 // trivyRun is trivy.Run; tests swap it for recorded reports.
 var trivyRun = trivy.Run
 
+// buildBOM and marshalBOM are sbom.BuildCycloneDX and pyfmt.MarshalLine; tests swap them to reach the error paths
+// (the OS family was checked before and a BOM always marshals, so the real ones do not fail here).
+var (
+	buildBOM   = sbom.BuildCycloneDX
+	marshalBOM = pyfmt.MarshalLine
+)
+
 // Target texts of kernel findings, as the Python version wrote them (the report layer groups by them).
 const (
 	TargetPending = "os: new kernel (reboot pending)"
@@ -73,11 +80,11 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 	if len(pkgs) == 0 {
 		return nil, errors.New("package list is empty")
 	}
-	bom, err := sbom.BuildCycloneDX(h.Name, facts.OSRelease, pkgs)
+	bom, err := buildBOM(h.Name, facts.OSRelease, pkgs)
 	if err != nil {
 		return nil, err
 	}
-	bomJSON, err := pyfmt.MarshalLine(bom, true) // json.dumps(bom): field order from the struct
+	bomJSON, err := marshalBOM(bom, true) // json.dumps(bom): field order from the struct
 	if err != nil {
 		return nil, err
 	}

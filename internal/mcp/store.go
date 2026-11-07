@@ -207,10 +207,13 @@ func (s *Store) Overview() any {
 
 var errNoRuns = errors.New("no runs")
 
+// updateCurrent folds finished runs into current/; a variable so tests can hand Current a snapshot that vanished.
+var updateCurrent = report.UpdateCurrent
+
 // Current: the view of reports/<org>/<env>/current, after folding in runs that finished since. While a scan holds
 // the environment, the existing snapshot is used as is (the scan updates it at the end).
 func (s *Store) Current(org, env string) (*report.View, error) {
-	cur, err := report.UpdateCurrent(report.EnvDir(s.Paths, org, env), false, false)
+	cur, err := updateCurrent(report.EnvDir(s.Paths, org, env), false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -261,10 +264,7 @@ func (s *Store) HostData(org, env, section, host string) pyfmt.Obj {
 	}
 	d := json.NewDecoder(bytes.NewReader(b))
 	d.UseNumber()
-	v, err := pyfmt.Decode(d)
-	if err != nil {
-		return nil
-	}
+	v, _ := pyfmt.Decode(d) // b is a value of a view.json that decoded as a whole: always valid JSON
 	m, _ := v.(pyfmt.Obj)
 	return m
 }
