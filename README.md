@@ -1,37 +1,49 @@
 # Kanareika
 
-[![CI](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml/badge.svg)](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/mikekosulin/kanareika)](https://github.com/mikekosulin/kanareika/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml/badge.svg)](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/mikekosulin/kanareika)](https://github.com/mikekosulin/kanareika/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Stars](https://img.shields.io/github/stars/mikekosulin/kanareika?style=social)](https://github.com/mikekosulin/kanareika)
 
-**English** · [Русский](README.ru.md)
+**English** · [Русский](README.ru.md) · [中文](README.zh.md)
 
 Agentless, read-only security audit of your servers over SSH: what to patch first, who can get in, what is exposed,
-whether the host is healthy — with rollback-ready fix steps. One binary, one YAML per organization, data stays local.
+whether the hosts are healthy — with fix steps that can be rolled back. One binary, one YAML per organization; the data
+stays on your machine.
 
-![Web interface (demo data)](docs/dashboard.png)
+![Terminal interface (demo data)](docs/screenshots/tui-en.png)
+
+![Web interface (demo data)](docs/screenshots/web-en.png)
 
 ```bash
-# download kanareika-<os>-<arch> from the release (or: make bin -> dist/kanareika); nothing else to install
-kanareika init                   # orgs/, secrets/, reports/ in the current directory (or --home DIR)
-kanareika org new myorg          # describe hosts, jump hosts and consent in orgs/myorg.yml
+# download kanareika-<os>-<arch> from the release (Linux, macOS, Windows); nothing else to install
+kanareika init                   # orgs/, secrets/, reports/ here (or --home DIR)
+kanareika org new myorg          # hosts, jump hosts and consent: orgs/myorg.yml
 kanareika validate myorg
-kanareika db update              # vulnerability DBs and feeds (isolated network: db export / db import)
+kanareika db update              # vulnerability DBs (isolated network: db export / db import)
 kanareika scan myorg
-kanareika                        # terminal interface (TUI): findings, hosts, runs, scans
-kanareika web                    # web interface at http://127.0.0.1:8088; scans can be started there too
+kanareika                        # terminal interface
+kanareika web                    # web interface, http://127.0.0.1:8088
 ```
 
-Three interfaces over the same data and rules: the TUI (`kanareika`, k9s-style; `?` shows the keys, `o` sets up the panels, kept in
-`~/.config/kanareika/tui.json` or the OS equivalent), the web
-(`kanareika web`) and commands for scripts and cron (`kanareika --help`). The TUI can also attach to a remote
-`kanareika web`: `kanareika tui --url http://host:8088 --token …`.
+**Four ways in, same data and rules:**
 
-- **Vulnerabilities** — OS packages, images, jars/lockfiles via trivy built into the binary (only its DBs are downloaded, or imported offline); backports and fix
+- **TUI** — `kanareika`: k9s-style; `?` for keys, `o` for panels, `L` for language. Attaches to a remote web too:
+  `kanareika tui --url http://host:8088 --token …`.
+- **Web** — `kanareika web`: dashboards, trends, host details; scans start from the page.
+- **Commands** — for scripts and cron: `kanareika --help`.
+- **MCP** — `kanareika mcp`: read-only tools for AI agents (Claude Code and others).
+
+**What it checks:**
+
+- **Vulnerabilities** — OS packages, images, jars and lockfiles via trivy built into the binary; backports and fix
   availability verified on the host; **P1–P4** by KEV, EPSS, exposure and pre-auth RCE.
-- **Access & exposure** — SSH password login per user, keys, logins and attackers, open ports, firewalls, external scan.
+- **Access and exposure** — SSH password logins, keys, logins and attackers, open ports, firewalls, external scan.
 - **Health** — kernel errors, disks, memory, time sync, pending reboots.
-- **Fixing** — pick actions → a ready task for an engineer or AI agent (apply / verify / rollback); MCP for agents.
-- **Safe by design** — read-only, per-org isolation, changed host keys refused, consent required, web interface on localhost only (or with a token).
+- **Fixing** — selected actions become a ready task for an engineer or an AI agent: apply, verify, roll back.
+- **Safe by design** — read-only, organizations isolated, changed host keys refused, no scan without consent, the web
+  interface on localhost only (or with a token).
 
-Details: [docs/org-file.md](docs/org-file.md) · `kanareika --help`
+English, Русский, 中文 in every interface. Details: [docs/org-file.md](docs/org-file.md) · [CHANGELOG](CHANGELOG.md)
 
-License: [MIT](LICENSE) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+Like it? [Star it](https://github.com/mikekosulin/kanareika) · Something wrong? [Open an issue](https://github.com/mikekosulin/kanareika/issues/new/choose)
+(no real hosts or addresses, please) · Vulnerability? [Report privately](SECURITY.md)
+
+[MIT](LICENSE) · [Contributing](CONTRIBUTING.md)

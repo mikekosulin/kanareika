@@ -19,6 +19,13 @@ Windows too, and runs the Linux end-to-end check: `tools/e2e/e2e.sh` (needs Dock
 about 1 GB on the host) builds the Linux binary, scans a Debian container over SSH and reads the result through
 `history` and the web API. Everything in it is made up and removed afterwards.
 
+## Screenshots
+
+`docs/screenshots/{tui,web}-{en,ru,zh}.png` are the README's, one per language, from demo data only (they are
+published). The TUI ones come from `go run ./tools/screenshots -home <demo> -lang <lang> -size 150x28 -keys 2`, a
+colored frame rendered as HTML and captured in a browser; the web ones from `kanareika web` on the same demo data,
+1600 px wide, dark theme.
+
 ## Test data must be fake
 
 Test data captured from real hosts is the easiest way to leak someone's infrastructure. Everything under `testdata/`

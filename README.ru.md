@@ -1,41 +1,50 @@
 # Kanareika
 
-[![CI](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml/badge.svg)](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/mikekosulin/kanareika)](https://github.com/mikekosulin/kanareika/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml/badge.svg)](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/mikekosulin/kanareika)](https://github.com/mikekosulin/kanareika/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Stars](https://img.shields.io/github/stars/mikekosulin/kanareika?style=social)](https://github.com/mikekosulin/kanareika)
 
-[English](README.md) · **Русский**
+[English](README.md) · **Русский** · [中文](README.zh.md)
 
-Безагентный аудит безопасности серверов по SSH, только чтение: что обновлять первым, кто может войти, что открыто
-наружу, здоров ли хост — с готовыми шагами исправления и откатом. Один бинарник, один YAML на организацию, данные
-остаются у вас.
+Безагентный аудит безопасности серверов по SSH, только чтение: что обновлять первым, кто может войти, что торчит
+наружу, здоровы ли хосты, — и шаги исправления с откатом. Один бинарник, один YAML на организацию, данные остаются у
+вас.
 
-![Веб-интерфейс (демо-данные)](docs/dashboard.png)
+![Интерфейс в терминале (демо-данные)](docs/screenshots/tui-ru.png)
+
+![Веб-интерфейс (демо-данные)](docs/screenshots/web-ru.png)
 
 ```bash
-# скачать kanareika-<os>-<arch> из релиза (или: make bin -> dist/kanareika); больше ничего ставить не нужно
-kanareika init                   # orgs/, secrets/, reports/ в текущем каталоге (или --home DIR)
-kanareika org new myorg          # описать хосты, бастионы и согласие в orgs/myorg.yml
+# скачать kanareika-<os>-<arch> из релиза (Linux, macOS, Windows); больше ничего не нужно
+kanareika init                   # orgs/, secrets/, reports/ здесь (или --home DIR)
+kanareika org new myorg          # хосты, бастионы и согласие: orgs/myorg.yml
 kanareika validate myorg
-kanareika db update              # базы уязвимостей и фиды (закрытый контур: db export / db import)
+kanareika db update              # базы уязвимостей (закрытый контур: db export / db import)
 kanareika scan myorg
-kanareika                        # интерфейс в терминале (TUI): находки, хосты, прогоны, сканы
-kanareika web                    # веб-интерфейс на http://127.0.0.1:8088; сканы можно запускать и оттуда
+kanareika                        # интерфейс в терминале
+kanareika web                    # веб-интерфейс, http://127.0.0.1:8088
 ```
 
-Три интерфейса поверх одних данных и правил: TUI (`kanareika`, в духе k9s; `?` показывает клавиши, `o` настраивает панели, настройки
-хранятся в `~/.config/kanareika/tui.json` или аналоге ОС), веб
-(`kanareika web`) и команды для скриптов и cron (`kanareika --help`). TUI умеет подключаться и к удалённому
-`kanareika web`: `kanareika tui --url http://host:8088 --token …`.
+**Четыре входа, одни данные и правила:**
 
-- **Уязвимости** — пакеты ОС, образы, jar/lock-файлы через trivy, встроенный в бинарник (скачиваются только его базы, или импортируются офлайн); бэкпорты и наличие исправления
-  проверяются на хосте; приоритеты **P1–P4** по KEV, EPSS, доступности снаружи и pre-auth RCE.
-- **Доступ и периметр** — вход по паролю для каждого пользователя, ключи, входы и атакующие, открытые порты,
-  файрволы, внешний скан.
+- **TUI** — `kanareika`: в духе k9s; `?` — клавиши, `o` — панели, `L` — язык. Подключается и к удалённому вебу:
+  `kanareika tui --url http://host:8088 --token …`.
+- **Веб** — `kanareika web`: сводки, динамика, карточки хостов; сканы запускаются со страницы.
+- **Команды** — для скриптов и cron: `kanareika --help`.
+- **MCP** — `kanareika mcp`: инструменты только на чтение для ИИ-агентов (Claude Code и другие).
+
+**Что проверяет:**
+
+- **Уязвимости** — пакеты ОС, образы, jar и lock-файлы через trivy, встроенный в бинарник; бэкпорты и наличие
+  исправления проверяются на хосте; приоритеты **P1–P4** по KEV, EPSS, доступности снаружи и pre-auth RCE.
+- **Доступ и периметр** — вход по паролю, ключи, входы и атакующие, открытые порты, файрволы, внешний скан.
 - **Здоровье** — ошибки ядра, диски, память, синхронизация времени, ожидающие перезагрузки.
-- **Исправление** — отметить действия → готовая задача для инженера или ИИ-агента (apply / verify / rollback); MCP
-  для агентов.
-- **Безопасно** — только чтение, изоляция организаций, смена ключа хоста не принимается, нужно согласие,
-  веб-интерфейс только на localhost (или с токеном).
+- **Исправление** — выбранные действия превращаются в готовую задачу для инженера или ИИ-агента: применить,
+  проверить, откатить.
+- **Безопасно** — только чтение, организации изолированы, смена ключа хоста не принимается, без согласия скана нет,
+  веб только на localhost (или с токеном).
 
-Подробнее: [docs/org-file.md](docs/org-file.md) · `kanareika --help`
+English, Русский, 中文 во всех интерфейсах. Подробнее: [docs/org-file.md](docs/org-file.md) · [CHANGELOG](CHANGELOG.md)
 
-Лицензия: [MIT](LICENSE) · [Как участвовать](CONTRIBUTING.md) · [Безопасность](SECURITY.md)
+Нравится? [Поставьте звезду](https://github.com/mikekosulin/kanareika) · Что-то не так? [Заведите issue](https://github.com/mikekosulin/kanareika/issues/new/choose)
+(без реальных хостов и адресов) · Уязвимость? [Сообщите приватно](SECURITY.md)
+
+[MIT](LICENSE) · [Как участвовать](CONTRIBUTING.md)
