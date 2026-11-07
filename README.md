@@ -16,7 +16,7 @@ kanareika org new myorg          # describe hosts, jump hosts and consent in org
 kanareika validate myorg
 kanareika db update              # vulnerability DBs and feeds (isolated network: db export / db import)
 kanareika scan myorg
-kanareika serve                  # dashboard at http://127.0.0.1:8088
+kanareika serve                  # dashboard at http://127.0.0.1:8088; scans can be started there too
 ```
 
 - **Vulnerabilities** — OS packages, images, jars/lockfiles via trivy built into the binary (only its DBs are downloaded, or imported offline); backports and fix

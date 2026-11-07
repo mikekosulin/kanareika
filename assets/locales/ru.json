@@ -351,6 +351,24 @@
     "Copy a task for an AI agent or an engineer: hosts, access, step-by-step fixes with verification and rollback": "Скопировать задачу для ИИ-агента или инженера: хосты, доступ, пошаговые исправления с проверкой и откатом",
     "public IP": "внешний IP",
     "all with a public IP": "все с внешним IP",
-    "only hosts reachable from the internet: own public IP (in the config or on an interface)": "только хосты, доступные из интернета: свой внешний IP (в конфиге или на интерфейсе)"
+    "only hosts reachable from the internet: own public IP (in the config or on an interface)": "только хосты, доступные из интернета: свой внешний IP (в конфиге или на интерфейсе)",
+    "Start a scan of this environment": "Запустить скан этого окружения",
+    "Scan": "Скан",
+    "Hosts (none selected: all)": "Хосты (ничего не выбрано: все)",
+    "Modules (none selected: all enabled)": "Модули (ничего не выбрано: все включённые)",
+    "Options": "Параметры",
+    "dry run: show the plan, connect nowhere": "пробный запуск: показать план, никуда не подключаться",
+    "ignore the consent time window": "игнорировать окно времени из согласия",
+    "offline: don't download vulnerability DBs": "офлайн: не скачивать базы уязвимостей",
+    "Cancel": "Отмена",
+    "Start": "Запустить",
+    "Scans started here": "Сканы, запущенные отсюда",
+    "cancelled": "остановлен",
+    "exit code": "код выхода",
+    "Stop": "Остановить",
+    "output": "вывод",
+    "lines": "строк",
+    "dry run": "пробный",
+    "finished with errors": "завершён с ошибками"
   }
 }

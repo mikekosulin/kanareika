@@ -76,7 +76,9 @@ func replay(t *testing.T, home, goldenPath string) {
 			}
 		}
 		if c.SHA256 != "" {
-			sum := sha256.Sum256(rec.Body.Bytes())
+			// the page carries a CSRF token fresh per server: hashed with the placeholder back in its place
+			body := bytes.Replace(rec.Body.Bytes(), []byte(`"`+s.csrf+`"`), []byte(`/*CSRF*/""`), 1)
+			sum := sha256.Sum256(body)
 			if got := hex.EncodeToString(sum[:]); got != c.SHA256 {
 				if *updatePage {
 					b = bytes.ReplaceAll(b, []byte(c.SHA256), []byte(got))
