@@ -238,19 +238,19 @@ func TestBrowse(t *testing.T) {
 	h.has("Hosts(acme/production)[5]", "CentOS Stream 9", "external:203.0.113.10")
 	h.key("4")
 	h.has("Packages(acme/production)", "nginx", "1.25.5")
-	h.key("5")
+	h.key("0")
 	h.has("Runs(acme/production)[5]", "2026-11-02 11:00", "partial")
 	// open an older run, then back to the current state
 	h.key("G", "enter")
 	h.has("To do(acme/production@2026-11-01 10:00)")
-	h.key("5", "c")
+	h.key("0", "c")
 	h.has("To do(acme/production)[")
 	h.key("1")
 	h.has("Organizations[2]", "staging", "no runs")
 	// another env: no runs yet, with the hint
 	h.key("down", "enter")
 	h.has("acme   staging   to do", "kanareika scan acme --env staging", "or press <s>")
-	h.key("tab", "tab", "tab", "tab", "tab", "tab", "tab") // around all views and one more
+	h.key("tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab") // around all views and one more
 	h.has("acme   staging   hosts")
 	h.key("?")
 	h.has("Hotkeys", "OSC 52")
@@ -332,7 +332,7 @@ func TestScanFromTUI(t *testing.T) {
 	h.key("space")
 	close(h.scan.release)
 	h.waitJob("done")
-	h.key("6")
+	h.key("S")
 	h.has("done")
 }
 
@@ -341,7 +341,7 @@ func TestReadOnlyAndLanguages(t *testing.T) {
 	h.has("Организации[2]", "Орг.:")
 	h.key("s")
 	h.has("Отсюда сканы не запускаются")
-	h.key("6")
+	h.key("S")
 	h.has("Отсюда сканы не запускаются")
 	h.key("L") // the list of languages, each in its own name, the current one marked
 	h.has("Язык", "English", "✓ Русский", "中文")
@@ -365,7 +365,7 @@ func TestSizes(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	for _, sz := range [][2]int{{60, 15}, {90, 24}, {120, 30}, {200, 60}} {
 		h.m.Update(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
-		for _, v := range []string{"1", "2", "3", "4", "5", "6"} {
+		for _, v := range viewHotkeys {
 			h.key(v)
 			h.screen()
 		}
@@ -474,7 +474,7 @@ func TestLiveScan(t *testing.T) {
 	if !h.m.busy() {
 		t.Fatal("busy")
 	}
-	h.key("6")
+	h.key("S")
 	h.has("running 60% · 3/5", "Scan running", "os_packages", "trivy sbom", "3/5")
 	h.m.envd.Live.State = "stale"
 	h.has("scan not responding")

@@ -479,6 +479,17 @@
     "users with password": "пользователи с паролем",
     "Hotkeys": "Клавиши",
     "Times in the browser's time zone or in UTC": "Время в часовом поясе браузера или в UTC",
-    "host card": "карточка хоста"
+    "host card": "карточка хоста",
+    "Run": "Прогон",
+    "a run's errors and log (Runs)": "ошибки и журнал прогона (Прогоны)",
+    "failed IPs": "IP неудач",
+    "id": "id",
+    "inode": "inode",
+    "journal": "journal",
+    "only ports open to the outside (Network)": "только порты, открытые снаружи (Сеть)",
+    "proto": "прото",
+    "root": "root",
+    "views: organizations, to do, hosts, packages, changes, access, network, health, exceptions, runs, scans": "экраны: организации, что делать, хосты, пакеты, изменения, доступ, сеть, здоровье, исключения, прогоны, сканы",
+    "errors and log": "ошибки, журнал"
   }
 }

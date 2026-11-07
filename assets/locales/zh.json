@@ -479,6 +479,17 @@
     "users with password": "有密码的用户",
     "Hotkeys": "快捷键",
     "Times in the browser's time zone or in UTC": "按浏览器时区或 UTC 显示时间",
-    "host card": "主机详情"
+    "host card": "主机详情",
+    "Run": "运行",
+    "a run's errors and log (Runs)": "运行的错误与日志（运行）",
+    "failed IPs": "失败 IP",
+    "id": "id",
+    "inode": "inode",
+    "journal": "journal",
+    "only ports open to the outside (Network)": "仅显示对外开放的端口（网络）",
+    "proto": "协议",
+    "root": "root",
+    "views: organizations, to do, hosts, packages, changes, access, network, health, exceptions, runs, scans": "视图：组织、待办、主机、软件包、变化、访问、网络、健康、例外、运行、扫描",
+    "errors and log": "错误与日志"
   }
 }

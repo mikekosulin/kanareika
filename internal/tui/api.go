@@ -99,11 +99,38 @@ type planRow struct {
 }
 
 type runMeta struct {
-	RunID        string  `json:"run_id"`
-	Started      string  `json:"started"`
-	Finished     string  `json:"finished"`
-	TrivyVersion string  `json:"trivy_version"`
-	FeedsUpdated *string `json:"feeds_updated"`
+	RunID        string              `json:"run_id"`
+	Started      string              `json:"started"`
+	Finished     string              `json:"finished"`
+	TrivyVersion string              `json:"trivy_version"`
+	FeedsUpdated *string             `json:"feeds_updated"`
+	HostsFailed  map[string]string   `json:"hosts_failed"`
+	ModuleErrors map[string][]string `json:"module_errors"`
+}
+
+// diffRow: a package or check new or resolved since the previous full run.
+type diffRow struct {
+	Host     string   `json:"host"`
+	Target   string   `json:"target"`
+	Pkg      string   `json:"pkg"`
+	IDs      []string `json:"ids"`
+	Priority string   `json:"priority"`
+	KEV      bool     `json:"kev"`
+	RCE      int      `json:"rce"`
+	Count    int      `json:"count"`
+}
+
+type diffSet struct {
+	Total int       `json:"total"`
+	Rows  []diffRow `json:"rows"`
+}
+
+type backported struct {
+	Host      string   `json:"host"`
+	Pkg       string   `json:"pkg"`
+	Installed string   `json:"installed"`
+	IDs       []string `json:"ids"`
+	CVEs      int      `json:"cves"`
 }
 
 type runResp struct {
@@ -122,6 +149,12 @@ type runResp struct {
 	Exposure  map[string]map[string]any `json:"exposure"`
 	Other     []map[string]any          `json:"other"`     // findings other than packages
 	Inventory []map[string]any          `json:"inventory"` // facts worth knowing, not to fix
+	// against the previous full run (nil: none to compare with)
+	Prev       string           `json:"prev"`
+	New        *diffSet         `json:"new"`
+	Resolved   *diffSet         `json:"resolved"`
+	Exceptions []map[string]any `json:"exceptions"` // findings under an accepted risk
+	Backported []backported     `json:"backported"` // CVEs the installed builds already fix
 }
 
 type scanRequest struct {
@@ -210,6 +243,18 @@ func (t *tr) msg(key string, args map[string]any, fallback string) string {
 		}
 		return s
 	})
+}
+
+// cat: a catalog text by its key, in the language shown (English when it has none; the key when unknown).
+func (t *tr) cat(key string) string {
+	m := t.catalog[key]
+	if s := m[t.lang]; s != "" {
+		return s
+	}
+	if s := m["en"]; s != "" {
+		return s
+	}
+	return key
 }
 
 func (t *tr) title(a action) string  { return t.msg(a.Msg, a.Args, a.Title) }

@@ -22,13 +22,22 @@ const (
 	vActions
 	vHosts
 	vPackages
+	vChanges
+	vAccess
+	vNetwork
+	vHealth
+	vExceptions
 	vRuns
 	vScans
 	nViews
 )
 
 // viewNames: tab titles (English keys of the web page's translations where it has them).
-var viewNames = [nViews]string{"Organizations", "To do", "Hosts", "Packages", "Runs", "Scans"}
+var viewNames = [nViews]string{"Organizations", "To do", "Hosts", "Packages", "Changes", "Access", "Network", "Health",
+	"Exceptions", "Runs", "Scans"}
+
+// viewHotkeys: the key of each view: 1-9, 0, then S.
+var viewHotkeys = [nViews]string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "S"}
 
 // Options of a TUI session.
 type Options struct {
@@ -79,10 +88,13 @@ type Model struct {
 	helpOff int
 	host    string // the host whose card the Hosts view shows ("" = the list)
 	hostOff int
-	panels  *panelsDlg
-	langs   *panelsDlg // the language list (L)
-	form    *scanForm
-	open    string // job whose output the Scans view shows
+	// outsideOnly: the Network view lists only ports open to the outside
+	outsideOnly bool
+	runInfo     *runInfoView // errors and log of one run (i in Runs)
+	panels      *panelsDlg
+	langs       *panelsDlg // the language list (L)
+	form        *scanForm
+	open        string // job whose output the Scans view shows
 
 	toast   string
 	toastAt time.Time
@@ -233,6 +245,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.say(string(msg))
 	case optsMsg:
 		m.form = newForm(m.org, m.env, scanOptions(msg))
+	case runInfoMsg:
+		if m.runInfo != nil && m.runInfo.id == msg.id {
+			m.runInfo.meta, m.runInfo.log = msg.meta, msg.log
+		}
 	case startedMsg:
 		m.form, m.open, m.view = nil, msg.id, vScans
 		m.say(m.t.T("Scan started"))
@@ -353,6 +369,10 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.langKey(s)
 		return m, nil
 	}
+	if m.runInfo != nil && m.view == vRuns && !m.typing && !m.help {
+		m.runInfoKey(s)
+		return m, nil
+	}
 	if m.typing {
 		switch s {
 		case "enter":
@@ -416,8 +436,8 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.setView((m.view + 1) % nViews)
 	case "shift+tab", "left", "h":
 		m.setView((m.view + nViews - 1) % nViews)
-	case "1", "2", "3", "4", "5", "6":
-		m.setView(view(s[0] - '1'))
+	case "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "S":
+		m.setView(view(slices.Index(viewHotkeys[:], s)))
 	case "r", "ctrl+r":
 		m.runKey = "" // reload the run too
 		return m, m.refresh()
@@ -453,7 +473,7 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m *Model) setView(v view) {
 	m.view, m.filter, m.detail = v, "", false
-	m.host, m.hostOff = "", 0
+	m.host, m.hostOff, m.runInfo = "", 0, nil
 }
 
 // languages: English first, then the others by code.
@@ -505,6 +525,16 @@ func (m *Model) rows() int {
 		return len(m.hostList())
 	case vPackages:
 		return len(m.packages())
+	case vChanges:
+		return len(m.changes())
+	case vAccess:
+		return len(m.sectionHosts(m.rundAccess()))
+	case vNetwork:
+		return len(m.sectionHosts(m.rundExposure()))
+	case vHealth:
+		return len(m.sectionHosts(m.rundHealth()))
+	case vExceptions:
+		return len(m.exceptions())
 	case vRuns:
 		return len(m.runList())
 	case vScans:
@@ -552,6 +582,26 @@ func (m *Model) viewKey(s string) tea.Cmd {
 		case "y":
 			return m.copyPrompt(list)
 		}
+	case vAccess, vNetwork, vHealth:
+		var hosts []string
+		switch m.view {
+		case vAccess:
+			hosts = m.sectionHosts(m.rundAccess())
+		case vNetwork:
+			hosts = m.sectionHosts(m.rundExposure())
+		default:
+			hosts = m.sectionHosts(m.rundHealth())
+		}
+		switch s {
+		case "enter": // the host's card
+			if c := m.cur[m.view]; c < len(hosts) {
+				m.view, m.host, m.hostOff, m.filter = vHosts, hosts[c], 0, ""
+			}
+		case "f":
+			if m.view == vNetwork {
+				m.outsideOnly = !m.outsideOnly
+			}
+		}
 	case vHosts:
 		switch s {
 		case "p":
@@ -567,6 +617,10 @@ func (m *Model) viewKey(s string) tea.Cmd {
 		}
 	case vRuns:
 		switch s {
+		case "i":
+			if l := m.runList(); m.cur[vRuns] < len(l) {
+				return m.openRunInfo(l[m.cur[vRuns]].RunID)
+			}
 		case "enter":
 			if l := m.runList(); m.cur[vRuns] < len(l) {
 				m.run, m.rund = l[m.cur[vRuns]].RunID, nil

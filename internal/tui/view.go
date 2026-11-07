@@ -282,7 +282,7 @@ func (m *Model) tabLines() []string {
 // narrow. A scan running shows on the Scans tab.
 func (m *Model) tabs() string {
 	label := func(v view, full bool) string {
-		n := strconv.Itoa(int(v) + 1)
+		n := viewHotkeys[v]
 		name := m.t.T(viewNames[v])
 		if v == vScans && m.busy() {
 			name += " ●"
@@ -291,17 +291,20 @@ func (m *Model) tabs() string {
 			return sCrumb.Render(n + " " + name)
 		}
 		if !full {
-			return " " + sKey.Render(n) + " "
+			return sKey.Render(n)
 		}
-		return " " + sKey.Render(n) + " " + sMuted.Render(name) + " "
+		return sKey.Render(n) + " " + sMuted.Render(name)
 	}
 	var l string
-	for _, full := range []bool{true, false} {
+	for _, f := range []struct {
+		full bool
+		sep  string
+	}{{true, "  "}, {true, " "}, {false, "  "}} {
 		parts := make([]string, nViews)
 		for v := range nViews {
-			parts[v] = label(v, full)
+			parts[v] = label(v, f.full)
 		}
-		if l = " " + strings.Join(parts, " "); ansi.StringWidth(l) <= m.w {
+		if l = " " + strings.Join(parts, f.sep); ansi.StringWidth(l) <= m.w {
 			break
 		}
 	}
@@ -526,14 +529,19 @@ func (m *Model) gauges(barW int) []string {
 // keys: k9s-style hints in columns, for the view on screen; what doesn't fit in width ends with <?> help.
 func (m *Model) keys(width int) []string {
 	type k struct{ key, what string }
-	global := []k{{"1-6", "views"}, {"/", "filter"}, {"o", "panels"}, {"r", "refresh"}, {"L", "language"}, {"q", "quit"}}
+	global := []k{{"1-0,S", "views"}, {"/", "filter"}, {"o", "panels"}, {"r", "refresh"}, {"L", "language"}, {"q", "quit"}}
 	local := map[view][]k{
-		vOrgs:     {{"enter", "open"}},
-		vActions:  {{"space", "select"}, {"a", "select all"}, {"y", "copy task"}, {"enter", "details"}, {"p", "P4"}},
-		vHosts:    {{"enter", "host card"}, {"p", "P4"}},
-		vPackages: {{"p", "P4"}},
-		vRuns:     {{"enter", "open"}, {"c", "current state"}},
-		vScans:    {{"enter", "output"}, {"x", "stop"}},
+		vOrgs:       {{"enter", "open"}},
+		vActions:    {{"space", "select"}, {"a", "select all"}, {"y", "copy task"}, {"enter", "details"}, {"p", "P4"}},
+		vHosts:      {{"enter", "host card"}, {"p", "P4"}},
+		vPackages:   {{"p", "P4"}},
+		vChanges:    {{"/", "filter"}},
+		vAccess:     {{"enter", "host card"}},
+		vNetwork:    {{"enter", "host card"}, {"f", "outside only"}},
+		vHealth:     {{"enter", "host card"}},
+		vExceptions: {{"/", "filter"}},
+		vRuns:       {{"enter", "open"}, {"i", "errors and log"}, {"c", "current state"}},
+		vScans:      {{"enter", "output"}, {"x", "stop"}},
 	}[m.view]
 	if m.scanOK {
 		local = append(local, k{"s", "scan"})
@@ -623,7 +631,25 @@ func (m *Model) body(w, h int) (string, []string) {
 	case vPackages:
 		l := m.packages()
 		return m.title(viewNames[vPackages], len(l), true), m.packagesView(l, w, h)
+	case vChanges:
+		l := m.changes()
+		return m.title(viewNames[vChanges], len(l), true), m.changesView(l, w, h)
+	case vAccess:
+		l := m.sectionHosts(m.rundAccess())
+		return m.title(viewNames[vAccess], len(l), true), m.accessView(l, w, h)
+	case vNetwork:
+		l := m.sectionHosts(m.rundExposure())
+		return m.title(viewNames[vNetwork], len(l), true), m.networkView(l, w, h)
+	case vHealth:
+		l := m.sectionHosts(m.rundHealth())
+		return m.title(viewNames[vHealth], len(l), true), m.healthView(l, w, h)
+	case vExceptions:
+		l := m.exceptions()
+		return m.title(viewNames[vExceptions], len(l), true), m.exceptionsView(l, w, h)
 	case vRuns:
+		if m.runInfo != nil {
+			return sTitle.Render(m.t.T("Run")) + sText.Render("("+m.t.runShort(m.runInfo.id)+")"), m.runInfoView(w, h)
+		}
 		l := m.runList()
 		return m.title(viewNames[vRuns], len(l), true), m.runsView(l, w, h)
 	}
@@ -643,6 +669,20 @@ var viewCols = [nViews][]col{
 	vPackages: {{width: 2}, {title: "host", width: 20, drop: 3}, {title: "where", width: 28, drop: 4}, {title: "package", min: 12},
 		{title: "installed", width: 20, drop: 5}, {title: "fixed in", width: 20}, {title: "CVE", width: 4, right: true, drop: 2},
 		{title: "KEV", width: 3, drop: 1}, {title: "due by", width: 10, drop: 6}},
+	vChanges: {{width: 1}, {width: 2}, {title: "host", width: 20}, {title: "package / check", width: 40},
+		{title: "where", min: 12, drop: 2}, {title: "CVE", width: 5, right: true, drop: 1}},
+	vAccess: {{title: "host", width: 22}, {title: "password", width: 10}, {title: "root", width: 12, drop: 4},
+		{title: "with password", width: 20, drop: 3}, {title: "keys", width: 5, right: true, drop: 2},
+		{title: "logins", width: 6, right: true, drop: 1}, {title: "IPs", width: 4, right: true, drop: 1},
+		{title: "failed", width: 8, right: true}, {title: "failed IPs", width: 6, right: true, drop: 2}},
+	vNetwork: {{title: "host", width: 22}, {title: "public IP", width: 34, drop: 2}, {title: "open to the outside", width: 30},
+		{title: "firewall", min: 12, drop: 1}},
+	vHealth: {{title: "host", width: 22}, {title: "disk", width: 16}, {title: "inode", width: 5, right: true, drop: 3},
+		{title: "memory", width: 10, drop: 2}, {title: "load", width: 8, drop: 2}, {title: "units", width: 5, right: true, drop: 4},
+		{title: "kernel", width: 30, drop: 5}, {title: "journal", width: 7, right: true, drop: 4}, {title: "time zone", width: 16, drop: 6},
+		{title: "time", width: 12, drop: 1}},
+	vExceptions: {{width: 1}, {title: "host", width: 20}, {title: "id", width: 20}, {title: "package", width: 20, drop: 2},
+		{title: "until", width: 10, drop: 3}, {title: "who", width: 12, drop: 4}, {title: "reason", min: 12, drop: 1}},
 	vRuns: {{title: "run", width: 18}, {title: "state", width: 14}, {title: "kind", width: 10, drop: 3},
 		{title: "hosts ok", width: 9, right: true, drop: 2}, {title: "P1", width: 4, right: true}, {title: "P2", width: 4, right: true, drop: 1},
 		{title: "P3", width: 4, right: true, drop: 1}},
@@ -935,7 +975,7 @@ func (m *Model) formView(h int) []string {
 }
 
 var helpRows = [][2]string{
-	{"1-6, tab, left/right", "views: organizations, to do, hosts, packages, runs, scans"},
+	{"1-9, 0, S, tab", "views: organizations, to do, hosts, packages, changes, access, network, health, exceptions, runs, scans"},
 	{"up/down, j/k, pgup/pgdn, g/G", "move"},
 	{"enter", "open (an environment, a run, details, a scan's output)"},
 	{"/", "filter the list; esc clears"},
@@ -945,6 +985,8 @@ var helpRows = [][2]string{
 	{"s", "start a scan of this environment"},
 	{"x", "stop the scan under the cursor (Scans)"},
 	{"c", "back to the current state (Runs)"},
+	{"i", "a run's errors and log (Runs)"},
+	{"f", "only ports open to the outside (Network)"},
 	{"o", "panels: header, columns of this view (kept between sessions)"},
 	{"z", "times in the system's time zone or in UTC"},
 	{"L", "language"},
