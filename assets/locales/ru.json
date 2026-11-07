@@ -502,6 +502,8 @@
     "newer DB out": "есть новее",
     "update DBs": "обновить базы",
     "check for newer vulnerability DBs and download them (kanareika db update)": "проверить, нет ли новых баз уязвимостей, и скачать их (kanareika db update)",
-    "DB": "База"
+    "DB": "База",
+    "from the last run": "из последнего прогона",
+    "runs merged": "прогонов в сводке"
   }
 }

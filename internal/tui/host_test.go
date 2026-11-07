@@ -141,7 +141,7 @@ func TestDBStatus(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 		h.run(h.m.fetchDB())
 	}
-	h.has("DB 1h")
+	h.has("DB:       1h")
 	h.hasNot("no DB")
 
 	// one running: U does nothing; a newer build out: said so; a failed update: the error

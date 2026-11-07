@@ -502,6 +502,8 @@
     "newer DB out": "有新版",
     "update DBs": "更新漏洞库",
     "check for newer vulnerability DBs and download them (kanareika db update)": "检查并下载更新的漏洞库（kanareika db update）",
-    "DB": "漏洞库"
+    "DB": "漏洞库",
+    "from the last run": "来自最近一次运行",
+    "runs merged": "合并的运行"
   }
 }

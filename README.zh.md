@@ -7,9 +7,15 @@
 无需代理、只读的服务器安全审计（通过 SSH）：先修什么、谁能登录、什么暴露在外、主机是否健康——并给出可回滚的修复步骤。
 一个二进制文件，每个组织一个 YAML，数据只留在你的机器上。
 
-![终端界面（演示数据）](docs/screenshots/tui-zh.png)
+**终端界面** —— 主要界面：`kanareika`。按优先级和期限列出先修什么；主机、软件包、访问、网络、健康、运行记录和扫描分布在标签 `1`–`0`、`S` 上。
 
-![Web 界面（演示数据）](docs/screenshots/web-zh.png)
+![演示数据，均为虚构。](docs/screenshots/tui-zh.png)
+
+**Web 界面** —— `kanareika web`，适合用浏览器或团队一起查看：数据相同，另有最近 30 次运行的趋势。
+
+![演示数据，均为虚构。](docs/screenshots/web-zh.png)
+
+<sub>演示数据，均为虚构。</sub>
 
 ```bash
 # 从 Release 下载 kanareika-<os>-<arch>（Linux、macOS、Windows），无需安装其他任何东西
@@ -24,7 +30,7 @@ kanareika web                    # Web 界面，http://127.0.0.1:8088
 
 **四种使用方式，同一份数据和规则：**
 
-- **TUI** — `kanareika`：k9s 风格；`?` 查看按键，`o` 设置面板，`L` 切换语言。也可连接远程 Web：
+- **TUI**（主要）— `kanareika`：k9s 风格；`?` 查看按键，`o` 设置面板，`L` 切换语言。也可连接远程 Web：
   `kanareika tui --url http://host:8088 --token …`。
 - **Web** — `kanareika web`：概览、趋势、主机详情；可直接在页面上发起扫描。
 - **命令** — 用于脚本和 cron：`kanareika --help`。

@@ -8,9 +8,15 @@ Agentless, read-only security audit of your servers over SSH: what to patch firs
 whether the hosts are healthy — with fix steps that can be rolled back. One binary, one YAML per organization; the data
 stays on your machine.
 
-![Terminal interface (demo data)](docs/screenshots/tui-en.png)
+**Terminal interface** — the main one: `kanareika`. What to fix first, by priority and due date; hosts, packages, access, network, health, runs and scans on tabs `1`–`0`, `S`.
 
-![Web interface (demo data)](docs/screenshots/web-en.png)
+![Demo data, made up.](docs/screenshots/tui-en.png)
+
+**Web interface** — `kanareika web`, when a browser is handier or the team looks together: the same data, plus the trend of the last 30 runs.
+
+![Demo data, made up.](docs/screenshots/web-en.png)
+
+<sub>Demo data, made up.</sub>
 
 ```bash
 # download kanareika-<os>-<arch> from the release (Linux, macOS, Windows); nothing else to install
@@ -25,7 +31,7 @@ kanareika web                    # web interface, http://127.0.0.1:8088
 
 **Four ways in, same data and rules:**
 
-- **TUI** — `kanareika`: k9s-style; `?` for keys, `o` for panels, `L` for language. Attaches to a remote web too:
+- **TUI**, the main one — `kanareika`: k9s-style; `?` for keys, `o` for panels, `L` for language. Attaches to a remote web too:
   `kanareika tui --url http://host:8088 --token …`.
 - **Web** — `kanareika web`: dashboards, trends, host details; scans start from the page.
 - **Commands** — for scripts and cron: `kanareika --help`.

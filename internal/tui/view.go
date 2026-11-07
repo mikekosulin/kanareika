@@ -462,7 +462,7 @@ func (m *Model) info() []string {
 				if name == "default" {
 					name = m.t.T("all")
 				}
-				env = sBold.Render(name) + sMuted.Render(fmt.Sprintf(" %d %s", e.Hosts, m.t.T("hosts")))
+				env = sBold.Render(name) + sMuted.Render(fmt.Sprintf(" · %s: %d", m.t.T("hosts"), e.Hosts))
 			}
 		}
 	}
@@ -506,7 +506,7 @@ func (m *Model) dbState() string {
 	}
 	for _, d := range m.db.DBs {
 		if at, err := time.Parse(time.RFC3339, d.Updated); err == nil && d.Name == "db" {
-			return sMuted.Render("DB " + agoShort(m.now().Sub(at)))
+			return sMuted.Render(agoShort(m.now().Sub(at)))
 		}
 	}
 	return ""

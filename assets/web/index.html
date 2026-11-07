@@ -624,7 +624,7 @@ function renderKpis() {
       <div class="foot" title="${t("packages")} P1–P3 ${t("past due by")} SLA">${expired ? `<span class="overdue">${t("expired exceptions")}: ${expired}</span>` : `${t("exceptions")}: ${rd.exceptions.length}`}</div></div>
     <div class="card kpi"><div class="label">${icon("arrow-path", "sm")}${t("Updated")}</div>
       <div class="value" style="font-size:18px;margin-top:8px">${esc(ago(m.finished))}</div>
-      <div class="foot" title="${fmt(c.cves)} CVE ${t("total")}${m.feeds_updated ? "" : " · KEV/EPSS " + t("not loaded") + " (kanareika db update)"}">${m.run_id === "current" ? `${t("of")} ${sources} ${t("runs")}` : esc(dur(m.started, m.finished))} · ${fmtc(c.cves)} CVE</div></div>`;
+      <div class="foot" title="${fmt(c.cves)} CVE ${t("total")}${m.feeds_updated ? "" : " · KEV/EPSS " + t("not loaded") + " (kanareika db update)"}">${m.run_id === "current" ? (sources === 1 ? t("from the last run") : `${t("runs merged")}: ${sources}`) : esc(dur(m.started, m.finished))} · ${fmtc(c.cves)} CVE</div></div>`;
   cap.textContent = partial(m) ? t("Partial run — no comparison") : rd.prev ? `${t("Packages to update")} · Δ ${t("vs full run")} ${runShort(rd.prev)}` : t("Packages to update");
 }
 
@@ -693,7 +693,8 @@ function renderTrend() {
     out += `<g class="col" data-i="${i}"><rect x="${L + slot * i}" y="${T}" width="${slot}" height="${H - T - B}" fill="${sel ? "var(--surface-2)" : "transparent"}"/>`
       + `<g ${r.now ? 'opacity=".55"' : ""}>${segs}</g>`
       + (total ? `<text x="${cx}" y="${y(total) - 5}" text-anchor="middle" font-size="11" fill="var(--ink-2)">${fmtc(total)}</text>` : "") + `</g>`;
-    if (i % every === 0 || i === bars.length - 1)
+    // every n-th label and the last one; a regular one too close to the last gives way (they would overlap)
+    if (i === bars.length - 1 || (i % every === 0 && bars.length - 1 - i >= Math.max(2, every * 0.6)))
       out += `<text x="${cx}" y="${H - 7}" text-anchor="middle" font-size="11" fill="${sel || r.now ? "var(--ink)" : "var(--muted)"}">${esc(r.label)}</text>`;
   });
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
@@ -1026,7 +1027,7 @@ function drawDaily(svg, daily) {
     const x = L + slot * i + (slot - bw) / 2, h = v ? Math.max(2, y(0) - y(v)) : 0;
     out += `<g class="col" data-i="${i}"><rect x="${L + slot * i}" y="${T}" width="${slot}" height="${H - T - B}" fill="transparent"/>`
       + (h ? `<path d="M${x},${y(0)} V${y(0) - h + Math.min(2, h)} Q${x},${y(0) - h} ${x + Math.min(2, bw / 2)},${y(0) - h} H${x + bw - Math.min(2, bw / 2)} Q${x + bw},${y(0) - h} ${x + bw},${y(0) - h + Math.min(2, h)} V${y(0)} Z" fill="var(--p2)"/>` : "") + `</g>`;
-    if (i % 7 === 0 || i === days.length - 1) out += `<text x="${L + slot * i + slot / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--muted)">${days[i].slice(5)}</text>`;
+    if (i === days.length - 1 || (i % 7 === 0 && days.length - 1 - i >= 4)) out += `<text x="${L + slot * i + slot / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--muted)">${days[i].slice(5)}</text>`;
   });
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   svg.innerHTML = out;

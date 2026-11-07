@@ -22,9 +22,10 @@ about 1 GB on the host) builds the Linux binary, scans a Debian container over S
 ## Screenshots
 
 `docs/screenshots/{tui,web}-{en,ru,zh}.png` are the README's, one per language, from demo data only (they are
-published). The TUI ones come from `go run ./tools/screenshots -home <demo> -lang <lang> -size 150x28 -keys 2`, a
-colored frame rendered as HTML and captured in a browser; the web ones from `kanareika web` on the same demo data,
-1600 px wide, dark theme.
+published). `go run ./tools/demo -out <dir>` writes it: a month of daily runs of a made-up organization. The TUI
+ones come from `go run ./tools/screenshots -home <dir> -lang <lang> -org acme -env production -size 150x26 -keys 2`,
+a colored frame rendered as HTML and captured in a browser; the web ones from `kanareika web` on the same directory,
+1600 px wide, dark theme. The demo data is also the quickest way to try the interfaces out.
 
 ## Test data must be fake
 
