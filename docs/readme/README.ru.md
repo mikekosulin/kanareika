@@ -1,8 +1,8 @@
-<h1><img src="docs/brand/banner-ru.png" alt="Kanareika: аудит безопасности серверов по SSH"></h1>
+<h1><img src="../brand/banner-ru.png" alt="Kanareika: аудит безопасности серверов по SSH"></h1>
 
-[![CI](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml/badge.svg)](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml) [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/mikekosulin/kanareika/badges/coverage.json)](https://github.com/mikekosulin/kanareika/actions/workflows/coverage.yml) [![Release](https://img.shields.io/github/v/release/mikekosulin/kanareika)](https://github.com/mikekosulin/kanareika/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Stars](https://img.shields.io/github/stars/mikekosulin/kanareika?style=social)](https://github.com/mikekosulin/kanareika)
+[![CI](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml/badge.svg)](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml) [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/mikekosulin/kanareika/badges/coverage.json)](https://github.com/mikekosulin/kanareika/actions/workflows/coverage.yml) [![Release](https://img.shields.io/github/v/release/mikekosulin/kanareika)](https://github.com/mikekosulin/kanareika/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE) [![Stars](https://img.shields.io/github/stars/mikekosulin/kanareika?style=social)](https://github.com/mikekosulin/kanareika)
 
-[English](README.md) · **Русский** · [中文](README.zh.md)
+[English](../../README.md) · **Русский** · [中文](README.zh.md)
 
 Безагентный аудит безопасности серверов по SSH, только чтение: что обновлять первым, кто может войти, что торчит
 наружу, здоровы ли хосты, — и шаги исправления с откатом. Один бинарник, один YAML на организацию, данные остаются у
@@ -12,13 +12,13 @@
 
 Запустите `kanareika`. Он открывается на списке «Что делать»: самое срочное сверху.
 
-![Демо-данные, выдуманные.](docs/screenshots/tui-ru.png)
+![Демо-данные, выдуманные.](../screenshots/tui-ru.png)
 
 ### Веб-интерфейс
 
 Запустите `kanareika web`: те же данные в браузере и динамика за последние 30 прогонов.
 
-![Демо-данные, выдуманные.](docs/screenshots/web-ru.png)
+![Демо-данные, выдуманные.](../screenshots/web-ru.png)
 
 <sub>Демо-данные, выдуманные.</sub>
 
@@ -54,9 +54,9 @@ kanareika web                    # веб-интерфейс, http://127.0.0.1:8
 
 **Отказ от ответственности.** Канарейка показывает то, что нашла, и не обещает найти всё. Приоритеты и шаги
 исправления — рекомендации: проверьте их, прежде чем запускать что-либо на хостах. Проверяйте только серверы, на
-которые у вас есть право. Предоставляется «как есть», без гарантий ([MIT](LICENSE)).
+которые у вас есть право. Предоставляется «как есть», без гарантий ([MIT](../../LICENSE)).
 
 Нравится? [Поставьте звезду](https://github.com/mikekosulin/kanareika) · Что-то не так? [Заведите issue](https://github.com/mikekosulin/kanareika/issues/new/choose)
-(без реальных хостов и адресов) · Уязвимость? [Сообщите приватно](SECURITY.md)
+(без реальных хостов и адресов) · Уязвимость? [Сообщите приватно](../../SECURITY.md)
 
-[Формат файла организации](docs/org-file.md) · [Изменения](CHANGELOG.md) · [Как участвовать](CONTRIBUTING.md) · [MIT](LICENSE)
+[Формат файла организации](../org-file.md) · [Изменения](../../CHANGELOG.md) · [Как участвовать](../../CONTRIBUTING.md) · [MIT](../../LICENSE)
