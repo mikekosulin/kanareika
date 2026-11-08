@@ -151,6 +151,10 @@ func newHarnessAt(t *testing.T, p config.Paths, o Options, scans bool) *harness 
 	h := &harness{t: t, m: New(o), clip: clip, scan: sc}
 	h.m.Update(tea.WindowSizeMsg{Width: 160, Height: 40})
 	h.run(h.m.Init())
+	if h.m.orgs.Orgs != nil && o.Org != "" {
+		h.m.setView(vActions) // most tests are about ToDo; TestServers starts where the TUI does
+		h.run(h.m.sync())
+	}
 	return h
 }
 
@@ -271,7 +275,7 @@ func (h *harness) waitJob(state string) {
 
 func TestBrowse(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.has("ToDo(acme/production)[30] P1 6 • P2 12 • P3 12 • P4 4", "openssl 3.0.1 → 3.0.10", "group by  fix  CVE  host  g",
+	h.has("ToDo(acme/production)[30] P1 6 • P2 12 • P3 12 • P4 4", "openssl 3.0.1 → 3.0.10", "group by  server  fix  CVE  g",
 		"space select", "? all keys", " acme  production ", "4 hosts", "DB ok", "12:00 UTC")
 	h.hasNot("P4 os")
 	h.key("p") // P4 too
@@ -280,8 +284,8 @@ func TestBrowse(t *testing.T) {
 	h.has("Details(openssl 3.0.1 → 3.0.10)", "WHY P1", "in CISA KEV: exploited in the wild", "due 2026-11-08 · in 1 d",
 		"CVE-2026-0002    high   91% KEV openssl issue", "web    1 CentOS Stream 9  ● ready 1 internet-facing", "$ dnf update openssl",
 		"node: pkg:os:openssl:3.0.1:3.0.10", "esc back")
-	h.key("esc", "2")
-	h.has("Hosts(acme/production)[5]", "CentOS Stream 9", "external:203.0.113.10")
+	h.key("esc", "1")
+	h.has("Servers(acme/production)", "web-01")
 	h.key("3")
 	h.has("Packages(acme/production)", "nginx", "1.25.5")
 	h.key("9")
@@ -297,11 +301,11 @@ func TestBrowse(t *testing.T) {
 	h.key("down", "enter")
 	h.has(" acme  staging ", "kanareika scan acme --env staging", "or press <s>", "<enter> checks SSH access", "enter check access, first scan")
 	h.key("tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab") // around all views and one more
-	h.has(" 2 Hosts ", " acme  staging ")
+	h.has(" 3 Packages ", " acme  staging ")
 	h.key("?")
 	h.has("Hotkeys", "OSC 52", "list_fixes · get_fix")
 	h.key("x")
-	h.has("Hosts(acme/staging)")
+	h.has("Packages(acme/staging)")
 }
 
 // TestTree: open and close, the cursor to the parent, grouping, a node's selection covering what is under it.
@@ -341,12 +345,12 @@ func TestTree(t *testing.T) {
 	}
 	// group by CVE, then host, then fix again
 	h.key("esc", "g")
-	h.has("ToDo(acme/production)[", "CVE-2026-0002", "group by  fix  CVE  host")
-	if h.m.by != "cve" || h.m.tree.By != "cve" {
+	h.has("ToDo(acme/production)[", "CVE-2026-0002", "group by  server  fix  CVE")
+	if h.m.by[vActions] != "cve" || h.m.tree.By != "cve" {
 		t.Fatal(h.m.by)
 	}
 	h.key("g")
-	h.has("web  4 hosts · Ubuntu 18.04.6 LTS")
+	h.has("web-01", "CentOS Stream 9")
 	if h.m.tree.By != "host" {
 		t.Fatal(h.m.tree.By)
 	}
@@ -535,7 +539,7 @@ func TestSizes(t *testing.T) {
 			h.key(v)
 			h.screen()
 		}
-		h.key("1", "pgdown", "G", "g")
+		h.key("2", "pgdown", "G", "g")
 		h.screen()
 	}
 	if New(Options{}).View() != "" {
@@ -659,7 +663,7 @@ func TestLiveScan(t *testing.T) {
 	h.has("Config errors: 1")
 	// no organizations at all
 	h.m.org, h.m.orgs.Orgs, h.m.rund = "", nil, nil
-	h.key("1")
+	h.key("2")
 	h.has("no organizations", "kanareika org new <id>")
 }
 

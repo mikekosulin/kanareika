@@ -790,6 +790,12 @@
     "journal /7d": "journal /7д",
     "load /cpu": "нагрузка /cpu",
     "mem free": "своб. память",
-    "mouse (shift+drag still selects text)": "мышь (Shift+перетаскивание выделяет текст)"
+    "mouse (shift+drag still selects text)": "мышь (Shift+перетаскивание выделяет текст)",
+    "as {user}": "как {user}",
+    "not checked": "не проверен",
+    "nothing to fix": "исправлять нечего",
+    "server": "сервер",
+    "to fix": "исправить",
+    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "экраны: серверы, Что делать, пакеты, изменения, доступ, сеть, здоровье, исключения, прогоны, сканы"
   }
 }

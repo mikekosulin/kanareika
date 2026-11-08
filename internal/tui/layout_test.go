@@ -25,7 +25,7 @@ func (h *harness) hasNot(parts ...string) {
 // TestNarrow: on a small terminal the least needed columns go, the rest are whole; the status bar keeps where.
 func TestNarrow(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.key("1")
+	h.key("2")
 	h.has("HOSTS", "EPSS", "DUE BY", "openssl 3.0.1 → 3.0.10", "? all keys", "Details")
 
 	h.size(60, 18)
@@ -47,7 +47,7 @@ func TestNarrow(t *testing.T) {
 	h.eventually("done")
 
 	h.size(80, 24)
-	h.key("2")
+	h.key("1")
 	h.has("P1", "? all keys")
 	h.hasNot("CHART")
 }
@@ -77,31 +77,26 @@ func TestHelpScrolls(t *testing.T) {
 	h.has("ToDo(")
 }
 
-// TestPanels: the panel settings change the tabs, P4 and the columns and are kept for the next session.
+// TestPanels: the panel settings change the tabs, P4, the mouse and the columns and are kept for the next session.
 func TestPanels(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "conf", "tui.json")
 	h := newHarness(t, Options{Org: "acme", Env: "production", Settings: path}, true)
-	h.key("2", "o")
-	h.has("Panels(Hosts)", "[x] view tabs", "[ ] show P4 too", "[x] mouse (shift+drag still selects text)", "time zone: < system >",
-		"[x] OS", "[x] facing")
-	h.hasNot("[x] host", "header:") // never switched off; the header is gone
+	h.key("3", "o")
+	h.has("Panels(Packages)", "[x] view tabs", "[ ] show P4 too", "[x] mouse (shift+drag still selects text)", "time zone: < system >",
+		"[x] where", "[x] installed")
+	h.hasNot("[x] package", "header:") // never switched off; the header is gone
 
 	h.key("down", "space") // P4
 	h.has("[x] show P4 too")
-	h.key("down", "down", "down", "down", "space", "down", "x", "k", "up", "up", "up", "up", "up", "up", "up", "up") // OS and P3 off; up stops at the first item
-	h.has("[ ] OS", "[ ] P3")
+	h.key("down", "down", "down", "down", "space", "down", "x", "k", "up", "up", "up", "up", "up", "up", "up", "up") // where and installed off
+	h.has("[ ] where", "[ ] installed")
 	h.key("esc")
-	h.has("Hosts(acme/production)", "━", "? all keys")
-	h.hasNot("Debian")
-	for _, l := range strings.Split(h.screen(), "\n") {
-		if strings.Contains(l, "HOST") && strings.Contains(l, "P3") {
-			t.Fatal("P3 column still there: " + l)
-		}
-	}
+	h.has("Packages(acme/production)", "? all keys")
+	h.hasNot("WHERE", "INSTALLED")
 
 	b, err := os.ReadFile(path)
 	must(t, err)
-	for _, want := range []string{`"show_p4": true`, `"hosts": [`, `"OS"`, `"P3"`} {
+	for _, want := range []string{`"show_p4": true`, `"packages": [`, `"where"`, `"installed"`} {
 		if !strings.Contains(string(b), want) {
 			t.Fatalf("%s not in the settings:\n%s", want, b)
 		}
@@ -109,24 +104,24 @@ func TestPanels(t *testing.T) {
 
 	// the next session starts with them; P4 shows in the lists
 	h2 := newHarness(t, Options{Org: "acme", Env: "production", Settings: path}, true)
+	h2.key("3")
+	h2.hasNot("WHERE")
 	h2.key("2")
-	h2.hasNot("Debian")
-	h2.key("1")
 	h2.has("P4 os")
 
 	// switched back on, the column returns and the view's entry leaves the file
-	h2.key("2", "o", "down", "down", "down", "down", "down", "space", "q")
-	h2.has("Debian")
-	h2.key("p") // P4 off from the Hosts view too
+	h2.key("3", "o", "down", "down", "down", "down", "down", "space", "down", "space", "q")
+	h2.has("WHERE", "INSTALLED")
+	h2.key("p") // P4 off from Packages too
 	b, _ = os.ReadFile(path)
-	if strings.Contains(string(b), `"OS"`) || strings.Contains(string(b), "show_p4") {
+	if strings.Contains(string(b), `"where"`) || strings.Contains(string(b), "show_p4") {
 		t.Fatalf("settings not updated:\n%s", b)
 	}
 	// the columns of ToDo can be switched off too
-	h2.key("1", "o")
+	h2.key("2", "o")
 	h2.has("Panels(ToDo)", "[x] hosts", "[x] EPSS", "[x] due by")
 	h2.key("space", "o") // tabs off
-	h2.hasNot(" 1 ToDo ")
+	h2.hasNot(" 2 ToDo ")
 	h2.has("┌")
 }
 
@@ -149,7 +144,7 @@ func TestSettingsFile(t *testing.T) {
 	blocker := filepath.Join(dir, "file")
 	must(t, os.WriteFile(blocker, nil, 0o600))
 	h := newHarness(t, Options{Org: "acme", Env: "production", Settings: filepath.Join(blocker, "tui.json")}, true)
-	h.key("1", "p")
+	h.key("2", "p")
 	h.has(errNotDir)
 }
 
@@ -164,8 +159,8 @@ func TestWideScript(t *testing.T) {
 			h.screen()
 		}
 	}
-	h.size(120, 30)
-	h.key("1")
+	h.size(140, 30)
+	h.key("2")
 	h.has(h.m.t.T("all keys"), h.m.t.T("group by"))
 }
 
@@ -176,15 +171,15 @@ func TestTabsAndZone(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production", Settings: path, Zone: time.FixedZone("MSK", 3*3600)}, true)
 	h.size(120, 30)
 	h.key("9")
-	h.has(" 1 ToDo ", "2 Hosts", " 9 Runs ", "2026-11-02 14:00") // the run of 11:00 UTC, in MSK
+	h.has("1 Servers", " 2 ToDo ", " 9 Runs ", "2026-11-02 14:00") // the run of 11:00 UTC, in MSK
 	h.size(44, 20)
 	h.has(" 9 Runs ", " 1  2 ")
-	h.hasNot("Hosts ")
+	h.hasNot("Servers ")
 	h.size(120, 30)
 
 	h.key("z")
 	h.has("2026-11-02 11:00", "times in UTC")
-	h.key("1")
+	h.key("2")
 	h.has("UTC")
 	h.key("o", "down", "down", "down", "space") // the zone from the settings: back to the system's
 	h.has("time zone: < system >")

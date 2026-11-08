@@ -185,7 +185,7 @@ func (m *Model) menuKey(k tea.KeyMsg) tea.Cmd {
 		case "enter", " ", "space", "x":
 			if d.cur < len(items) {
 				m.flt[items[d.cur].id] = !m.flt[items[d.cur].id]
-				m.cur[vActions], m.off[vActions] = 0, 0
+				m.cur[m.view], m.off[m.view] = 0, 0
 			}
 		}
 		return nil
@@ -224,7 +224,7 @@ func (m *Model) pick(it menuItem) tea.Cmd {
 		m.setView(view(v))
 	case "fix", "cve":
 		m.setView(vActions)
-		m.by, m.flt, m.onlySel = it.kind, map[string]bool{}, false
+		m.by[vActions], m.flt, m.onlySel = it.kind, map[string]bool{}, false
 		m.cur[vActions], m.off[vActions] = 0, 0
 		m.jumpTo, m.curID = it.id, it.id
 		if m.wantTree() == m.treeKey {
@@ -232,7 +232,7 @@ func (m *Model) pick(it menuItem) tea.Cmd {
 			m.placeCursor()
 		}
 	case "host":
-		m.setView(vHosts)
+		m.setView(vServers)
 		m.host, m.hostOff = it.id, 0
 	}
 	return nil
@@ -338,17 +338,16 @@ func (m *Model) hints() string {
 	type k struct{ key, what string }
 	var l []k
 	switch {
-	case m.view == vActions && m.full:
+	case m.isTree() && m.host == "" && m.full:
 		l = []k{{"↑↓", "scroll"}, {"[ ]", "command"}, {"c", "copy command"}, {"y", "copy task"}, {"Y", "copy context"}, {"esc", "back"}}
-	case m.view == vActions && m.run == "" && m.org != "":
+	case m.isTree() && m.host == "" && m.run == "" && m.org != "":
 		l = []k{{"enter", "check access, first scan"}, {"s", "scan"}, {"E", "environment"}, {"O", "organization"}}
-	case m.view == vActions:
+	case m.isTree() && m.host == "":
 		// the main ones only; c, f, g, E, O, p, v are in ? (and g, f in the title line)
 		l = []k{{"space", "select"}, {"→←", "open/close"}, {"enter", "details"}, {"y", "copy task"}, {"Y", "copy context"},
 			{"/", "filter"}, {":", "jump"}}
 	default:
 		l = map[view][]k{
-			vHosts:      {{"enter", "host card"}, {"p", "P4"}},
 			vPackages:   {{"p", "P4"}},
 			vAccess:     {{"enter", "host card"}},
 			vNetwork:    {{"enter", "host card"}, {"f", "outside only"}},
@@ -358,7 +357,7 @@ func (m *Model) hints() string {
 			vChanges:    {},
 			vExceptions: {},
 		}[m.view]
-		if m.host != "" && m.view == vHosts {
+		if m.host != "" && m.view == vServers {
 			l = []k{{"↑↓", "scroll"}, {"esc", "back"}}
 		}
 		l = append(l, k{"/", "filter"}, k{":", "jump"})

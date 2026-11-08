@@ -62,6 +62,7 @@ type envResp struct {
 		Name     string `json:"name"`
 		Group    string `json:"group"`
 		Exposure int    `json:"exposure"`
+		User     string `json:"user"`
 	} `json:"hosts"`
 }
 

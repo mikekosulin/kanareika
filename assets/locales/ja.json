@@ -790,6 +790,12 @@
     "journal /7d": "journal /7日",
     "load /cpu": "負荷 /cpu",
     "mem free": "空きメモリ",
-    "mouse (shift+drag still selects text)": "マウス（Shift+ドラッグでテキスト選択可）"
+    "mouse (shift+drag still selects text)": "マウス（Shift+ドラッグでテキスト選択可）",
+    "as {user}": "{user} として",
+    "not checked": "未確認",
+    "nothing to fix": "修正不要",
+    "server": "サーバー",
+    "to fix": "要修正",
+    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "ビュー：サーバー、やること、パッケージ、変更、アクセス、ネットワーク、ヘルス、例外、実行、スキャン"
   }
 }

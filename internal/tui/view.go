@@ -119,7 +119,7 @@ func (m *Model) layout(v view, cols []col, rows [][]string, width int) (keep, wi
 		if m.set.hidden(v, c.key()) && c.drop > 0 {
 			continue
 		}
-		empty := len(rows) > 0 && c.fill == nil && c.title != ""
+		empty := len(rows) > 0 && c.fill == nil
 		n := ansi.StringWidth(m.t.T(c.title))
 		if c.fill != nil {
 			n = max(n, c.width, c.min)
@@ -312,18 +312,18 @@ func (m *Model) tabs() string {
 			break
 		}
 	}
-	if m.view == vActions && m.run != "" {
+	if m.isTree() && m.host == "" && m.run != "" {
 		g := sMuted.Render(m.t.T("group by")) + " "
 		for _, by := range groupings {
 			name := m.t.T(groupNames[by])
 			s := sMuted.Render(" " + name + " ")
-			if by == m.by {
+			if by == m.grouping() {
 				s = sCrumb2.Render(name)
 			}
 			g += m.zone("by:"+by, s, func(int) tea.Cmd {
-				if m.by != by {
-					m.by = by
-					m.cur[vActions], m.off[vActions], m.curID = 0, 0, ""
+				if m.grouping() != by {
+					m.by[m.view] = by
+					m.cur[m.view], m.off[m.view], m.curID = 0, 0, ""
 				}
 				return nil
 			})
@@ -433,7 +433,7 @@ func (m *Model) main(h int) []string {
 			msg = sErr.Render(m.err)
 		}
 		return panel(sTitle.Render("Kanareika"), []string{" " + msg}, w, h)
-	case m.view == vActions:
+	case m.isTree() && m.host == "":
 		return m.todoMain(h)
 	}
 	title, content := m.body(w-2, h-2)
@@ -463,14 +463,12 @@ func (m *Model) title(name string, n int, scoped bool) string {
 
 func (m *Model) body(w, h int) (string, []string) {
 	switch m.view {
-	case vHosts:
+	case vServers:
 		if m.host != "" && m.rund != nil {
 			lines := m.hostCard(m.host, w)
 			m.hostOff = min(m.hostOff, max(len(lines)-h, 0))
 			return sTitle.Render(m.t.T("Host")) + sText.Render("("+m.host+")"), lines[m.hostOff:]
 		}
-		l := m.hostList()
-		return m.title(viewNames[vHosts], len(l), true), m.hostsView(l, w, h)
 	case vPackages:
 		l := m.packages()
 		return m.title(viewNames[vPackages], len(l), true), m.packagesView(l, w, h)
@@ -501,9 +499,6 @@ func (m *Model) body(w, h int) (string, []string) {
 
 // viewCols: the columns of each view, in the order of its cells. drop: what goes first on a narrow terminal.
 var viewCols = [nViews][]col{
-	vHosts: {{title: "host", width: 24}, {title: "group", width: 16, drop: 3}, {title: "OS", width: 28, min: 12, drop: 4},
-		{title: "P1", right: true}, {title: "P2", right: true}, {title: "P3", right: true, drop: 2}, {title: "P4", right: true, drop: 1},
-		{title: "CVE", right: true, drop: 2}, {width: barW, min: barW, drop: 6}, {title: "facing", width: 10, drop: 5}},
 	vPackages: {{width: 2}, {title: "host", width: 20, drop: 3}, {title: "where", width: 24, min: 8, drop: 4},
 		{title: "package", width: 32, min: 14}, {title: "installed", width: 28, right: true, drop: 5}, {title: "fixed in", width: 28},
 		{title: "CVE", right: true, drop: 2}, {title: "KEV", drop: 1}, {title: "due by", width: 10, drop: 6}},
@@ -552,52 +547,6 @@ func (m *Model) noData() []string {
 }
 
 // stack: a host's P1..P4 as one stacked bar of width w (btop style).
-const barW = 16 // the hosts' bar: a line, never the whole free width
-
-// stack: a host's P1..P3 as one thin line of at most w cells, scaled to top (the largest row's); P4 is background
-// and left out.
-func stack(c map[string]int, top, w int) string {
-	if top == 0 {
-		return ""
-	}
-	var b strings.Builder
-	used := 0
-	for _, p := range []string{"P1", "P2", "P3"} {
-		n := (c[p]*w + top - 1) / top
-		n = min(n, w-used)
-		b.WriteString(lipgloss.NewStyle().Foreground(cP[p]).Render(strings.Repeat("━", n)))
-		used += n
-	}
-	return b.String()
-}
-
-func (m *Model) hostsView(list []hostItem, w, h int) []string {
-	if m.rund == nil {
-		return m.noData()
-	}
-	top := 0
-	for _, x := range list {
-		top = max(top, x.counts["P1"]+x.counts["P2"]+x.counts["P3"])
-	}
-	group, facing := map[string]string{}, map[string]string{}
-	for _, h := range m.envd.Hosts {
-		group[h.Name] = h.Group
-		if h.Exposure == 1 {
-			facing[h.Name] = lipgloss.NewStyle().Foreground(cP["P2"]).Render(m.t.T("internet"))
-		}
-	}
-	var rows [][]string
-	for _, x := range list {
-		c := x.counts
-		rows = append(rows, []string{sBold.Render(x.name), sMuted.Render(group[x.name]), sText.Render(x.os), count("P1", c["P1"], true),
-			count("P2", c["P2"], true), count("P3", c["P3"], true), sDim.Render(strconv.Itoa(c["P4"])), compact(float64(c["cves"])),
-			"", facing[x.name]})
-	}
-	cols := slices.Clone(viewCols[vHosts])
-	cols[len(cols)-2].fill = func(r, w int) string { return stack(list[r].counts, top, w) }
-	return m.table(cols, rows, w, h)
-}
-
 func (m *Model) packagesView(list []planRow, w, h int) []string {
 	if m.rund == nil {
 		return m.noData()
@@ -744,7 +693,7 @@ func (m *Model) formView(h int) []string {
 }
 
 var helpRows = [][2]string{
-	{"1-9, 0, S, tab", "views: ToDo, hosts, packages, changes, access, network, health, exceptions, runs, scans"},
+	{"1-9, 0, S, tab", "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans"},
 	{"O, E", "organization, environment (popup lists; type to narrow them)"},
 	{":, ctrl+k", "jump to a fix, a CVE, a host or a view"},
 	{"up/down, j/k, pgup/pgdn, g/G", "move (ToDo: home/end, G)"},

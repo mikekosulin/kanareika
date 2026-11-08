@@ -790,6 +790,12 @@
     "journal /7d": "journal /7d",
     "load /cpu": "carga /cpu",
     "mem free": "mem libre",
-    "mouse (shift+drag still selects text)": "ratón (Mayús+arrastrar sigue seleccionando texto)"
+    "mouse (shift+drag still selects text)": "ratón (Mayús+arrastrar sigue seleccionando texto)",
+    "as {user}": "como {user}",
+    "not checked": "sin comprobar",
+    "nothing to fix": "nada que corregir",
+    "server": "servidor",
+    "to fix": "por corregir",
+    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "vistas: servidores, Por hacer, paquetes, cambios, acceso, red, salud, excepciones, ejecuciones, escaneos"
   }
 }

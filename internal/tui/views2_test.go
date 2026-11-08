@@ -21,7 +21,7 @@ func TestAnalysisViews(t *testing.T) {
 	h.key("enter") // the host's card
 	h.has("Host(db-01)")
 	h.key("esc")
-	h.has("Hosts(acme/production)")
+	h.has("Servers(acme/production)")
 
 	h.key("6")
 	h.has("Network(acme/production)[3]", "192.0.2.1", "Listening ports 3", "internal")

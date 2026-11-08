@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -47,6 +48,11 @@ type tnode struct {
 	Preauth  bool           `json:"preauth"`
 	States   map[string]int `json:"states"`
 	Kids     []*tnode       `json:"kids"`
+	// a server of the Servers tree (/api/tree?by=host&all=1)
+	State    string         `json:"state"` // clean, failed, partial, not_scanned
+	LastScan string         `json:"last_scan"`
+	Error    string         `json:"error"` // why it failed
+	Counts   map[string]int `json:"counts"`
 }
 
 type treeResp struct {
@@ -128,9 +134,20 @@ type (
 	}
 )
 
+// isTree: the view on screen is a tree (Servers, ToDo).
+func (m *Model) isTree() bool { return m.view == vServers || m.view == vActions }
+
+// grouping: the tree's grouping in the view on screen (ToDo's when it is not a tree).
+func (m *Model) grouping() string {
+	if m.isTree() {
+		return m.by[m.view]
+	}
+	return m.by[vActions]
+}
+
 // Groupings and filters, in the order g and the filter menu go through them.
 var (
-	groupings   = []string{"fix", "cve", "host"}
+	groupings   = []string{"host", "fix", "cve"}
 	treeFilters = []struct{ key, label string }{
 		{key: "kev", label: "in CISA KEV"},
 		{key: "rce", label: "remote code execution"},
@@ -145,7 +162,7 @@ var (
 
 // Names on screen: of the groupings, of the sections inside an image, of the popup lists, of a form's choices.
 var (
-	groupNames   = map[string]string{"fix": "fix", "cve": "CVE", "host": "host"}
+	groupNames   = map[string]string{"fix": "fix", "cve": "CVE", "host": "server"}
 	sectionNames = map[string]string{"parts": "components", "where": "runs on"}
 	menuTitles   = map[string]string{"filters": "Filters", "orgs": "Organizations", "envs": "Environments", "jump": "Jump to"}
 )
@@ -158,7 +175,10 @@ func (m *Model) treeQuery() string {
 	v.Set("org", m.org)
 	v.Set("env", m.env)
 	v.Set("run", m.run)
-	v.Set("by", m.by)
+	v.Set("by", m.grouping())
+	if m.grouping() == "host" {
+		v.Set("all", "1") // every server, scanned or not
+	}
 	var f []string
 	for _, x := range treeFilters {
 		if m.flt[x.key] && x.key != "backported" {
@@ -168,7 +188,7 @@ func (m *Model) treeQuery() string {
 	if len(f) > 0 {
 		v.Set("f", strings.Join(f, ","))
 	}
-	if m.view == vActions && m.filter != "" {
+	if m.isTree() && m.filter != "" {
 		v.Set("q", m.filter)
 	}
 	if m.flt["backported"] {
@@ -194,11 +214,11 @@ func (m *Model) sync() tea.Cmd {
 		q := "/api/tree?" + m.treeQuery()
 		return m.get(q, func(v any) tea.Msg { return treeMsg{k, v.(*treeResp)} }, &treeResp{})
 	}
-	if m.tree == nil || m.view != vActions || !m.full && m.w < wideDetails {
+	if m.tree == nil || !m.isTree() || !m.full && m.w < wideDetails {
 		return nil
 	}
 	n := m.curNode()
-	if n == nil || n.Kind == "section" {
+	if n == nil || n.Kind == "section" || n.Kind == "host" { // a host's details: its card, from the run
 		return nil
 	}
 	return m.fetchNode(n.ID, nil)
@@ -250,12 +270,12 @@ func (m *Model) onTree(msg treeMsg) {
 func (m *Model) placeCursor() {
 	rows := m.treeRows()
 	if i := slices.IndexFunc(rows, func(r trow) bool { return r.n.ID == m.curID }); i >= 0 {
-		m.cur[vActions] = i
+		m.cur[m.view] = i
 		return
 	}
-	m.cur[vActions] = min(m.cur[vActions], max(len(rows)-1, 0))
+	m.cur[m.view] = min(m.cur[m.view], max(len(rows)-1, 0))
 	if len(rows) > 0 {
-		m.curID = rows[m.cur[vActions]].n.ID
+		m.curID = rows[m.cur[m.view]].n.ID
 	}
 }
 
@@ -275,10 +295,14 @@ func (m *Model) treeRows() []trow {
 	var walk func(ns []*tnode, depth int, pre string)
 	walk = func(ns []*tnode, depth int, pre string) {
 		for i, n := range ns {
+			if depth == 0 && n.Kind == "group" && m.grouping() == "host" { // by server: the servers, not their groups
+				walk(n.Kids, 0, "")
+				continue
+			}
 			if depth == 0 && m.onlySel && !m.anySel(n) {
 				continue
 			}
-			if depth == 0 && !m.onlySel && !m.set.ShowP4 && (n.Priority == "P4" || n.Priority == "") && m.by != "host" {
+			if depth == 0 && !m.onlySel && !m.set.ShowP4 && (n.Priority == "P4" || n.Priority == "") && m.grouping() != "host" {
 				continue
 			}
 			last := i == len(ns)-1
@@ -302,7 +326,7 @@ func (m *Model) treeRows() []trow {
 
 func (m *Model) curNode() *tnode {
 	rows := m.treeRows()
-	if c := m.cur[vActions]; c < len(rows) {
+	if c := m.cur[m.view]; c < len(rows) {
 		return rows[c].n
 	}
 	return nil
@@ -412,7 +436,7 @@ func (m *Model) todoKey(s string) (tea.Cmd, bool) {
 		return nil, true
 	}
 	rows := m.treeRows()
-	c := m.cur[vActions]
+	c := m.cur[m.view]
 	var n *tnode
 	if c < len(rows) {
 		n = rows[c].n
@@ -436,7 +460,7 @@ func (m *Model) todoKey(s string) (tea.Cmd, bool) {
 		}
 		for i := c - 1; i >= 0; i-- { // to the parent
 			if rows[i].depth < rows[c].depth {
-				m.cur[vActions], m.curID = i, rows[i].n.ID
+				m.cur[m.view], m.curID = i, rows[i].n.ID
 				break
 			}
 		}
@@ -466,8 +490,8 @@ func (m *Model) todoKey(s string) (tea.Cmd, bool) {
 			m.full, m.detOff = true, 0
 		}
 	case "g":
-		m.by = groupings[(slices.Index(groupings, m.by)+1)%len(groupings)]
-		m.cur[vActions], m.off[vActions], m.curID = 0, 0, ""
+		m.by[m.view] = groupings[(slices.Index(groupings, m.grouping())+1)%len(groupings)]
+		m.cur[m.view], m.off[m.view], m.curID = 0, 0, ""
 	case "G":
 		m.move(1 << 30)
 	case "f":
@@ -476,7 +500,7 @@ func (m *Model) todoKey(s string) (tea.Cmd, bool) {
 		m.toggleP4()
 	case "v":
 		m.onlySel = !m.onlySel
-		m.cur[vActions], m.off[vActions] = 0, 0
+		m.cur[m.view], m.off[m.view] = 0, 0
 		if m.onlySel && len(m.sel) == 0 {
 			m.say(m.t.T("Nothing selected yet: space selects a node"))
 		}
@@ -615,7 +639,7 @@ func (m *Model) agentContext(d *nodeDetail) string {
 	if len(d.Actions) > 0 {
 		line("action ids", strings.Join(d.Actions, ", "))
 	}
-	fmt.Fprintf(&b, "more: kanareika MCP get_fix org=%s env=%s by=%s id=%q; fix_prompt / fix_plan take the action ids\n", m.org, m.env, m.by, n.ID)
+	fmt.Fprintf(&b, "more: kanareika MCP get_fix org=%s env=%s by=%s id=%q; fix_prompt / fix_plan take the action ids\n", m.org, m.env, m.grouping(), n.ID)
 	return b.String()
 }
 
@@ -746,14 +770,43 @@ func (m *Model) nodeText(n *tnode, full, styled bool) string {
 		}
 		return s
 	case "host":
-		s := st(lipgloss.NewStyle().Foreground(cCyan), n.Label)
-		if n.OS != "" {
-			s += st(sMuted, " · "+n.OS)
+		if full || m.grouping() != "host" {
+			s := st(lipgloss.NewStyle().Foreground(cCyan), n.Label)
+			if n.OS != "" {
+				s += st(sMuted, " · "+n.OS)
+			}
+			if n.Exposure == 1 {
+				s += "  " + st(lipgloss.NewStyle().Foreground(cP["P2"]), m.t.T("internet-facing"))
+			}
+			return s
 		}
+		// a server of the Servers view: name, OS, internet-facing, P1 • P2 • P3 • P4, each in its own column
+		s := st(lipgloss.NewStyle().Foreground(cCyan), fit(n.Label, m.hostW, false))
+		switch n.State {
+		case "failed":
+			return s + "  " + st(sErr, orStr(n.Error, m.t.T("failed")))
+		case "not_scanned":
+			return s + "  " + st(sDim, m.t.T("not scanned"))
+		}
+		s += "  " + st(sMuted, fit(shortOS(n.OS), m.osW, false))
+		face := ""
 		if n.Exposure == 1 {
-			s += "  " + st(lipgloss.NewStyle().Foreground(cP["P2"]), m.t.T("internet-facing"))
+			face = m.t.T("internet")
 		}
-		return s
+		s += "  " + st(lipgloss.NewStyle().Foreground(cP["P2"]), fit(face, m.faceW, false))
+		if hostCounts(n)["P1"]+hostCounts(n)["P2"]+hostCounts(n)["P3"]+hostCounts(n)["P4"] == 0 {
+			return s + "  " + st(sMuted, m.t.T("nothing to fix"))
+		}
+		var counts []string
+		for _, p := range []string{"P1", "P2", "P3", "P4"} {
+			c := strconv.Itoa(hostCounts(n)[p])
+			if hostCounts(n)[p] == 0 {
+				counts = append(counts, st(sDim, c))
+			} else {
+				counts = append(counts, st(lipgloss.NewStyle().Foreground(cP[p]), c))
+			}
+		}
+		return s + "  " + strings.Join(counts, st(sDim, " • "))
 	case "cve":
 		return st(sBold, n.Label) + "  " + st(sMuted, n.Title)
 	}
@@ -800,7 +853,7 @@ func (m *Model) dueCell(due string) string {
 // treeCols: check, caret, priority, kind, the text with the tree in it, hosts, CVE, EPSS, flag, due. Every row has
 // every cell, so they line up.
 func (m *Model) treeCols() []col {
-	text := groupNames[m.by]
+	text := groupNames[m.grouping()]
 	return []col{{width: 1, tight: true}, {width: 1, tight: true}, {width: 2, tight: true}, {width: 6, tight: true},
 		{title: text, min: 18, grow: true, tight: true}, {title: "hosts", width: 5, right: true, drop: 2, tight: true},
 		{title: "CVE", width: 4, right: true, drop: 4, tight: true}, {title: "EPSS", width: 5, right: true, drop: 5, tight: true},
@@ -815,6 +868,15 @@ func (m *Model) treeView(w, h int) []string {
 		return []string{" " + sMuted.Render(m.t.T("loading"))}
 	}
 	rows := m.treeRows()
+	m.hostW, m.osW, m.faceW = 0, 0, 0 // the servers' parts line up
+	for _, r := range rows {
+		if r.n.Kind == "host" {
+			m.hostW, m.osW = min(max(m.hostW, ansi.StringWidth(r.n.Label)), 18), min(max(m.osW, ansi.StringWidth(shortOS(r.n.OS))), 16)
+			if r.n.Exposure == 1 {
+				m.faceW = ansi.StringWidth(m.t.T("internet"))
+			}
+		}
+	}
 	cells := make([][]string, 0, len(rows))
 	for _, r := range rows {
 		n := r.n
@@ -838,6 +900,17 @@ func (m *Model) treeView(w, h int) []string {
 		if n.Kind != "section" && m.primary(r) {
 			p = prio(n.Priority)
 		}
+		server := n.Kind == "host" && m.grouping() == "host"
+		if server {
+			switch {
+			case n.State == "failed":
+				p = sErr.Render("✗")
+			case n.State == "not_scanned":
+				p = sDim.Render("–")
+			case hostCounts(n)["P1"]+hostCounts(n)["P2"]+hostCounts(n)["P3"]+hostCounts(n)["P4"] == 0:
+				p = sOK.Render("✓")
+			}
+		}
 		var hosts, cves, epss, flag, due string
 		if n.Kind != "section" {
 			hosts = sBold.Render(strconv.Itoa(n.Hosts))
@@ -860,6 +933,15 @@ func (m *Model) treeView(w, h int) []string {
 				due = m.dueCell(n.Due)
 			}
 		}
+		if server { // a server: its CVEs, how long ago it was scanned
+			hosts, due = "", ""
+			if at, ok := parseTime(n.LastScan); ok {
+				due = sMuted.Render(agoShort(max(m.now().Sub(at), 0)))
+			}
+			if n.State == "failed" || n.State == "not_scanned" {
+				due = sDim.Render(m.t.T("not checked"))
+			}
+		}
 		cells = append(cells, []string{box, caret, p, kindOf(n), sDim.Render(r.prefix) + m.nodeText(n, false, true), hosts, cves, epss, flag, due})
 	}
 	if len(rows) == 0 && m.tree.Hidden > 0 && !m.flt["backported"] {
@@ -868,10 +950,37 @@ func (m *Model) treeView(w, h int) []string {
 	return m.table(m.treeCols(), cells, w, h)
 }
 
+// shortOS: an OS name as a column has room for it: Debian GNU/Linux 12 (bookworm) -> Debian 12, Ubuntu 22.04.5 LTS
+// -> Ubuntu 22.04.
+func shortOS(s string) string {
+	s = osParen.ReplaceAllString(strings.ReplaceAll(s, "GNU/Linux ", ""), "")
+	s = strings.TrimSuffix(strings.TrimSpace(s), " LTS")
+	return osPatch.ReplaceAllString(s, "$1")
+}
+
+var (
+	osParen = regexp.MustCompile(` *\([^)]*\)`)
+	osPatch = regexp.MustCompile(`\b(\d+\.\d+)\.\d+\b`)
+)
+
+// hostCounts: a server's fixes per priority: as the server counts them, else from the fixes under it.
+func hostCounts(n *tnode) map[string]int {
+	if n.Counts != nil {
+		return n.Counts
+	}
+	c := map[string]int{}
+	for _, k := range n.Kids {
+		if k.Kind != "section" {
+			c[k.Priority]++
+		}
+	}
+	return c
+}
+
 // primary: a row that is a thing to do, with its own priority and due date shown; hosts and groups under a fix or
 // a CVE only say where it is (grouped by host they are what the tree is about).
 func (m *Model) primary(r trow) bool {
-	return r.depth == 0 || m.by == "host" || r.n.Kind != "group" && r.n.Kind != "host" && r.n.Kind != "where"
+	return r.depth == 0 || m.grouping() == "host" || r.n.Kind != "group" && r.n.Kind != "host" && r.n.Kind != "where"
 }
 
 // todoTitle: ToDo(org/env)[nodes listed] P1 n P2 n ... </query> and the filters on.
@@ -882,13 +991,32 @@ func (m *Model) todoTitle() string {
 			n++
 		}
 	}
-	t := m.title(viewNames[vActions], n, true)
+	t := m.title(viewNames[m.view], n, true)
 	if m.tree != nil {
 		var c []string
 		for _, p := range []string{"P1", "P2", "P3", "P4"} {
 			c = append(c, prio(p)+" "+count(p, m.tree.Counts[p], true))
 		}
 		t += " " + strings.Join(c, sMuted.Render(" • ")) // a dot between the groups: "P1 6 P2 16" reads as one run of numbers
+	}
+	if m.view == vServers && m.tree != nil {
+		ok, bad := 0, 0
+		var count func([]*tnode)
+		count = func(ns []*tnode) {
+			for _, n := range ns {
+				switch {
+				case n.Kind == "host" && n.State == "failed":
+					bad++
+				case n.Kind == "host" && n.State == "clean":
+					ok++
+				}
+				count(n.Kids)
+			}
+		}
+		count(m.tree.Nodes)
+		if ok+bad > 0 {
+			t += sDim.Render(" · ") + sOK.Render(strconv.Itoa(ok)+" ✓") + sDim.Render(" · ") + sErr.Render(strconv.Itoa(bad)+" ✗")
+		}
 	}
 	for _, f := range treeFilters {
 		if m.flt[f.key] {
@@ -908,7 +1036,7 @@ func (m *Model) todoMain(h int) []string {
 		n := m.curNode()
 		title := sTitle.Render(m.t.T("Details"))
 		if n != nil {
-			title += sText.Render("(" + ansi.Strip(m.nodeText(n, false, false)) + ")")
+			title += sText.Render("(" + ansi.Strip(m.nodeText(n, n.Kind == "host", false)) + ")")
 		}
 		lines := m.detailView(w-2, true)
 		m.detOff = min(m.detOff, max(len(lines)-(h-2), 0))
@@ -1039,6 +1167,43 @@ func (m *Model) detailView(w int, full bool) []string {
 	}
 	if n.Kind == "section" {
 		return nil
+	}
+	if n.Kind == "host" && m.grouping() == "host" { // a server: its card
+		var out []string
+		if n.State == "failed" {
+			out = append(out, " "+sErr.Render("✗ "+m.t.T("failed")+": ")+sText.Render(orStr(n.Error, "?")), "")
+		}
+		if n.State == "not_scanned" {
+			out = append(out, " "+sMuted.Render(m.t.T("not scanned")), "")
+		}
+		var fix []string
+		for _, p := range []string{"P1", "P2", "P3", "P4"} {
+			if c := hostCounts(n)[p]; c > 0 {
+				fix = append(fix, prio(p)+" "+strconv.Itoa(c))
+			}
+		}
+		if len(fix) > 0 {
+			out = append(out, " "+sLabel.Render(m.t.T("to fix")+"  ")+strings.Join(fix, sDim.Render(" • ")))
+		}
+		scanned := ""
+		if _, ok := parseTime(n.LastScan); ok {
+			scanned = m.t.ago(n.LastScan, m.now())
+		}
+		for _, h := range m.envd.Hosts {
+			if h.Name == n.Label && h.User != "" {
+				scanned = strings.TrimSpace(scanned + " " + m.t.F("as {user}", "user", h.User))
+			}
+		}
+		if scanned != "" {
+			out = append(out, " "+sLabel.Render(m.t.T("scanned")+"  ")+sText.Render(scanned))
+		}
+		if n.States["reboot"] > 0 {
+			out = append(out, " "+lipgloss.NewStyle().Foreground(cP["P3"]).Render(m.t.T("reboot pending")))
+		}
+		if m.rund != nil {
+			out = append(out, m.hostCard(n.Label, w)...)
+		}
+		return out
 	}
 	d := m.nodes[m.treeKey+"#"+n.ID]
 	var out []string

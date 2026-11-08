@@ -790,6 +790,12 @@
     "journal /7d": "journal /7天",
     "load /cpu": "负载 /cpu",
     "mem free": "空闲内存",
-    "mouse (shift+drag still selects text)": "鼠标（Shift+拖动仍可选择文本）"
+    "mouse (shift+drag still selects text)": "鼠标（Shift+拖动仍可选择文本）",
+    "as {user}": "以 {user} 身份",
+    "not checked": "未检查",
+    "nothing to fix": "无需修复",
+    "server": "服务器",
+    "to fix": "待修复",
+    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "视图：服务器、待办、软件包、变更、访问、网络、健康、例外、运行记录、扫描"
   }
 }

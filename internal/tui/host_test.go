@@ -2,21 +2,17 @@ package tui
 
 import (
 	"encoding/json"
-	"strings"
 	"testing"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/x/ansi"
-	"github.com/muesli/termenv"
 )
 
 // TestHostCardOtherInLanguage: the other findings of a host card are in the interface's language, as in ToDo.
 func TestHostCardOtherInLanguage(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production", Lang: "ru"}, true)
 	h.size(110, 70)
-	h.key("2", "enter")
+	card(h)
 	h.has("Подбор паролей SSH:")
 	h.hasNot("SSH password guessing")
 }
@@ -25,7 +21,7 @@ func TestHostCardOtherInLanguage(t *testing.T) {
 func TestHostCard(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(110, 70)
-	h.key("2", "enter")
+	card(h)
 	h.has("Host(web-01)", "CentOS Stream 9", "5.14.0-575.el9.x86_64", "19 CVE",
 		"ToDo", "Update OS packages (2)", "Packages", "openssl", "KEV", "+8 more",
 		"SSH and logins", "port", "logged in", "10.77.0.24", "failed logins", "password guessing", "198.51.100.0",
@@ -39,10 +35,12 @@ func TestHostCard(t *testing.T) {
 	h.key("g", "down", "up", "pgdown", "pgup")
 	h.has("CentOS Stream 9")
 	h.key("esc")
-	h.has("Hosts(acme/production)[5]")
-	h.key("enter", "1") // another view closes the card
-	h.key("2")
-	h.has("Hosts(acme/production)")
+	h.has("Servers(acme/production)")
+	card(h)
+	h.key("2") // another view closes the card
+	h.key("1")
+	h.has("Servers(acme/production)")
+	h.hasNot("Host(web-01)")
 }
 
 // TestHostCardSections: the fields the modules write on real hosts (as the module goldens have them).
@@ -68,7 +66,7 @@ func TestHostCardSections(t *testing.T) {
 		"mem":    map[string]any{"available_mb": 241.0, "total_mb": 490.0}, "load": map[string]any{"load1": 0.5, "load15": 0.2, "cpus": 2.0},
 		"failed_units": []any{"nginx.service"}, "readonly_mounts": []any{"/data"}, "journal": map[string]any{"errors_7d": 12.0},
 		"time": map[string]any{"service": "chronyd", "synced": "yes", "offset_s": 0.0008, "skew_s": 0.07}}
-	h.key("2", "enter")
+	card(h)
 	h.has("password login       on (Match: deploy)", "root login           without-password", "users with password  root, admin",
 		"authorized keys      2 (root: 1)", "root @ 100.21.0.11 ×10 publickey 2026-11-01 23:54:24", "failed logins        4981 551 IPs",
 		"100.21.0.14 ×353 admin", "no access to", "192.0.2.9 (not in the config)", "tcp *:80", "nginx public", "no inbound filtering",
@@ -87,7 +85,7 @@ func TestHostCardSections(t *testing.T) {
 // the letters typed.
 func TestOtherLayout(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.key("2") // Hosts
+	h.key("1") // Servers
 	runes := func(s string) {
 		for _, r := range s {
 			_, cmd := h.m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
@@ -95,7 +93,7 @@ func TestOtherLayout(t *testing.T) {
 		}
 	}
 	runes("о") // j: down
-	if h.m.cur[vHosts] != 1 {
+	if h.m.cur[vServers] != 1 {
 		t.Fatal("о is not j")
 	}
 	runes(".") // / on the Russian layout: the filter
@@ -111,21 +109,21 @@ func TestOtherLayout(t *testing.T) {
 	h.has("Organizations")
 	h.key("esc")
 	runes("щ")
-	h.has("Panels(Hosts)")
+	h.has("Panels(Servers)")
 	h.key("esc")
-	// Korean 2-set: ㅓ is j, ㅃ (shift+q) is Q; French AZERTY: é is 2 (Hosts), à is 0 (Scans)
-	h.key("2")
-	before := h.m.cur[vHosts]
+	// Korean 2-set: ㅓ is j, ㅃ (shift+q) is Q; French AZERTY: é is 2 (ToDo), à is 0 (Scans)
+	h.key("1")
+	before := h.m.cur[vServers]
 	runes("ㅓ")
-	if h.m.cur[vHosts] != before+1 {
+	if h.m.cur[vServers] != before+1 {
 		t.Fatal("ㅓ is not j")
 	}
 	if latin['ㅃ'] != 'Q' || latin['ㅖ'] != 'P' {
 		t.Fatal("shifted jamo")
 	}
-	h.key("1")
+	h.key("2")
 	runes("é")
-	if h.m.view != vHosts {
+	if h.m.view != vActions {
 		t.Fatalf("é is not 2: view %d", h.m.view)
 	}
 	runes("à")
@@ -138,28 +136,13 @@ func TestOtherLayout(t *testing.T) {
 	}
 }
 
-// TestSelectedRowKeepsChart: the cursor row is a bar, but its chart keeps its colors.
-func TestSelectedRowKeepsChart(t *testing.T) {
-	old := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.TrueColor) // tests have no terminal: colors on
-	t.Cleanup(func() { lipgloss.SetColorProfile(old) })
-	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.size(120, 30)
-	h.key("2")
-	for _, l := range strings.Split(h.m.View(), "\n") {
-		if strings.Contains(ansi.Strip(l), "web-01") {
-			chart := strings.Index(l, "━")
-			// the chart's cells: a priority color in front of them, not the cursor bar's black on cyan
-			if chart < 0 || !strings.Contains(l[:chart], "38;2;229;72;77") {
-				t.Fatalf("selected row without its colored chart: %q", l)
-			}
-			if !strings.Contains(l, "48;2;34;211;238") {
-				t.Fatalf("not selected: %q", l)
-			}
-			return
-		}
-	}
-	t.Fatal("no web-01 row")
+// card: the card of web-01, as Enter in Access opens it.
+func card(h *harness) {
+	host := "web-01"
+	h.t.Helper()
+	h.key("5", "/")
+	h.typeText(host)
+	h.key("enter", "enter")
 }
 
 // TestDBStatus: checked at start (none yet: a hint), shown in the header, U updates it.

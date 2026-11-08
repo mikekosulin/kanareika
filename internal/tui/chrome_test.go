@@ -19,7 +19,7 @@ func TestJump(t *testing.T) {
 	// a CVE: grouped by CVE, the cursor on it (the filters cleared)
 	h.m.flt["kev"] = true
 	h.key(":", "C", "V", "E", "-", "2", "0", "2", "6", "-", "0", "0", "2", "1", "enter")
-	if n := h.m.curNode(); n == nil || n.ID != "cve:CVE-2026-0021" || h.m.by != "cve" || h.m.flt["kev"] {
+	if n := h.m.curNode(); n == nil || n.ID != "cve:CVE-2026-0021" || h.m.by[vActions] != "cve" || h.m.flt["kev"] {
 		t.Fatal("not on the CVE", n, h.m.by)
 	}
 	h.key(":", "w", "e", "b", "-", "0", "1", "enter")
@@ -91,5 +91,5 @@ func TestDetails(t *testing.T) {
 	}
 	// hosts grouping: a group's details
 	h.key("esc", "g", "g", "enter")
-	h.has("Details(web  4 hosts", "WHY P1", "4 of 4 hosts are internet-facing")
+	h.has("Details(web-01", "CentOS Stream 9", "SSH and logins")
 }

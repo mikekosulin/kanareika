@@ -186,7 +186,7 @@ func TestSetup(t *testing.T) {
 	h.has("⏎ See the results", "plan line")
 	h.dump("first scan")
 	h.key("enter")
-	if h.m.setup != nil || h.m.view != vActions || h.m.org != "servers" {
+	if h.m.setup != nil || h.m.view != vServers || h.m.org != "servers" {
 		t.Fatal("ToDo after the first scan", h.m.org)
 	}
 	// more personal servers: added to Personal
@@ -263,7 +263,7 @@ func TestFirstScanOfEnv(t *testing.T) {
 	h.key("enter")
 	h.has("Checking access", " · staging")
 	h.key("esc") // no form to go back to: closed
-	if h.m.setup != nil || h.m.view != vActions {
+	if h.m.setup != nil || h.m.view != vServers {
 		t.Fatal("esc: back to ToDo")
 	}
 }

@@ -76,8 +76,8 @@ func TestSettingsEdges(t *testing.T) {
 		t.Fatal("no config dir, yet", p)
 	}
 	var s Settings
-	s.toggle(vHosts, "OS")
-	s.toggle(vHosts, "OS")
+	s.toggle(vPackages, "where")
+	s.toggle(vPackages, "where")
 	if s.Hidden == nil || len(s.Hidden) != 0 {
 		t.Fatalf("a column back on leaves no empty entry: %v", s.Hidden)
 	}
@@ -147,14 +147,15 @@ func TestMessages(t *testing.T) {
 func TestKeysMore(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.key("shift+tab")
-	if h.m.view != vScans {
+	if h.m.view != vServers {
 		t.Fatal("shift+tab: the previous view", h.m.view)
 	}
+	h.key("shift+tab")
 	h.key("h", "l") // other views: h and l go through them
 	if h.m.view != vScans {
 		t.Fatal("h, l", h.m.view)
 	}
-	h.key("S", "1")
+	h.key("S", "2")
 	if h.m.view != vActions || h.m.rund == nil {
 		t.Fatal("1: ToDo")
 	}
@@ -276,11 +277,11 @@ func TestFormMore(t *testing.T) {
 func TestPanelsScroll(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(80, 12)
-	h.key("2", "o")
+	h.key("3", "o")
 	for range 12 {
 		h.key("down")
 	}
-	h.has("Panels(Hosts)", "facing")
+	h.has("Panels(Packages)", "due by")
 	h.hasNot("Layout")
 }
 
@@ -329,14 +330,7 @@ func TestNarrowCursor(t *testing.T) {
 func TestOddData(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(160, 50)
-	if stack(map[string]int{}, 0, 10) != "" {
-		t.Fatal("cells")
-	}
-	// hosts with the same counts: by name
 	h.m.rund.Hosts = map[string]map[string]int{"web-02": {"P1": 1}, "web-01": {"P1": 1}}
-	if l := h.m.hostList(); l[0].name != "web-01" || l[1].name != "web-02" {
-		t.Fatal(l)
-	}
 	// a host card without facts
 	if l := h.m.hostCard("web-02", 100); !strings.Contains(ansi.Strip(l[0]), "web-02  ?") {
 		t.Fatal(l[0])

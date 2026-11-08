@@ -708,7 +708,7 @@ func (m *Model) setupKey(k tea.KeyMsg) tea.Cmd {
 	case 3:
 		if j := m.jobOf(w.job); s == "esc" || s == "q" || s == "enter" && j != nil && j.State != "running" {
 			m.setup = nil
-			m.setView(vActions)
+			m.setView(vServers)
 			return m.refresh()
 		}
 		return nil
@@ -736,7 +736,7 @@ func (m *Model) checkKey(s string) tea.Cmd {
 			return nil
 		}
 		m.setup = nil
-		m.setView(vActions)
+		m.setView(vServers)
 	case "r":
 		if waiting == 0 {
 			return m.checkAccess(bad > 0 && ok > 0)

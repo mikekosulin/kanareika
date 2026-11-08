@@ -203,7 +203,7 @@ func keyMsg(key string) tea.KeyMsg {
 func (m *Model) rowClick(i, dx int) tea.Cmd {
 	was := m.cur[m.view] == i
 	m.cur[m.view] = i
-	if m.view == vActions {
+	if m.isTree() && m.host == "" {
 		rows := m.treeRows()
 		if i >= len(rows) {
 			return nil

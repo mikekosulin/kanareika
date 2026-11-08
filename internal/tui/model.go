@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/url"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -18,8 +17,8 @@ import (
 type view int
 
 const (
-	vActions view = iota
-	vHosts
+	vServers view = iota
+	vActions
 	vPackages
 	vChanges
 	vAccess
@@ -33,7 +32,7 @@ const (
 
 // viewNames: tab titles (English keys of the web page's translations where it has them). Organizations and
 // environments are chosen with O and E.
-var viewNames = [nViews]string{"ToDo", "Hosts", "Packages", "Changes", "Access", "Network", "Health",
+var viewNames = [nViews]string{"Servers", "ToDo", "Packages", "Changes", "Access", "Network", "Health",
 	"Exceptions", "Runs", "Scans"}
 
 // viewHotkeys: the key of each view: 1-9, 0 (S opens Scans too).
@@ -96,7 +95,7 @@ type Model struct {
 	open        string // job whose output the Scans view shows
 
 	// ToDo: the tree
-	by      string                 // grouping: fix, cve, host (g)
+	by      [nViews]string         // the trees' groupings: fix, cve, host (g); Servers by host, ToDo by fix
 	flt     map[string]bool        // filters on (f)
 	tree    *treeResp              // nil until it comes
 	treeKey string                 // what the tree on screen is for (wantTree)
@@ -123,6 +122,8 @@ type Model struct {
 	handlers     map[string]func(dx int) tea.Cmd // what a click on a zone does (drawn this frame)
 	zones        []hitZone                       // where the zones are on screen
 	zoneSeq      int
+	hostW, osW   int // Servers: the widths of the servers' names and OS, so their rows line up
+	faceW        int
 
 	toast   string
 	toastAt time.Time
@@ -140,9 +141,9 @@ func New(o Options) *Model {
 	if o.Zone == nil {
 		o.Zone = time.Local
 	}
-	m := &Model{c: o.Client, now: o.Now, every: o.Tick, clip: o.Clip, org: o.Org, env: o.Env, view: vActions, sel: map[string]bool{},
+	m := &Model{c: o.Client, now: o.Now, every: o.Tick, clip: o.Clip, org: o.Org, env: o.Env, view: vServers, sel: map[string]bool{},
 		t: &tr{lang: "en", ui: i18n.UI()}, set: loadSettings(o.Settings), setPath: o.Settings, sysZone: o.Zone,
-		by: "fix", flt: map[string]bool{}, nodes: map[string]*nodeDetail{}, pending: map[string]string{}, opened: map[string]bool{}}
+		by: [nViews]string{vServers: "host", vActions: "fix"}, flt: map[string]bool{}, nodes: map[string]*nodeDetail{}, pending: map[string]string{}, opened: map[string]bool{}}
 	m.applyZone()
 	if o.Lang != "" && (o.Lang == "en" || m.t.ui[o.Lang] != nil) {
 		m.t.lang = o.Lang
@@ -541,7 +542,7 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.cur[m.view], m.off[m.view] = 0, 0
 		return m, nil
 	}
-	if m.host != "" && m.view == vHosts && !m.help {
+	if m.host != "" && m.view == vServers && !m.help {
 		switch s {
 		case "up", "k":
 			m.hostOff = max(m.hostOff-1, 0)
@@ -577,7 +578,7 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
-	if m.view == vActions {
+	if m.isTree() && m.host == "" {
 		if cmd, ok := m.todoKey(s); ok {
 			return m, cmd
 		}
@@ -683,7 +684,7 @@ func (m *Model) move(d int) {
 	n := m.rows()
 	c := min(max(m.cur[m.view]+d, 0), max(n-1, 0))
 	m.cur[m.view] = c
-	if m.view == vActions {
+	if m.isTree() {
 		if rows := m.treeRows(); c < len(rows) {
 			m.curID = rows[c].n.ID
 		}
@@ -696,10 +697,8 @@ func (m *Model) page() int { return max(m.bodyHeight()-2, 1) }
 // rows: how many rows the current view lists.
 func (m *Model) rows() int {
 	switch m.view {
-	case vActions:
+	case vServers, vActions:
 		return len(m.treeRows())
-	case vHosts:
-		return len(m.hostList())
 	case vPackages:
 		return len(m.packages())
 	case vChanges:
@@ -722,7 +721,7 @@ func (m *Model) rows() int {
 
 func (m *Model) viewKey(s string) tea.Cmd {
 	switch m.view {
-	case vActions:
+	case vServers, vActions:
 		if s == "enter" && m.run == "" && m.org != "" { // no runs yet: check the access, then the first scan
 			m.setup = checkWizard(m.org, m.env)
 			return m.fetchHosts()
@@ -740,20 +739,11 @@ func (m *Model) viewKey(s string) tea.Cmd {
 		switch s {
 		case "enter": // the host's card
 			if c := m.cur[m.view]; c < len(hosts) {
-				m.view, m.host, m.hostOff, m.filter = vHosts, hosts[c], 0, ""
+				m.view, m.host, m.hostOff, m.filter = vServers, hosts[c], 0, ""
 			}
 		case "f":
 			if m.view == vNetwork {
 				m.outsideOnly = !m.outsideOnly
-			}
-		}
-	case vHosts:
-		switch s {
-		case "p":
-			m.toggleP4()
-		case "enter":
-			if l := m.hostList(); m.cur[vHosts] < len(l) {
-				m.host, m.hostOff = l[m.cur[vHosts]].name, 0
 			}
 		}
 	case vPackages:
@@ -897,7 +887,7 @@ func (m *Model) panelItems() []formItem {
 		{kind: itemChoice, label: "time zone", value: zone},
 		{kind: itemHead, label: "Columns"}}
 	cols := viewCols[m.view]
-	if m.view == vActions {
+	if m.isTree() {
 		cols = m.treeCols()
 	}
 	for _, c := range cols {
@@ -1036,35 +1026,6 @@ func (m *Model) match(fields ...string) bool {
 		}
 	}
 	return false
-}
-
-type hostItem struct {
-	name   string
-	os     string
-	counts map[string]int
-}
-
-func (m *Model) hostList() []hostItem {
-	if m.rund == nil {
-		return nil
-	}
-	var out []hostItem
-	for name, c := range m.rund.Hosts {
-		os := m.rund.Facts[name].OS
-		if m.match(name, os) {
-			out = append(out, hostItem{name, os, c})
-		}
-	}
-	sort.Slice(out, func(i, j int) bool {
-		a, b := out[i].counts, out[j].counts
-		for _, p := range []string{"P1", "P2", "P3", "P4"} {
-			if a[p] != b[p] {
-				return a[p] > b[p]
-			}
-		}
-		return out[i].name < out[j].name
-	})
-	return out
 }
 
 func (m *Model) packages() []planRow {

@@ -790,6 +790,12 @@
     "journal /7d": "journal /7일",
     "load /cpu": "부하 /cpu",
     "mem free": "여유 메모리",
-    "mouse (shift+drag still selects text)": "마우스 (Shift+드래그로 텍스트 선택 가능)"
+    "mouse (shift+drag still selects text)": "마우스 (Shift+드래그로 텍스트 선택 가능)",
+    "as {user}": "{user}(으)로",
+    "not checked": "확인 안 됨",
+    "nothing to fix": "고칠 것 없음",
+    "server": "서버",
+    "to fix": "고칠 것",
+    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "보기: 서버, 할 일, 패키지, 변경, 접근, 네트워크, 상태, 예외, 실행, 스캔"
   }
 }
