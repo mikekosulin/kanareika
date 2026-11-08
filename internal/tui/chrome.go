@@ -322,7 +322,10 @@ func overlay(lines, box []string, x, y, w int) []string {
 
 // hints: the keys of what is on screen, as many as fit, ending with the help key.
 func (m *Model) hints() string {
-	if m.setup != nil || m.form != nil || m.menu != nil || m.help || m.panels != nil || m.langs != nil {
+	if m.setup != nil {
+		return m.setupHints()
+	}
+	if m.form != nil || m.menu != nil || m.help || m.panels != nil || m.langs != nil {
 		return "" // dialogs say their own keys
 	}
 	type k struct{ key, what string }
@@ -370,6 +373,9 @@ func (m *Model) hints() string {
 
 // statusBar: org │ env │ hosts · data age · DB, the last message; at the right what is selected and the time.
 func (m *Model) statusBar() string {
+	if m.setup != nil {
+		return m.setupStatus()
+	}
 	l := ""
 	if m.org != "" {
 		l = sCrumb2.Render(m.org) + sEnv.Render(m.envLabel(m.env))

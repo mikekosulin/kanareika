@@ -51,7 +51,7 @@ func TestOrgsEnvs(t *testing.T) {
 		t.Fatal(h.m.org, h.m.env, h.m.toast)
 	}
 	h.key("O", "down", "down", "enter") // the setup
-	h.has("Add servers")
+	h.has("~ kanareika setup")
 	h.key("esc", "O", "up", "enter") // acme
 	h.has(" acme  production ")
 	h.key("E", "s", "t", "a", "enter")

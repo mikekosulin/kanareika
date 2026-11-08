@@ -111,14 +111,15 @@ type Model struct {
 	detOff  int
 	cmdCur  int // the command of the details c copies ([ ])
 
-	menu      *menuDlg // filters (f), organizations (O), environments (E), jump (:)
-	setup     *wizard  // first-run setup (no organization yet, N) and the first scan of an env
-	setupSeen bool     // the setup opened on its own once
-	found     *foundResp
-	dbSize    *dbSizeResp
-	dlStart   time.Time // when the download asked for here started
-	dbPolled  time.Time
-	spinning  bool // a spinner frame is due
+	menu         *menuDlg // filters (f), organizations (O), environments (E), jump (:)
+	setup        *wizard  // first-run setup (no organization yet, N) and the first scan of an env
+	setupSeen    bool     // the setup opened on its own once
+	found        *foundResp
+	dbSize       *dbSizeResp
+	dlStart      time.Time // when the download asked for here started
+	dbPolled     time.Time
+	spinning     bool // a spinner frame is due
+	setupCurLine int  // the line of the setup form the cursor is on (kept in view)
 
 	toast   string
 	toastAt time.Time

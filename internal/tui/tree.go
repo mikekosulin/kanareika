@@ -182,7 +182,7 @@ func (m *Model) wantTree() string { return m.wantKey() + "?" + m.treeQuery() }
 // sync: fetch what the screen needs and doesn't have yet: the tree, the details of the node under the cursor.
 func (m *Model) sync() tea.Cmd {
 	if m.setup != nil {
-		if c := m.fetchDBSize(); c != nil {
+		if c := tea.Batch(m.fetchDBSize(), m.fetchFound()); c != nil {
 			return c
 		}
 	}

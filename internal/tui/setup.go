@@ -17,12 +17,12 @@ import (
 	"github.com/mikekosulin/kanareika/internal/dbsize"
 )
 
-// The setup, as the web page has it, on the same API: choose a path (add to the org on screen, my servers, a
-// client's servers, a fleet), paste the servers (POST /api/setup/parse shows what was understood as one types;
-// ~/.ssh/config hosts from GET /api/setup/discover can be picked), save (POST /api/setup or /api/setup/add), check
-// SSH access to each host, eight at a time (POST /api/setup/check), then the first scan (POST /api/scan). The
-// vulnerability list scans need is one line all along: downloaded only when asked (POST /api/db/update), with its
-// size (GET /api/db/size).
+// The setup, one screen as the web page's window, on the same API. Servers: whose they are (personal, a client's,
+// a company's, or more for the org on screen), what to connect to — pasted in any form, each line beside what the
+// server understood of it (POST /api/setup/parse), aliases picked from ~/.ssh/config (GET /api/setup/discover) —
+// and how to log in; saved by POST /api/setup or /api/setup/add. Access: a login to each host, eight at a time
+// (POST /api/setup/check), grouped by outcome. First scan: POST /api/scan, its output. The vulnerability list is one
+// line on every step, downloaded only when asked (POST /api/db/update), with its size (GET /api/db/size).
 
 type fieldKind int
 
@@ -32,22 +32,22 @@ const (
 	fChoice
 	fCheck
 	fButton
-	fFold // "Login details": shows the fields folded under it
+	fLogin // the login line: what will be used; c opens the fields under it
 )
 
 type field struct {
 	key         string
 	label       string
-	hint        string
 	placeholder string
 	kind        fieldKind
 	val         []rune
 	pos         int      // the cursor in val
 	opts        []string // a choice's values
-	shown       []string // what a choice shows of them ("": the value)
+	shown       []string // what a choice shows of them
 	opt         int
-	on          bool // a check box
-	fold        bool // under "Login details"
+	on          bool   // a check box
+	login       bool   // under the login line
+	only        string // shown for this kind of org only ("org": client and company, "company")
 }
 
 type checkResult struct {
@@ -78,10 +78,10 @@ type foundResp struct {
 type parsedHost struct {
 	Name    string `json:"name"`
 	Address string `json:"address"`
-	Group   string `json:"group"`
-	Env     string `json:"env"`
 	User    string `json:"user"`
 	Jump    string `json:"jump"`
+	Line    int    `json:"line"`
+	From    string `json:"from"`
 }
 
 // parseResp: POST /api/setup/parse.
@@ -97,7 +97,22 @@ type dbSizeResp struct {
 	Total int64            `json:"total"`
 }
 
-type hostRef struct{ name, address string }
+type hostRef struct {
+	name, address, user, jump string
+	port                      int
+}
+
+// login: user@address, as the check shows a host.
+func (h hostRef) login() string {
+	a := orStr(h.address, h.name)
+	if h.port != 0 && h.port != 22 {
+		a += ":" + strconv.Itoa(h.port)
+	}
+	if h.user != "" {
+		return h.user + "@" + a
+	}
+	return a
+}
 
 // sshPick: the ~/.ssh/config hosts to choose from (ctrl+o).
 type sshPick struct {
@@ -107,14 +122,13 @@ type sshPick struct {
 }
 
 type wizard struct {
-	step    int    // 0: the path, 1: the servers, 2: the access check, 3: the first scan
-	path    string // add, few, client, fleet
-	pathCur int
-	fields  []field
-	cur     int
-	login   bool     // the login details unfolded
-	errs    []string // the server's problems with the form
-	busy    bool
+	step      int    // 1: servers, 2: access, 3: the first scan
+	kind      string // add, personal, client, company
+	fields    []field
+	cur       int
+	loginOpen bool
+	errs      []string // what is wrong with the form (the server's words, or what is missing)
+	busy      bool
 
 	parsed   *parseResp
 	parseGen int // the paste area's edits: an answer for an older text is dropped
@@ -130,9 +144,8 @@ type wizard struct {
 	started        time.Time
 	job            string
 	off            int
-
-	dlAsked bool // the download was asked for here: its error shows
-	raw     bool // the raw errors of the failed checks unfolded (e)
+	dlAsked        bool // the download was asked for here: its error shows
+	dlParts        bool // what the vulnerability list is made of (i)
 }
 
 // The messages of the setup.
@@ -169,13 +182,11 @@ func (m *Model) spinChar() string {
 	return string(spinner[int(m.now().UnixMilli()/100)%len(spinner)])
 }
 
-// setupPaths: the ways in; "add" only with an organization on screen (not My servers: that is "few").
-func (m *Model) setupPaths() []string {
-	var out []string
-	if m.org != "" && m.org != "servers" && m.orgRow() != nil {
-		out = append(out, "add")
+func orStr(a, b string) string {
+	if a != "" {
+		return a
 	}
-	return append(out, "few", "client", "fleet")
+	return b
 }
 
 func (m *Model) orgByID(id string) *orgRow {
@@ -187,63 +198,75 @@ func (m *Model) orgByID(id string) *orgRow {
 	return nil
 }
 
-func (m *Model) newWizard() *wizard { return &wizard{} }
+// kinds: whose servers; "add" only with an organization on screen that is not Personal.
+func (m *Model) kinds() []string {
+	var out []string
+	if m.org != "" && m.org != "servers" && m.orgRow() != nil {
+		out = append(out, "add")
+	}
+	return append(out, "personal", "client", "company")
+}
+
+func (m *Model) kindName(k string) string {
+	switch k {
+	case "add":
+		o := m.orgRow()
+		return m.t.F("Add to {org}", "org", orStr(o.Name, o.ID))
+	case "personal":
+		return m.t.T("Personal")
+	case "client":
+		return m.t.T("Client")
+	}
+	return m.t.T("Company")
+}
+
+func (m *Model) newWizard() *wizard {
+	w := &wizard{step: 1, kind: "personal"}
+	w.fields = m.setupFields()
+	return w
+}
 
 // checkWizard: the access check of an env that has no runs yet, then its first scan.
 func checkWizard(org, env string) *wizard { return &wizard{step: 2, org: org, env: env} }
 
-// formFor: the fields of a path's form (the web page's fewForm, clientForm, fleetForm).
-func (m *Model) formFor(path string) []field {
+// setupFields: the form; which of them show depends on the kind and on the login line being open.
+func (m *Model) setupFields() []field {
 	f := m.found
 	if f == nil {
 		f = &foundResp{}
 	}
-	user := orStr(f.User, "root")
-	hosts := field{key: "hosts", label: "Servers", hint: "an IP, user@host or an ssh command, one per line", kind: fArea, placeholder: "admin@192.0.2.10"}
-	sudo := field{key: "sudo", label: "The user can sudo without a password: also check passwords, keys, the login log and the firewall", kind: fCheck}
-	agent := m.t.T("the ssh-agent")
+	agent := m.t.T("ssh-agent")
 	if f.AgentKeys > 0 {
-		agent = m.t.F("the ssh-agent ({n} keys)", "n", strconv.Itoa(f.AgentKeys))
+		agent = m.t.F("ssh-agent ({n} keys)", "n", strconv.Itoa(f.AgentKeys))
 	}
-	keyChoice := field{key: "key", label: "Key", hint: "not needed with an ssh-agent", kind: fChoice, opts: append([]string{""}, f.Keys...),
-		shown: append([]string{agent}, f.Keys...), fold: true}
-	keyText := field{key: "key", label: "Key", hint: "not needed with an ssh-agent", placeholder: agent, fold: true}
-	userF := field{key: "user", label: "SSH user", hint: "unless a line says otherwise", placeholder: user, fold: true}
-	fold := field{key: "login", label: "Login details", kind: fFold}
-	switch path {
-	case "client":
-		sudo.fold = true
-		return []field{{key: "name", label: "Client", placeholder: m.t.T("ACME Corp")}, hosts, fold, userF, keyText, sudo,
-			{key: "consent", label: "The client's permission", hint: "where it is documented: a contract, a ticket, an e-mail", placeholder: m.t.T("Contract 42, appendix 3")},
-			{key: "confirmed", label: "The client allowed me to audit these servers.", kind: fCheck},
-			{key: "submit", label: "Save and check access", kind: fButton}}
-	case "fleet":
-		userF.fold, keyText.fold = false, false
-		userF.placeholder = orStr(f.User, "audit")
-		return []field{{key: "name", label: "Organization", placeholder: m.t.T("ACME Corp")},
-			{key: "id", label: "Short id", hint: "for files and commands", placeholder: "acme"}, hosts, userF, keyText,
-			{key: "env", label: "Environment", hint: "unless a line says otherwise", val: []rune("production"), pos: 10},
-			{key: "jump", label: "Jump host for all", hint: "[user@]host[:port], empty: direct or per line", placeholder: "bastion.example.com"},
-			{key: "front", label: "Groups facing the internet", hint: "comma-separated; their findings get higher priority", placeholder: "web, edge"},
-			sudo,
-			{key: "consent", label: "Permission to audit", hint: "where it is documented: a contract, a ticket, an e-mail", placeholder: m.t.T("Ticket OPS-123")},
-			{key: "confirmed", label: "I am allowed to audit these servers.", kind: fCheck},
-			{key: "submit", label: "Save and check access", kind: fButton}}
+	return []field{
+		{key: "kind", label: "Whose servers?", kind: fChoice},
+		{key: "name", label: "Client", placeholder: "ACME", only: "org"},
+		{key: "consent", label: "Permission", only: "org"},
+		{key: "hosts", label: "Servers", kind: fArea, placeholder: "admin@192.0.2.10"},
+		{key: "login", label: "Login", kind: fLogin},
+		{key: "user", label: "User", placeholder: orStr(f.User, "root"), login: true},
+		{key: "key", label: "Key", kind: fChoice, opts: append([]string{""}, f.Keys...), shown: append([]string{agent}, f.Keys...), login: true},
+		{key: "env", label: "Environment", val: []rune("production"), pos: 10, login: true, only: "company"},
+		{key: "jump", label: "Jump host", placeholder: "bastion", login: true, only: "company"},
+		{key: "sudo", label: "passwordless sudo: also check passwords, keys and the firewall", kind: fCheck, login: true},
+		{key: "confirmed", label: "I’m allowed to audit these servers", kind: fCheck},
+		{key: "submit", label: "Check access", kind: fButton},
 	}
-	sudo.fold = true
-	return []field{hosts, fold, userF, keyChoice, sudo,
-		{key: "confirmed", label: "These are my servers, or I am allowed to audit them.", kind: fCheck},
-		{key: "submit", label: "Check access", kind: fButton}}
 }
 
-func orStr(a, b string) string {
-	if a != "" {
-		return a
+func (w *wizard) visible(i int) bool {
+	f := w.fields[i]
+	switch {
+	case f.login && !w.loginOpen:
+		return false
+	case f.only == "org":
+		return w.kind == "client" || w.kind == "company"
+	case f.only == "company":
+		return w.kind == "company"
 	}
-	return b
+	return true
 }
-
-func (w *wizard) visible(i int) bool { return !w.fields[i].fold || w.login }
 
 // texting: a text field has the keyboard (keys are text, not hotkeys).
 func (w *wizard) texting() bool {
@@ -268,14 +291,17 @@ func (w *wizard) value(key string) string {
 	case f == nil:
 		return ""
 	case f.kind == fChoice:
-		return f.opts[f.opt]
+		if f.opt < len(f.opts) {
+			return f.opts[f.opt]
+		}
+		return ""
 	case f.kind == fCheck:
 		return strconv.FormatBool(f.on)
 	}
 	return strings.TrimSpace(string(f.val))
 }
 
-// --- keys ------------------------------------------------------------------------------------------------------------
+// --- background: spinner frames, delayed messages --------------------------------------------------------------------
 
 // spin: the next frame of a spinner (checks and downloads under way); nil when none is needed or one is due.
 func (m *Model) spin() tea.Cmd {
@@ -313,9 +339,10 @@ func (m *Model) setupUpdate(msg tea.Msg) tea.Cmd {
 	case foundMsg:
 		f := foundResp(msg)
 		m.found = &f
-		if w != nil && w.step == 1 {
+		if w != nil && w.fields != nil {
 			m.refreshForm()
 		}
+		return nil
 	case dlStartedMsg: // what is still needed: asked again (also once the download ends)
 		m.dbSize = nil
 		return m.spin()
@@ -323,6 +350,7 @@ func (m *Model) setupUpdate(msg tea.Msg) tea.Cmd {
 		d := dbSizeResp(msg)
 		m.dbSize = &d
 		delete(m.pending, "dbsize")
+		return nil
 	case spinMsg:
 		m.spinning = false
 		var cmds []tea.Cmd
@@ -352,7 +380,7 @@ func (m *Model) setupUpdate(msg tea.Msg) tea.Cmd {
 			w.errs = msg.errs
 		case "created":
 			w.step, w.org, w.env, w.file, w.skipped, w.only = 2, msg.org, msg.env, msg.path, msg.skipped, msg.only
-			w.res, w.hosts = map[string]*checkResult{}, nil
+			w.res, w.hosts, w.errs = map[string]*checkResult{}, nil, nil
 			return tea.Batch(m.fetchOrgs(), m.selectEnv(msg.org, msg.env), m.fetchHosts())
 		}
 	case hostsMsg:
@@ -372,13 +400,14 @@ func (m *Model) setupUpdate(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
+// refreshForm: the fields again with what discover found (the key choice, the user), what was typed kept.
 func (m *Model) refreshForm() {
 	w := m.setup
 	old := w.fields
-	w.fields = m.formFor(w.path)
-	for i := range w.fields { // what was typed stays
+	w.fields = m.setupFields()
+	for i := range w.fields {
 		for _, o := range old {
-			if o.key == w.fields[i].key && o.kind == w.fields[i].kind {
+			if o.key == w.fields[i].key {
 				w.fields[i].val, w.fields[i].pos, w.fields[i].on = o.val, o.pos, o.on
 				w.fields[i].opt = min(o.opt, max(len(w.fields[i].opts)-1, 0))
 			}
@@ -387,7 +416,7 @@ func (m *Model) refreshForm() {
 }
 
 func (m *Model) fetchFound() tea.Cmd {
-	if m.found != nil || m.pending["found"] != "" {
+	if m.found != nil || m.pending["found"] != "" || !m.scanOK {
 		return nil
 	}
 	m.pending["found"] = "found"
@@ -401,7 +430,7 @@ func (m *Model) fetchFound() tea.Cmd {
 	}
 }
 
-// fetchDBSize: what a download would cost (none on a read-only dashboard: nothing to ask).
+// fetchDBSize: what the download would cost (none on a read-only dashboard: nothing to ask).
 func (m *Model) fetchDBSize() tea.Cmd {
 	if m.dbSize != nil || m.pending["dbsize"] != "" || !m.scanOK {
 		return nil
@@ -443,8 +472,11 @@ func (m *Model) fetchHosts() tea.Cmd {
 		defer cancel()
 		var e struct {
 			Hosts []struct {
-				Name    string `json:"name"`
-				Address string `json:"address"`
+				Name    string  `json:"name"`
+				Address string  `json:"address"`
+				User    string  `json:"user"`
+				Port    int     `json:"port"`
+				Jump    *string `json:"jump"`
 			} `json:"hosts"`
 		}
 		if err := c.Get(ctx, "/api/env?org="+url.QueryEscape(org)+"&env="+url.QueryEscape(env), &e); err != nil {
@@ -452,7 +484,11 @@ func (m *Model) fetchHosts() tea.Cmd {
 		}
 		out := hostsMsg{}
 		for _, h := range e.Hosts {
-			out = append(out, hostRef{h.Name, h.Address})
+			r := hostRef{name: h.Name, address: h.Address, user: h.User, port: h.Port}
+			if h.Jump != nil {
+				r.jump = *h.Jump
+			}
+			out = append(out, r)
 		}
 		return out
 	}
@@ -502,6 +538,16 @@ func (m *Model) nextCheck() tea.Cmd {
 	return tea.Batch(append(cmds, m.spin())...)
 }
 
+// loginKey: the key the login line shows and the org file gets: the agent's (empty) when it has keys, else the first
+// key in ~/.ssh.
+func (m *Model) loginKey() string {
+	w, f := m.setup, m.found
+	if k := w.value("key"); k != "" || f == nil || f.AgentKeys > 0 || len(f.Keys) == 0 {
+		return k
+	}
+	return f.Keys[0]
+}
+
 // submit: the form to the server, as the web page sends it.
 func (m *Model) submit() tea.Cmd {
 	w := m.setup
@@ -512,42 +558,57 @@ func (m *Model) submit() tea.Cmd {
 	if f == nil {
 		f = &foundResp{}
 	}
-	w.busy, w.errs = true, nil
+	named := w.kind == "client" || w.kind == "company"
+	switch {
+	case strings.TrimSpace(w.value("hosts")) == "":
+		w.errs = []string{m.t.T("Paste at least one server.")}
+	case named && w.value("name") == "" && w.kind == "client":
+		w.errs = []string{m.t.T("Name the client.")}
+	case named && w.value("name") == "":
+		w.errs = []string{m.t.T("Name the company.")}
+	case named && w.value("consent") == "":
+		w.errs = []string{m.t.T("Say where the permission is documented.")}
+	case w.value("confirmed") != "true":
+		w.errs = []string{m.t.T("Confirm that you are allowed to audit these servers.")}
+	default:
+		w.errs = nil
+	}
+	if w.errs != nil {
+		return nil
+	}
+	w.busy = true
 	sudo := map[bool]string{true: "sudo", false: "none"}[w.value("sudo") == "true"]
-	confirmed := w.value("confirmed") == "true"
-	today := m.now().Format(time.DateOnly)
+	base := setupReq{User: orStr(w.value("user"), orStr(f.User, "root")), Privilege: sudo, Key: m.loginKey(), Hosts: w.value("hosts"),
+		Env: "production", Confirmed: true}
 	var body any
 	path, org, env := "/api/setup", "", "production"
-	switch w.path {
-	case "add", "few":
-		target := m.orgByID("servers")
-		if w.path == "add" {
-			target = m.orgRow()
-		}
-		if target != nil {
-			path, org = "/api/setup/add", target.ID
-			env = target.Envs[0].Env
-			if w.path == "add" && slices.ContainsFunc(target.Envs, func(e envRow) bool { return e.Env == m.env }) {
-				env = m.env
-			}
-			body = map[string]any{"org": org, "hosts": w.value("hosts"), "user": w.value("user")}
-			break
-		}
-		org = "servers"
-		body = setupReq{ID: org, Name: m.t.T("My servers"), User: orStr(w.value("user"), orStr(f.User, "root")), Privilege: sudo,
-			Key: w.value("key"), Hosts: w.value("hosts"), Env: env, Consent: m.t.F("Confirmed in the setup on {d}", "d", today), Confirmed: confirmed}
-	case "client":
-		org = m.freeID(slugRE.ReplaceAllString(strings.ToLower(w.value("name")), "-"))
-		body = setupReq{ID: org, Name: w.value("name"), User: orStr(w.value("user"), orStr(f.User, "root")), Privilege: sudo, Key: w.value("key"),
-			Hosts: w.value("hosts"), Env: env, Consent: w.value("consent"), Confirmed: confirmed}
+	target := m.orgByID("servers")
+	switch w.kind {
+	case "add":
+		target = m.orgRow()
+	case "personal":
 	default:
-		org, env = w.value("id"), orStr(w.value("env"), "production")
-		var front []string
-		for _, g := range strings.FieldsFunc(w.value("front"), func(r rune) bool { return r == ',' || r == ' ' }) {
-			front = append(front, strings.ToLower(g))
+		target = nil
+	}
+	switch {
+	case target != nil:
+		path, org, env = "/api/setup/add", target.ID, target.Envs[0].Env
+		if w.kind == "add" && slices.ContainsFunc(target.Envs, func(e envRow) bool { return e.Env == m.env }) {
+			env = m.env
 		}
-		body = setupReq{ID: org, Name: w.value("name"), User: orStr(w.value("user"), orStr(f.User, "audit")), Privilege: sudo, Key: w.value("key"),
-			Hosts: w.value("hosts"), Env: env, Jump: w.value("jump"), Front: front, Consent: w.value("consent"), Confirmed: confirmed}
+		body = map[string]any{"org": org, "hosts": w.value("hosts"), "user": w.value("user")}
+	case w.kind == "personal":
+		org = "servers"
+		base.ID, base.Name, base.Consent = org, m.t.T("Personal"), m.t.F("Confirmed in the setup on {d}", "d", m.now().Format(time.DateOnly))
+		body = base
+	default:
+		org = m.freeID(strings.Trim(slugRE.ReplaceAllString(strings.ToLower(w.value("name")), "-"), "-"), w.kind)
+		base.ID, base.Name, base.Consent = org, w.value("name"), w.value("consent")
+		if w.kind == "company" {
+			base.Env, base.Jump = orStr(w.value("env"), "production"), w.value("jump")
+			env = base.Env
+		}
+		body = base
 	}
 	c := m.c
 	return func() tea.Msg {
@@ -580,11 +641,10 @@ func (m *Model) submit() tea.Cmd {
 
 var slugRE = regexp.MustCompile(`[^a-z0-9]+`)
 
-// freeID: an org id from a name, not taken yet (acme, acme-2, ...).
-func (m *Model) freeID(base string) string {
-	base = strings.Trim(base, "-")
+// freeID: an org id not taken yet (acme, acme-2, ...); base, or fallback when it is empty.
+func (m *Model) freeID(base, fallback string) string {
 	if base == "" {
-		base = "client"
+		base = fallback
 	}
 	id := base
 	for i := 2; m.orgByID(id) != nil; i++ {
@@ -609,10 +669,9 @@ type setupReq struct {
 	Confirmed bool     `json:"confirmed"`
 }
 
-// download: the DBs now, asked for (the card's "Download now").
+// download: the vulnerability list now, asked for.
 func (m *Model) download() tea.Cmd {
-	w := m.setup
-	if w != nil {
+	if w := m.setup; w != nil {
 		w.dlAsked = true
 	}
 	if m.db != nil && m.db.Updating {
@@ -627,6 +686,8 @@ func (m *Model) download() tea.Cmd {
 
 func (m *Model) dlNeeded() bool { return m.dbSize != nil && len(m.dbSize.Need) > 0 }
 
+// --- keys ------------------------------------------------------------------------------------------------------------
+
 func (m *Model) setupKey(k tea.KeyMsg) tea.Cmd {
 	w := m.setup
 	s := k.String()
@@ -636,38 +697,22 @@ func (m *Model) setupKey(k tea.KeyMsg) tea.Cmd {
 	if s == "ctrl+d" || s == "d" && !w.texting() { // the vulnerability list, downloaded when asked
 		return m.download()
 	}
-	switch w.step {
-	case 0:
-		paths := m.setupPaths()
-		switch s {
-		case "esc", "q":
-			if len(m.orgs.Orgs) > 0 {
-				m.setup = nil
-			}
-		case "up", "k", "shift+tab":
-			w.pathCur = max(w.pathCur-1, 0)
-		case "down", "j", "tab":
-			w.pathCur = min(w.pathCur+1, len(paths)-1)
-		case "enter", " ", "space":
-			w.path, w.step, w.cur, w.errs, w.parsed = paths[min(w.pathCur, len(paths)-1)], 1, 0, nil, nil
-			w.fields = m.formFor(w.path)
-			return m.fetchFound()
-		}
+	if s == "i" && !w.texting() { // what it is made of
+		w.dlParts = !w.dlParts
 		return nil
+	}
+	switch w.step {
 	case 2:
 		return m.checkKey(s)
 	case 3:
-		switch s {
-		case "enter", "esc", "q":
-			if j := m.jobOf(w.job); s != "enter" || j == nil || j.State != "running" {
-				m.setup = nil
-				m.setView(vActions)
-				return m.refresh()
-			}
+		if j := m.jobOf(w.job); s == "esc" || s == "q" || s == "enter" && j != nil && j.State != "running" {
+			m.setup = nil
+			m.setView(vActions)
+			return m.refresh()
 		}
 		return nil
 	}
-	return m.formKey1(k)
+	return m.serversKey(k)
 }
 
 func (m *Model) jobOf(id string) *jobInfo {
@@ -684,17 +729,19 @@ func (m *Model) checkKey(s string) tea.Cmd {
 	ok, bad := w.counts()
 	waiting := len(w.hosts) - ok - bad
 	switch s {
-	case "esc", "q":
+	case "esc":
+		if waiting == 0 && ok == 0 && w.fields != nil { // nothing answered: back to the servers
+			w.step = 1
+			return nil
+		}
 		m.setup = nil
 		m.setView(vActions)
 	case "r":
 		if waiting == 0 {
 			return m.checkAccess(bad > 0 && ok > 0)
 		}
-	case "e":
-		w.raw = !w.raw
 	case "enter", "s":
-		if ok == 0 || w.busy {
+		if ok == 0 || waiting > 0 || w.busy {
 			return nil
 		}
 		req := scanRequest{Org: w.org, Env: w.env}
@@ -731,8 +778,8 @@ func (w *wizard) counts() (ok, bad int) {
 	return ok, bad
 }
 
-// formKey1: the keys of the servers form.
-func (m *Model) formKey1(k tea.KeyMsg) tea.Cmd {
+// serversKey: the keys of the servers form.
+func (m *Model) serversKey(k tea.KeyMsg) tea.Cmd {
 	w := m.setup
 	s := k.String()
 	f := &w.fields[w.cur]
@@ -746,12 +793,14 @@ func (m *Model) formKey1(k tea.KeyMsg) tea.Cmd {
 	}
 	switch s {
 	case "esc":
-		w.step, w.errs = 0, nil // back to the paths
+		if len(m.orgs.Orgs) > 0 {
+			m.setup = nil
+		}
 		return nil
 	case "ctrl+s":
 		return m.submit()
 	case "ctrl+o":
-		if m.found != nil && len(m.found.Hosts) > 0 && w.field("hosts") != nil {
+		if m.found != nil && len(m.found.Hosts) > 0 {
 			w.pick = &sshPick{on: map[int]bool{}}
 		}
 		return nil
@@ -763,12 +812,20 @@ func (m *Model) formKey1(k tea.KeyMsg) tea.Cmd {
 		return nil
 	case "up", "down":
 		if f.kind == fArea {
-			if moved := f.line(map[string]int{"up": -1, "down": 1}[s]); moved {
+			if f.line(map[string]int{"up": -1, "down": 1}[s]) {
 				return nil
 			}
 		}
 		next(map[string]int{"up": -1, "down": 1}[s])
 		return nil
+	case "c":
+		if !w.texting() {
+			w.loginOpen = !w.loginOpen
+			if !w.visible(w.cur) {
+				w.cur = slices.IndexFunc(w.fields, func(x field) bool { return x.key == "login" })
+			}
+			return nil
+		}
 	}
 	before := string(f.val)
 	switch f.kind {
@@ -776,9 +833,9 @@ func (m *Model) formKey1(k tea.KeyMsg) tea.Cmd {
 		if s == "enter" || s == " " || s == "space" {
 			return m.submit()
 		}
-	case fFold:
-		if s == "enter" || s == " " || s == "space" || s == "right" || s == "left" {
-			w.login = !w.login
+	case fLogin:
+		if s == "enter" || s == " " || s == "space" || s == "right" {
+			w.loginOpen = !w.loginOpen
 		}
 	case fCheck:
 		switch s {
@@ -786,12 +843,18 @@ func (m *Model) formKey1(k tea.KeyMsg) tea.Cmd {
 			f.on = !f.on
 		}
 	case fChoice:
-		switch s {
-		case "enter", " ", "space", "right", "l":
-			f.opt = (f.opt + 1) % len(f.opts)
-		case "left", "h":
-			f.opt = (f.opt + len(f.opts) - 1) % len(f.opts)
+		dir := map[string]int{"enter": 1, " ": 1, "space": 1, "right": 1, "l": 1, "left": -1, "h": -1}[s]
+		if dir == 0 {
+			break
 		}
+		if f.key == "kind" {
+			ks := m.kinds()
+			i := slices.Index(ks, w.kind)
+			w.kind = ks[(i+dir+len(ks))%len(ks)]
+			w.errs = nil
+			return m.parseSoon() // the default user may change the preview
+		}
+		f.opt = (f.opt + dir + len(f.opts)) % len(f.opts)
 	case fText, fArea:
 		switch s {
 		case "enter":
@@ -825,15 +888,16 @@ func (m *Model) formKey1(k tea.KeyMsg) tea.Cmd {
 			f.val, f.pos = nil, 0
 		default:
 			if k.Type == tea.KeyRunes || k.Type == tea.KeySpace {
-				r := k.Runes
+				r := strings.ReplaceAll(string(k.Runes), "\r", "")
 				if f.kind == fText {
-					r = []rune(strings.ReplaceAll(strings.ReplaceAll(string(r), "\r", ""), "\n", " "))
-				} else {
-					r = []rune(strings.ReplaceAll(string(r), "\r", ""))
+					r = strings.ReplaceAll(r, "\n", " ")
 				}
-				f.insert(r)
+				f.insert([]rune(r))
 			}
 		}
+	}
+	if string(f.val) != before {
+		w.errs = nil // what was wrong may be fixed now
 	}
 	if (f.key == "hosts" || f.key == "user") && string(f.val) != before {
 		return m.parseSoon()
@@ -848,7 +912,8 @@ func (m *Model) parseSoon() tea.Cmd {
 	return m.after(250*time.Millisecond, parseDueMsg{w.parseGen})
 }
 
-// pickKey: the ~/.ssh/config picker: type to narrow, space to choose, enter adds them to the paste area.
+// pickKey: the ~/.ssh/config picker: type to narrow, space to choose, enter adds their aliases (the server resolves
+// them).
 func (m *Model) pickKey(k tea.KeyMsg) tea.Cmd {
 	w := m.setup
 	p := w.pick
@@ -889,7 +954,7 @@ func (m *Model) pickKey(k tea.KeyMsg) tea.Cmd {
 			if text != "" {
 				text += "\n"
 			}
-			text += sshLine(m.found.Hosts[i], m.found.Hosts)
+			text += m.found.Hosts[i].Alias
 		}
 		f.val = []rune(text)
 		f.pos = len(f.val)
@@ -913,33 +978,6 @@ func (m *Model) pickList() []int {
 		}
 	}
 	return out
-}
-
-// sshLine: a ~/.ssh/config host as the ssh command the paste area understands (its jump host spelled out).
-func sshLine(h sshHost, all []sshHost) string {
-	s := "ssh"
-	if h.Port != 0 && h.Port != 22 {
-		s += " -p " + strconv.Itoa(h.Port)
-	}
-	if h.Jump != "" {
-		j := h.Jump
-		if i := slices.IndexFunc(all, func(x sshHost) bool { return x.Alias == h.Jump }); i >= 0 {
-			x := all[i]
-			j = orStr(x.HostName, x.Alias)
-			if x.User != "" {
-				j = x.User + "@" + j
-			}
-			if x.Port != 0 {
-				j += ":" + strconv.Itoa(x.Port)
-			}
-		}
-		s += " -J " + j
-	}
-	s += " "
-	if h.User != "" {
-		s += h.User + "@"
-	}
-	return s + orStr(h.HostName, h.Alias)
 }
 
 func (f *field) insert(r []rune) {
@@ -984,141 +1022,61 @@ func (f *field) line(d int) bool {
 
 // --- drawing ---------------------------------------------------------------------------------------------------------
 
-func (m *Model) setupTitle() string {
-	w := m.setup
-	switch {
-	case w.step == 0 && len(m.orgs.Orgs) > 0:
-		return sTitle.Render(m.t.T("Add servers"))
-	case w.step == 0:
-		return sTitle.Render(m.t.T("Welcome to Kanareika"))
-	case w.step == 2:
-		return sTitle.Render(m.t.T("Access check")) + sText.Render("("+w.org+"/"+w.env+")")
-	case w.step == 3:
-		return sTitle.Render(m.t.T("First scan")) + sText.Render("("+w.org+"/"+w.env+")")
-	}
-	return sTitle.Render(m.t.T(pathTitles[w.path]))
-}
+func (m *Model) setupTitle() string { return sTitle.Render("~ kanareika setup") }
 
-// steps: the stepper's steps.
+// steps: the setup's steps, as tabs.
 var steps = []string{"Servers", "Access", "First scan"}
 
-// stepper: 1 Servers ── 2 Access ── 3 First scan; done ✓ green, the current one canary, the rest dim.
-func (m *Model) stepper() string {
-	cur := max(1, m.setup.step)
-	var b strings.Builder
-	b.WriteString(" ")
+// stepTabs: Servers › Access › First scan; the current one a tab, the done ones ✓ green, the rest dim.
+func (m *Model) stepTabs() string {
+	var parts []string
 	for i, st := range steps {
 		n := i + 1
-		label := m.t.T(st)
 		switch {
-		case n < cur:
-			b.WriteString(sOK.Render("✓ " + label))
-		case n == cur:
-			b.WriteString(sBrand.Render(strconv.Itoa(n) + " " + label))
+		case n < m.setup.step:
+			parts = append(parts, sOK.Render("✓ "+m.t.T(st)))
+		case n == m.setup.step:
+			parts = append(parts, sCrumb.Render(m.t.T(st)))
 		default:
-			b.WriteString(sDim.Render(strconv.Itoa(n) + " " + label))
-		}
-		if n < len(steps) {
-			line := sDim
-			if n < cur {
-				line = sOK
-			}
-			b.WriteString(line.Render(" ──── "))
+			parts = append(parts, sDim.Render(m.t.T(st)))
 		}
 	}
-	return b.String()
-}
-
-var pathTitles = map[string]string{"add": "Add servers", "few": "Which servers?", "client": "A client's servers", "fleet": "Your fleet"}
-
-// pathTexts: the paths, as the web page's cards say them.
-var pathTexts = map[string]string{
-	"add":    "More servers for this organization: paste them, they are checked and scanned on their own.",
-	"few":    "A homelab, a VPS, a NAS. Paste an address or user@host; logins come from your SSH setup.",
-	"client": "For freelancers: one organization per client, with where their permission is documented.",
-	"fleet":  "Tens or hundreds of servers: a list, CSV, an Ansible inventory or ssh config; groups, environments, jump hosts.",
-}
-
-func (m *Model) pathName(p string) string {
-	switch p {
-	case "add":
-		o := m.orgRow()
-		return m.t.F("Add to {org}", "org", orStr(o.Name, o.ID))
-	case "few":
-		if m.orgByID("servers") != nil {
-			return m.t.T("Add to My servers")
-		}
-		return m.t.T("My servers")
-	case "client":
-		return m.t.T("A client's servers")
-	}
-	return m.t.T("A fleet")
+	return " " + strings.Join(parts, sDim.Render(" › "))
 }
 
 func (m *Model) setupView(w, h int) []string {
 	wz := m.setup
-	out := []string{m.stepper(), ""}
+	tabs, dl := m.stepTabs(), m.dlLine(w)
+	if room := w - ansi.StringWidth(tabs) - ansi.StringWidth(dl) - 1; dl != "" && room > 0 {
+		tabs += strings.Repeat(" ", room) + dl
+	}
+	out := []string{tabs, ""}
+	if wz.dlParts {
+		out = append(out, m.dlBreakdown()...)
+	}
 	switch wz.step {
-	case 0:
-		out = append(out, m.pathsView(w)...)
 	case 1:
-		out = append(out, m.formView1(w, h-4)...)
+		body := m.serversView(w)
+		if wz.pick != nil {
+			body = append(m.pickView(w), body...)
+		}
+		out = append(out, body...)
 	case 2:
 		out = append(out, m.checkView(w)...)
 	default:
-		out = append(out, m.firstScanView(w)...)
-	}
-	if l := m.dlLine(w); l != "" {
-		out = append(out, "", l)
+		out = append(out, m.scanView(w)...)
 	}
 	off := min(wz.off, max(len(out)-h, 0))
 	if wz.step == 1 {
-		off = 0
+		off = max(m.setupCurLine-h+4, 0)
 	}
-	return out[off:]
-}
-
-func (m *Model) pathsView(w int) []string {
-	wz := m.setup
-	out := wrapText(m.t.T("A read-only security audit over SSH: what to patch first, who can get in, what is exposed. Nothing is installed or changed on the servers."), sText, w)
-	out = append(out, "")
-	icons := map[string]string{"add": "+", "few": "⌂", "client": "⚿", "fleet": "☰"}
-	for i, p := range m.setupPaths() {
-		name := m.pathName(p)
-		text := m.t.T(pathTexts[p])
-		if i == wz.pathCur {
-			out = append(out, " "+sKey.Render("▶ "+icons[p]+" ")+sBold.Render(name))
-			for _, l := range strings.Split(ansi.Wordwrap(text, max(w-8, 20), ""), "\n") {
-				out = append(out, "      "+sText.Render(l))
-			}
-		} else {
-			out = append(out, "   "+sMuted.Render(icons[p]+" ")+sText.Render(name))
-			for _, l := range strings.Split(ansi.Wordwrap(text, max(w-8, 20), ""), "\n") {
-				out = append(out, "      "+sDim.Render(l))
-			}
-		}
-		out = append(out, "")
-	}
-	keys := sKey.Render("<↑↓>") + " " + sMuted.Render(m.t.T("choose")) + "  " + sKey.Render("<enter>") + " " + sMuted.Render(m.t.T("next"))
-	if len(m.orgs.Orgs) > 0 {
-		keys += "  " + sKey.Render("<esc>") + " " + sMuted.Render(m.t.T("Cancel"))
-	}
-	return append(out, " "+keys)
-}
-
-// wrapText: text in style, wrapped to w cells, each line indented by one.
-func wrapText(s string, style lipgloss.Style, w int) []string {
-	var out []string
-	for _, l := range strings.Split(ansi.Wordwrap(s, max(w-2, 20), ""), "\n") {
-		out = append(out, " "+style.Render(l))
-	}
-	return out
+	return out[min(off, len(out)):]
 }
 
 // textBox: a field's text, the cursor shown where it is when it has the keyboard; one string per line.
-func textBox(f *field, focus bool, placeholder string) []string {
+func textBox(f *field, focus bool) []string {
 	if len(f.val) == 0 && !focus {
-		return []string{sDim.Render(placeholder)}
+		return []string{sDim.Render(f.placeholder)}
 	}
 	cur := lipgloss.NewStyle().Reverse(true)
 	var lines []string
@@ -1147,179 +1105,215 @@ func textBox(f *field, focus bool, placeholder string) []string {
 	return append(lines, b.String())
 }
 
-func (m *Model) formView1(w, h int) []string {
+// heading: a question or a label, highlighted when its field has the keyboard.
+func heading(s string, focus bool) string {
+	if focus {
+		return sKey.Render("▶ " + s)
+	}
+	return "  " + sBold.Render(s)
+}
+
+func (m *Model) serversView(w int) []string {
 	wz := m.setup
-	labelW := 0
-	for i, f := range wz.fields {
-		if wz.visible(i) && (f.kind == fText || f.kind == fArea || f.kind == fChoice) {
-			labelW = max(labelW, ansi.StringWidth(m.t.T(f.label))+map[bool]int{true: 2}[f.fold])
-		}
-	}
-	labelW = min(labelW+2, 26)
-	valueW := max(w-labelW-5, 16)
-	ind := strings.Repeat(" ", labelW+3)
+	focus := func(key string) bool { return wz.fields[wz.cur].key == key }
 	var out []string
-	curLine := 0
-	for i := range wz.fields {
-		if !wz.visible(i) {
-			continue
+	mark := func() { m.setupCurLine = len(out) + 2 } // the steps, a blank line
+	// whose servers
+	if focus("kind") {
+		mark()
+	}
+	var opts []string
+	for _, k := range m.kinds() {
+		if k == wz.kind {
+			opts = append(opts, sBrand.Render("(•) "+m.kindName(k)))
+		} else {
+			opts = append(opts, sMuted.Render("( ) "+m.kindName(k)))
 		}
-		f := &wz.fields[i]
-		focus := i == wz.cur
+	}
+	out = append(out, " "+heading(m.t.T("Whose servers?"), focus("kind"))+"   "+strings.Join(opts, "  "))
+	if wz.kind == "client" || wz.kind == "company" {
+		name, consent := wz.field("name"), wz.field("consent")
+		name.label, consent.label, consent.placeholder = "Client", "Their permission", m.t.T("contract, ticket, e-mail")
+		if wz.kind == "company" {
+			name.label, consent.label, consent.placeholder = "Company", "Permission", m.t.T("ticket, policy")
+		}
+		if focus("name") || focus("consent") {
+			mark()
+		}
+		out = append(out, "   "+heading(m.t.T(name.label), focus("name"))+"  "+fit(textBox(name, focus("name"))[0], 24, false)+"   "+
+			heading(m.t.T(consent.label), focus("consent"))+"  "+textBox(consent, focus("consent"))[0])
+	}
+	out = append(out, "")
+	// the servers: what was written, and beside each line what it becomes
+	if focus("hosts") {
+		mark()
+	}
+	out = append(out, " "+heading(m.t.T("Servers"), focus("hosts"))+"   "+sMuted.Render(m.t.T("One per line: user@host, an ssh command, ssh config, CSV")))
+	out = append(out, m.editor(w)...)
+	if m.found != nil && len(m.found.Hosts) > 0 {
+		out = append(out, "    "+sKey.Render("ctrl+o")+" "+sMuted.Render("+ ~/.ssh/config ("+strconv.Itoa(len(m.found.Hosts))+")"))
+	}
+	out = append(out, "")
+	// login
+	if focus("login") {
+		mark()
+	}
+	out = append(out, " "+heading(m.t.T("Login"), focus("login"))+"  "+m.loginSummary()+"   "+sKey.Render("c")+" "+sMuted.Render(m.t.T("change")))
+	if wz.loginOpen {
+		for i := range wz.fields {
+			f := &wz.fields[i]
+			if !f.login || !wz.visible(i) {
+				continue
+			}
+			if focus(f.key) {
+				mark()
+			}
+			switch f.kind {
+			case fCheck:
+				out = append(out, "     "+checkBox(f, m.t.T(f.label), focus(f.key)))
+			case fChoice:
+				var o []string
+				for j := range f.opts {
+					if j == f.opt {
+						o = append(o, sBrand.Render("(•) "+f.shown[j]))
+					} else {
+						o = append(o, sMuted.Render("( ) "+f.shown[j]))
+					}
+				}
+				out = append(out, "   "+heading(fit(m.t.T(f.label), 12, false), focus(f.key))+strings.Join(o, "  "))
+			default:
+				out = append(out, "   "+heading(fit(m.t.T(f.label), 12, false), focus(f.key))+textBox(f, focus(f.key))[0])
+			}
+		}
+	}
+	out = append(out, "")
+	if focus("confirmed") {
+		mark()
+	}
+	out = append(out, " "+checkBox(wz.field("confirmed"), m.t.T("I’m allowed to audit these servers"), focus("confirmed")))
+	for _, e := range wz.errs {
+		out = append(out, " "+sErr.Render("✗ "+e))
+	}
+	if focus("submit") {
+		mark()
+	}
+	b := sCrumb.Render("⏎ " + m.t.T("Check access"))
+	if focus("submit") {
+		b = sSel.Render(" ⏎ " + m.t.T("Check access") + " ")
+	}
+	if wz.busy {
+		b += " " + sRun.Render(m.spinChar())
+	}
+	return append(out, "", " "+b)
+}
+
+func checkBox(f *field, label string, focus bool) string {
+	box := sDim.Render("[ ]")
+	if f.on {
+		box = sBrand.Render("[x]")
+	}
+	if focus {
+		return sKey.Render("▶ ") + box + " " + sKey.Render(label)
+	}
+	return "  " + box + " " + sText.Render(label)
+}
+
+// loginSummary: what the login will be: the agent's keys or the key file, and the user.
+func (m *Model) loginSummary() string {
+	wz, f := m.setup, m.found
+	if f == nil {
+		f = &foundResp{}
+	}
+	key := ""
+	switch k := m.loginKey(); {
+	case k != "":
+		key = sBold.Render(k)
+	case f.AgentKeys > 0:
+		key = sText.Render("ssh-agent · ") + sBold.Render(m.t.F("{n} keys", "n", strconv.Itoa(f.AgentKeys)))
+	default:
+		key = sErr.Render(m.t.T("no SSH key found"))
+	}
+	return key + sMuted.Render(" · "+m.t.T("user")+" ") + sBold.Render(orStr(wz.value("user"), orStr(f.User, "root")))
+}
+
+// editor: the paste area. Empty: one plain field with greyed examples. With text: line numbers, what was written,
+// and on each line's row what the server made of it.
+func (m *Model) editor(w int) []string {
+	wz := m.setup
+	f := wz.field("hosts")
+	focus := wz.fields[wz.cur].key == "hosts"
+	if len(f.val) == 0 {
+		cur := " "
 		if focus {
-			curLine = len(out)
+			cur = lipgloss.NewStyle().Reverse(true).Render(" ")
 		}
-		mark := "  "
-		label := sLabel.Render(fit(m.t.T(f.label), labelW, false))
-		if focus {
-			mark = sKey.Render("▶ ")
-			label = sKey.Render(fit(m.t.T(f.label), labelW, false))
-		}
-		hint := ""
-		if f.hint != "" {
-			hint = sMuted.Render(m.t.T(f.hint))
-		}
-		if f.fold {
-			mark = "  " + mark
-			label = fit(label, labelW-2, false)
-		}
-		switch f.kind {
-		case fText:
-			box := textBox(f, focus, f.placeholder)
-			out = append(out, " "+mark+label+" "+box[0]+"  "+hint)
-		case fArea:
-			box := textBox(f, focus, "")
-			l := " " + mark + label + " " + hint
-			if m.found != nil && len(m.found.Hosts) > 0 {
-				l += "  " + sKey.Render("ctrl+o") + " " + sMuted.Render(m.t.F("choose from ~/.ssh/config ({n})", "n", strconv.Itoa(len(m.found.Hosts))))
-			}
-			out = append(out, l)
-			if len(f.val) == 0 && !focus {
-				box = []string{sDim.Render(f.placeholder)}
-			}
-			rows := 3
-			if wz.path == "fleet" {
-				rows = 6
-			}
-			for len(box) < rows {
-				box = append(box, "")
-			}
-			for _, l := range box {
-				out = append(out, ind+sDim.Render("│ ")+l)
-			}
-			out = append(out, m.previewLines(ind, valueW)...)
-		case fChoice:
-			var o []string
-			for j, v := range f.opts {
-				name := v
-				if j < len(f.shown) && f.shown[j] != "" {
-					name = f.shown[j]
-				}
-				if j == f.opt {
-					o = append(o, sBrand.Render("(•) "+name))
-				} else {
-					o = append(o, sMuted.Render("( ) "+name))
-				}
-			}
-			out = append(out, " "+mark+label+" "+strings.Join(o, "  ")+"   "+hint)
-		case fFold:
-			arrow := "▸"
-			if wz.login {
-				arrow = "▾"
-			}
-			l := sMuted.Render(arrow+" ") + sText.Render(m.t.T(f.label))
-			if focus {
-				l = sKey.Render(ansi.Strip(l))
-			}
-			if !wz.login {
-				l += sDim.Render("  " + m.t.T("optional: the user and key from your SSH setup"))
-			}
-			out = append(out, " "+mark+l)
-		case fCheck:
-			box := sDim.Render("[ ]")
-			if f.on {
-				box = sBrand.Render("[x]")
-			}
-			l := box + " " + sText.Render(m.t.T(f.label))
-			if focus {
-				l = sKey.Render(ansi.Strip(l))
-			}
-			out = append(out, " "+mark+l)
-		case fButton:
-			b := sCrumb.Render(m.t.T(f.label))
-			if wz.busy {
-				b += " " + sRun.Render(m.spinChar()) + " " + sMuted.Render(m.t.T("saving…"))
-			}
-			out = append(out, "", " "+mark+b)
-		}
+		return []string{"    " + cur + sDim.Render("admin@192.0.2.10"), "     " + sDim.Render("ssh -p 2222 deploy@203.0.113.7"), "     " + sDim.Render("nas")}
 	}
-	if len(wz.errs) > 0 {
-		out = append(out, "")
-		for _, e := range wz.errs {
-			for j, l := range strings.Split(ansi.Wordwrap(e, max(w-6, 20), ""), "\n") {
-				p := "   "
-				if j == 0 {
-					p = " " + sErr.Render("✗ ")
-				}
-				out = append(out, p+sErr.Render(l))
-			}
+	box := textBox(f, focus)
+	n := max(3, len(box))
+	right := m.lineResults(n)
+	leftW := max(min((w-8)/2, 44), 20)
+	var out []string
+	for i := 0; i < max(n, len(right)); i++ {
+		num := ""
+		if i < n {
+			num = strconv.Itoa(i + 1)
 		}
-	}
-	out = append(out, "", " "+sKey.Render("<tab>")+" "+sMuted.Render(m.t.T("next field"))+"  "+sKey.Render("<ctrl+s>")+" "+
-		sMuted.Render(m.t.T("save"))+"  "+sKey.Render("<ctrl+d>")+" "+sMuted.Render(m.t.T("download now"))+"  "+sKey.Render("<esc>")+" "+sMuted.Render(m.t.T("Back")))
-	if off := curLine - (h - 8); off > 0 {
-		out = out[min(off, len(out)):]
-	}
-	if wz.pick != nil {
-		out = append(m.pickView(w), out...)
+		out = append(out, "   "+sDim.Render(fit(num, 2, true))+" "+fit(get(box, i), leftW, false)+"  "+get(right, i))
 	}
 	return out
 }
 
-// previewLines: what the server understood of the paste area: ✓ user@address (via a jump host); a table for a
-// fleet; the lines it skipped and why.
-func (m *Model) previewLines(ind string, w int) []string {
+func get(l []string, i int) string {
+	if i < len(l) {
+		return l[i]
+	}
+	return ""
+}
+
+var lineErr = regexp.MustCompile(`^line (\d+): (?:"[^"]*"(?::\s*|\s+))?(.*)$`)
+
+// lineResults: for each of n pasted lines, what it becomes (✓ user@address via … from ssh config), or why it is
+// skipped; errors without a line at the end.
+func (m *Model) lineResults(n int) []string {
 	wz := m.setup
-	if wz.parsed == nil || strings.TrimSpace(string(wz.field("hosts").val)) == "" {
+	if wz.parsed == nil {
 		return nil
 	}
-	defUser := wz.value("user")
-	if defUser == "" && wz.field("user") != nil {
-		defUser = wz.field("user").placeholder
+	f := m.found
+	if f == nil {
+		f = &foundResp{}
 	}
-	var out []string
-	hs := wz.parsed.Hosts
-	if wz.path == "fleet" && len(hs) > 3 {
-		cols := []col{{title: "Name", width: 20}, {title: "User", width: 12}, {title: "Address", width: 24}, {title: "Via", width: 20},
-			{title: "Group", min: 8}}
-		var rows [][]string
-		for _, h := range hs {
-			g := strings.Trim(h.Group+" · "+h.Env, " ·")
-			rows = append(rows, []string{lipgloss.NewStyle().Foreground(cCyan).Render(h.Name), sText.Render(orStr(h.User, defUser)),
-				sText.Render(h.Address), sMuted.Render(h.Jump), sMuted.Render(g)})
+	defUser := orStr(wz.value("user"), orStr(f.User, "root"))
+	rows := make([]string, n)
+	for _, h := range wz.parsed.Hosts {
+		if h.Line < 1 || h.Line > n {
+			continue
 		}
-		for _, l := range m.grid(cols, rows, w, min(len(rows)+1, 12), false) {
-			out = append(out, ind+l)
+		l := sMuted.Render("→ ") + sText.Render(orStr(h.User, defUser)+"@"+h.Address)
+		if h.Jump != "" {
+			l += sMuted.Render(" via " + h.Jump)
 		}
-		if len(rows) > 11 {
-			out = append(out, ind+sMuted.Render(m.t.F("{n} more", "n", strconv.Itoa(len(rows)-11))))
+		if h.From != "" {
+			l += sMuted.Render(" " + m.t.T("from ssh config"))
 		}
-	} else {
-		for _, h := range hs {
-			l := ind + sOK.Render("✓ ") + sText.Render(orStr(h.User, defUser)+"@"+h.Address)
-			if h.Jump != "" {
-				l += "  " + sMuted.Render(m.t.F("via {j}", "j", h.Jump))
-			}
-			out = append(out, l)
-		}
+		rows[h.Line-1] = l
 	}
-	if n := len(wz.parsed.Errors); n > 0 {
-		out = append(out, ind+lipgloss.NewStyle().Foreground(cP["P3"]).Render("! "+m.t.F("{n} skipped", "n", strconv.Itoa(n))))
-		for _, e := range wz.parsed.Errors {
-			out = append(out, ind+"  "+sMuted.Render(e))
+	for _, e := range wz.parsed.Errors {
+		msg := e
+		line := 0
+		if sm := lineErr.FindStringSubmatch(e); sm != nil {
+			line, _ = strconv.Atoi(sm[1])
+			msg = sm[2]
+		}
+		l := sMuted.Render("→ ") + lipgloss.NewStyle().Foreground(cP["P3"]).Render(msg) + sMuted.Render(" · "+m.t.T("skipped"))
+		if line >= 1 && line <= n && rows[line-1] == "" {
+			rows[line-1] = l
+		} else {
+			rows = append(rows, l)
 		}
 	}
-	return out
+	return rows
 }
 
 // pickView: the ~/.ssh/config hosts to choose from.
@@ -1346,7 +1340,7 @@ func (m *Model) pickView(w int) []string {
 		}
 		l := " " + box + " " + sBold.Render(fit(h.Alias, aw, false)) + "  " + sMuted.Render(where)
 		if h.Jump != "" {
-			l += sMuted.Render(" · " + m.t.F("via {j}", "j", h.Jump))
+			l += sMuted.Render(" via " + h.Jump)
 		}
 		if j == p.cur {
 			l = sSel.Render(fit(ansi.Strip(l), min(w-4, 70), false))
@@ -1356,185 +1350,285 @@ func (m *Model) pickView(w int) []string {
 	if len(list) == 0 {
 		lines = append(lines, " "+sMuted.Render(m.t.T("nothing here")))
 	}
-	lines = append(lines, "", " "+sKey.Render("<space>")+" "+sMuted.Render(m.t.T("toggle"))+"  "+sKey.Render("<enter>")+" "+
-		sMuted.Render(m.t.T("Add selected"))+"  "+sKey.Render("<esc>")+" "+sMuted.Render(m.t.T("Cancel")))
-	return append(panel(sTitle.Render(m.t.T("Choose from ~/.ssh/config")), lines, min(w, 74), len(lines)+2), "")
+	lines = append(lines, "", " "+sKey.Render("space")+" "+sMuted.Render(m.t.T("toggle"))+"  "+sKey.Render("⏎")+" "+
+		sMuted.Render(m.t.T("Add"))+"  "+sKey.Render("esc")+" "+sMuted.Render(m.t.T("Cancel")))
+	return append(panel(sTitle.Render("~/.ssh/config"), lines, min(w, 74), len(lines)+2), "")
 }
 
-// checkView: the hosts as their checks answer, grouped: still checking, each cause of failure once (in plain
-// words, its hosts on one line, the raw error folded away: e), the ones that answered.
+var authFail = regexp.MustCompile(`(?i)authenticat|permission denied|publickey|refused the login`)
+
+// checkView: the hosts as their checks answer, grouped: connecting, each cause of failure once (its hint, its hosts,
+// how to fix a refused login), the ones that answered, the lines skipped when saving.
 func (m *Model) checkView(w int) []string {
 	wz := m.setup
-	out := wrapText(m.t.T("Kanareika logs in to each server and runs uname -sr. Nothing is changed."), sText, w)
+	out := []string{" " + sBold.Render(m.t.T("Checking access")) + "   " + sMuted.Render(m.t.T("One login per server, uname -sr, log out. Nothing is changed.")), ""}
 	if m.err != "" && wz.hosts == nil {
-		return append(out, "", " "+sErr.Render("✗ "+m.err))
+		return append(out, " "+sErr.Render("✗ "+m.err))
 	}
 	if wz.hosts == nil {
-		return append(out, "", " "+sRun.Render(m.spinChar())+" "+sMuted.Render(m.t.T("loading")))
+		return append(out, " "+sRun.Render(m.spinChar())+" "+sMuted.Render(m.t.T("loading")))
 	}
-	var ok, waiting []hostRef
-	type cause struct {
-		hint, err string
-		hosts     []hostRef
-	}
-	var causes []*cause
+	lw := 0
 	for _, h := range wz.hosts {
-		r := wz.res[h.name]
-		switch {
+		lw = max(lw, ansi.StringWidth(h.login()))
+	}
+	lw = min(lw, max(w/2, 24))
+	row := func(mark string, h hostRef, note string) string {
+		l := h.login()
+		if ansi.StringWidth(l) > lw { // never wrapped: cut at its end
+			l = ansi.Truncate(l, lw, "…")
+		}
+		return "   " + mark + " " + lipgloss.NewStyle().Foreground(cCyan).Render(fit(l, lw, false)) + "  " + sMuted.Render(ansi.Truncate(note, max(w-lw-8, 10), "…"))
+	}
+	var ok, bad, waiting []hostRef
+	for _, h := range wz.hosts {
+		switch r := wz.res[h.name]; {
 		case r == nil:
 			waiting = append(waiting, h)
 		case r.OK:
 			ok = append(ok, h)
 		default:
-			k := orStr(r.Hint, r.Error)
-			i := slices.IndexFunc(causes, func(c *cause) bool { return orStr(c.hint, c.err) == k })
-			if i < 0 {
-				causes = append(causes, &cause{hint: r.Hint, err: r.Error})
-				i = len(causes) - 1
-			}
-			causes[i].hosts = append(causes[i].hosts, h)
+			bad = append(bad, h)
 		}
 	}
-	out = append(out, "")
 	if len(waiting) > 0 {
 		secs := strconv.Itoa(int(m.now().Sub(wz.started).Seconds()))
-		out = append(out, " "+sRun.Render(m.spinChar()+" ")+sBold.Render(m.t.F("Checking {n}… {s} s", "n", strconv.Itoa(len(waiting)), "s", secs)),
-			"   "+hostLine(waiting, w-4, sMuted), "")
+		out = append(out, " "+sRun.Render(m.spinChar()+" ")+sBold.Render(m.t.F("{n} connecting", "n", strconv.Itoa(len(waiting))))+sMuted.Render(" · "+secs+" s"))
+		for _, h := range waiting {
+			note := ""
+			if h.jump != "" {
+				note = "via " + h.jump
+			}
+			out = append(out, row(sRun.Render(m.spinChar()), h, note))
+		}
+		out = append(out, "")
+	}
+	type cause struct {
+		r     *checkResult
+		hosts []hostRef
+	}
+	var causes []*cause
+	for _, h := range bad {
+		r := wz.res[h.name]
+		k := orStr(r.Hint, r.Error)
+		i := slices.IndexFunc(causes, func(c *cause) bool { return orStr(c.r.Hint, c.r.Error) == k })
+		if i < 0 {
+			causes = append(causes, &cause{r: r})
+			i = len(causes) - 1
+		}
+		causes[i].hosts = append(causes[i].hosts, h)
+	}
+	bare := func(e string) string { // the error without the host name it starts with
+		if _, rest, ok := strings.Cut(e, ": "); ok {
+			return rest
+		}
+		return e
 	}
 	for _, c := range causes {
-		for i, l := range strings.Split(ansi.Wordwrap(orStr(c.hint, c.err), max(w-5, 20), ""), "\n") {
+		for i, l := range strings.Split(ansi.Wordwrap(orStr(c.r.Hint, c.r.Error), max(w-5, 20), ""), "\n") {
 			p := "   "
 			if i == 0 {
 				p = " " + sErr.Render("✗ ")
 			}
 			out = append(out, p+sBold.Render(l))
 		}
-		out = append(out, "   "+hostLine(c.hosts, w-4, lipgloss.NewStyle().Foreground(cCyan)))
-		if c.hint != "" && wz.raw {
-			for _, l := range strings.Split(ansi.Wordwrap(c.err, max(w-6, 20), ""), "\n") {
-				out = append(out, "   "+sDim.Render(l))
+		same := !slices.ContainsFunc(c.hosts, func(h hostRef) bool { return bare(wz.res[h.name].Error) != bare(c.r.Error) })
+		for _, h := range c.hosts {
+			note := ""
+			if c.r.Hint != "" && !same {
+				note = bare(wz.res[h.name].Error)
+			}
+			out = append(out, row(sErr.Render("✗"), h, note))
+		}
+		if authFail.MatchString(c.r.Error + " " + c.r.Hint) {
+			for _, h := range c.hosts[:min(3, len(c.hosts))] {
+				host, port := h.address, ""
+				if h.port != 0 && h.port != 22 {
+					port = " -p " + strconv.Itoa(h.port)
+				}
+				if h.user != "" {
+					host = h.user + "@" + host
+				}
+				out = append(out, "   "+sMuted.Render(m.t.T("fix")+": ")+sText.Render("ssh-copy-id"+port+" "+host))
 			}
 		}
 		out = append(out, "")
 	}
 	if len(ok) > 0 {
-		out = append(out, " "+sOK.Render("✓ "+m.t.F("{n} answered", "n", strconv.Itoa(len(ok)))), "   "+hostLine(ok, w-4, sText), "")
+		out = append(out, " "+sOK.Render("✓ ")+sBold.Render(m.t.F("{n} answered", "n", strconv.Itoa(len(ok)))))
+		for _, h := range ok {
+			out = append(out, row(sOK.Render("✓"), h, wz.res[h.name].System))
+		}
+		out = append(out, "")
 	}
-	for _, s := range wz.skipped {
-		out = append(out, " "+lipgloss.NewStyle().Foreground(cP["P3"]).Render("! ")+sMuted.Render(s+" · "+m.t.T("skipped")))
+	if len(wz.skipped) > 0 {
+		out = append(out, " "+lipgloss.NewStyle().Foreground(cP["P3"]).Render("! ")+sBold.Render(m.t.F("{n} skipped", "n", strconv.Itoa(len(wz.skipped)))))
+		for _, s := range wz.skipped {
+			out = append(out, "   "+sMuted.Render(s))
+		}
+		out = append(out, "")
 	}
 	if wz.file != "" {
-		out = append(out, " "+sMuted.Render(m.t.F("Addresses and logins are saved in {file}.", "file", wz.file[strings.LastIndex(wz.file, "/")+1:])))
+		out = append(out, " "+sMuted.Render(m.t.F("Saved in {file}", "file", wz.file[strings.LastIndex(wz.file, "/")+1:])), "")
 	}
 	var keys []string
 	switch {
 	case len(waiting) > 0:
 	case len(ok) > 0:
 		scan := m.t.T("Start the first scan")
-		if len(causes) > 0 {
+		if len(bad) > 0 {
 			scan = m.t.F("Scan the {n} that answered", "n", strconv.Itoa(len(ok)))
 		}
 		if m.dlNeeded() && (m.db == nil || !m.db.Updating) {
-			scan += " · " + m.t.F("downloads {size} first", "size", dbsize.Bytes(m.dbSize.Total))
+			scan += " · " + m.t.F("downloads the vuln list first ({size})", "size", dbsize.Bytes(m.dbSize.Total))
 		}
-		keys = append(keys, sKey.Render("<enter>")+" "+sText.Render(scan))
-		if len(causes) > 0 {
-			keys = append(keys, sKey.Render("<r>")+" "+sMuted.Render(m.t.T("Check the failed again")))
+		keys = append(keys, sCrumb.Render("⏎ "+scan))
+		if len(bad) > 0 {
+			keys = append(keys, sKey.Render("r")+" "+sText.Render(m.t.T("Check again")))
 		}
 	default:
-		keys = append(keys, sKey.Render("<r>")+" "+sText.Render(m.t.T("Check again")))
-	}
-	if len(causes) > 0 && slices.ContainsFunc(causes, func(c *cause) bool { return c.hint != "" }) {
-		keys = append(keys, sKey.Render("<e>")+" "+sMuted.Render(m.t.T("Details")))
-	}
-	keys = append(keys, sKey.Render("<esc>")+" "+sMuted.Render(m.t.T("later")))
-	return append(out, " "+strings.Join(keys, "  "))
-}
-
-// hostLabel: a host as the check shows it: its address, or name · address when the name says something else.
-func hostLabel(h hostRef) string {
-	a := orStr(h.address, h.name)
-	if h.name == a || h.name == strings.Trim(slugRE.ReplaceAllString(strings.ToLower(a), "-"), "-") {
-		return a
-	}
-	return h.name + " · " + a
-}
-
-// hostLine: hosts on one line, w cells at most: a name or an address is never cut or wrapped; what doesn't fit is
-// counted (+12).
-func hostLine(hs []hostRef, w int, style lipgloss.Style) string {
-	var b strings.Builder
-	used := 0
-	for i, h := range hs {
-		l := hostLabel(h)
-		more := ""
-		if rest := len(hs) - i - 1; rest > 0 {
-			more = "  +" + strconv.Itoa(rest)
+		keys = append(keys, sCrumb.Render("r "+m.t.T("Check again")))
+		if wz.fields != nil {
+			keys = append(keys, sKey.Render("esc")+" "+sText.Render(m.t.T("Back")))
 		}
-		sep := 0
-		if i > 0 {
-			sep = 2
-		}
-		if used+sep+ansi.StringWidth(l)+len(more) > w && i > 0 {
-			b.WriteString(sMuted.Render("  +" + strconv.Itoa(len(hs)-i)))
-			break
-		}
-		if i > 0 {
-			b.WriteString("  ")
-		}
-		if ansi.StringWidth(l) > w-len(more) { // one alone wider than the line: cut at its end
-			l = ansi.Truncate(l, max(w-len(more), 4), "…")
-		}
-		b.WriteString(style.Render(l))
-		used += sep + ansi.StringWidth(l)
 	}
-	return b.String()
-}
-
-// firstScanView: the first scan's output, then on to the results.
-func (m *Model) firstScanView(w int) []string {
-	wz := m.setup
-	out := wrapText(m.t.T("Databases download first, then every server is read. This takes a few minutes; you can leave the page."), sText, w)
-	j := m.jobOf(wz.job)
-	if j == nil {
-		return append(out, "", " "+sRun.Render(m.spinChar())+" "+sMuted.Render(m.t.T("loading")))
-	}
-	st := map[string]string{"running": sRun.Render(m.spinChar() + " " + m.t.T("running")), "done": sOK.Render("✓ " + m.t.T("done")),
-		"failed": sErr.Render("✗ " + m.t.T("finished with errors")), "cancelled": sMuted.Render(m.t.T("cancelled"))}[j.State]
-	out = append(out, "", " "+st, "")
-	lines := j.Output
-	if len(lines) > 14 {
-		lines = lines[len(lines)-14:]
-	}
-	for _, l := range lines {
-		out = append(out, "   "+sMuted.Render(fit(l, max(w-4, 10), false)))
-	}
-	if j.State != "running" {
-		out = append(out, "", " "+sKey.Render("<enter>")+" "+sText.Render(m.t.T("See the results")))
+	if len(keys) > 0 {
+		out = append(out, " "+strings.Join(keys, "   "))
 	}
 	return out
 }
 
-// dlLine: the vulnerability list a scan needs, in one quiet line: how big, downloaded only when asked; its
-// download under way; ready. "" where it can't be downloaded (read-only) or before its size is known.
+// scanView: the first scan's own output, as a terminal shows it; then the results.
+func (m *Model) scanView(w int) []string {
+	wz := m.setup
+	out := []string{" " + sBold.Render(m.t.T("First scan")) + "   " + sMuted.Render(m.t.T("A few minutes. The scan goes on if you leave this screen.")), ""}
+	j := m.jobOf(wz.job)
+	var lines []string
+	if j != nil {
+		lines = j.Output
+		if len(lines) > 16 {
+			lines = lines[len(lines)-16:]
+		}
+	}
+	var term []string
+	for _, l := range lines {
+		term = append(term, " "+sText.Render(l))
+	}
+	if len(term) == 0 {
+		term = []string{" " + sRun.Render(m.spinChar())}
+	}
+	out = append(out, panel(sMuted.Render("scan"), term, w, len(term)+2)...)
+	switch {
+	case j == nil || j.State == "running":
+		state := "starting"
+		if j != nil {
+			state = j.State
+		}
+		return append(out, "", " "+sRun.Render(m.spinChar())+" "+sMuted.Render(m.t.T(state)))
+	case j.Code != 0:
+		return append(out, "", " "+sCrumb.Render("⏎ "+m.t.T("See the results"))+"   "+sErr.Render(m.t.T("finished with errors")))
+	}
+	return append(out, "", " "+sCrumb.Render("⏎ "+m.t.T("See the results")))
+}
+
+// dlLine: the vulnerability list a scan needs, at the right of the steps: its size and d to download it;
+// downloading; ready; failed. "" where it can't be downloaded (read-only) or before its size is known.
 func (m *Model) dlLine(w int) string {
 	z, db, wz := m.dbSize, m.db, m.setup
 	if !m.scanOK || z == nil {
 		return ""
 	}
+	label := sMuted.Render(m.t.T("vulnerability list")) + " "
 	switch {
 	case db != nil && db.Updating:
 		secs := 0
 		if !m.dlStart.IsZero() {
 			secs = int(m.now().Sub(m.dlStart).Seconds())
 		}
-		return " " + sRun.Render(m.spinChar()) + " " + sText.Render(m.t.F("Downloading the vulnerability list… {s} s", "s", strconv.Itoa(secs)))
+		bar := []string{"▬  ", "▬▬ ", "▬▬▬", " ▬▬", "  ▬"}[int(m.now().UnixMilli()/250)%5]
+		return label + sRun.Render(bar) + " " + sMuted.Render(strconv.Itoa(secs)+" s") + " "
 	case db != nil && db.Error != "" && wz != nil && wz.dlAsked:
-		return ansi.Truncate(" "+sErr.Render("✗ "+m.t.T("The download failed")+": ")+sMuted.Render(db.Error), w-14, ellipsis) + "  " + sKey.Render("<d>") +
-			" " + sText.Render(m.t.T("Try again"))
+		return label + sErr.Render(m.t.T("failed")) + "  " + sKey.Render("d") + " " + sText.Render(m.t.T("retry")) + " "
 	case len(z.Need) == 0:
-		return " " + sOK.Render("✓ "+m.t.T("Vulnerability list ready"))
+		return label + sOK.Render("✓ "+m.t.T("ready")) + " "
 	}
-	return " " + sMuted.Render(m.t.F("Kanareika needs a list of known vulnerabilities: {size}, downloaded once.", "size", dbsize.Bytes(z.Total))) +
-		"  " + sKey.Render("<d>") + " " + sText.Render(m.t.T("Download now"))
+	_ = w
+	return label + sText.Render(dbsize.Bytes(z.Total)) + "  " + sKey.Render("↓ d") + " " + sText.Render(m.t.T("download")) + " "
+}
+
+// dlBreakdown: what the vulnerability list is made of (i), on demand only.
+func (m *Model) dlBreakdown() []string {
+	z := m.dbSize
+	if z == nil {
+		return nil
+	}
+	size := func(keys ...string) string {
+		var n int64
+		for _, k := range keys {
+			n += z.Sizes[k]
+		}
+		return dbsize.Bytes(n)
+	}
+	row := func(label, size, note string) string {
+		return "   " + sText.Render(fit(m.t.T(label), 18, false)) + sBold.Render(fit(size, 8, true)) + "  " + sMuted.Render(note)
+	}
+	out := []string{row("Linux packages", size("db"), ""), row("IP locations", size("dbip-city", "dbip-asn"), ""),
+		row("Exploit data", size("kev", "epss"), "CISA KEV, EPSS")}
+	if j := z.Sizes["java-db"]; j > 0 {
+		out = append(out, row("Java libraries", "~"+dbsize.Bytes(j), m.t.T("only if a scan finds .jar files")))
+	}
+	if db := m.db; db != nil && db.Error != "" && m.setup.dlAsked {
+		out = append(out, "   "+sErr.Render(ansi.Truncate(db.Error, 100, "…")))
+	}
+	return append(out, "")
+}
+
+// setupStatus: the setup's status bar: the org and env, the vulnerability list, the ssh-agent.
+func (m *Model) setupStatus() string {
+	wz := m.setup
+	name := m.t.T("setup")
+	if o := m.orgByID(wz.org); o != nil {
+		name = orStr(o.Name, o.ID)
+	}
+	if wz.env != "" {
+		name += " · " + wz.env
+	}
+	parts := []string{sBold.Render(name)}
+	if f := m.found; f != nil {
+		agent := m.t.T("none")
+		if f.AgentKeys > 0 {
+			agent = m.t.F("{n} keys", "n", strconv.Itoa(f.AgentKeys))
+		}
+		parts = append(parts, sMuted.Render("ssh-agent ")+sText.Render(agent))
+	}
+	l := " " + strings.Join(parts, sDim.Render(" │ "))
+	if m.err != "" && wz.step != 2 {
+		l += "  " + sErr.Render(m.err)
+	}
+	return l
+}
+
+// setupHints: the keys of the setup's step.
+func (m *Model) setupHints() string {
+	wz := m.setup
+	type k struct{ key, what string }
+	var l []k
+	switch {
+	case wz.pick != nil:
+		l = []k{{"space", "toggle"}, {"⏎", "Add"}, {"esc", "Cancel"}}
+	case wz.step == 1:
+		l = []k{{"tab", "next"}, {"ctrl+s", "Check access"}, {"ctrl+o", "~/.ssh/config"}, {"ctrl+d", "download"}}
+		if len(m.orgs.Orgs) > 0 {
+			l = append(l, k{"esc", "close"})
+		}
+	case wz.step == 2:
+		l = []k{{"d", "download"}, {"i", "what is downloaded"}, {"esc", "close"}}
+	default:
+		l = []k{{"esc", "close"}}
+	}
+	out := " "
+	for _, x := range l {
+		out += sKey.Render(x.key) + " " + sMuted.Render(m.t.T(x.what)) + "  "
+	}
+	return out
 }
