@@ -20,16 +20,76 @@
 
 <sub>데모 데이터(가상).</sub>
 
+### 설치
+
+Homebrew (macOS, Linux):
+
 ```bash
-brew install mikekosulin/tap/kanareika   # macOS, Linux; 또는 릴리스의 바이너리 (Windows 포함)
-kanareika init                   # 여기에 orgs/, secrets/, reports/ 생성 (또는 --home DIR)
-kanareika org new myorg          # 호스트, 점프 호스트, 동의: orgs/myorg.yml
-kanareika validate myorg
-kanareika db update              # 취약점 DB (폐쇄망: db export / db import)
-kanareika scan myorg
-kanareika                        # 터미널 인터페이스
-kanareika web                    # 웹 인터페이스, http://127.0.0.1:8088
+brew install mikekosulin/tap/kanareika
 ```
+
+Homebrew 없는 Linux: 아키텍처(amd64 또는 arm64)에 맞는 바이너리를 내려받아 릴리스 체크섬으로 검증한 뒤 `/usr/local/bin`에 설치합니다:
+
+```bash
+arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+curl -fsSLO "https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-linux-$arch"
+curl -fsSL https://github.com/mikekosulin/kanareika/releases/latest/download/SHA256SUMS | sha256sum -c --ignore-missing
+sudo install -m 755 "kanareika-linux-$arch" /usr/local/bin/kanareika
+```
+
+Windows (PowerShell):
+
+```powershell
+Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.exe -OutFile kanareika.exe
+```
+
+ARM용은 `kanareika-windows-arm64.exe`입니다. 모든 바이너리는 [최신 릴리스](https://github.com/mikekosulin/kanareika/releases/latest)에 있습니다.
+
+### 빠른 시작
+
+1. 작업 디렉터리를 만듭니다. 현재 디렉터리에 `orgs/`, `secrets/`, `reports/`가 생깁니다(다른 위치는 `--home DIR`).
+
+   ```bash
+   kanareika init
+   ```
+
+2. 조직을 추가하고 `orgs/myorg.yml`에 호스트, 점프 호스트, 스캔 동의를 적습니다.
+
+   ```bash
+   kanareika org new myorg
+   ```
+
+3. 파일을 검증합니다.
+
+   ```bash
+   kanareika validate myorg
+   ```
+
+4. 취약점 DB를 내려받습니다. 폐쇄망에서는 `db export`와 `db import`로 옮깁니다.
+
+   ```bash
+   kanareika db update
+   ```
+
+5. 스캔합니다.
+
+   ```bash
+   kanareika scan myorg
+   ```
+
+6. 터미널 인터페이스에서 결과를 엽니다:
+
+   ```bash
+   kanareika
+   ```
+
+   또는 웹 인터페이스에서 엽니다. 주소는 http://127.0.0.1:8088이며 localhost에서만 수신합니다:
+
+   ```bash
+   kanareika web
+   ```
+
+   다른 포트는 `--port 9000`, `--port 0`이면 빈 포트를 자동으로 고릅니다.
 
 **네 가지 사용 방식, 같은 데이터와 규칙:**
 

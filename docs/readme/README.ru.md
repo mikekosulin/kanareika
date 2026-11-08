@@ -22,16 +22,76 @@ Kanareika проверяет безопасность Linux-серверов п�
 
 <sub>На скриншотах вымышленные данные.</sub>
 
+### Установка
+
+Homebrew (macOS и Linux):
+
 ```bash
-brew install mikekosulin/tap/kanareika   # macOS и Linux; для Windows — бинарник со страницы релиза
-kanareika init                   # создаст orgs/, secrets/ и reports/ в текущей папке (или --home DIR)
-kanareika org new myorg          # хосты, бастионы и согласие на сканирование: orgs/myorg.yml
-kanareika validate myorg         # проверить настройки
-kanareika db update              # скачать базы уязвимостей (без интернета: db export / db import)
-kanareika scan myorg
-kanareika                        # терминальный интерфейс
-kanareika web                    # веб-интерфейс на http://127.0.0.1:8088
+brew install mikekosulin/tap/kanareika
 ```
+
+Linux без Homebrew — скачает бинарник под вашу архитектуру (amd64 или arm64), сверит контрольную сумму из релиза и установит в `/usr/local/bin`:
+
+```bash
+arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+curl -fsSLO "https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-linux-$arch"
+curl -fsSL https://github.com/mikekosulin/kanareika/releases/latest/download/SHA256SUMS | sha256sum -c --ignore-missing
+sudo install -m 755 "kanareika-linux-$arch" /usr/local/bin/kanareika
+```
+
+Windows (PowerShell):
+
+```powershell
+Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.exe -OutFile kanareika.exe
+```
+
+Для ARM есть отдельный `kanareika-windows-arm64.exe`. Все бинарники — на [странице последнего релиза](https://github.com/mikekosulin/kanareika/releases/latest).
+
+### Быстрый старт
+
+1. Создайте рабочую папку: `orgs/`, `secrets/` и `reports/` появятся в текущей папке (или в другой, если указать `--home DIR`).
+
+   ```bash
+   kanareika init
+   ```
+
+2. Добавьте организацию и опишите в `orgs/myorg.yml` хосты, бастионы и согласие на сканирование.
+
+   ```bash
+   kanareika org new myorg
+   ```
+
+3. Проверьте настройки.
+
+   ```bash
+   kanareika validate myorg
+   ```
+
+4. Скачайте базы уязвимостей. Если на машине нет интернета, перенесите их через `db export` и `db import`.
+
+   ```bash
+   kanareika db update
+   ```
+
+5. Запустите сканирование.
+
+   ```bash
+   kanareika scan myorg
+   ```
+
+6. Откройте результаты в терминальном интерфейсе:
+
+   ```bash
+   kanareika
+   ```
+
+   или в браузере, на http://127.0.0.1:8088 (веб-интерфейс слушает только localhost):
+
+   ```bash
+   kanareika web
+   ```
+
+   Другой порт — `--port 9000`, любой свободный — `--port 0`.
 
 ### Как пользоваться
 

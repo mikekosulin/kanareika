@@ -20,16 +20,76 @@ Lancez `kanareika web` pour retrouver les mêmes données dans un navigateur, av
 
 <sub>Données de démo, fictives.</sub>
 
+### Installation
+
+Homebrew (macOS, Linux) :
+
 ```bash
-brew install mikekosulin/tap/kanareika   # macOS, Linux ; ou un binaire de la release (Windows aussi)
-kanareika init                   # orgs/, secrets/, reports/ ici (ou --home DIR)
-kanareika org new myorg          # hôtes, hôtes de rebond et consentement : orgs/myorg.yml
-kanareika validate myorg
-kanareika db update              # bases de vulnérabilités (réseau isolé : db export / db import)
-kanareika scan myorg
-kanareika                        # interface terminal
-kanareika web                    # interface web, http://127.0.0.1:8088
+brew install mikekosulin/tap/kanareika
 ```
+
+Linux sans Homebrew : télécharge le binaire pour votre architecture (amd64 ou arm64), le vérifie avec les sommes de contrôle de la release et l'installe dans `/usr/local/bin` :
+
+```bash
+arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+curl -fsSLO "https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-linux-$arch"
+curl -fsSL https://github.com/mikekosulin/kanareika/releases/latest/download/SHA256SUMS | sha256sum -c --ignore-missing
+sudo install -m 755 "kanareika-linux-$arch" /usr/local/bin/kanareika
+```
+
+Windows (PowerShell) :
+
+```powershell
+Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.exe -OutFile kanareika.exe
+```
+
+Sur ARM, téléchargez plutôt `kanareika-windows-arm64.exe`. Tous les binaires sont sur la page de la [dernière release](https://github.com/mikekosulin/kanareika/releases/latest).
+
+### Démarrage rapide
+
+1. Créez le répertoire de travail : `orgs/`, `secrets/` et `reports/` apparaissent dans le répertoire courant (ou dans un autre, avec `--home DIR`).
+
+   ```bash
+   kanareika init
+   ```
+
+2. Ajoutez une organisation, puis décrivez ses hôtes, ses hôtes de rebond et le consentement au scan dans `orgs/myorg.yml`.
+
+   ```bash
+   kanareika org new myorg
+   ```
+
+3. Vérifiez le fichier.
+
+   ```bash
+   kanareika validate myorg
+   ```
+
+4. Téléchargez les bases de vulnérabilités. Sur un réseau isolé, transférez-les avec `db export` et `db import`.
+
+   ```bash
+   kanareika db update
+   ```
+
+5. Lancez le scan.
+
+   ```bash
+   kanareika scan myorg
+   ```
+
+6. Ouvrez les résultats dans l'interface terminal :
+
+   ```bash
+   kanareika
+   ```
+
+   ou dans l'interface web, sur http://127.0.0.1:8088 (elle n'écoute que sur localhost) :
+
+   ```bash
+   kanareika web
+   ```
+
+   Autre port : `--port 9000` ; `--port 0` prend n'importe quel port libre.
 
 **Quatre points d'entrée, mêmes données et mêmes règles :**
 

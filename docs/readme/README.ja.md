@@ -20,16 +20,76 @@
 
 <sub>デモデータ (架空のもの)。</sub>
 
+### インストール
+
+Homebrew (macOS、Linux):
+
 ```bash
-brew install mikekosulin/tap/kanareika   # macOS、Linux。またはリリースのバイナリ (Windows 版もあり)
-kanareika init                   # ここに orgs/、secrets/、reports/ を作成 (または --home DIR)
-kanareika org new myorg          # ホスト、踏み台ホスト、同意: orgs/myorg.yml
-kanareika validate myorg
-kanareika db update              # 脆弱性 DB (閉域ネットワークでは db export / db import)
-kanareika scan myorg
-kanareika                        # ターミナル UI
-kanareika web                    # Web UI、http://127.0.0.1:8088
+brew install mikekosulin/tap/kanareika
 ```
+
+Homebrew を使わない Linux: アーキテクチャ (amd64 / arm64) に合ったバイナリをダウンロードし、リリースのチェックサムで検証して `/usr/local/bin` にインストールします:
+
+```bash
+arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+curl -fsSLO "https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-linux-$arch"
+curl -fsSL https://github.com/mikekosulin/kanareika/releases/latest/download/SHA256SUMS | sha256sum -c --ignore-missing
+sudo install -m 755 "kanareika-linux-$arch" /usr/local/bin/kanareika
+```
+
+Windows (PowerShell):
+
+```powershell
+Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.exe -OutFile kanareika.exe
+```
+
+ARM 版は `kanareika-windows-arm64.exe` です。すべてのバイナリは[最新リリース](https://github.com/mikekosulin/kanareika/releases/latest)にあります。
+
+### クイックスタート
+
+1. 作業ディレクトリを作成します。現在のディレクトリに `orgs/`、`secrets/`、`reports/` ができます (別の場所なら `--home DIR`)。
+
+   ```bash
+   kanareika init
+   ```
+
+2. 組織を追加し、`orgs/myorg.yml` にホスト、踏み台ホスト、スキャンへの同意を記述します。
+
+   ```bash
+   kanareika org new myorg
+   ```
+
+3. ファイルを検証します。
+
+   ```bash
+   kanareika validate myorg
+   ```
+
+4. 脆弱性 DB をダウンロードします。閉域ネットワークでは `db export` と `db import` で持ち込みます。
+
+   ```bash
+   kanareika db update
+   ```
+
+5. スキャンします。
+
+   ```bash
+   kanareika scan myorg
+   ```
+
+6. 結果をターミナル UI で開きます:
+
+   ```bash
+   kanareika
+   ```
+
+   または Web UI で開きます。http://127.0.0.1:8088 (localhost のみで待ち受けます):
+
+   ```bash
+   kanareika web
+   ```
+
+   別のポートは `--port 9000`、`--port 0` なら空いているポートを自動で使います。
 
 **4 つの入口、同じデータと同じルール:**
 

@@ -20,16 +20,76 @@
 
 <sub>演示数据，均为虚构。</sub>
 
+### 安装
+
+Homebrew（macOS、Linux）：
+
 ```bash
-brew install mikekosulin/tap/kanareika   # macOS、Linux；或从 Release 下载二进制文件（含 Windows）
-kanareika init                   # 在当前目录创建 orgs/、secrets/、reports/（或 --home DIR）
-kanareika org new myorg          # 主机、跳板机和授权：orgs/myorg.yml
-kanareika validate myorg
-kanareika db update              # 漏洞库（离线环境：db export / db import）
-kanareika scan myorg
-kanareika                        # 终端界面
-kanareika web                    # Web 界面，http://127.0.0.1:8088
+brew install mikekosulin/tap/kanareika
 ```
+
+不使用 Homebrew 的 Linux：下载对应架构（amd64 或 arm64）的二进制文件，用 Release 中的校验和验证后安装到 `/usr/local/bin`：
+
+```bash
+arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+curl -fsSLO "https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-linux-$arch"
+curl -fsSL https://github.com/mikekosulin/kanareika/releases/latest/download/SHA256SUMS | sha256sum -c --ignore-missing
+sudo install -m 755 "kanareika-linux-$arch" /usr/local/bin/kanareika
+```
+
+Windows（PowerShell）：
+
+```powershell
+Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.exe -OutFile kanareika.exe
+```
+
+ARM 设备请改用 `kanareika-windows-arm64.exe`。所有二进制文件见[最新 Release](https://github.com/mikekosulin/kanareika/releases/latest)。
+
+### 快速开始
+
+1. 创建工作目录：在当前目录生成 `orgs/`、`secrets/`、`reports/`（或用 `--home DIR` 指定其他目录）。
+
+   ```bash
+   kanareika init
+   ```
+
+2. 添加组织，然后在 `orgs/myorg.yml` 中填写主机、跳板机和扫描授权。
+
+   ```bash
+   kanareika org new myorg
+   ```
+
+3. 检查配置文件。
+
+   ```bash
+   kanareika validate myorg
+   ```
+
+4. 下载漏洞库。离线环境下用 `db export` 导出、`db import` 导入。
+
+   ```bash
+   kanareika db update
+   ```
+
+5. 开始扫描。
+
+   ```bash
+   kanareika scan myorg
+   ```
+
+6. 在终端界面中查看结果：
+
+   ```bash
+   kanareika
+   ```
+
+   或在 Web 界面中查看，地址为 http://127.0.0.1:8088（仅监听 localhost）：
+
+   ```bash
+   kanareika web
+   ```
+
+   换端口：`--port 9000`；`--port 0` 自动选择空闲端口。
 
 **四种使用方式，同一份数据和规则：**
 
