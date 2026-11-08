@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	jsT     = regexp.MustCompile(`\bt\("((?:[^"\\]|\\.)*)"\)`)
+	jsT     = regexp.MustCompile(`\btf?\("((?:[^"\\]|\\.)*)"[),]`) // t("…") and tf("…", {…})
 	attrT   = regexp.MustCompile(`data-t(?:-title)?="([^"]+)"`)
 	notWord = regexp.MustCompile(`^([A-Z0-9/+-]{1,6}|[^A-Za-z]*|Trivy|Kanareika)$`)
 )

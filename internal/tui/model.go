@@ -824,7 +824,7 @@ func (m *Model) applyZone() {
 func (m *Model) toggleZone() {
 	m.set.UTC = !m.set.UTC
 	m.applyZone()
-	m.say(m.t.T("times in") + " " + m.t.zoneName(m.now()))
+	m.say(m.t.F("times in {zone}", "zone", m.t.zoneName(m.now())))
 	m.saveSettings()
 }
 

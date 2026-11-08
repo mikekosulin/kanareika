@@ -278,7 +278,7 @@ func (m *Model) hostCard(name string, w int) []string {
 		}
 		usage("inodes", hot, "use")
 		if mem := obj(hl["mem"]); mem != nil {
-			kv("memory", sText.Render(fmt.Sprintf("%s / %s MB %s", str(mem["available_mb"]), str(mem["total_mb"]), m.t.T("free"))))
+			kv("memory", sText.Render(m.t.F("{avail} / {total} MB free", "avail", str(mem["available_mb"]), "total", str(mem["total_mb"]))))
 		}
 		if ld := obj(hl["load"]); ld != nil {
 			kv("load", sText.Render(fmt.Sprintf("%s / %s", str(ld["load1"]), str(ld["load15"])))+sMuted.Render(fmt.Sprintf(" (1/15 min, %s CPU)", str(ld["cpus"]))))

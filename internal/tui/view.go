@@ -752,7 +752,7 @@ func (m *Model) noData() []string {
 		}
 		l := []string{"", " " + sMuted.Render(m.t.T("No runs yet. Run")+": ") + sKey.Render(cmd)}
 		if m.scanOK {
-			l = append(l, " "+sMuted.Render(m.t.T("or press"))+" "+sKey.Render("<s>"))
+			l = append(l, " "+m.t.FS("or press {key}", sMuted, "key", sKey.Render("<s>")))
 		}
 		return l
 	}
@@ -959,8 +959,8 @@ func (m *Model) scansView(w, h int) []string {
 			sMuted.Render(strings.Join(scope, " "))})
 	}
 	if len(rows) == 0 {
-		return append(out, "", " "+sMuted.Render(m.t.T("Press"))+" "+sKey.Render("<s>")+" "+
-			sMuted.Render(m.t.T("to start a scan of"))+" "+sText.Render(m.org+"/"+m.env))
+		return append(out, "", " "+m.t.FS("Press {key} to start a scan of {target}", sMuted,
+			"key", sKey.Render("<s>"), "target", sText.Render(m.org+"/"+m.env)))
 	}
 	listH := min(len(rows)+1, max((h-len(out))/3, 3))
 	out = append(out, m.table(viewCols[vScans], rows, w, listH)...)
@@ -1313,4 +1313,35 @@ func (m *Model) langView() []string {
 		out = append(out, line)
 	}
 	return append(out, "", "  "+sKey.Render("<enter>")+" "+sMuted.Render(m.t.T("choose"))+"  "+sKey.Render("<esc>")+" "+sMuted.Render(m.t.T("close")))
+}
+
+// FS: as F, with the sentence's own words in base and the values as given (already styled: a key, a name).
+func (t *tr) FS(s string, base lipgloss.Style, kv ...string) string { return fill(t.T(s), &base, kv) }
+
+// fill puts the values into a template's {name}s; the words around them in base when there is one. A {name}
+// without a value stays as written.
+func fill(tmpl string, base *lipgloss.Style, kv []string) string {
+	vals := map[string]string{}
+	for i := 0; i+1 < len(kv); i += 2 {
+		vals[kv[i]] = kv[i+1]
+	}
+	var b strings.Builder
+	words := func(s string) {
+		if s != "" && base != nil {
+			s = base.Render(s)
+		}
+		b.WriteString(s)
+	}
+	last := 0
+	for _, m := range argRE.FindAllStringSubmatchIndex(tmpl, -1) {
+		v, ok := vals[tmpl[m[2]:m[3]]]
+		if !ok {
+			continue
+		}
+		words(tmpl[last:m[0]])
+		b.WriteString(v)
+		last = m[1]
+	}
+	words(tmpl[last:])
+	return b.String()
 }
