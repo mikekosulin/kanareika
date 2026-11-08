@@ -887,7 +887,7 @@ func (m *Model) todoTitle() string {
 		for _, p := range []string{"P1", "P2", "P3", "P4"} {
 			c = append(c, prio(p)+" "+count(p, m.tree.Counts[p], true))
 		}
-		t += " " + strings.Join(c, " ")
+		t += " " + strings.Join(c, sMuted.Render(" • ")) // a dot between the groups: "P1 6 P2 16" reads as one run of numbers
 	}
 	for _, f := range treeFilters {
 		if m.flt[f.key] {

@@ -271,7 +271,7 @@ func (h *harness) waitJob(state string) {
 
 func TestBrowse(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.has("ToDo(acme/production)[30] P1 6 P2 12 P3 12 P4 4", "openssl 3.0.1 → 3.0.10", "group by  fix  CVE  host  g",
+	h.has("ToDo(acme/production)[30] P1 6 • P2 12 • P3 12 • P4 4", "openssl 3.0.1 → 3.0.10", "group by  fix  CVE  host  g",
 		"space select", "? all keys", " acme  production ", "4 hosts", "DB ok", "12:00 UTC")
 	h.hasNot("P4 os")
 	h.key("p") // P4 too

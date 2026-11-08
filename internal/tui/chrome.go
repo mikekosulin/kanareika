@@ -336,9 +336,9 @@ func (m *Model) hints() string {
 	case m.view == vActions && m.run == "" && m.org != "":
 		l = []k{{"enter", "check access, first scan"}, {"s", "scan"}, {"E", "environment"}, {"O", "organization"}}
 	case m.view == vActions:
+		// the main ones only; c, f, g, E, O, p, v are in ? (and g, f in the title line)
 		l = []k{{"space", "select"}, {"→←", "open/close"}, {"enter", "details"}, {"y", "copy task"}, {"Y", "copy context"},
-			{"c", "copy command"}, {"f", "filters"}, {"g", "group by"}, {"/", "filter"}, {":", "jump"}, {"E", "environment"},
-			{"O", "organization"}, {"p", "P4"}, {"v", "selected only"}}
+			{"/", "filter"}, {":", "jump"}}
 	default:
 		l = map[view][]k{
 			vHosts:      {{"enter", "host card"}, {"p", "P4"}},
@@ -354,15 +354,17 @@ func (m *Model) hints() string {
 		if m.host != "" && m.view == vHosts {
 			l = []k{{"↑↓", "scroll"}, {"esc", "back"}}
 		}
-		l = append(l, k{"/", "filter"}, k{":", "jump"}, k{"E", "environment"}, k{"O", "organization"})
+		l = append(l, k{"/", "filter"}, k{":", "jump"})
 	}
 	if m.scanOK && !m.full {
 		l = append(l, k{"s", "scan"})
 	}
+	// key in colour, what it does dim, a dot between pairs: easy to scan
+	sep := sDim.Render("  ·  ")
 	help := sKey.Render("?") + " " + sMuted.Render(m.t.T("all keys"))
 	out := " "
 	for _, x := range l {
-		part := sKey.Render(x.key) + " " + sMuted.Render(m.t.T(x.what)) + "  "
+		part := sKey.Render(x.key) + " " + sMuted.Render(m.t.T(x.what)) + sep
 		if ansi.StringWidth(out+part+help) > m.w {
 			break
 		}

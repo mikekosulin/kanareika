@@ -1626,9 +1626,9 @@ func (m *Model) setupHints() string {
 	default:
 		l = []k{{"esc", "close"}}
 	}
-	out := " "
+	parts := make([]string, 0, len(l))
 	for _, x := range l {
-		out += sKey.Render(x.key) + " " + sMuted.Render(m.t.T(x.what)) + "  "
+		parts = append(parts, sKey.Render(x.key)+" "+sMuted.Render(m.t.T(x.what)))
 	}
-	return out
+	return " " + strings.Join(parts, sDim.Render("  ·  "))
 }
