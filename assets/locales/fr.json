@@ -534,6 +534,9 @@
     "has CVEs with remote code execution, no account and no user interaction": "CVE avec exécution de code à distance, sans compte ni action de l'utilisateur",
     "{n} CVE: remote code execution with no account and no user interaction": "{n} CVE : exécution de code à distance, sans compte ni action de l'utilisateur",
     "filtering": "filtrage actif",
-    "first 1000 of {n}": "1000 premiers sur {n}"
+    "first 1000 of {n}": "1000 premiers sur {n}",
+    "built in": "intégré",
+    "run: {version}": "scan : {version}",
+    "up to date": "à jour"
   }
 }

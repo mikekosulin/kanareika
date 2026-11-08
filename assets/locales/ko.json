@@ -534,6 +534,9 @@
     "has CVEs with remote code execution, no account and no user interaction": "원격 코드 실행 CVE 있음 (계정 및 사용자 상호작용 불필요)",
     "{n} CVE: remote code execution with no account and no user interaction": "CVE {n}개: 원격 코드 실행 (계정 및 사용자 상호작용 불필요)",
     "filtering": "필터링 있음",
-    "first 1000 of {n}": "처음 1000개 / 전체 {n}개"
+    "first 1000 of {n}": "처음 1000개 / 전체 {n}개",
+    "built in": "내장",
+    "run: {version}": "스캔: {version}",
+    "up to date": "최신"
   }
 }

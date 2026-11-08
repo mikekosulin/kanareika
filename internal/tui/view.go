@@ -476,12 +476,25 @@ func (m *Model) info() []string {
 	if st := m.scanState(); st != "" {
 		scan = st
 	}
-	trivy := sDim.Render("-")
-	if m.rund != nil && m.rund.Meta.TrivyVersion != "" {
-		trivy = sText.Render(m.rund.Meta.TrivyVersion)
-		if m.rund.Meta.FeedsUpdated == nil {
-			trivy += sMuted.Render(" · KEV/EPSS " + m.t.T("not loaded"))
+	// trivy: the one built into the server; the run's own when it was scanned with another (or the server's is unknown)
+	trivy, built, ran := sDim.Render("-"), "", ""
+	if m.db != nil {
+		built = m.db.Trivy
+	}
+	if m.rund != nil {
+		ran = m.rund.Meta.TrivyVersion
+	}
+	switch {
+	case built != "":
+		trivy = sText.Render(built) + sMuted.Render(" "+m.t.T("built in"))
+		if ran != "" && ran != built { // the column is narrow: the run's version instead of "built in"
+			trivy = sText.Render(built) + sMuted.Render(" · "+m.t.F("run: {version}", "version", ran))
 		}
+	case ran != "":
+		trivy = sText.Render(ran)
+	}
+	if ran != "" && m.rund.Meta.FeedsUpdated == nil {
+		trivy += sMuted.Render(" · KEV/EPSS " + m.t.T("not loaded"))
 	}
 
 	db := m.dbState()
@@ -507,7 +520,11 @@ func (m *Model) dbState() string {
 	}
 	for _, d := range m.db.DBs {
 		if at, err := time.Parse(time.RFC3339, d.Updated); err == nil && d.Name == "db" {
-			return sMuted.Render(agoShort(m.now().Sub(at)))
+			age := max(m.now().Sub(at), 0) // a clock behind the DB's build time: not a negative age
+			if d.Next == "" {
+				return sMuted.Render(agoShort(age))
+			}
+			return sMuted.Render(agoShort(age)+" · ") + sOK.Render(m.t.T("up to date")) // not outdated: checked above
 		}
 	}
 	return ""

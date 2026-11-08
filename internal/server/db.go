@@ -76,6 +76,9 @@ func (u *dbUpdater) stop() {
 	}
 }
 
+// embeddedTrivy: the version of the trivy built into this binary ("" when unknown); a variable for tests.
+var embeddedTrivy = trivy.Embedded
+
 // apiDB: the DBs scans use (when downloaded, whether a newer build is out), the feeds, and the update in progress.
 func (s *Server) apiDB(w http.ResponseWriter, _ *http.Request) {
 	now := time.Now()
@@ -91,7 +94,7 @@ func (s *Server) apiDB(w http.ResponseWriter, _ *http.Request) {
 		dbs = append(dbs, e)
 	}
 	feeds, _ := priority.LoadFeeds()
-	out := map[string]any{"dbs": dbs, "feeds_updated": feeds.Updated, "enabled": s.db != nil}
+	out := map[string]any{"dbs": dbs, "feeds_updated": feeds.Updated, "enabled": s.db != nil, "trivy": embeddedTrivy()}
 	if u := s.db; u != nil {
 		u.mu.Lock()
 		out["updating"], out["output"], out["error"] = u.running, append([]string{}, u.out...), u.err

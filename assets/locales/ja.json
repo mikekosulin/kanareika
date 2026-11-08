@@ -534,6 +534,9 @@
     "has CVEs with remote code execution, no account and no user interaction": "リモートコード実行の CVE あり (アカウント不要、ユーザー操作不要)",
     "{n} CVE: remote code execution with no account and no user interaction": "{n} 件の CVE: リモートコード実行 (アカウント不要、ユーザー操作不要)",
     "filtering": "フィルターあり",
-    "first 1000 of {n}": "先頭 1000 件 / 全 {n} 件"
+    "first 1000 of {n}": "先頭 1000 件 / 全 {n} 件",
+    "built in": "内蔵",
+    "run: {version}": "スキャン時: {version}",
+    "up to date": "最新"
   }
 }

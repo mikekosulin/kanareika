@@ -196,6 +196,7 @@ type dbResp struct {
 		Next     string `json:"next_update"`
 		Outdated bool   `json:"outdated"`
 	} `json:"dbs"`
+	Trivy        string   `json:"trivy"` // the server's built-in trivy
 	FeedsUpdated string   `json:"feeds_updated"`
 	Enabled      bool     `json:"enabled"`
 	Updating     bool     `json:"updating"`

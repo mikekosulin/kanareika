@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -189,6 +190,23 @@ func TestDBStatus(t *testing.T) {
 	h2 := newHarness(t, Options{Org: "acme", Env: "production"}, false)
 	h2.key("U")
 	h2.has("DB updates are off here (read-only)")
+	// the header: the server's built-in trivy, the run's own when it differs; a DB with a known next build is
+	// up to date until then; a clock behind the build time shows no negative age
+	built := h.m.now().Add(3 * time.Hour).UTC().Format(time.RFC3339) // ahead of the clock
+	var d dbResp
+	if err := json.Unmarshal([]byte(`{"trivy": "0.76.2", "enabled": true, "dbs": [{"name": "db", "updated": "`+built+`"}]}`), &d); err != nil {
+		t.Fatal(err)
+	}
+	h.m.db = &d
+	h.m.rund.Meta.TrivyVersion = "0.75.0"
+	h.has("0.76.2 · run: 0.75.0")
+	h.m.rund.Meta.TrivyVersion = "0.76.2"
+	h.has("0.76.2 built in")
+	h.has("DB:       0m")
+	h.hasNot("up to date") // no next build known: no claim
+	h.m.db.DBs[0].Next = "2099-01-01T00:00:00Z"
+	h.has("DB:       0m · up to date")
+
 	if agoShort(5*time.Minute) != "5m" || agoShort(3*time.Hour) != "3h" || agoShort(72*time.Hour) != "3d" {
 		t.Fatal("agoShort")
 	}

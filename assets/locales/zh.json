@@ -534,6 +534,9 @@
     "has CVEs with remote code execution, no account and no user interaction": "含可远程执行代码的 CVE：无需账户、无需用户交互",
     "{n} CVE: remote code execution with no account and no user interaction": "{n} 个 CVE：远程代码执行，无需账户、无需用户交互",
     "filtering": "有过滤",
-    "first 1000 of {n}": "仅显示前 1000 条，共 {n} 条"
+    "first 1000 of {n}": "仅显示前 1000 条，共 {n} 条",
+    "built in": "内置",
+    "run: {version}": "扫描版本：{version}",
+    "up to date": "最新"
   }
 }
