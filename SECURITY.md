@@ -44,9 +44,9 @@ calls (report those upstream: trivy, OpenSSH, …), and findings that need an al
 
 ## Verifying releases
 
-Every release binary has a build provenance attestation and is listed in `SHA256SUMS`:
+Every release archive has a build provenance attestation and is listed in `SHA256SUMS`:
 
 ```bash
-gh attestation verify kanareika-linux-amd64 --repo mikekosulin/kanareika
+gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
 sha256sum -c SHA256SUMS --ignore-missing
 ```

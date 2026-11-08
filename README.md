@@ -4,7 +4,11 @@
 
 **English** · [Español](docs/readme/README.es.md) · [Français](docs/readme/README.fr.md) · [Português](docs/readme/README.pt.md) · [Русский](docs/readme/README.ru.md) · [中文](docs/readme/README.zh.md) · [日本語](docs/readme/README.ja.md) · [한국어](docs/readme/README.ko.md)
 
-Agentless, read-only security audit of your servers over SSH: what to patch first, who can get in, what is exposed, whether the hosts are healthy — with fix steps that can be rolled back. One binary, one YAML per organization; the data stays on your machine.
+Agentless, read-only security audit of Linux servers over SSH. It ranks what to patch first: CVEs with KEV and EPSS, SSH access, exposed ports, host health, each with fix steps that can be rolled back. It works the same in a terminal UI, a web UI and through an MCP server for AI agents. One Go binary, one YAML per organization, no telemetry; the data stays on your machine.
+
+- **Homelab**: pick your hosts from `~/.ssh/config` or paste `user@host`.
+- **Freelancer**: one organization per client; add servers to it later.
+- **Company fleet**: paste a host list, CSV or Ansible inventory; failed logins are grouped by cause, with the fix.
 
 ### Terminal interface
 
@@ -115,7 +119,7 @@ Everything else: `kanareika --help`.
 
 **Four ways in, same data and rules:**
 
-- **TUI**, the main one — `kanareika`: `?` for keys, `o` for panels, `L` for language. Attaches to a remote web too.
+- **TUI** — `kanareika`: `?` for keys, `o` for panels, `L` for language. Attaches to a remote web too.
 - **Web** — `kanareika web`: dashboards, trends, host details; scans start from the page.
 - **Commands** — for scripts and cron.
 - **MCP** — `kanareika mcp`: read-only tools for AI agents (Claude Code and others).

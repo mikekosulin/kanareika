@@ -4,7 +4,11 @@
 
 [English](../../README.md) · [Español](README.es.md) · [Français](README.fr.md) · **Português** · [Русский](README.ru.md) · [中文](README.zh.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
-Auditoria de segurança dos seus servidores via SSH, sem agente e somente leitura: o que atualizar primeiro, quem consegue entrar, o que está exposto, se os hosts estão saudáveis — com etapas de correção que podem ser revertidas. Um único binário, um YAML por organização; os dados ficam na sua máquina.
+Auditoria de segurança de servidores Linux via SSH, sem agente e somente leitura. Ordena o que corrigir primeiro: CVEs com KEV e EPSS, acesso SSH, portas expostas, saúde dos hosts, cada um com etapas de correção que podem ser revertidas. Funciona do mesmo jeito em uma interface de terminal, em uma interface web e por um servidor MCP para agentes de IA. Um único binário Go, um YAML por organização, sem telemetria; os dados ficam na sua máquina.
+
+- **Homelab**: escolha seus hosts no `~/.ssh/config` ou cole `user@host`.
+- **Freelancer**: uma organização por cliente; adicione servidores depois.
+- **Empresa**: cole uma lista de hosts, um CSV ou um inventário do Ansible; as falhas de login são agrupadas por causa, com a correção.
 
 ### Interface no terminal
 
@@ -115,7 +119,7 @@ Todo o resto: `kanareika --help`.
 
 **Quatro formas de acesso, os mesmos dados e regras:**
 
-- **TUI**, a principal — `kanareika`: `?` para os atalhos, `o` para os painéis, `L` para o idioma. Também se conecta a uma interface web remota.
+- **TUI** — `kanareika`: `?` para os atalhos, `o` para os painéis, `L` para o idioma. Também se conecta a uma interface web remota.
 - **Web** — `kanareika web`: dashboards, tendências, detalhes dos hosts; os scans são iniciados pela página.
 - **Comandos** — para scripts e cron.
 - **MCP** — `kanareika mcp`: ferramentas somente leitura para agentes de IA (Claude Code e outros).

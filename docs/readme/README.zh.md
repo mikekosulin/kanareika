@@ -4,7 +4,11 @@
 
 [English](../../README.md) · [Español](README.es.md) · [Français](README.fr.md) · [Português](README.pt.md) · [Русский](README.ru.md) · **中文** · [日本語](README.ja.md) · [한국어](README.ko.md)
 
-无需代理、只读的服务器安全审计（通过 SSH）：先修什么、谁能登录、什么暴露在外、主机是否健康——并给出可回滚的修复步骤。一个二进制文件，每个组织一个 YAML，数据只留在你的机器上。
+无需代理、只读的 Linux 服务器安全审计（通过 SSH）。它排出先修什么：结合 KEV 和 EPSS 的 CVE、SSH 访问、暴露的端口、主机健康，每项都附带可回滚的修复步骤。终端界面、Web 界面和面向 AI 代理的 MCP 服务器，用起来完全一样。一个 Go 二进制文件，每个组织一个 YAML，无遥测，数据只留在你的机器上。
+
+- **家庭实验室**：从 `~/.ssh/config` 中挑选主机，或粘贴 `user@host`。
+- **自由职业者**：每个客户一个组织，之后可以再添加服务器。
+- **企业**：粘贴主机列表、CSV 或 Ansible 清单；登录失败按原因分组，并给出修复方法。
 
 ### 终端界面
 
@@ -115,7 +119,7 @@ kanareika scan <ORG_ID> --offline
 
 **四种使用方式，同一份数据和规则：**
 
-- **TUI**（主要）— `kanareika`：`?` 查看按键，`o` 设置面板，`L` 切换语言。也可连接远程 Web。
+- **TUI** — `kanareika`：`?` 查看按键，`o` 设置面板，`L` 切换语言。也可连接远程 Web。
 - **Web** — `kanareika web`：概览、趋势、主机详情；可直接在页面上发起扫描。
 - **命令** — 用于脚本和 cron。
 - **MCP** — `kanareika mcp`：供 AI 智能体（Claude Code 等）使用的只读工具。
