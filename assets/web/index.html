@@ -628,15 +628,18 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
 .stabs span.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .stabs span.done { color: var(--ok); }
 .stabs i { font-style: normal; color: var(--line-2); }
-.wbody { flex: 1; min-height: 0; overflow: auto; padding: 18px 24px 24px; }
+.wbody { flex: 1; min-height: 0; overflow: auto; padding: 22px 24px 24px; }
 
-.dlline { display: flex; align-items: center; gap: 12px; height: 38px; padding: 0 6px 0 12px; margin-bottom: 22px; border: 1px solid var(--line); border-radius: 8px; font: 12.5px var(--mono); color: var(--ink-2); }
+.wtop { display: flex; align-items: center; gap: 16px; padding: 16px 24px 0; }
+.wtop .stabs { padding: 0; }
+.dlline { margin-left: auto; display: flex; align-items: center; gap: 10px; font: 12.5px var(--mono); color: var(--ink-3); white-space: nowrap; }
 .dlline:empty { display: none; }
-.dlline .lbl { color: var(--ink); } .dlline .mut { color: var(--ink-3); }
-.dlline .btn { margin-left: auto; height: 26px; padding: 0 10px; font-size: 12.5px; }
-.dlline.ok, .dlline.busy { padding-right: 12px; }
-.dlline .okc { color: var(--ok); } .dlline .err { color: var(--err); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dlline .bar { flex: 1; max-width: 220px; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.dlline .lbl { color: var(--ink-2); }
+.dlbtn { background: none; border: 0; padding: 2px 0; font: 600 12.5px var(--mono); color: var(--accent-line); cursor: pointer; }
+.dlbtn:hover { text-decoration: underline; text-underline-offset: 3px; }
+[data-theme="light"] .dlbtn { color: #8a6500; }
+.dlline .okc { color: var(--ok); } .dlline .err { color: var(--err); }
+.dlline .bar { width: 120px; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .dlline .bar i { display: block; height: 100%; width: 35%; border-radius: 3px; background: var(--accent); animation: dlbar 1.4s var(--ease) infinite; }
 @keyframes dlbar { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
 @media (prefers-reduced-motion: reduce) { .dlline .bar i { animation: none; width: 100%; opacity: .5; } }
@@ -710,7 +713,7 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
   .sbrand img { width: 28px; height: 28px; } .sbrand h1 { font-size: 24px; margin: 0; } .sbrand p { flex-basis: 100%; font-size: 15px; }
   .facts { display: none; } .sprefs { margin: 0 0 0 auto; }
   .win { margin: 8px 0 0; border-right: 1px solid var(--line-2); border-radius: 12px 12px 0 0; }
-  .wbody { padding: 14px 16px 20px; } .stabs { padding: 14px 16px 0; }
+  .wbody { padding: 14px 16px 20px; } .wtop { padding: 14px 16px 0; flex-wrap: wrap; gap: 8px; } .dlline { margin-left: 0; }
   .ed { grid-template-columns: 30px minmax(0, 1fr); } .ed .eh:last-child { display: none; }
   .ed .dx { grid-column: 1 / -1; border-left: 0; border-top: 1px dashed var(--line); white-space: normal; }
   .fields { grid-template-columns: minmax(0, 1fr); }
@@ -719,9 +722,9 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
 
 #formerr:empty { display: none; }
 #setupform .go { margin-top: -6px; }
-.wbody > .dlline:first-child { margin-top: 2px; }
-.stabs { padding-bottom: 2px; }
+
 .qn.mono { font: 12.5px var(--mono); }
+.dlline .tipped { cursor: help; text-decoration: underline dotted; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
 
 /* end-extra-css */
 </style>
@@ -1071,18 +1074,20 @@ function dbCard() { // the line at the top of the window
   if (!z) return `<div class="dlline"></div>`;
   if (db.updating) {
     const secs = Math.round((Date.now() - Date.parse(S.dlStart || new Date())) / 1000);
-    return `<div class="dlline busy"><span class="lbl">${t("Vulnerability list")}</span><span class="bar"><i></i></span><span class="mut">${t("downloading… {s} s", { s: secs })}</span></div>`;
+    return `<div class="dlline busy"><span class="lbl">${t("vulnerability list")}</span><span class="bar"><i></i></span><span class="mut">${secs} s</span></div>`;
   }
-  if (db.error && S.dlAsked) return `<div class="dlline bad"><span class="lbl">${t("Vulnerability list")}</span><span class="err">${esc(db.error.split("\n")[0])}</span><button class="lnk" data-dl-start>${t("Try again")}</button></div>`;
-  if (!z.need.length) return `<div class="dlline ok"><span class="lbl">${t("Vulnerability list")}</span><span class="okc">✓ ${t("ready")}</span></div>`;
-  return `<div class="dlline"><span class="lbl">${t("Vulnerability list")}</span><span class="mut">${bytes(z.total)}</span><button class="btn small" data-dl-start>${t("Download now")}</button></div>`;
+  if (db.error && S.dlAsked) return `<div class="dlline bad"><span class="lbl">${t("vulnerability list")}</span><span class="err" title="${esc(db.error)}">${t("failed")}</span><button class="dlbtn" data-dl-start>${t("retry")}</button></div>`;
+  if (!z.need.length) return `<div class="dlline ok"><span class="lbl">${t("vulnerability list")}</span><span class="okc">✓ ${t("ready")}</span></div>`;
+  // what the total is made of: on hover, not on the page (less text)
+  const part = (keys) => keys.filter((k) => z.need.includes(k)).reduce((n, k) => n + (z.sizes[k] || 0), 0);
+  const tip = [[t("Linux packages and libraries"), part(["db"])], [t("IP locations"), part(["dbip-city", "dbip-asn"])], [t("exploit data (KEV, EPSS)"), part(["kev", "epss"])]]
+    .filter(([, n]) => n).map(([l, n]) => `${l}: ${bytes(n)}`).concat(z.sizes["java-db"] ? [t("Java libraries: {size}, only if a scan finds .jar files", { size: bytes(z.sizes["java-db"]) })] : []).join("\n");
+  return `<div class="dlline"><span class="lbl">${t("vulnerability list")}</span><span class="mut tipped" title="${esc(tip)}" tabindex="0">${bytes(z.total)}</span><button class="dlbtn" data-dl-start>↓ ${t("download")}</button></div>`;
 }
 function statusBar(s) {
   const db = S.db || {}, z = S.dbsize, f = FOUND.v;
   const org = s.org ? S.orgs.find((o) => o.id === s.org) : null;
-  const vl = db.updating ? `<b>${t("downloading")}</b>` : z && !z.need.length ? `<b>${t("ready")}</b>` : `<b>${t("not downloaded")}</b>`;
   return `<footer class="sbar"><span><b>${esc(org ? org.name || org.id : t("setup"))}</b>${s.env ? " · " + esc(s.env) : ""}</span>
-    <span>${t("vuln list")} ${vl}</span>
     ${f ? `<span>ssh-agent <b>${f.agent_keys ? t("{n} keys", { n: f.agent_keys }) : t("none")}</b></span>` : ""}
     <span class="r">${esc(location.host)}</span></footer>`;
 }
@@ -1120,8 +1125,8 @@ function setupView() {
     </section>
     <section class="win" aria-label="${t("Setup")}">
       <header class="wt"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>~ kanareika setup${S.orgs.length ? `<button class="lnk close" data-setup-cancel aria-label="${t("Close")}">${icon("x")}</button>` : ""}</header>
-      ${stepTabs(s)}
-      <div class="wbody">${dbCard()}${body}</div>
+      <div class="wtop">${stepTabs(s)}${dbCard()}</div>
+      <div class="wbody">${body}</div>
       ${statusBar(s)}
     </section></div>`;
 }
@@ -1137,7 +1142,7 @@ function serversForm(s) {
   const d = FOUND.v || { hosts: [], keys: [], agent_keys: 0, user: "" };
   const cur = orgOf(), mine = S.orgs.find((o) => o.id === "servers");
   const kinds = [...(cur && cur.id !== "servers" ? [["add", t("Add to {org}", { org: esc(cur.name || cur.id) })]] : []),
-    ["personal", mine ? t("Add to Personal") : t("Personal")], ["client", t("Client")], ["company", t("Company")]];
+    ["personal", t("Personal")], ["client", t("Client")], ["company", t("Company")]];
   const radio = (k, l) => `<label class="opt"><input type="radio" name="kind" value="${k}" ${s.kind === k ? "checked" : ""}><span>${l}</span></label>`;
   const who = s.kind === "client" ? `<div class="fields"><label><span>${t("Client")}</span><input name="name" value="${esc(f.name)}" required placeholder="ACME"></label>
         <label><span>${t("Their permission")}</span><input name="consent" value="${esc(f.consent)}" required placeholder="${t("contract, ticket, e-mail")}"></label></div>`
