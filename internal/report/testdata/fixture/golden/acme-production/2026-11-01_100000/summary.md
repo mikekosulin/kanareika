@@ -4,12 +4,13 @@
 - Modules: access, docker, exposure, hardening, health, os_packages, software_fs, network_external
 - Trivy 0.58.0, KEV/EPSS as of none (kanareika db update)
 
-| | P1 | P2 | P3 | P4 | accepted |
+| | P1 | P2 | P3 | P4 | total |
 |---|---:|---:|---:|---:|---:|
-| packages to update | 4 | 12 | 18 | 3 | |
-| findings (CVE × package) | 5 | 18 | 22 | 5 | 2 |
+| fixes to apply | 5 | 11 | 9 | 5 | 30 |
 
-Already fixed in the installed build (CVE in the package changelog, not counted above): 2
+- 30 fixes to apply (P1 5, P2 11, P3 9, P4 5), 3 of them with nothing to install yet; 35 unique CVEs; 4 hosts with something to do
+- A fix is one change: one package update on every host that needs it, one image to rebuild, one setting to change.
+- Not counted: 2 accepted risks; 2 already fixed in the installed build (CVE in the package changelog).
 
 ## Errors
 

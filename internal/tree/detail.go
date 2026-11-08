@@ -152,7 +152,11 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 		d.Why = append(d.Why, Reason{Code: "front", Args: map[string]any{"n": len(front), "of": n.Hosts}})
 	}
 	if n.States[finding.FixVendor] > 0 {
-		d.Why = append(d.Why, Reason{Code: "nofix", Args: map[string]any{"n": n.States[finding.FixVendor]}})
+		args := map[string]any{"n": n.States[finding.FixVendor]}
+		for r, k := range n.NoFix { // hosts per reason: pending, repos, esm, deferred, wontfix
+			args[r] = k
+		}
+		d.Why = append(d.Why, Reason{Code: "nofix", Args: args})
 	}
 	if n.States[finding.FixReboot] > 0 {
 		d.Why = append(d.Why, Reason{Code: "reboot", Args: map[string]any{"n": n.States[finding.FixReboot]}})
@@ -228,6 +232,7 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 	// how: one command per OS family for package updates that can be installed
 	if n.Kind == KindPkg && n.Fixed != "" && n.Path == "" {
 		steps := map[string]*Step{}
+		pkgs := map[string][]string{}
 		var order []string
 		for _, f := range fs {
 			if !installable(f) || state(f) == finding.FixReboot {
@@ -239,17 +244,24 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 			}
 			s := steps[fam]
 			if s == nil {
-				s = &Step{OS: hosts.os(f.Host), Command: command(fam, f.Pkg), Reboot: f.Kernel}
+				s = &Step{OS: hosts.os(f.Host)}
 				steps[fam] = s
 				order = append(order, fam)
 			}
+			s.Reboot = s.Reboot || f.Kernel
 			if !slices.Contains(s.Hosts, f.Host) {
 				s.Hosts = append(s.Hosts, f.Host)
 			}
+			if !slices.Contains(pkgs[fam], f.Pkg) {
+				pkgs[fam] = append(pkgs[fam], f.Pkg)
+			}
 		}
 		for _, fam := range order {
-			slices.Sort(steps[fam].Hosts)
-			d.Apply = append(d.Apply, *steps[fam])
+			s := steps[fam]
+			slices.Sort(s.Hosts)
+			slices.Sort(pkgs[fam])
+			s.Command = command(fam, strings.Join(pkgs[fam], " ")) // every binary package of the source
+			d.Apply = append(d.Apply, *s)
 		}
 	}
 	// the view's actions that cover it

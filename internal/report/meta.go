@@ -30,6 +30,7 @@ type Meta struct {
 	FeedsUpdated  *string                 `json:"feeds_updated"`
 	Counts        map[string]int          `json:"counts,omitempty"` // as stored: runs of older versions lack "backported"
 	PlanCounts    *PlanCounts             `json:"plan_counts,omitempty"`
+	Totals        *Totals                 `json:"totals,omitempty"` // what there is to do (see Totals); runs before 0.5 lack it
 	// current/ only
 	Sources map[string]map[string]string `json:"sources,omitzero"` // host -> module -> run it comes from
 	LastRun string                       `json:"last_run,omitempty"`
@@ -49,7 +50,7 @@ type plainMeta Meta
 
 var metaKnown = []string{"org", "env", "run_id", "kanareika", "trivy_version", "started", "finished", "selection",
 	"modules", "hosts_scanned", "hosts_ok", "modules_by_host", "hosts_failed", "module_errors", "feeds_updated",
-	"counts", "plan_counts", "sources", "last_run"}
+	"counts", "plan_counts", "totals", "sources", "last_run"}
 
 func (m *Meta) UnmarshalJSON(b []byte) error {
 	var p plainMeta

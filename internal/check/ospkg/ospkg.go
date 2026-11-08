@@ -107,6 +107,7 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 	base := check.Base(h, "os_packages")
 	base.Target = "os"
 	findings := trivy.VulnFindings(report, base)
+	SetSources(findings, pkgs)
 	running := ""
 	if f := strings.Fields(facts.Uname); len(f) > 1 {
 		running = f[1] // `uname -srm`: Linux <release> <machine>
@@ -134,6 +135,22 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 		findings = append(findings, f)
 	}
 	return findings, nil
+}
+
+// SetSources records the source package of each finding whose binary package comes from a source of another name
+// (libssl3 and openssl from openssl, libc6 from glibc), so one update of one source reads as one fix.
+func SetSources(findings []finding.Finding, pkgs []sbom.Package) {
+	src := map[string]string{}
+	for _, p := range pkgs {
+		if p.SrcName != "" && p.SrcName != p.Name {
+			src[p.Name] = p.SrcName
+		}
+	}
+	for i := range findings {
+		if s, ok := src[findings[i].Pkg]; ok {
+			findings[i].SrcPkg = s
+		}
+	}
 }
 
 // MarkKernels flags kernel findings: Kernel for the running kernel; Inactive for an installed kernel that is not

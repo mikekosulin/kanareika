@@ -234,6 +234,7 @@ func (s *Server) view(dir string) ([]byte, error) {
 		}
 		v := report.BuildView(dir, meta, findings, prev)
 		meta.PlanCounts = &v.PlanCounts
+		meta.Totals = &v.Totals
 		v.Meta = meta
 		if body, err = marshalView(v); err != nil {
 			return nil, err
