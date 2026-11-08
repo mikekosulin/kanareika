@@ -72,9 +72,14 @@ func TestSetup(t *testing.T) {
 	if r := do(h, "POST", "/api/setup/check", map[string]string{"org": "neworg", "env": "nope"}, s.postHdr()); r.code != 404 {
 		t.Fatal(r.code)
 	}
-	newConn = func(*config.Org, config.Paths) (onboard.Runner, error) { return nil, errors.New("no key") }
-	if r := do(h, "POST", "/api/setup/check", map[string]string{"org": "neworg", "env": "production"}, s.postHdr()); r.code != 400 {
-		t.Fatal(r.code)
+	// no way to log in at all: every host fails the same way, with the advice
+	newConn = func(*config.Org, config.Paths) (onboard.Runner, error) {
+		return nil, errors.New("neworg: no access.key and no ssh-agent (SSH_AUTH_SOCK)")
+	}
+	r = do(h, "POST", "/api/setup/check", map[string]string{"org": "neworg", "env": "production"}, s.postHdr())
+	if r.code != 200 || json.Unmarshal([]byte(r.body), &c) != nil || len(c.Results) != 2 || c.Results[0].OK ||
+		!strings.Contains(c.Results[0].Hint, "ssh-add") {
+		t.Fatal(r.code, r.body)
 	}
 	r = do(h, "POST", "/api/setup/parse", map[string]string{"text": "admin@192.0.2.40\nssh -p 2222 root@192.0.2.41\nbad host name x"}, s.postHdr())
 	var parsed struct {
