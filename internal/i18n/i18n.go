@@ -5,11 +5,11 @@
 package i18n
 
 import (
+	"cmp"
 	"encoding/json"
 	"io/fs"
 	"regexp"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 
@@ -58,12 +58,7 @@ func Langs() []string {
 			out = append(out, l)
 		}
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if a, b := Name(out[i]), Name(out[j]); a != b {
-			return a < b
-		}
-		return out[i] < out[j]
-	})
+	slices.SortFunc(out, func(a, b string) int { return cmp.Or(cmp.Compare(Name(a), Name(b)), cmp.Compare(a, b)) })
 	return append([]string{Default}, out...)
 }
 
