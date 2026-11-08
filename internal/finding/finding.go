@@ -63,6 +63,7 @@ type Finding struct {
 	Title     string `json:"title"`
 	URL       string `json:"url"`
 	Target    string `json:"target"` // "os", "image:<ref>", a path, or human text for config findings
+	Image     string `json:"image,omitempty"` // k8s: the image of the workload the finding is in (Target is the workload)
 	// i18n: the English title/target above + key and args to render other languages
 	Msg        string         `json:"msg,omitempty"`
 	Args       map[string]any `json:"args,omitzero"`
@@ -135,7 +136,7 @@ var known = []string{"org", "host", "group", "exposure", "module", "kind", "id",
 	"status", "severity", "title", "url", "target", "msg", "args", "target_msg", "target_args", "vector", "preauth",
 	"rce", "kernel", "inactive", "pending_reboot", "backported", "fix_state", "repo_version", "image_in_use", "kev",
 	"epss", "priority", "due", "accepted", "exception", "first_seen", "fix_since", "clock_start", "due_why", "published",
-	"kev_due", "cvss_score", "description"}
+	"kev_due", "cvss_score", "description", "image"}
 
 // PriorityOr: the priority or "" when none was assigned.
 func (f *Finding) PriorityOr() string {

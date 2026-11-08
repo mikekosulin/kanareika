@@ -222,9 +222,10 @@ func firstDiff(got, want string) string {
 // goOnly: fields the Go finding always has and the Python module dicts did not (prioritization fills them later).
 var goOnly = []string{"kev", "epss", "priority", "due", "accepted", "exception"}
 
-// advisoryOnly: advisory facts added in 0.5 (trivy.VulnFindings); fixtures recorded before them have none. A fixture
+// advisoryOnly: fields added in 0.5 (advisory facts from trivy.VulnFindings, the k8s workload's image); fixtures
+// recorded before them have none. A fixture
 // that has one of them is compared on it as usual.
-var advisoryOnly = []string{"published", "cvss_score", "description"}
+var advisoryOnly = []string{"published", "cvss_score", "description", "image"}
 
 // DropAdvisory removes from got the advisory facts that want does not have.
 func DropAdvisory(got, want map[string]any) {
