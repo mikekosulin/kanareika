@@ -27050,7 +27050,7 @@ false
 "results": [
 {
 "findings": null,
-"error": "нет доступа к docker (privilege=sudo): host-15: exit 1: sudo: a password is required"
+"error": "no access to docker (privilege=sudo): host-15: exit 1: sudo: a password is required"
 }
 ],
 "files": {
