@@ -594,51 +594,134 @@ main { background: var(--bg); }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
 .st .spin { margin-right: 4px; }
-/* onboarding: stepper and the vulnerability-list line */
-.onbwrap { max-width: 760px; margin: 32px auto; padding: 0 24px 48px; }
-.onbwrap.roomy { max-width: 920px; }
-.onbwrap .onb, .onbwrap .onb.wide { max-width: none; margin: 0; padding: 0; }
-.onbwrap .onb h2:first-child { margin-top: 0; }
-.stepper { list-style: none; margin: 0 0 32px; padding: 0; display: flex; align-items: center; max-width: 560px; }
-.stepper li { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
-.stepper li + li { flex: 1; }
-.stepper li + li::before { content: ""; flex: 1; height: 2px; margin: 0 6px; border-radius: 2px; background: var(--line-2); }
-.stepper li.done + li::before, .stepper li.done + li.done::before { background: var(--ok); }
-.stepper li.on:not(:first-child)::before { background: linear-gradient(90deg, var(--ok), var(--accent)); }
-.stepper .dotn { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font: 600 12.5px var(--mono); color: var(--ink-3);
-  border: 1.5px solid var(--line-2); background: var(--solid); transition: box-shadow .2s var(--ease); }
-.stepper .dotn svg { width: 14px; height: 14px; }
-.stepper li.on .dotn { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 22%, transparent); }
-.stepper li.done .dotn { background: color-mix(in oklab, var(--ok) 14%, var(--solid)); border-color: var(--ok); color: var(--ok); }
-.stepper b { font-size: 13.5px; font-weight: 600; color: var(--ink-3); }
-.stepper li.on b, .stepper li.done b { color: var(--ink); }
-.dlline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
-.dlline:empty { display: none; }
-.dlline > svg { flex: none; width: 16px; height: 16px; color: var(--ink-3); }
-.dlline > span { flex: 1; min-width: 220px; } .dlline b { color: var(--ink); font-family: var(--mono); font-weight: 600; }
-.dlline.ok > svg { color: var(--ok); } .dlline.bad > svg { color: var(--err); }
-.dlline .bar { flex-basis: 100%; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
-.dlline .bar i { display: block; height: 100%; width: 35%; border-radius: 3px; background: var(--accent); animation: dlbar 1.4s var(--ease) infinite; }
-@keyframes dlbar { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
-@media (prefers-reduced-motion: reduce) { .dlline .bar i { animation: none; width: 100%; opacity: .5; } }
-@media (max-width: 640px) { .stepper li:not(.on) b { display: none; } .onbwrap { padding: 0 16px 40px; margin-top: 20px; } }
-
-#pastebox { resize: vertical; overflow: auto; min-height: 84px; }
-.understood.skip li { color: var(--ink-3); } .understood.skip svg { color: var(--p2); }
-.causes { display: grid; gap: 10px; margin: 4px 0 14px; }
-.cause { display: grid; grid-template-columns: 18px 1fr; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-panel); background: var(--solid); }
-.cause > svg, .cause > .spin { width: 16px; height: 16px; margin-top: 2px; color: var(--err); }
-.cause.good > svg { color: var(--ok); }
-.cause b { font-weight: 500; font-size: 13.5px; line-height: 1.45; display: block; }
-.cause .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.cause .chips code { font: 12px var(--mono); padding: 2px 8px; border-radius: var(--r-pill); background: var(--sel); color: var(--host); white-space: nowrap; }
-.cause details.raw { margin-top: 8px; font-size: 12px; } .cause details.raw summary { cursor: pointer; color: var(--ink-3); }
-.cause details.raw code { display: block; margin-top: 6px; font: 11.5px var(--mono); color: var(--ink-3); white-space: pre-wrap; word-break: break-word; }
 code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); border-bottom: 1px dashed var(--line-2); }
 .btn[disabled] { opacity: .45; cursor: not-allowed; filter: saturate(.4); }
 /* host names and addresses never break across lines */
-.hostn, .tbl td.mono, .tbl.preview td, .understood code, .cause .chips code, code.from, code.to, .pick b { white-space: nowrap; }
+.hostn, .tbl td.mono, .tbl.preview td, .understood code, code.from, code.to, .pick b { white-space: nowrap; }
 .tbl.preview { display: block; overflow-x: auto; }
+/* ===== setup: the brand on the left, one window on the right (the banner's layout) ===== */
+.app.setupmode { grid-template-columns: minmax(0, 1fr); }
+.app.setupmode .side, .app.setupmode .mbar { display: none; }
+.setup { min-height: 100vh; display: grid; grid-template-columns: minmax(300px, .72fr) minmax(0, 1.45fr); position: relative; isolation: isolate; overflow: hidden; }
+.setup::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(900px 620px at 18% 28%, #000, transparent 75%); mask-image: radial-gradient(900px 620px at 18% 28%, #000, transparent 75%); }
+.setup::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--aurora); opacity: .8; }
+.sbrand { padding: 64px 48px 40px 56px; display: flex; flex-direction: column; }
+.sbrand img { width: 40px; height: 40px; }
+.sbrand h1 { font-size: 44px; line-height: 1; letter-spacing: -.035em; font-weight: 700; margin: 20px 0 18px; }
+.sbrand p { font-size: 19px; line-height: 1.4; letter-spacing: -.01em; color: var(--ink-2); margin: 0; max-width: 360px; }
+.sbrand p em { display: block; font-style: normal; color: var(--accent-line); }
+[data-theme="light"] .sbrand p em { color: #a87b00; }
+.facts { margin: auto 0 0; padding-top: 40px; display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font: 12.5px/1.5 var(--mono); }
+.facts dt { color: var(--ink-2); } .facts dd { margin: 0; color: var(--ink-3); }
+.sprefs { display: flex; gap: 8px; align-items: center; margin-top: 22px; }
+
+.win { margin: 48px 0; border: 1px solid var(--line-2); border-right: 0; border-radius: 14px 0 0 14px; background: var(--solid);
+  display: flex; flex-direction: column; min-height: 0; box-shadow: var(--shadow); }
+.wt { display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 16px; border-bottom: 1px solid var(--line); font: 12.5px var(--mono); color: var(--ink-3); }
+.wt .dots { display: flex; gap: 7px; margin-right: 4px; } .wt .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-2); }
+.wt .close { margin-left: auto; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; color: var(--ink-3); }
+.wt .close:hover { background: var(--hover); color: var(--ink); } .wt .close svg { width: 15px; height: 15px; }
+.stabs { display: flex; align-items: center; gap: 6px; padding: 16px 24px 0; font: 13px var(--mono); }
+.stabs span { padding: 2px 9px; border-radius: 5px; color: var(--ink-3); }
+.stabs span.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.stabs span.done { color: var(--ok); }
+.stabs i { font-style: normal; color: var(--line-2); }
+.wbody { flex: 1; min-height: 0; overflow: auto; padding: 18px 24px 24px; }
+
+.dlline { display: flex; align-items: center; gap: 12px; height: 38px; padding: 0 6px 0 12px; margin-bottom: 22px; border: 1px solid var(--line); border-radius: 8px; font: 12.5px var(--mono); color: var(--ink-2); }
+.dlline:empty { display: none; }
+.dlline .lbl { color: var(--ink); } .dlline .mut { color: var(--ink-3); }
+.dlline .btn { margin-left: auto; height: 26px; padding: 0 10px; font-size: 12.5px; }
+.dlline.ok, .dlline.busy { padding-right: 12px; }
+.dlline .okc { color: var(--ok); } .dlline .err { color: var(--err); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dlline .bar { flex: 1; max-width: 220px; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.dlline .bar i { display: block; height: 100%; width: 35%; border-radius: 3px; background: var(--accent); animation: dlbar 1.4s var(--ease) infinite; }
+@keyframes dlbar { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+@media (prefers-reduced-motion: reduce) { .dlline .bar i { animation: none; width: 100%; opacity: .5; } }
+
+#setupform { display: grid; gap: 26px; }
+.q h3 { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 4px; color: var(--ink); }
+.qn { font-size: 13px; color: var(--ink-3); margin: 0 0 10px; line-height: 1.5; }
+.qn b { color: var(--ink); font-weight: 500; }
+.qn code, .q code { font: 12.5px var(--mono); color: var(--ink-2); }
+.opts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.opt { position: relative; }
+.opt input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.opt span { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 7px; font-size: 13.5px; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line-2); }
+.opt span::before { content: ""; width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink-3); }
+.opt input:checked + span { color: var(--ink); background: var(--sel); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent); }
+.opt input:checked + span::before { box-shadow: inset 0 0 0 4px var(--accent); }
+.opt input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; margin-top: 12px; max-width: 620px; }
+.fields label { display: grid; gap: 4px; font-size: 12px; color: var(--ink-3); }
+.fields label.wide { grid-column: 1 / -1; }
+.fields input:not([type=checkbox]), .fields select { height: 32px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--raised); color: var(--ink); font: 13px var(--font); }
+.fields input:focus, .fields select:focus { outline: none; border-color: color-mix(in oklab, var(--accent) 55%, transparent); }
+
+.ed { display: grid; grid-template-columns: 38px minmax(0, 1fr) minmax(0, 1.1fr); border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg); overflow: hidden; }
+.ed:focus-within { border-color: color-mix(in oklab, var(--accent) 50%, transparent); }
+.ed .eh { font: 600 10.5px/16px var(--font); text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); padding: 9px 14px 2px; }
+.ed .eh:first-child { padding: 0; border-right: 1px solid var(--line); }
+.ed .eh:last-child, .ed .dx { border-left: 1px dashed var(--line); }
+.ed .ln { font: 13px/24px var(--mono); color: var(--ink-3); opacity: .55; text-align: right; padding: 6px 10px 10px 0; border-right: 1px solid var(--line); user-select: none; }
+.ed textarea { font: 13px/24px var(--mono); color: var(--ink); background: none; border: 0; outline: none; resize: none; padding: 6px 14px 10px; white-space: pre; overflow-x: auto; overflow-y: hidden; min-height: 0; }
+.ed textarea::placeholder { color: var(--ink-3); opacity: .6; }
+.ed .dx { font: 13px/24px var(--mono); padding: 6px 14px 10px; white-space: nowrap; overflow: hidden; color: var(--ink-3); }
+.ed .dx div { overflow: hidden; text-overflow: ellipsis; }
+.ok { color: var(--ok); } .bad { color: var(--err); } .wn { color: var(--p2); } .mut { color: var(--ink-3); }
+.ed .h, .groups .h { color: var(--host); }
+.lnk { background: none; border: 0; padding: 0; font: inherit; font-size: 13px; color: var(--ink-2); cursor: pointer; text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+.lnk:hover { color: var(--ink); text-decoration-color: var(--ink-3); }
+.q > .lnk { margin-top: 10px; display: inline-block; font-family: var(--mono); font-size: 12.5px; }
+
+/* a checkbox drawn to sit on the text's centre line */
+.chk { display: inline-flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; }
+.chk input { appearance: none; -webkit-appearance: none; flex: none; width: 16px; height: 16px; margin: 0; border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--ink-3); display: grid; place-items: center; cursor: pointer; }
+.chk input::after { content: ""; width: 9px; height: 5px; border: solid var(--accent-ink); border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg); opacity: 0; }
+.chk input:checked { background: var(--accent); box-shadow: none; } .chk input:checked::after { opacity: 1; }
+.chk input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chk span { line-height: 1.3; }
+
+.go { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+.setup .btn.primary { height: 34px; padding: 0 16px; font-size: 13.5px; font-weight: 600; border-radius: 7px; }
+.setup .btn { height: 34px; border-radius: 7px; }
+.ferr { margin: 0; font: 12.5px var(--mono); color: var(--err); }
+
+.groups { display: grid; gap: 18px; margin: 4px 0 18px; }
+.grp .gh { display: flex; align-items: baseline; gap: 10px; font-size: 13.5px; color: var(--ink); }
+.grp .gh > span:first-child, .grp .gh > .spin { width: 12px; flex: none; }
+.hr { display: grid; grid-template-columns: 22px minmax(140px, max-content) minmax(0, 1fr); column-gap: 14px; font: 13px/26px var(--mono); white-space: nowrap; margin-left: 4px; padding-left: 12px; border-left: 2px solid var(--line); }
+.grp .gh + .hr { margin-top: 6px; }
+.hr > * { overflow: hidden; text-overflow: ellipsis; }
+.fix { margin: 8px 0 0 18px; display: flex; flex-wrap: wrap; gap: 6px; }
+.fix code { font: 12.5px var(--mono); color: var(--ink); background: var(--raised); padding: 3px 8px; border-radius: 5px; box-shadow: inset 0 0 0 1px var(--line); }
+.term { font: 12.5px/1.6 var(--mono); color: var(--ink-2); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-word; margin: 0 0 16px; }
+
+.sbar { display: flex; align-items: center; height: 32px; border-top: 1px solid var(--line); font: 12px var(--mono); color: var(--ink-3); white-space: nowrap; overflow: hidden; }
+.sbar > span { padding: 0 14px; border-right: 1px solid var(--line); }
+.sbar > span.r { margin-left: auto; border-right: 0; }
+.sbar b { color: var(--ink-2); font-weight: 500; }
+
+@media (max-width: 980px) {
+  .setup { grid-template-columns: minmax(0, 1fr); overflow: visible; }
+  .sbrand { padding: 24px 16px 8px; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+  .sbrand img { width: 28px; height: 28px; } .sbrand h1 { font-size: 24px; margin: 0; } .sbrand p { flex-basis: 100%; font-size: 15px; }
+  .facts { display: none; } .sprefs { margin: 0 0 0 auto; }
+  .win { margin: 8px 0 0; border-right: 1px solid var(--line-2); border-radius: 12px 12px 0 0; }
+  .wbody { padding: 14px 16px 20px; } .stabs { padding: 14px 16px 0; }
+  .ed { grid-template-columns: 30px minmax(0, 1fr); } .ed .eh:last-child { display: none; }
+  .ed .dx { grid-column: 1 / -1; border-left: 0; border-top: 1px dashed var(--line); white-space: normal; }
+  .fields { grid-template-columns: minmax(0, 1fr); }
+  .sbar > span:nth-child(3), .sbar > span.r { display: none; }
+}
+
+#formerr:empty { display: none; }
+#setupform .go { margin-top: -6px; }
+.wbody > .dlline:first-child { margin-top: 2px; }
+.stabs { padding-bottom: 2px; }
+.qn.mono { font: 12.5px var(--mono); }
 
 /* end-extra-css */
 </style>
@@ -969,194 +1052,186 @@ function context(d) {
 const FOUND = { v: null };
 async function discover() { if (!FOUND.v) { try { FOUND.v = await api("/api/setup/discover"); } catch { FOUND.v = { user: "", keys: [], agent_keys: 0, hosts: [] }; } } return FOUND.v; }
 function freeId(base) { let id = base, i = 2; while (S.orgs.some((o) => o.id === id)) id = base + "-" + i++; return id; }
-function stepsHead(s) {
-  const cur = Math.max(1, s.step);
-  const steps = ["Servers", "Access", "First scan"];
-  return `<ol class="stepper" aria-label="${t("Setup steps")}">${steps.map((l, i) => {
-    const n = i + 1, st = n < cur ? "done" : n === cur ? "on" : "";
-    return `<li class="${st}" ${n === cur ? 'aria-current="step"' : ""}><span class="dotn">${n < cur ? icon("check") : n}</span><b>${t(l)}</b></li>`;
-  }).join("")}</ol>`;
+/* ---------- setup: one window, as on the banner. Steps at /setup, /setup/access, /setup/scan ---------- */
+const STEP_PATH = { 1: "/setup", 2: "/setup/access", 3: "/setup/scan" };
+function setupURL(s) { const p = STEP_PATH[s.step] || "/setup"; if (location.pathname !== p) history.replaceState(null, "", p + location.search); }
+function stepTabs(s) {
+  return `<nav class="stabs" aria-label="${t("Setup steps")}">${["Servers", "Access", "First scan"].map((l, i) => {
+    const n = i + 1, st = n < s.step ? "done" : n === s.step ? "on" : "";
+    return (i ? `<i aria-hidden="true">›</i>` : "") + `<span class="${st}" ${n === s.step ? 'aria-current="step"' : ""}>${n < s.step ? "✓ " : ""}${t(l)}</span>`;
+  }).join("")}</nav>`;
 }
-/* ---------- the vulnerability list: one quiet line, downloaded only on a click (mobile data) ---------- */
+
+/* the vulnerability list: offered first, downloaded only on a click (mobile data), shown again in the status bar */
 function bytes(n) { return n >= 1e9 ? (n / 1e9).toFixed(1) + " GB" : n >= 1e6 ? Math.round(n / 1e6) + " MB" : n > 0 ? Math.max(1, Math.round(n / 1e3)) + " KB" : "?"; }
 function dlTotal() { const z = S.dbsize; return z ? z.total : 0; }
 function dlNeeded() { const z = S.dbsize; return !!z && z.need.length > 0; }
-function dbCard() {
-  const z = S.dbsize, db = S.db || {}, s = S.setup || {};
+function dbCard() { // the line at the top of the window
+  const z = S.dbsize, db = S.db || {};
   if (!z) return `<div class="dlline"></div>`;
   if (db.updating) {
     const secs = Math.round((Date.now() - Date.parse(S.dlStart || new Date())) / 1000);
-    return `<div class="dlline busy"><i class="spin"></i><span>${t("Downloading the vulnerability list… {s} s", { s: secs })}</span><div class="bar"><i></i></div></div>`;
+    return `<div class="dlline busy"><span class="lbl">${t("Vulnerability list")}</span><span class="bar"><i></i></span><span class="mut">${t("downloading… {s} s", { s: secs })}</span></div>`;
   }
-  if (db.error && s.dlAsked) return `<div class="dlline bad">${icon("alert")}<span>${t("The download failed: {err}", { err: esc(db.error.split("\n")[0]) })}</span><button class="linkbtn" data-dl-start>${t("Try again")}</button></div>`;
-  if (!z.need.length) return `<div class="dlline ok">${icon("check")}<span>${t("Vulnerability list ready")}</span></div>`;
-  return `<div class="dlline">${icon("shield")}<span>${t("Kanareika needs a list of known vulnerabilities: {size}, downloaded once.", { size: `<b>${bytes(z.total)}</b>` })}</span><button class="btn small" data-dl-start>${t("Download now")}</button></div>`;
+  if (db.error && S.dlAsked) return `<div class="dlline bad"><span class="lbl">${t("Vulnerability list")}</span><span class="err">${esc(db.error.split("\n")[0])}</span><button class="lnk" data-dl-start>${t("Try again")}</button></div>`;
+  if (!z.need.length) return `<div class="dlline ok"><span class="lbl">${t("Vulnerability list")}</span><span class="okc">✓ ${t("ready")}</span></div>`;
+  return `<div class="dlline"><span class="lbl">${t("Vulnerability list")}</span><span class="mut">${bytes(z.total)}</span><button class="btn small" data-dl-start>${t("Download now")}</button></div>`;
+}
+function statusBar(s) {
+  const db = S.db || {}, z = S.dbsize, f = FOUND.v;
+  const org = s.org ? S.orgs.find((o) => o.id === s.org) : null;
+  const vl = db.updating ? `<b>${t("downloading")}</b>` : z && !z.need.length ? `<b>${t("ready")}</b>` : `<b>${t("not downloaded")}</b>`;
+  return `<footer class="sbar"><span><b>${esc(org ? org.name || org.id : t("setup"))}</b>${s.env ? " · " + esc(s.env) : ""}</span>
+    <span>${t("vuln list")} ${vl}</span>
+    ${f ? `<span>ssh-agent <b>${f.agent_keys ? t("{n} keys", { n: f.agent_keys }) : t("none")}</b></span>` : ""}
+    <span class="r">${esc(location.host)}</span></footer>`;
 }
 let dbTick;
 async function pollDB() {
   try { S.db = await api("/api/db"); } catch {}
-  if (S.db?.updating) { clearTimeout(dbTick); dbTick = setTimeout(pollDB, 1000); }
-  else if (S.dbsize && S.dbWas) { S.dbWas = false; try { S.dbsize = await api("/api/db/size"); } catch {} }
-  if (S.db?.updating) S.dbWas = true;
+  if (S.db?.updating) { clearTimeout(dbTick); dbTick = setTimeout(pollDB, 1000); S.dbWas = true; }
+  else if (S.dbWas) { S.dbWas = false; S.dbsize = null; dbSizeReq = null; loadDBSize(); }
   renderSide();
   if (S.view === "setup") refreshDLCard();
 }
 let dbSizeReq;
-function refreshDLCard() { document.querySelectorAll(".dlline").forEach((c) => { c.outerHTML = dbCard(); }); }
+function refreshDLCard() {
+  document.querySelectorAll(".dlline").forEach((c) => { c.outerHTML = dbCard(); });
+  const sb = $(".sbar"); if (sb && S.setup) sb.outerHTML = statusBar(S.setup);
+}
 function loadDBSize() {
   if (S.dbsize || !S.scans) return;
   dbSizeReq ||= api("/api/db/size").catch(() => ({ sizes: {}, need: [], total: 0 })).then((z) => { S.dbsize = z; dbSizeReq = null; requestAnimationFrame(refreshDLCard); });
 }
+
 function setupView() {
-  const s = S.setup ||= { step: 0, path: "" };
-  if (!S.scans) return setupMain(s);
-  loadDBSize();
-  return `<div class="onbwrap ${s.step === 0 || s.path === "fleet" && s.step === 1 ? "roomy" : ""}">${stepsHead(s)}${setupMain(s)}${dbCard()}</div>`;
-}
-function setupMain(s) {
+  const s = S.setup ||= { step: 1, kind: "personal" };
   if (!S.scans) return `<div class="onb"><h2>${t("Read-only dashboard")}</h2><p>${t("Organizations are added where kanareika web runs on localhost (or with a token). On that machine: kanareika org new <ORG_ID>.")}</p></div>`;
-  if (s.step === 0) {
-    const cur = orgOf(), mine = S.orgs.find((o) => o.id === "servers");
-    const card = (path, ic, title, text) => `<button class="pathcard" data-path="${path}">${icon(ic)}<b>${title}</b><span>${text}</span></button>`;
-    return `<div class="onb wide"><h2>${S.orgs.length ? t("Add servers") : t("Welcome to Kanareika")}</h2>
-    <p>${t("A read-only security audit over SSH: what to patch first, who can get in, what is exposed. Nothing is installed or changed on the servers.")}</p>
-    <div class="paths">
-      ${cur && cur.id !== "servers" ? card("add", "plus", t("Add to {org}", { org: esc(cur.name || cur.id) }), t("More servers for this organization: paste them, they are checked and scanned on their own.")) : ""}
-      ${card("few", "server", mine ? t("Add to My servers") : t("My servers"), t("A homelab, a VPS, a NAS. Paste an address or user@host; logins come from your SSH setup."))}
-      ${card("client", "key", t("A client's servers"), t("For freelancers: one organization per client, with where their permission is documented."))}
-      ${card("fleet", "list", t("A fleet"), t("Tens or hundreds of servers: a list, CSV, an Ansible inventory or ssh config; groups, environments, jump hosts."))}
-    </div>${S.orgs.length ? `<div class="actions"><button class="btn ghost" data-setup-cancel>${t("Cancel")}</button></div>` : ""}</div>`;
-  }
-  if (s.step === 1 && (s.path === "few" || s.path === "add")) return fewForm(s);
-  if (s.step === 1 && s.path === "client") return clientForm(s);
-  if (s.step === 1) return fleetForm(s);
-  if (s.step === 2) return checkView(s);
-  const job = S.jobs.find((j) => j.id === s.job);
-  return `<div class="onb"><h2>${t("First scan")}</h2><p>${t("Databases download first, then every server is read. This takes a few minutes; you can leave the page.")}</p>
-    <div class="jobout">${job ? `<div class="meta"><span class="st ${job.state === "running" ? "reboot" : job.code ? "bad" : "available"}">${t(job.state)}</span></div><pre>${esc((job.output || []).slice(-14).join("\n"))}</pre>` : `<div class="sk" style="height:120px"></div>`}</div>
-    ${job && job.state !== "running" ? `<div class="actions"><button class="btn primary" data-setup-done>${t("See the results")}</button></div>` : ""}</div>`;
+  loadDBSize(); discover().then(() => { if (!s.found) { s.found = true; if (S.view === "setup" && s.step === 1) render(); } });
+  setupURL(s);
+  const body = s.step === 1 ? serversForm(s) : s.step === 2 ? checkView(s) : scanView(s);
+  return `<div class="setup">
+    <section class="sbrand">
+      <img src="/logo.png" alt="" width="40" height="40">
+      <h1>kanareika</h1>
+      <p>${t("Security audit of your servers over SSH.")}<em>${t("What to patch first.")}</em></p>
+      <dl class="facts"><dt>${t("read-only")}</dt><dd>${t("logs in, reads, logs out")}</dd><dt>${t("agentless")}</dt><dd>${t("nothing installed")}</dd><dt>${t("local")}</dt><dd>${t("results stay here")}</dd></dl>
+      <div class="sprefs">${prefsHTML()}</div>
+    </section>
+    <section class="win" aria-label="${t("Setup")}">
+      <header class="wt"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>~ kanareika setup${S.orgs.length ? `<button class="lnk close" data-setup-cancel aria-label="${t("Close")}">${icon("x")}</button>` : ""}</header>
+      ${stepTabs(s)}
+      <div class="wbody">${dbCard()}${body}</div>
+      ${statusBar(s)}
+    </section></div>`;
 }
-// pasteBox: one field for whatever people have at hand, with a short live list of what was understood.
-function pasteBox(text, rows) {
-  const d = FOUND.v || { hosts: [] };
-  return `<label class="wide"><span>${t("Servers")}<small>${t("an IP, user@host or an ssh command, one per line")}</small>
-      <button type="button" class="linkbtn" data-formats>${t("more formats")}</button></span>
-    <textarea name="hosts" id="pastebox" rows="${rows}" required spellcheck="false" placeholder="admin@192.0.2.10">${esc(text)}</textarea></label>
-    <div class="wide formats" id="formats" hidden><code>ssh -p 2222 -J jump@203.0.113.10 deploy@198.51.100.5</code> · <code>Host</code> ${t("blocks from an ssh config")} · <code>name,address,group,env</code> · ${t("an Ansible INI inventory")}</div>
-    ${d.hosts.length ? `<div class="wide"><button type="button" class="btn ghost small left" data-sshpick>${icon("list")}${t("Choose from ~/.ssh/config ({n})", { n: d.hosts.length })}</button></div>` : ""}
-    <div class="wide" id="preview"></div>`;
+// language and theme: the sidebar's controls, here because the sidebar is hidden during setup
+function prefsHTML() {
+  return `<label class="langw" title="${t("Language")}"><select id="lang" aria-label="${t("Language")}">${Object.entries(LANG_NAMES).map(([k, n]) => `<option value="${k}" ${k === LANG ? "selected" : ""}>${esc(n)}</option>`).join("")}</select><span class="lv">${LANG.toUpperCase()}</span>${icon("chev")}</label>
+    <div class="seg3" role="radiogroup" aria-label="${t("Theme")}">${[["light", "sun", "Light"], ["system", "monitor", "System"], ["dark", "moon", "Dark"]].map(([v, i, l]) => `<button role="radio" data-theme-set="${v}" aria-checked="${S.theme === v}" title="${t(l)}" aria-label="${t(l)}">${icon(i)}</button>`).join("")}</div>`;
+}
+
+/* step 1: whose servers, which, how to log in — one form for the three audiences */
+function serversForm(s) {
+  const f = (s.form ||= { hosts: "", user: "", key: "", sudo: false, name: "", consent: "", env: "production", jump: "", front: "", confirmed: false });
+  const d = FOUND.v || { hosts: [], keys: [], agent_keys: 0, user: "" };
+  const cur = orgOf(), mine = S.orgs.find((o) => o.id === "servers");
+  const kinds = [...(cur && cur.id !== "servers" ? [["add", t("Add to {org}", { org: esc(cur.name || cur.id) })]] : []),
+    ["personal", mine ? t("Add to Personal") : t("Personal")], ["client", t("Client")], ["company", t("Company")]];
+  const radio = (k, l) => `<label class="opt"><input type="radio" name="kind" value="${k}" ${s.kind === k ? "checked" : ""}><span>${l}</span></label>`;
+  const who = s.kind === "client" ? `<div class="fields"><label><span>${t("Client")}</span><input name="name" value="${esc(f.name)}" required placeholder="ACME"></label>
+        <label><span>${t("Their permission")}</span><input name="consent" value="${esc(f.consent)}" required placeholder="${t("contract, ticket, e-mail")}"></label></div>`
+    : s.kind === "company" ? `<div class="fields"><label><span>${t("Company")}</span><input name="name" value="${esc(f.name)}" required placeholder="ACME"></label>
+        <label><span>${t("Permission")}</span><input name="consent" value="${esc(f.consent)}" required placeholder="${t("ticket, policy")}"></label></div>` : "";
+  const keyOpts = [["", d.agent_keys ? t("ssh-agent ({n} keys)", { n: d.agent_keys }) : t("ssh-agent")], ...d.keys.map((k) => [k, k])];
+  const login = s.loginOpen
+    ? `<div class="fields"><label><span>${t("User")}</span><input name="user" value="${esc(f.user)}" placeholder="${esc(d.user || "root")}"></label>
+        <label><span>${t("Key")}</span><select name="key">${keyOpts.map(([v, l]) => `<option value="${esc(v)}" ${v === f.key ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
+        ${s.kind === "company" ? `<label><span>${t("Environment")}</span><input name="env" value="${esc(f.env)}"></label><label><span>${t("Jump host")}</span><input name="jump" value="${esc(f.jump)}" placeholder="bastion"></label>` : ""}
+        <label class="chk wide"><input type="checkbox" name="sudo" ${f.sudo ? "checked" : ""}><span>${t("passwordless sudo: also check passwords, keys and the firewall")}</span></label></div>`
+    : `<p class="qn mono">${d.agent_keys ? `ssh-agent · <b>${t("{n} keys", { n: d.agent_keys })}</b>` : d.keys.length ? `<b>${esc(d.keys[0])}</b>` : `<span class="bad">${t("no SSH key found")}</span>`} · ${t("user")} <b>${esc(f.user || d.user || "root")}</b> &nbsp;<button type="button" class="lnk" data-login-open>${t("change")}</button></p>`;
+  return `<form id="setupform" autocomplete="off" novalidate>
+    <div class="q"><h3>${t("Whose servers?")}</h3><div class="opts">${kinds.map(([k, l]) => radio(k, l)).join("")}</div>${who}</div>
+    <div class="q"><h3>${t("Servers")}</h3><p class="qn">${t("One per line: {a}, an {b} command, ssh config, CSV", { a: "<code>user@host</code>", b: "<code>ssh</code>" })}</p>
+      ${editor(f.hosts)}
+      ${d.hosts.length ? `<button type="button" class="lnk" data-sshpick>+ ~/.ssh/config (${d.hosts.length})</button>` : ""}</div>
+    <div class="q"><h3>${t("Login")}</h3>${login}</div>
+    <label class="chk"><input type="checkbox" name="confirmed" ${f.confirmed ? "checked" : ""}><span>${t("I’m allowed to audit these servers")}</span></label>
+    <div id="formerr"></div>
+    <div class="go"><button class="btn primary" type="submit">${t("Check access")}</button></div>
+  </form>`;
+}
+// editor: line numbers | the text | what each line becomes, on the same row
+function editor(text) {
+  const n = Math.max(4, text.split("\n").length + 1);
+  return `<div class="ed"><div class="eh"></div><div class="eh">${t("you wrote")}</div><div class="eh">${t("will connect to")}</div>
+    <div class="ln" id="edln">${Array.from({ length: n }, (_, i) => i + 1).join("<br>")}</div>
+    <textarea name="hosts" id="pastebox" spellcheck="false" wrap="off" rows="${n}" placeholder="admin@192.0.2.10" aria-label="${t("Servers")}">${esc(text)}</textarea>
+    <div class="dx" id="preview" aria-live="polite"></div></div>`;
+}
+let previewTimer;
+function grow(ta) {
+  const n = Math.max(4, ta.value.split("\n").length + 1);
+  ta.rows = n; const ln = $("#edln"); if (ln) ln.innerHTML = Array.from({ length: n }, (_, i) => i + 1).join("<br>");
+}
+async function preview() {
+  const ta = $("#pastebox"), out = $("#preview"); if (!ta || !out) return;
+  grow(ta);
+  if (!ta.value.trim()) { out.innerHTML = ""; S.setup.parsed = null; return; }
+  const text = ta.value;
+  let r; try { r = await post("/api/setup/parse", { text }); } catch (e) { out.innerHTML = `<div class="bad">${esc(e.message)}</div>`; return; }
+  if (ta.value !== text) return; // an older answer
+  S.setup.parsed = r;
+  const d = FOUND.v || {}, defUser = $("[name=user]")?.value || S.setup.form.user || d.user || "root";
+  const rows = [];
+  r.hosts.forEach((h) => { if (h.line) rows[h.line] = `<div><span class="ok">✓</span> <span class="h">${esc((h.user || defUser) + "@" + h.address)}</span>${h.jump ? `<span class="mut"> via ${esc(h.jump)}</span>` : ""}${h.from ? `<span class="mut"> ${t("from ssh config")}</span>` : ""}</div>`; });
+  const loose = [];
+  r.errors.forEach((x) => {
+    const m = x.match(/^line (\d+): (?:"[^"]*"(?::\s*|\s+))?(.*)$/);
+    const msg = `<div><span class="wn">✗ ${esc(m ? m[2] : x)}</span><span class="mut"> · ${t("skipped")}</span></div>`;
+    if (m && !rows[+m[1]]) rows[+m[1]] = msg; else loose.push(msg);
+  });
+  const n = text.split("\n").length;
+  out.innerHTML = Array.from({ length: n }, (_, i) => rows[i + 1] || "<div>&nbsp;</div>").join("") + loose.join("");
 }
 function sshPicker() {
   const d = FOUND.v || { hosts: [] };
   const dlg = $("#dlg");
-  dlg.innerHTML = `<header><h3>${t("Choose from ~/.ssh/config")}</h3></header><div class="body">
+  dlg.innerHTML = `<header><h3>~/.ssh/config</h3></header><div class="body">
     <input class="pickq" id="pickq" placeholder="${t("Filter")}" autocomplete="off">
-    <div class="picklist" id="picklist">${d.hosts.map((h, i) => `<label class="pick" data-alias="${esc(h.alias.toLowerCase())}"><input type="checkbox" value="${i}"> <b>${esc(h.alias)}</b> <span class="note">${esc((h.user ? h.user + "@" : "") + (h.hostname || h.alias) + (h.port ? ":" + h.port : ""))}${h.jump ? " · " + t("via {j}", { j: esc(h.jump) }) : ""}</span></label>`).join("")}</div></div>
-    <footer><button class="btn ghost" data-pickclose>${t("Cancel")}</button><button class="btn primary" data-pickadd>${t("Add selected")}</button></footer>`;
+    <div class="picklist" id="picklist">${d.hosts.map((h, i) => `<label class="pick" data-alias="${esc(h.alias.toLowerCase())}"><input type="checkbox" value="${i}"> <b>${esc(h.alias)}</b> <span class="note">${esc((h.user ? h.user + "@" : "") + (h.hostname || h.alias) + (h.port ? ":" + h.port : ""))}${h.jump ? " · via " + esc(h.jump) : ""}</span></label>`).join("")}</div></div>
+    <footer><button class="btn ghost" data-pickclose>${t("Cancel")}</button><button class="btn primary" data-pickadd>${t("Add")}</button></footer>`;
   dlg.showModal();
   $("#pickq").focus();
 }
-function sshLine(h, d) {
-  const j = h.jump && (d.hosts || []).find((x) => x.alias === h.jump);
-  const jump = h.jump ? ` -J ${j ? `${j.user ? j.user + "@" : ""}${j.hostname || j.alias}${j.port ? ":" + j.port : ""}` : h.jump}` : "";
-  return `ssh${h.port && h.port !== 22 ? " -p " + h.port : ""}${jump} ${h.user ? h.user + "@" : ""}${h.hostname || h.alias}`;
+function formData(form) {
+  const fd = new FormData(form), g = (k) => (fd.get(k) ?? "").toString().trim();
+  const f = S.setup.form;
+  Object.assign(f, { hosts: fd.get("hosts") ?? f.hosts, confirmed: !!fd.get("confirmed") });
+  if (fd.has("name")) f.name = g("name");
+  if (fd.has("consent")) f.consent = g("consent");
+  if (fd.has("user")) { f.user = g("user"); f.key = g("key"); f.sudo = !!fd.get("sudo"); }
+  if (fd.has("env")) { f.env = g("env") || "production"; f.jump = g("jump"); }
+  return f;
 }
-let previewTimer;
-function grow(ta) { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight + 2, 360) + "px"; }
-async function preview() {
-  const ta = $("#pastebox"), out = $("#preview"); if (!ta || !out) return;
-  grow(ta);
-  if (!ta.value.trim()) { out.innerHTML = ""; return; }
-  let r; try { r = await post("/api/setup/parse", { text: ta.value }); } catch (e) { out.innerHTML = `<div class="note">${esc(e.message)}</div>`; return; }
-  const defUser = $("[name=user]")?.value || $("[name=user]")?.placeholder || "";
-  const fleet = !!$("#fleetform");
-  const list = fleet && r.hosts.length > 3
-    ? `<table class="tbl preview"><thead><tr><th>${t("Name")}</th><th>${t("User")}</th><th>${t("Address")}</th><th>${t("Via")}</th><th>${t("Group")}</th></tr></thead><tbody>${r.hosts.map((h) =>
-      `<tr><td style="font-family:var(--mono);color:var(--host)">${esc(h.name)}</td><td class="mono">${esc(h.user || defUser)}</td><td class="mono">${esc(h.address)}</td><td class="mono note">${esc(h.jump || "")}</td><td class="note">${esc([h.group, h.env].filter(Boolean).join(" · "))}</td></tr>`).join("")}</tbody></table>`
-    : `<ul class="understood">${r.hosts.map((h) => `<li>${icon("check")}<code>${esc((h.user || defUser) + "@" + h.address)}</code>${h.jump ? `<span class="note">${t("via {j}", { j: esc(h.jump) })}</span>` : ""}</li>`).join("")}</ul>`;
-  out.innerHTML = (r.hosts.length ? list : "") + (r.errors.length ? `<ul class="understood skip">${r.errors.map((x) => `<li>${icon("alert")}<span>${esc(x)} · ${t("skipped")}</span></li>`).join("")}</ul>` : "");
-}
-function fewForm(s) {
-  const f = (s.form ||= { hosts: "", user: "", key: "", sudo: false, confirmed: false });
-  const d = FOUND.v || { hosts: [], keys: [], agent_keys: 0, user: "" };
-  const keyOpts = [["", d.agent_keys ? t("the ssh-agent ({n} keys)", { n: d.agent_keys }) : t("the ssh-agent")], ...d.keys.map((k) => [k, k])];
-  const target = s.path === "add" ? orgOf() : S.orgs.find((o) => o.id === "servers");
-  return `<div class="onb"><h2>${target ? t("Add to {org}", { org: esc(target.name || target.id) }) : t("Which servers?")}</h2>
-    <form id="fewform" class="form" autocomplete="off">
-      ${pasteBox(f.hosts, 3)}
-      <details class="wide"><summary>${t("Login details")}</summary>
-        <div class="form inner">
-          <label><span>${t("SSH user")}<small>${t("unless a line says otherwise")}</small></span><input name="user" value="${esc(f.user)}" placeholder="${esc(d.user || "root")}"></label>
-          <label><span>${t("Key")}<small>${t("not needed with an ssh-agent")}</small></span><select name="key">${keyOpts.map(([v, l]) => `<option value="${esc(v)}" ${v === f.key ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
-          <label class="check wide"><input type="checkbox" name="sudo" ${f.sudo ? "checked" : ""}> ${t("The user can sudo without a password: also check passwords, keys, the login log and the firewall")}</label>
-        </div></details>
-      <label class="check wide"><input type="checkbox" name="confirmed" ${f.confirmed ? "checked" : ""} required> ${t("These are my servers, or I am allowed to audit them.")}</label>
-      <div id="formerr" class="wide"></div>
-      <div class="wide actions"><button class="btn primary" type="submit">${t("Check access")}</button><button class="btn ghost" type="button" data-path="">${t("Back")}</button></div>
-    </form></div>`;
-}
-async function submitFew(form) {
-  const fd = new FormData(form), s = S.setup, d = await discover();
-  s.form = { hosts: fd.get("hosts"), user: fd.get("user").trim(), key: fd.get("key"), sudo: !!fd.get("sudo"), confirmed: !!fd.get("confirmed") };
-  const f = s.form;
-  const target = s.path === "add" ? orgOf() : S.orgs.find((o) => o.id === "servers");
-  if (target) { await addHosts(target, { hosts: f.hosts, user: f.user }); return; }
-  await createOrg({ id: "servers", name: t("My servers"), user: f.user || d.user || "root", privilege: f.sudo ? "sudo" : "none", key: f.key,
-    hosts: f.hosts, env: "production", internet: false, consent: t("Confirmed in the setup on {d}", { d: today() }), confirmed: f.confirmed });
-}
-function fleetForm(s) {
-  const f = (s.form ||= { name: "", id: "", hosts: "", user: "", key: "", env: "production", jump: "", front: "", sudo: false, consent: "", confirmed: false });
-  const d = FOUND.v || { hosts: [], keys: [], user: "" };
-  return `<div class="onb wide"><h2>${t("Your fleet")}</h2>
-    <form id="fleetform" class="form" autocomplete="off">
-      <label><span>${t("Organization")}</span><input name="name" value="${esc(f.name)}" required placeholder="${t("ACME Corp")}"></label>
-      <label><span>${t("Short id")}<small>${t("for files and commands")}</small></span><input name="id" value="${esc(f.id)}" required pattern="[a-z0-9][a-z0-9_-]*" placeholder="acme"></label>
-      ${pasteBox(f.hosts, 10)}
-      <label><span>${t("SSH user")}<small>${t("unless a line says otherwise")}</small></span><input name="user" value="${esc(f.user)}" placeholder="${esc(d.user || "audit")}"></label>
-      <label><span>${t("Key")}<small>${t("not needed with an ssh-agent")}</small></span><input name="key" list="sshkeys" value="${esc(f.key)}"><datalist id="sshkeys">${(d.keys || []).map((k) => `<option value="${esc(k)}">`).join("")}</datalist></label>
-      <label><span>${t("Environment")}<small>${t("unless a line says otherwise")}</small></span><input name="env" value="${esc(f.env)}"></label>
-      <label><span>${t("Jump host for all")}<small>${t("[user@]host[:port], empty: direct or per line")}</small></span><input name="jump" value="${esc(f.jump)}" placeholder="bastion.example.com"></label>
-      <label class="wide"><span>${t("Groups facing the internet")}<small>${t("comma-separated; their findings get higher priority")}</small></span><input name="front" value="${esc(f.front)}" placeholder="web, edge"></label>
-      <label class="check wide"><input type="checkbox" name="sudo" ${f.sudo ? "checked" : ""}> ${t("The user can sudo without a password: also check passwords, keys, the login log and the firewall")}</label>
-      <label class="wide"><span>${t("Permission to audit")}<small>${t("where it is documented: a contract, a ticket, an e-mail")}</small></span><input name="consent" value="${esc(f.consent)}" required placeholder="${t("Ticket OPS-123")}"></label>
-      <label class="check wide"><input type="checkbox" name="confirmed" ${f.confirmed ? "checked" : ""} required> ${t("I am allowed to audit these servers.")}</label>
-      <div id="formerr" class="wide"></div>
-      <div class="wide actions"><button class="btn primary" type="submit">${t("Save and check access")}</button><button class="btn ghost" type="button" data-path="">${t("Back")}</button></div>
-    </form></div>`;
-}
-async function submitFleet(form) {
-  const fd = new FormData(form), s = S.setup, d = await discover();
-  s.form = { name: fd.get("name").trim(), id: fd.get("id").trim(), hosts: fd.get("hosts"), user: fd.get("user").trim(), key: fd.get("key").trim(),
-    env: fd.get("env").trim() || "production", jump: fd.get("jump").trim(), front: fd.get("front").trim(), sudo: !!fd.get("sudo"), consent: fd.get("consent").trim(), confirmed: !!fd.get("confirmed") };
-  const f = s.form;
-  await createOrg({ id: f.id, name: f.name, user: f.user || d.user || "audit", privilege: f.sudo ? "sudo" : "none", key: f.key, hosts: f.hosts, env: f.env, jump: f.jump,
-    front: f.front.split(/[\s,]+/).filter(Boolean).map((x) => x.toLowerCase()), internet: false, consent: f.consent, confirmed: f.confirmed });
-}
-function clientForm(s) {
-  const f = (s.form ||= { name: "", hosts: "", user: "", key: "", sudo: false, consent: "", confirmed: false });
-  const d = FOUND.v || { hosts: [], keys: [], agent_keys: 0, user: "" };
-  return `<div class="onb"><h2>${t("A client's servers")}</h2>
-    <form id="clientform" class="form" autocomplete="off">
-      <label class="wide"><span>${t("Client")}</span><input name="name" value="${esc(f.name)}" required placeholder="${t("ACME Corp")}"></label>
-      ${pasteBox(f.hosts, 4)}
-      <details class="wide"><summary>${t("Login details")}</summary>
-        <div class="form inner">
-          <label><span>${t("SSH user")}<small>${t("unless a line says otherwise")}</small></span><input name="user" value="${esc(f.user)}" placeholder="${esc(d.user || "root")}"></label>
-          <label><span>${t("Key")}<small>${t("not needed with an ssh-agent")}</small></span><input name="key" list="sshkeys" value="${esc(f.key)}"><datalist id="sshkeys">${(d.keys || []).map((k) => `<option value="${esc(k)}">`).join("")}</datalist></label>
-          <label class="check wide"><input type="checkbox" name="sudo" ${f.sudo ? "checked" : ""}> ${t("The user can sudo without a password: also check passwords, keys, the login log and the firewall")}</label>
-        </div></details>
-      <label class="wide"><span>${t("The client's permission")}<small>${t("where it is documented: a contract, a ticket, an e-mail")}</small></span><input name="consent" value="${esc(f.consent)}" required placeholder="${t("Contract 42, appendix 3")}"></label>
-      <label class="check wide"><input type="checkbox" name="confirmed" ${f.confirmed ? "checked" : ""} required> ${t("The client allowed me to audit these servers.")}</label>
-      <div id="formerr" class="wide"></div>
-      <div class="wide actions"><button class="btn primary" type="submit">${t("Save and check access")}</button><button class="btn ghost" type="button" data-path="">${t("Back")}</button></div>
-    </form></div>`;
-}
-async function submitClient(form) {
-  const fd = new FormData(form), s = S.setup, d = await discover();
-  s.form = { name: fd.get("name").trim(), hosts: fd.get("hosts"), user: fd.get("user").trim(), key: fd.get("key").trim(), sudo: !!fd.get("sudo"), consent: fd.get("consent").trim(), confirmed: !!fd.get("confirmed") };
-  const f = s.form, id = freeId(f.name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "client");
-  await createOrg({ id, name: f.name, user: f.user || d.user || "root", privilege: f.sudo ? "sudo" : "none", key: f.key, hosts: f.hosts, env: "production",
-    internet: false, consent: f.consent, confirmed: f.confirmed });
+async function submitServers(form) {
+  const s = S.setup, f = formData(form), d = await discover();
+  const err = (m) => { $("#formerr").innerHTML = `<p class="ferr">${esc(m)}</p>`; };
+  if (!f.hosts.trim()) return err(t("Paste at least one server."));
+  if (s.kind !== "personal" && s.kind !== "add" && !f.name) return err(s.kind === "client" ? t("Name the client.") : t("Name the company."));
+  if (s.kind !== "personal" && s.kind !== "add" && !f.consent) return err(t("Say where the permission is documented."));
+  if (!f.confirmed) return err(t("Confirm that you are allowed to audit these servers."));
+  // the key the Login line shows: the agent's keys, else the first key in ~/.ssh
+  const key = f.key || (d.agent_keys ? "" : d.keys[0] || "");
+  const base = { user: f.user || d.user || "root", privilege: f.sudo ? "sudo" : "none", key, hosts: f.hosts, internet: false, confirmed: f.confirmed };
+  if (s.kind === "add") return addHosts(orgOf(), { hosts: f.hosts, user: f.user });
+  if (s.kind === "personal") {
+    const mine = S.orgs.find((o) => o.id === "servers");
+    if (mine) return addHosts(mine, { hosts: f.hosts, user: f.user });
+    return createOrg({ ...base, id: "servers", name: t("Personal"), env: "production", consent: t("Confirmed in the setup on {d}", { d: today() }) });
+  }
+  const id = freeId(f.name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || s.kind);
+  return createOrg({ ...base, id, name: f.name, env: s.kind === "company" ? f.env || "production" : "production", jump: f.jump, consent: f.consent });
 }
 async function addHosts(org, body) {
   const s = S.setup;
@@ -1166,10 +1241,7 @@ async function addHosts(org, body) {
     const o = S.orgs.find((x) => x.id === org.id);
     s.org = org.id; s.env = (o?.envs.find((e) => e.env === S.env) || o?.envs[0])?.env || "production"; s.only = r.added; s.file = ""; s.skipped = r.skipped || []; s.res = {}; s.hosts = null;
     s.step = 2; s.results = null; render(); checkAccess();
-  } catch (e) {
-    const errs = e.body?.errors || [e.message];
-    $("#formerr").innerHTML = `<div class="banner err">${icon("alert")}<ul>${errs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
-  }
+  } catch (e) { formErrors(e); }
 }
 async function createOrg(body) {
   const s = S.setup;
@@ -1177,42 +1249,51 @@ async function createOrg(body) {
     const r = await post("/api/setup", body);
     s.org = r.org; s.file = r.path; s.env = body.env; s.step = 2; s.results = null; s.res = {}; s.hosts = null; s.only = null; s.skipped = r.skipped || [];
     await loadOrgs(); render(); checkAccess();
-  } catch (e) {
-    const errs = e.body?.errors || [e.message];
-    $("#formerr").innerHTML = `<div class="banner err">${icon("alert")}<ul>${errs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
-  }
+  } catch (e) { formErrors(e); }
 }
-// checkView: every host from the start, each one filled in as its own check answers.
+function formErrors(e) { const errs = e.body?.errors || [e.message]; $("#formerr").innerHTML = errs.map((x) => `<p class="ferr">${esc(x)}</p>`).join(""); }
+
+/* step 2: rows as in the TUI, grouped by outcome; one cause, its hosts, the fix */
 function checkView(s) {
   const hosts = s.hosts || [], res = s.res || {};
-  const done = hosts.filter((h) => res[h.name]), ok = done.filter((h) => res[h.name].ok), bad = done.filter((h) => !res[h.name].ok);
-  const waiting = hosts.filter((h) => !res[h.name]);
+  const ok = hosts.filter((h) => res[h.name]?.ok), bad = hosts.filter((h) => res[h.name] && !res[h.name].ok), waiting = hosts.filter((h) => !res[h.name]);
   const secs = Math.round((Date.now() - (s.started || Date.now())) / 1000);
-  const label = (h) => { const a = h.address || h.name, slug = a.toLowerCase().replace(/[^a-z0-9]+/g, "-"); return h.name === slug || h.name === a ? a : `${h.name} · ${a}`; };
-  // failures grouped by cause: one explanation, the hosts under it, the raw error folded away
+  const who = (h) => esc(h.login || h.address || h.name);
+  const row = (mark, h, note) => `<div class="hr">${mark}<span class="h">${who(h)}</span><span class="mut">${note}</span></div>`;
   const causes = {};
-  bad.forEach((h) => { const r = res[h.name], k = r.hint || r.error; (causes[k] ||= { hint: r.hint, error: r.error, hosts: [] }).hosts.push(h); });
-  const causeHTML = Object.values(causes).map((c) => `<div class="cause">${icon("x")}<div><b>${esc(c.hint || c.error)}</b>
-      <div class="chips">${c.hosts.slice(0, 40).map((h) => `<code>${esc(label(h))}</code>`).join("")}${c.hosts.length > 40 ? `<span class="note">+${c.hosts.length - 40}</span>` : ""}</div>
-      ${c.hint ? `<details class="raw"><summary>${t("Details")}</summary><code>${esc(c.error)}</code></details>` : ""}</div></div>`).join("");
-  const okHTML = ok.length ? `<div class="cause good">${icon("check")}<div><b>${t("{n} answered", { n: ok.length })}</b><div class="chips">${ok.slice(0, 40).map((h) => `<code title="${esc(res[h.name].system || "")}">${esc(label(h))}</code>`).join("")}</div></div></div>` : "";
-  const waitHTML = waiting.length ? `<div class="cause wait"><i class="spin"></i><div><b>${t("Checking {n}… {s} s", { n: waiting.length, s: secs })}</b><div class="chips">${waiting.slice(0, 40).map((h) => `<code>${esc(label(h))}</code>`).join("")}</div></div></div>` : "";
-  const skipped = (s.skipped || []).length ? `<ul class="understood skip">${s.skipped.map((x) => `<li>${icon("alert")}<span>${esc(x)} · ${t("skipped")}</span></li>`).join("")}</ul>` : "";
-  const file = s.file ? `<p class="note">${t("Addresses and logins are saved in {file}.", { file: `<code class="copyable" data-copy-text="${esc(s.file)}" title="${esc(s.file)} · ${t("click to copy")}">${esc(s.file.split("/").pop())}</code>` })}</p>` : "";
-  const dl = dlNeeded() && !S.db?.updating ? `<span class="note">${t("downloads {size} first", { size: bytes(dlTotal()) })}</span>` : "";
+  bad.forEach((h) => { const r = res[h.name], k = r.hint || r.error; (causes[k] ||= { r, hosts: [] }).hosts.push(h); });
+  const fixFor = (c) => /authenticat|permission denied|publickey|refused the login/i.test(c.r.error + c.r.hint)
+    ? c.hosts.slice(0, 3).map((h) => { const [host, port] = (h.address || "").split(/:(?=\d+$)/); return `<code>ssh-copy-id${port ? " -p " + port : ""} ${esc((h.user ? h.user + "@" : "") + host)}</code>`; }).join("") : "";
+  const groups = [];
+  if (waiting.length) groups.push(`<div class="grp"><div class="gh"><i class="spin"></i>${t("{n} connecting", { n: waiting.length })}<span class="mut"> · ${secs} s</span></div>${waiting.map((h) => row(`<i class="spin"></i>`, h, h.jump ? "via " + esc(h.jump) : "")).join("")}</div>`);
+  Object.values(causes).forEach((c) => {
+    const same = c.hosts.every((h) => res[h.name].error.replace(/^[^:]+:\s*/, "") === c.r.error.replace(/^[^:]+:\s*/, "")); // one error for all: said once
+    groups.push(`<div class="grp"><div class="gh"><span class="bad">✗</span>${esc(c.r.hint || c.r.error)}</div>${c.hosts.map((h) => row(`<span class="bad">✗</span>`, h, c.r.hint && !same ? esc(res[h.name].error.replace(/^[^:]+:\s*/, "")) : "")).join("")}${fixFor(c) ? `<div class="fix">${fixFor(c)}</div>` : ""}</div>`);
+  });
+  if (ok.length) groups.push(`<div class="grp"><div class="gh"><span class="ok">✓</span>${t("{n} answered", { n: ok.length })}</div>${ok.map((h) => row(`<span class="ok">✓</span>`, h, esc(res[h.name].system || ""))).join("")}</div>`);
+  const skipped = (s.skipped || []).length ? `<div class="grp"><div class="gh"><span class="wn">!</span>${t("{n} skipped", { n: s.skipped.length })}</div>${s.skipped.map((x) => `<div class="hr"><span></span><span class="mut">${esc(x)}</span></div>`).join("")}</div>` : "";
+  const dl = dlNeeded() && !S.db?.updating ? `<span class="mut">${t("downloads the vuln list first ({size})", { size: bytes(dlTotal()) })}</span>` : "";
   const actions = waiting.length ? "" : ok.length
-    ? `<button class="btn primary" data-setup-scan>${bad.length ? t("Scan the {n} that answered", { n: ok.length }) : t("Start the first scan")}</button>${bad.length ? `<button class="btn" data-setup-recheck>${t("Check the failed again")}</button>` : ""}${dl}`
-    : `<button class="btn primary" data-setup-recheck>${t("Check again")}</button>`;
-  return `<div class="onb"><h2>${t("Access check")}</h2>
-    <p>${t("Kanareika logs in to each server and runs uname -sr. Nothing is changed.")}</p>
-    <div class="causes">${waitHTML}${causeHTML}${okHTML}</div>${skipped}${file}
-    <div class="actions">${actions}</div></div>`;
+    ? `<button class="btn primary" data-setup-scan>${bad.length ? t("Scan the {n} that answered", { n: ok.length }) : t("Start the first scan")}</button>${bad.length ? `<button class="btn" data-setup-recheck>${t("Check again")}</button>` : ""}${dl}`
+    : `<button class="btn primary" data-setup-recheck>${t("Check again")}</button><button class="btn ghost" data-setup-back>${t("Back")}</button>`;
+  return `<div class="q"><h3>${t("Checking access")}</h3><p class="qn">${t("One login per server, {cmd}, log out. Nothing is changed.", { cmd: "<code>uname -sr</code>" })}</p></div>
+    <div class="groups">${groups.join("")}${skipped}</div>
+    ${s.file ? `<p class="qn">${t("Saved in {file}", { file: `<code class="copyable" data-copy-text="${esc(s.file)}" title="${esc(s.file)}">${esc(s.file.split("/").pop())}</code>` })}</p>` : ""}
+    <div class="go">${actions}</div>`;
+}
+/* step 3: the scan's own output, as a terminal shows it */
+function scanView(s) {
+  const job = S.jobs.find((j) => j.id === s.job);
+  const lines = (job?.output || []).slice(-16);
+  return `<div class="q"><h3>${t("First scan")}</h3><p class="qn">${t("A few minutes. You can close the page; the scan goes on.")}</p></div>
+    <pre class="term">${lines.length ? esc(lines.join("\n")) : `<i class="spin"></i>`}</pre>
+    <div class="go">${job && job.state !== "running" ? `<button class="btn primary" data-setup-done>${t("See the results")}</button>${job.code ? `<span class="bad">${t("finished with errors")}</span>` : ""}` : `<span class="mut"><i class="spin"></i> ${t(job ? job.state : "starting")}</span>`}</div>`;
 }
 let checkTick;
 async function checkAccess(onlyFailed) {
   const s = S.setup;
   if (!s.hosts) {
-    try { const e = await api("/api/env?" + qs({ org: s.org, env: s.env })); s.hosts = (e.hosts || []).filter((h) => !s.only || s.only.includes(h.name)).map((h) => ({ name: h.name, address: h.address })); }
+    try { const e = await api("/api/env?" + qs({ org: s.org, env: s.env })); s.hosts = (e.hosts || []).filter((h) => !s.only || s.only.includes(h.name)).map((h) => ({ name: h.name, address: h.address, user: h.user, jump: h.jump, login: (h.user ? h.user + "@" : "") + h.address })); }
     catch { s.hosts = []; }
   }
   s.res ||= {};
@@ -1266,7 +1347,9 @@ function noRuns() {
 }
 function render() {
   renderSide();
-  if (S.view === "setup" || !S.orgs.length) { S.view = "setup"; $("#view").innerHTML = setupView(); return; }
+  const setup = S.view === "setup" || !S.orgs.length;
+  $(".app").classList.toggle("setupmode", setup);
+  if (setup) { S.view = "setup"; $("#view").innerHTML = setupView(); const ta = $("#pastebox"); if (ta && ta.value) preview(); return; }
   $("#view").innerHTML = `<div id="banner"></div>` + todoShell();
   banner(); loadTree();
 }
@@ -1320,27 +1403,20 @@ document.addEventListener("click", async (e) => {
   if (d.cancel) { try { await post(`/api/jobs/${d.cancel}/cancel`); } catch (er) { toast(er.message); } return; }
   if (el.id === "scanbtn" || "scanNow" in d) { await startScan(S.org, S.env); return; }
   if (el.id === "cmdk") { palOpen(); return; }
-  if ("setupCancel" in d) { S.view = "todo"; render(); return; }
-  if (d.path !== undefined && el.classList.contains("pathcard") || (d.path === "" && el.tagName === "BUTTON")) { S.setup = { step: d.path ? 1 : 0, path: d.path }; await discover(); render(); return; }
-  if ("formats" in d) { const f = $("#formats"); f.hidden = !f.hidden; return; }
+  if ("setupCancel" in d) { S.setup = null; S.view = "todo"; history.replaceState(null, "", "/" + location.search); render(); return; }
+  if ("loginOpen" in d) { formData($("#setupform")); S.setup.loginOpen = true; render(); $("[name=user]")?.focus(); return; }
+  if ("setupBack" in d) { S.setup.step = 1; render(); return; }
   if ("sshpick" in d) { await discover(); sshPicker(); return; }
   if ("pickclose" in d) { $("#dlg").close(); return; }
   if ("pickadd" in d) {
     const dd = await discover(), ta = $("#pastebox");
     const hs = [...document.querySelectorAll("#picklist input:checked")].map((c) => dd.hosts[+c.value]);
     $("#dlg").close();
-    if (hs.length) { ta.value = (ta.value.trim() ? ta.value.trim() + "\n" : "") + hs.map((h) => sshLine(h, dd)).join("\n"); preview(); }
+    if (hs.length) { ta.value = (ta.value.trim() ? ta.value.trim() + "\n" : "") + hs.map((h) => h.alias).join("\n"); preview(); } // aliases resolve on the server
     return;
   }
-  if (d.sshhost !== undefined || "sshall" in d) {
-    const dd = await discover(), ta = $("#pastebox");
-    const hs = "sshall" in d ? dd.hosts : [dd.hosts[+d.sshhost]];
-    ta.value = (ta.value.trim() ? ta.value.trim() + "\n" : "") + hs.map((h) => sshLine(h, dd)).join("\n");
-    preview(); return;
-  }
-  if ("importSsh" in d) { const dd = await discover(); const ta = $("#fleetform textarea[name=hosts]"); ta.value = (ta.value.trim() ? ta.value.trim() + "\n" : "") + dd.hosts.map((h) => `${h.alias.toLowerCase().replace(/[^a-z0-9_-]+/g, "-")} ${(h.hostname || h.alias)}${h.port ? ":" + h.port : ""}`).join("\n"); return; }
   if ("dlStart" in d) {
-    S.setup ||= { step: 0, path: "" }; S.setup.dlAsked = true; S.setup.dlLater = false;
+    S.dlAsked = true;
     try { await post("/api/db/update", {}); } catch (er) { if (!/already running/.test(er.message)) { toast(er.message); return; } }
     S.dlStart = new Date().toISOString(); pollDB(); return;
   }
@@ -1352,15 +1428,14 @@ document.addEventListener("click", async (e) => {
     try { const r = await post("/api/scan", { org: s.org, env: s.env, hosts: ok.length < all || s.only ? ok : undefined }); s.job = r.id; pollJobs(); } catch (er) { toast(er.message); return; }
     s.step = 3; render(); return;
   }
-  if ("setupDone" in d) { S.setup = null; S.view = "todo"; await loadOrgs(); render(); return; }
+  if ("setupDone" in d) { S.setup = null; S.view = "todo"; history.replaceState(null, "", "/" + location.search); await loadOrgs(); render(); return; }
 });
 document.addEventListener("submit", (e) => {
-  if (e.target.id === "fewform") { e.preventDefault(); submitFew(e.target); }
-  else if (e.target.id === "fleetform") { e.preventDefault(); submitFleet(e.target); }
-  else if (e.target.id === "clientform") { e.preventDefault(); submitClient(e.target); }
+  if (e.target.id === "setupform") { e.preventDefault(); submitServers(e.target); }
 });
 document.addEventListener("change", async (e) => {
   const id = e.target.id, v = e.target.value;
+  if (e.target.name === "kind" && S.setup) { formData($("#setupform")); S.setup.kind = v; render(); return; }
   if (id === "org") {
     if (v === "__new") { S.setup = null; S.view = "setup"; render(); return; }
     S.org = v; store.set("org", v); S.env = orgOf()?.envs[0]?.env || ""; store.set("env", S.env); S.run = "current"; S.cur = null; await loadEnv(); render();
@@ -1414,7 +1489,7 @@ async function loadEnv() {
   api("/api/db").then((d) => { S.db = d; renderSide(); if (d.updating) { S.dlStart = new Date().toISOString(); pollDB(); } }).catch(() => {});
   await loadOrgs();
   await loadEnv();
-  if (!S.orgs.length) S.view = "setup";
+  if (!S.orgs.length || location.pathname.startsWith("/setup")) S.view = "setup";
   render();
   pollJobs();
 })();

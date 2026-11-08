@@ -341,7 +341,7 @@ func TestCheck(t *testing.T) {
 		t.Fatalf("%+v", rs)
 	}
 	if hint("something else") != "" || !strings.Contains(hint("connection refused"), "sshd") ||
-		!strings.Contains(hint("no such host"), "DNS") || !strings.Contains(hint("x: no access.key and no ssh-agent (SSH_AUTH_SOCK)"), "ssh-add") || !strings.Contains(hint("host key mismatch"), "known_hosts") {
+		!strings.Contains(hint("no such host"), "DNS") || !strings.Contains(hint("x: no access.key and no ssh-agent (SSH_AUTH_SOCK)"), "ssh-add") || !strings.Contains(hint("ssh: invalid openssh private key format"), "ssh-add") || !strings.Contains(hint("host key mismatch"), "known_hosts") {
 		t.Fatal("hints")
 	}
 }

@@ -624,6 +624,8 @@ func Hint(msg string) string { return hint(msg) }
 func hint(msg string) string {
 	m := strings.ToLower(msg)
 	switch {
+	case strings.Contains(m, "passphrase"), strings.Contains(m, "private key"):
+		return "the SSH key file can't be read (a passphrase, or not a private key): load it with ssh-add and log in through the ssh-agent"
 	case strings.Contains(m, "no ssh-agent"), strings.Contains(m, "ssh_auth_sock"):
 		return "no SSH key to log in with: no ssh-agent is running here. Run ssh-add in a terminal, then check again"
 	case strings.Contains(m, "unable to authenticate"), strings.Contains(m, "permission denied"), strings.Contains(m, "no supported methods"):
