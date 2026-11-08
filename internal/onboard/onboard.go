@@ -45,6 +45,7 @@ type Host struct {
 	Group   string `json:"group,omitempty"` // "": servers
 	Env     string `json:"env,omitempty"`   // "": the form's environment
 	User    string `json:"user,omitempty"`  // "": the form's SSH user
+	Jump    string `json:"jump,omitempty"`  // a jump host: another pasted host's name, or [user@]host[:port]
 }
 
 var (
@@ -75,9 +76,28 @@ func slug(s string) string {
 //
 // Errors say which line.
 func ParseHosts(text string) ([]Host, []string) {
+	// pasted ~/.ssh/config blocks (a Host line and the indented or keyword lines after it) are read as such; the
+	// other lines one by one, so a mixed paste keeps both
+	cfg, rest := splitSSHConfig(text)
 	var out []Host
 	var errs []string
 	seen := map[string]bool{}
+	for _, c := range ParseSSHConfig(cfg) {
+		h := Host{Name: slug(c.Alias), Address: cmpOr(c.HostName, c.Alias), User: c.User, Jump: c.Jump}
+		if c.Port != 0 && c.Port != 22 {
+			h.Address = net.JoinHostPort(strings.Trim(h.Address, "[]"), strconv.Itoa(c.Port))
+		}
+		switch {
+		case h.Name == "":
+			errs = append(errs, fmt.Sprintf("Host %q: not a usable host name, skipped", c.Alias))
+		case seen[h.Name]:
+			errs = append(errs, fmt.Sprintf("Host %q twice, the second skipped", c.Alias))
+		default:
+			seen[h.Name] = true
+			out = append(out, h)
+		}
+	}
+	text = rest
 	group, skip := "", false // the current INI section; :vars / :children sections are skipped
 	for i, line := range strings.Split(text, "\n") {
 		line, _, _ = strings.Cut(line, "#")
@@ -95,7 +115,22 @@ func ParseHosts(text string) ([]Host, []string) {
 			continue
 		}
 		var h Host
+		if c, ok := sshCommand(line); ok { // ssh [-p port] [-l user] [-J jump] [user@]host
+			if c.Name == "" {
+				errs = append(errs, fmt.Sprintf("line %d: %q: no host in the ssh command", i+1, line))
+				continue
+			}
+			c.Group = group
+			h = c
+		} else if f := strings.Fields(line); len(f) <= 2 && strings.Contains(f[len(f)-1], "@") { // [name] user@host[:port]
+			u, addr, _ := strings.Cut(f[len(f)-1], "@")
+			h = Host{Name: slug(hostOnly(addr)), Address: addr, User: u, Group: group}
+			if len(f) == 2 {
+				h.Name = strings.ToLower(f[0])
+			}
+		}
 		switch f := strings.Fields(line); {
+		case h.Name != "":
 		case strings.Contains(line, ","): // CSV
 			c := strings.Split(line, ",")
 			for j := range c {
@@ -161,6 +196,12 @@ func ParseHosts(text string) ([]Host, []string) {
 			errs = append(errs, fmt.Sprintf("line %d: environment %q: a-z, 0-9, '-', '_'", i+1, h.Env))
 			continue
 		}
+		if _, port, err := net.SplitHostPort(h.Address); err == nil {
+			if n, err := strconv.Atoi(port); err != nil || n < 1 || n > 65535 {
+				errs = append(errs, fmt.Sprintf("line %d: %q: the port must be 1-65535", i+1, h.Address))
+				continue
+			}
+		}
 		if seen[h.Name] {
 			errs = append(errs, fmt.Sprintf("line %d: host %q twice", i+1, h.Name))
 			continue
@@ -172,6 +213,97 @@ func ParseHosts(text string) ([]Host, []string) {
 		errs = append(errs, "no hosts: one per line, an address or `name address`")
 	}
 	return out, errs
+}
+
+var (
+	sshHostRE = regexp.MustCompile(`(?i)^host\s+\S`)
+	sshKeyRE  = regexp.MustCompile(`(?i)^(hostname|user|port|proxyjump|identityfile|identitiesonly|forwardagent|` +
+		`serveraliveinterval|serveralivecountmax|stricthostkeychecking|userknownhostsfile|localforward|remoteforward|` +
+		`dynamicforward|proxycommand|controlmaster|controlpath|controlpersist|compression|loglevel|addkeystoagent|` +
+		`usekeychain|pubkeyauthentication|passwordauthentication|preferredauthentications|requesttty|sendenv|setenv|` +
+		`hostkeyalias|certificatefile|connecttimeout)(\s|=)`)
+)
+
+// splitSSHConfig: the Host blocks of a paste (a `Host x` line and the keyword lines after it) and everything else.
+func splitSSHConfig(text string) (cfg, rest string) {
+	var c, r []string
+	in := false
+	for _, line := range strings.Split(text, "\n") {
+		trim := strings.TrimSpace(line)
+		switch {
+		case sshHostRE.MatchString(trim):
+			in = true
+			c = append(c, trim)
+		case in && trim == "":
+			c = append(c, "")
+		case in && (sshKeyRE.MatchString(trim) || strings.HasPrefix(trim, "#")):
+			c = append(c, trim)
+		default:
+			in = false
+			r = append(r, line)
+		}
+	}
+	return strings.Join(c, "\n"), strings.Join(r, "\n")
+}
+
+func cmpOr(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
+}
+
+// sshCommand: a pasted `ssh ...` command line as a host; ok is false when the line is not one.
+func sshCommand(line string) (Host, bool) {
+	f := strings.Fields(line)
+	if len(f) < 2 || f[0] != "ssh" {
+		return Host{}, false
+	}
+	var h Host
+	port := ""
+	for i := 1; i < len(f); i++ {
+		a := f[i]
+		takes := func() string {
+			if len(a) > 2 { // -p2222
+				return a[2:]
+			}
+			if i+1 < len(f) {
+				i++
+				return f[i]
+			}
+			return ""
+		}
+		switch {
+		case strings.HasPrefix(a, "-p"):
+			port = takes()
+		case strings.HasPrefix(a, "-l"):
+			h.User = takes()
+		case strings.HasPrefix(a, "-J"):
+			h.Jump = takes()
+		case strings.HasPrefix(a, "-i"), strings.HasPrefix(a, "-o"), strings.HasPrefix(a, "-F"), strings.HasPrefix(a, "-L"),
+			strings.HasPrefix(a, "-R"), strings.HasPrefix(a, "-D"), strings.HasPrefix(a, "-b"), strings.HasPrefix(a, "-c"),
+			strings.HasPrefix(a, "-E"), strings.HasPrefix(a, "-m"), strings.HasPrefix(a, "-S"), strings.HasPrefix(a, "-W"),
+			strings.HasPrefix(a, "-w"):
+			takes() // options with a value kanareika does not need
+		case strings.HasPrefix(a, "-"):
+			// flags without a value (-A, -t, -v, ...)
+		case h.Address == "":
+			if u, host, ok := strings.Cut(a, "@"); ok {
+				h.User, a = u, host
+			}
+			h.Address = a
+		default:
+			i = len(f) // the remote command
+		}
+	}
+	if h.Address == "" {
+		return h, true
+	}
+	if port != "" && port != "22" {
+		h.Address = net.JoinHostPort(strings.Trim(h.Address, "[]"), port)
+	}
+	h.Name = slug(hostOnly(h.Address))
+	return h, true
 }
 
 // hostOnly: the host of "host:port" / "[v6]:port" / "user@host".
@@ -236,13 +368,48 @@ access:
 			fmt.Fprintf(&b, "      user: %s\n", ju)
 		}
 	}
+	// jump hosts named by hosts: another pasted host (by name) or an address of their own
+	jumpName := map[string]string{}
+	var jumpOrder []string
+	byName := map[string]Host{}
+	for _, h := range hosts {
+		byName[h.Name] = h
+	}
+	for _, h := range hosts {
+		if h.Jump == "" || jumpName[h.Jump] != "" {
+			continue
+		}
+		n := slug(hostOnly(h.Jump))
+		if j, ok := byName[strings.ToLower(h.Jump)]; ok {
+			n = j.Name
+		}
+		jumpName[h.Jump] = n
+		jumpOrder = append(jumpOrder, h.Jump)
+	}
+	if len(jumpOrder) > 0 {
+		if r.Jump == "" {
+			b.WriteString("  jumps:                         # reached first, the servers through them\n")
+		}
+		for _, raw := range jumpOrder {
+			addr, user := raw, ""
+			if j, ok := byName[strings.ToLower(raw)]; ok {
+				addr, user = j.Address, j.User
+			} else if u, a, ok := strings.Cut(raw, "@"); ok {
+				user, addr = u, a
+			}
+			fmt.Fprintf(&b, "    %s:\n      address: %s\n", jumpName[raw], addr)
+			if user != "" {
+				fmt.Fprintf(&b, "      user: %s\n", user)
+			}
+		}
+	}
 	type key struct{ group, env string }
 	var order []key
 	byGroup := map[key][]Host{}
 	for _, h := range hosts {
 		k := key{h.Group, h.Env}
 		if k.group == "" {
-			k.group = "servers"
+			k.group = Ungrouped
 		}
 		if k.env == "" {
 			k.env = env
@@ -275,6 +442,9 @@ access:
 			fmt.Fprintf(&b, "      %s:\n        address: %s\n", h.Name, h.Address)
 			if h.User != "" && h.User != r.User {
 				fmt.Fprintf(&b, "        user: %s\n", h.User)
+			}
+			if h.Jump != "" {
+				fmt.Fprintf(&b, "        jump: %s\n", jumpName[h.Jump])
 			}
 		}
 	}
@@ -315,12 +485,22 @@ func (r Request) check() []string {
 var ErrExists = errors.New("an organization with this id exists")
 
 // Create writes orgs/<id>.yml (and copies the key into secrets/<id>/ when one is given), after the loader accepted
-// it. Nothing is written when anything is wrong; the problems come back as a list.
+// it. Nothing is written when anything is wrong; the problems come back as a list. Lines of the hosts list it could
+// not use are skipped, not fatal: they come back in Created.Skipped.
 func Create(p config.Paths, r Request, today time.Time) (string, []string, error) {
+	path, _, errs, err := CreateWithSkipped(p, r, today)
+	return path, errs, err
+}
+
+// CreateWithSkipped: Create, and the host lines it skipped.
+func CreateWithSkipped(p config.Paths, r Request, today time.Time) (string, []string, []string, error) {
 	r.ID = strings.TrimSpace(strings.ToLower(r.ID))
 	errs := r.check()
-	hosts, herrs := ParseHosts(r.Hosts)
-	errs = append(errs, herrs...)
+	hosts, skipped := ParseHosts(r.Hosts)
+	if len(hosts) == 0 {
+		errs = append(errs, "no usable hosts: one per line, an address, user@host, an ssh command or ssh config")
+		errs = append(errs, skipped...)
+	}
 	var key []byte
 	if r.Key != "" {
 		k := r.Key
@@ -340,11 +520,11 @@ func Create(p config.Paths, r Request, today time.Time) (string, []string, error
 		}
 	}
 	if len(errs) > 0 {
-		return "", errs, nil
+		return "", nil, errs, nil
 	}
 	path := filepath.Join(p.Orgs, r.ID+".yml")
 	if _, err := os.Stat(path); err == nil {
-		return "", nil, fmt.Errorf("%w: %s", ErrExists, path)
+		return "", nil, nil, fmt.Errorf("%w: %s", ErrExists, path)
 	}
 	keyRef := ""
 	if key != nil {
@@ -354,50 +534,57 @@ func Create(p config.Paths, r Request, today time.Time) (string, []string, error
 	// the loader judges the file where it will live: a scratch copy of the working directory's layout
 	tmp, err := os.MkdirTemp("", "kanareika-setup-")
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	defer os.RemoveAll(tmp)
 	tp := config.PathsAt(tmp)
 	tp.Policy = p.Policy
 	for _, d := range []string{tp.Orgs, tp.Secrets} {
 		if err := os.MkdirAll(d, 0o700); err != nil {
-			return "", nil, err
+			return "", nil, nil, err
 		}
 	}
 	if err := os.WriteFile(filepath.Join(tp.Orgs, r.ID+".yml"), body, 0o600); err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	l, err := config.NewLoader(tp)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	if _, lerrs := l.LoadOrg(filepath.Join(tp.Orgs, r.ID+".yml")); len(lerrs) > 0 {
-		return "", lerrs, nil
+		return "", nil, lerrs, nil
 	}
 	for _, d := range []string{p.Orgs, p.Reports} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
-			return "", nil, err
+			return "", nil, nil, err
 		}
 	}
 	if err := os.MkdirAll(filepath.Join(p.Secrets, r.ID), 0o700); err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	if key != nil {
 		if err := os.WriteFile(filepath.Join(p.Secrets, keyRef), key, 0o600); err != nil {
-			return "", nil, err
+			return "", nil, nil, err
 		}
 	}
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if errors.Is(err, os.ErrExist) {
-		return "", nil, fmt.Errorf("%w: %s", ErrExists, path)
+		return "", nil, nil, fmt.Errorf("%w: %s", ErrExists, path)
 	} else if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	_, err = f.Write(body)
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}
-	return path, nil, err
+	return path, skippedOK(hosts, skipped), nil, err
+}
+
+func skippedOK(hosts []Host, skipped []string) []string {
+	if len(hosts) == 0 || skipped == nil {
+		return []string{}
+	}
+	return skipped
 }
 
 // Result: one host of an access check.
@@ -434,11 +621,12 @@ func hint(msg string) string {
 	return ""
 }
 
-// Check logs in to every host of env (in parallel) and runs `uname -sr`: nothing is changed on the servers.
-func Check(ctx context.Context, o *config.Org, env string, conn Runner) []Result {
+// Check logs in to the hosts of env (only to those named in only, when given), in parallel, and runs
+// `uname -sr`: nothing is changed on the servers.
+func Check(ctx context.Context, o *config.Org, env string, conn Runner, only ...string) []Result {
 	var hosts []config.Host
 	for _, h := range o.Hosts {
-		if h.Env == env {
+		if h.Env == env && (len(only) == 0 || slices.Contains(only, h.Name)) {
 			hosts = append(hosts, h)
 		}
 	}

@@ -195,6 +195,8 @@ func (s *Server) Handler() http.Handler {
 	r.With(s.csrfCheck).Post("/api/scan", s.apiScan)
 	r.With(s.csrfCheck).Post("/api/setup", s.apiSetup)
 	r.With(s.csrfCheck).Post("/api/setup/check", s.apiSetupCheck)
+	r.With(s.csrfCheck).Post("/api/setup/parse", s.apiSetupParse)
+	r.With(s.csrfCheck).Post("/api/setup/add", s.apiSetupAdd)
 	r.With(s.csrfCheck).Post("/api/jobs/{id}/cancel", s.apiCancel)
 	return r
 }
@@ -248,7 +250,7 @@ func headers(next http.Handler) http.Handler {
 func methods(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		post := r.Method == http.MethodPost && (r.URL.Path == "/api/scan" || r.URL.Path == "/api/db/update" ||
-			r.URL.Path == "/api/setup" || r.URL.Path == "/api/setup/check" ||
+			r.URL.Path == "/api/setup" || r.URL.Path == "/api/setup/check" || r.URL.Path == "/api/setup/parse" || r.URL.Path == "/api/setup/add" ||
 			strings.HasPrefix(r.URL.Path, "/api/jobs/") && strings.HasSuffix(r.URL.Path, "/cancel"))
 		if r.Method != http.MethodGet && !post {
 			send(w, 501, "text/plain", []byte("unsupported method"))

@@ -554,7 +554,7 @@ main { background: var(--bg); }
 
 /* extra-css */
 .onb.wide { max-width: 900px; }
-.paths { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0; }
+.paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 18px 0; }
 .pathcard { text-align: left; display: grid; align-content: start; justify-items: start; gap: 8px; padding: 18px; border: 1px solid var(--line-2); border-radius: var(--r-panel); background: var(--solid); color: var(--ink); cursor: pointer; }
 .pathcard:hover { border-color: var(--accent-line); background: var(--sel); }
 .pathcard svg { width: 22px; height: 22px; color: var(--accent-line); }
@@ -567,6 +567,24 @@ main { background: var(--bg); }
 .btn.small { height: 24px; padding: 0 8px; font-size: 12px; margin-left: auto; }
 .failgroup { padding: 10px 0; border-top: 1px solid var(--line); } .failgroup b { font-weight: 500; }
 @media (max-width: 720px) { .paths { grid-template-columns: 1fr; } }
+.fromssh { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.fromssh .chip { height: 24px; font: 12px var(--mono); }
+.tbl.preview td, .tbl.preview th { padding: 5px 8px 5px 0; font-size: 12.5px; }
+.mono { font-family: var(--mono); }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--host); font-size: 12px; margin-left: auto; cursor: pointer; }
+.formats { font-size: 12px; color: var(--ink-3); }
+.btn.small.left { margin-left: 0; }
+.understood { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; }
+.understood li { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.understood li svg { color: var(--ok); width: 14px; height: 14px; }
+.skipped { display: flex; gap: 10px; margin-top: 10px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--p2) 45%, var(--line)); border-radius: var(--r-ctl); font-size: 13px; }
+.skipped svg { color: var(--p2); flex: none; margin-top: 2px; }
+.nav a.off { opacity: .4; cursor: default; pointer-events: none; }
+.navnote { font-size: 11.5px; color: var(--ink-3); padding: 6px 10px; }
+.pickq { width: 100%; font: 13px var(--mono); padding: 8px 10px; border: 1px solid var(--line-2); border-radius: var(--r-ctl); background: var(--solid); color: var(--ink); margin: 8px 0; }
+.picklist { display: grid; gap: 2px; max-height: 50vh; overflow: auto; }
+.pick { display: flex; gap: 8px; align-items: baseline; padding: 6px 4px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+.pick:hover { background: var(--hover); } .pick b { font-family: var(--mono); font-weight: 500; }
 
 /* end-extra-css */
 </style>
@@ -596,7 +614,7 @@ main { background: var(--bg); }
   <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3c1 4 5 5 5 10a5 5 0 01-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z"/></symbol>
   <symbol id="i-plan" viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11M4 5l1 1 2-2M4 12l1 1 2-2M4 19l1 1 2-2"/></symbol>
   <symbol id="i-back" viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.4 2.6L3 8M3 3v5h5"/></symbol>
-<symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol><symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"/></symbol></svg>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"/></symbol></svg>
 <div class="app">
   <aside class="side" id="side" aria-label="Navigation">
     <div class="brand"><img src="/logo.png" alt=""> kanareika<button class="btn ghost" id="cmdk" style="margin-left:auto;height:26px;padding:0 6px" aria-label="Command palette"><kbd>⌘K</kbd></button></div>
@@ -613,6 +631,7 @@ main { background: var(--bg); }
   </main>
 </div>
 <div class="pal" id="pal" role="dialog" aria-label="Command palette"><div class="box"><input id="palq" placeholder="Jump to a fix, CVE, host or view…" autocomplete="off"><ul id="pall" role="listbox"></ul></div></div>
+<dialog id="dlg"></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
 "use strict";
@@ -690,7 +709,10 @@ function renderSide() {
   $("#scope").innerHTML = S.orgs.length ? sel("org", t("Org"), orgOpts, S.org) +
     sel("env", t("Env"), (o?.envs || []).map((x) => [x.env, `${x.env} · ${x.hosts}${x.last ? "" : " · " + t("no scans")}`]), S.env) +
     sel("run", t("Data"), [["current", t("Current state")], ...S.runs.slice(-20).reverse().map((r) => [r.run_id, r.run_id.replace("_", " ").replace(/(\d\d)(\d\d)(\d\d)$/, "$1:$2") + (r.partial ? " · " + t("partial") : "")])], S.run) : "";
-  $("#nav").innerHTML = S.orgs.length ? NAV.map((n) => n === "-" ? "<hr>" :
+  if (!S.orgs.length || S.view === "setup" && !envOf()?.last) {
+    $("#nav").innerHTML = NAV.map((n) => n === "-" ? "<hr>" : `<a class="off" aria-disabled="true" title="${t("Available after the first scan")}">${icon(n[2])}${t(n[1])}</a>`).join("") +
+      `<div class="navnote">${t("Available after the first scan")}</div>`;
+  } else $("#nav").innerHTML = S.orgs.length ? NAV.map((n) => n === "-" ? "<hr>" :
     `<a href="${n[0] === "todo" ? "#" : "/classic#" + qs({ org: S.org, env: S.env })}" data-view="${n[0]}" ${S.view === n[0] ? 'aria-current="page"' : ""}>${icon(n[2])}${t(n[1])}${n[0] === "todo" && S.tree ? `<span class="n hot">${S.tree.fixes}</span>` : n[0] !== "todo" ? `<span class="n">${icon("ext")}</span>` : ""}</a>`).join("") : "";
   const db = S.db, dbOld = db && (db.dbs || []).some((d) => d.outdated), feedsOld = db?.feeds_outdated;
   const dbAt = db && (db.dbs || []).map((d) => d.updated).filter(Boolean).sort()[0];
@@ -900,13 +922,20 @@ function stepsHead(s) {
 function setupView() {
   const s = S.setup ||= { step: 0, path: "" };
   if (!S.scans) return `<div class="onb"><h2>${t("Read-only dashboard")}</h2><p>${t("Organizations are added where kanareika web runs on localhost (or with a token). On that machine: kanareika org new <ORG_ID>.")}</p></div>`;
-  if (s.step === 0) return `<div class="onb"><h2>${S.orgs.length ? t("Add servers") : t("Welcome to Kanareika")}</h2>
+  if (s.step === 0) {
+    const cur = orgOf(), mine = S.orgs.find((o) => o.id === "servers");
+    const card = (path, ic, title, text) => `<button class="pathcard" data-path="${path}">${icon(ic)}<b>${title}</b><span>${text}</span></button>`;
+    return `<div class="onb wide"><h2>${S.orgs.length ? t("Add servers") : t("Welcome to Kanareika")}</h2>
     <p>${t("A read-only security audit over SSH: what to patch first, who can get in, what is exposed. Nothing is installed or changed on the servers.")}</p>
     <div class="paths">
-      <button class="pathcard" data-path="few">${icon("server")}<b>${t("One or two servers")}</b><span>${t("A home server, a VPS, a NAS. Just the address; the rest comes from your SSH setup.")}</span></button>
-      <button class="pathcard" data-path="fleet">${icon("list")}<b>${t("A fleet")}</b><span>${t("Tens or hundreds of servers: import from ~/.ssh/config, an Ansible inventory or a list; groups, environments, a jump host.")}</span></button>
+      ${cur && cur.id !== "servers" ? card("add", "plus", t("Add to {org}", { org: esc(cur.name || cur.id) }), t("More servers for this organization: paste them, they are checked and scanned on their own.")) : ""}
+      ${card("few", "server", mine ? t("Add to My servers") : t("My servers"), t("A homelab, a VPS, a NAS. Paste an address or user@host; logins come from your SSH setup."))}
+      ${card("client", "key", t("A client's servers"), t("For freelancers: one organization per client, with where their permission is documented."))}
+      ${card("fleet", "list", t("A fleet"), t("Tens or hundreds of servers: a list, CSV, an Ansible inventory or ssh config; groups, environments, jump hosts."))}
     </div>${S.orgs.length ? `<div class="actions"><button class="btn ghost" data-setup-cancel>${t("Cancel")}</button></div>` : ""}</div>`;
-  if (s.step === 1 && s.path === "few") return fewForm(s);
+  }
+  if (s.step === 1 && (s.path === "few" || s.path === "add")) return fewForm(s);
+  if (s.step === 1 && s.path === "client") return clientForm(s);
   if (s.step === 1) return fleetForm(s);
   if (s.step === 2) return checkView(s);
   const job = S.jobs.find((j) => j.id === s.job);
@@ -914,49 +943,71 @@ function setupView() {
     <div class="jobout">${job ? `<div class="meta"><span class="st ${job.state === "running" ? "reboot" : job.code ? "bad" : "available"}">${t(job.state)}</span></div><pre>${esc((job.output || []).slice(-14).join("\n"))}</pre>` : `<div class="sk" style="height:120px"></div>`}</div>
     ${job && job.state !== "running" ? `<div class="actions"><button class="btn primary" data-setup-done>${t("See the results")}</button></div>` : ""}</div>`;
 }
+// pasteBox: one field for whatever people have at hand, with a short live list of what was understood.
+function pasteBox(text, rows) {
+  const d = FOUND.v || { hosts: [] };
+  return `<label class="wide"><span>${t("Servers")}<small>${t("an IP, user@host or an ssh command, one per line")}</small>
+      <button type="button" class="linkbtn" data-formats>${t("more formats")}</button></span>
+    <textarea name="hosts" id="pastebox" rows="${rows}" required spellcheck="false" placeholder="admin@192.0.2.10">${esc(text)}</textarea></label>
+    <div class="wide formats" id="formats" hidden><code>ssh -p 2222 -J jump@203.0.113.10 deploy@10.0.0.5</code> · <code>Host</code> ${t("blocks from an ssh config")} · <code>name,address,group,env</code> · ${t("an Ansible INI inventory")}</div>
+    ${d.hosts.length ? `<div class="wide"><button type="button" class="btn ghost small left" data-sshpick>${icon("list")}${t("Choose from ~/.ssh/config ({n})", { n: d.hosts.length })}</button></div>` : ""}
+    <div class="wide" id="preview"></div>`;
+}
+function sshPicker() {
+  const d = FOUND.v || { hosts: [] };
+  const dlg = $("#dlg");
+  dlg.innerHTML = `<header><h3>${t("Choose from ~/.ssh/config")}</h3></header><div class="body">
+    <input class="pickq" id="pickq" placeholder="${t("Filter")}" autocomplete="off">
+    <div class="picklist" id="picklist">${d.hosts.map((h, i) => `<label class="pick" data-alias="${esc(h.alias.toLowerCase())}"><input type="checkbox" value="${i}"> <b>${esc(h.alias)}</b> <span class="note">${esc((h.user ? h.user + "@" : "") + (h.hostname || h.alias) + (h.port ? ":" + h.port : ""))}${h.jump ? " · " + t("via {j}", { j: esc(h.jump) }) : ""}</span></label>`).join("")}</div></div>
+    <footer><button class="btn ghost" data-pickclose>${t("Cancel")}</button><button class="btn primary" data-pickadd>${t("Add selected")}</button></footer>`;
+  dlg.showModal();
+  $("#pickq").focus();
+}
+function sshLine(h, d) {
+  const j = h.jump && (d.hosts || []).find((x) => x.alias === h.jump);
+  const jump = h.jump ? ` -J ${j ? `${j.user ? j.user + "@" : ""}${j.hostname || j.alias}${j.port ? ":" + j.port : ""}` : h.jump}` : "";
+  return `ssh${h.port && h.port !== 22 ? " -p " + h.port : ""}${jump} ${h.user ? h.user + "@" : ""}${h.hostname || h.alias}`;
+}
+let previewTimer;
+async function preview() {
+  const ta = $("#pastebox"), out = $("#preview"); if (!ta || !out) return;
+  if (!ta.value.trim()) { out.innerHTML = ""; return; }
+  let r; try { r = await post("/api/setup/parse", { text: ta.value }); } catch (e) { out.innerHTML = `<div class="note">${esc(e.message)}</div>`; return; }
+  const defUser = $("[name=user]")?.value || $("[name=user]")?.placeholder || "";
+  const fleet = !!$("#fleetform");
+  const list = fleet && r.hosts.length > 3
+    ? `<table class="tbl preview"><thead><tr><th>${t("Name")}</th><th>${t("User")}</th><th>${t("Address")}</th><th>${t("Via")}</th><th>${t("Group")}</th></tr></thead><tbody>${r.hosts.map((h) =>
+      `<tr><td style="font-family:var(--mono);color:var(--host)">${esc(h.name)}</td><td class="mono">${esc(h.user || defUser)}</td><td class="mono">${esc(h.address)}</td><td class="mono note">${esc(h.jump || "")}</td><td class="note">${esc([h.group, h.env].filter(Boolean).join(" · "))}</td></tr>`).join("")}</tbody></table>`
+    : `<ul class="understood">${r.hosts.map((h) => `<li>${icon("check")}<code>${esc((h.user || defUser) + "@" + h.address)}</code>${h.jump ? `<span class="note">${t("via {j}", { j: esc(h.jump) })}</span>` : ""}</li>`).join("")}</ul>`;
+  out.innerHTML = (r.hosts.length ? list : "") + (r.errors.length ? `<div class="skipped">${icon("alert")}<div><b>${t("{n} skipped", { n: r.errors.length })}</b>${r.errors.map((x) => `<div class="note">${esc(x)}</div>`).join("")}</div></div>` : "");
+}
 function fewForm(s) {
-  const f = (s.form ||= { address: "", user: "", port: "", key: "", sudo: false, confirmed: false });
+  const f = (s.form ||= { hosts: "", user: "", key: "", sudo: false, confirmed: false });
   const d = FOUND.v || { hosts: [], keys: [], agent_keys: 0, user: "" };
   const keyOpts = [["", d.agent_keys ? t("the ssh-agent ({n} keys)", { n: d.agent_keys }) : t("the ssh-agent")], ...d.keys.map((k) => [k, k])];
-  return `<div class="onb">${stepsHead(s)}<h2>${t("Which server?")}</h2>
+  const target = s.path === "add" ? orgOf() : S.orgs.find((o) => o.id === "servers");
+  return `<div class="onb">${stepsHead(s)}<h2>${target ? t("Add to {org}", { org: esc(target.name || target.id) }) : t("Which servers?")}</h2>
     <form id="fewform" class="form" autocomplete="off">
-      <label class="wide"><span>${t("Address")}<small>${t("an IP, a name, or a Host from your ~/.ssh/config")}</small></span>
-        <input name="address" list="sshhosts" value="${esc(f.address)}" required placeholder="192.0.2.10" autofocus>
-        <datalist id="sshhosts">${d.hosts.map((h) => `<option value="${esc(h.alias)}">${esc(h.hostname || "")}${h.user ? " · " + esc(h.user) : ""}</option>`).join("")}</datalist></label>
-      <details class="wide"><summary>${t("Login details")} <small id="loginguess">${esc(guessLogin(f.address, d))}</small></summary>
+      ${pasteBox(f.hosts, 3)}
+      <details class="wide"><summary>${t("Login details")}</summary>
         <div class="form inner">
-          <label><span>${t("SSH user")}</span><input name="user" value="${esc(f.user)}" placeholder="${esc(guessUser(f.address, d))}"></label>
-          <label><span>${t("SSH port")}</span><input name="port" value="${esc(f.port)}" inputmode="numeric" placeholder="22"></label>
-          <label class="wide"><span>${t("Key")}</span><select name="key">${keyOpts.map(([v, l]) => `<option value="${esc(v)}" ${v === f.key ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
+          <label><span>${t("SSH user")}<small>${t("unless a line says otherwise")}</small></span><input name="user" value="${esc(f.user)}" placeholder="${esc(d.user || "root")}"></label>
+          <label><span>${t("Key")}<small>${t("not needed with an ssh-agent")}</small></span><select name="key">${keyOpts.map(([v, l]) => `<option value="${esc(v)}" ${v === f.key ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
           <label class="check wide"><input type="checkbox" name="sudo" ${f.sudo ? "checked" : ""}> ${t("The user can sudo without a password: also check passwords, keys, the login log and the firewall")}</label>
         </div></details>
-      <label class="check wide"><input type="checkbox" name="confirmed" ${f.confirmed ? "checked" : ""} required> ${t("This is my server, or I am allowed to audit it.")}</label>
+      <label class="check wide"><input type="checkbox" name="confirmed" ${f.confirmed ? "checked" : ""} required> ${t("These are my servers, or I am allowed to audit them.")}</label>
       <div id="formerr" class="wide"></div>
       <div class="wide actions"><button class="btn primary" type="submit">${t("Check access")}</button><button class="btn ghost" type="button" data-path="">${t("Back")}</button></div>
     </form></div>`;
 }
-const sshHost = (addr, d) => (d?.hosts || []).find((h) => h.alias === addr.trim());
-function guessUser(addr, d) { return sshHost(addr, d)?.user || d?.user || "root"; }
-function guessLogin(addr, d) {
-  const h = sshHost(addr, d);
-  if (!addr) return "";
-  if (h) return t("from ~/.ssh/config: {u}@{h}", { u: h.user || d.user, h: (h.hostname || h.alias) + (h.port ? ":" + h.port : "") }) + (h.jump ? " · " + t("via {j}", { j: h.jump }) : "");
-  return t("{u}@{h}, port 22, keys from the ssh-agent", { u: d.user || "root", h: addr });
-}
 async function submitFew(form) {
   const fd = new FormData(form), s = S.setup, d = await discover();
-  s.form = { address: fd.get("address").trim(), user: fd.get("user").trim(), port: fd.get("port").trim(), key: fd.get("key"), sudo: !!fd.get("sudo"), confirmed: !!fd.get("confirmed") };
-  const f = s.form, h = sshHost(f.address, d);
-  let address = h ? (h.hostname || h.alias) : f.address;
-  const port = +f.port || h?.port || 0;
-  if (port && port !== 22 && !/:\d+$/.test(address)) address = address.includes(":") ? `[${address}]:${port}` : `${address}:${port}`;
-  const name = (h ? h.alias : f.address).toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "server";
-  let jump = "";
-  if (h?.jump) { const j = sshHost(h.jump, d); jump = j ? `${j.user ? j.user + "@" : ""}${j.hostname || j.alias}${j.port ? ":" + j.port : ""}` : h.jump; }
-  const body = { id: freeId("servers"), name: t("My servers"), user: f.user || h?.user || d.user || "root", privilege: f.sudo ? "sudo" : "none",
-    key: f.key || (h?.identity || ""), hosts: `${name} ${address}`, env: "production", internet: false, jump,
-    consent: t("Confirmed in the setup on {d}", { d: today() }), confirmed: f.confirmed };
-  await createOrg(body);
+  s.form = { hosts: fd.get("hosts"), user: fd.get("user").trim(), key: fd.get("key"), sudo: !!fd.get("sudo"), confirmed: !!fd.get("confirmed") };
+  const f = s.form;
+  const target = s.path === "add" ? orgOf() : S.orgs.find((o) => o.id === "servers");
+  if (target) { await addHosts(target, { hosts: f.hosts, user: f.user }); return; }
+  await createOrg({ id: "servers", name: t("My servers"), user: f.user || d.user || "root", privilege: f.sudo ? "sudo" : "none", key: f.key,
+    hosts: f.hosts, env: "production", internet: false, consent: t("Confirmed in the setup on {d}", { d: today() }), confirmed: f.confirmed });
 }
 function fleetForm(s) {
   const f = (s.form ||= { name: "", id: "", hosts: "", user: "", key: "", env: "production", jump: "", front: "", sudo: false, consent: "", confirmed: false });
@@ -965,13 +1016,11 @@ function fleetForm(s) {
     <form id="fleetform" class="form" autocomplete="off">
       <label><span>${t("Organization")}</span><input name="name" value="${esc(f.name)}" required placeholder="${t("ACME Corp")}"></label>
       <label><span>${t("Short id")}<small>${t("for files and commands")}</small></span><input name="id" value="${esc(f.id)}" required pattern="[a-z0-9][a-z0-9_-]*" placeholder="acme"></label>
-      <label class="wide"><span>${t("Servers")}<small>${t("paste a list, CSV name,address,group,env, or an Ansible INI inventory")}</small>
-        ${d.hosts.length ? `<button class="btn ghost small" type="button" data-import-ssh>${icon("ext")}${t("Import {n} hosts from ~/.ssh/config", { n: d.hosts.length })}</button>` : ""}</span>
-        <textarea name="hosts" rows="10" required placeholder="web-01,192.0.2.11,web,production&#10;db-01,192.0.2.31,db,production&#10;&#10;[web]&#10;web-02 ansible_host=192.0.2.12 ansible_user=deploy">${esc(f.hosts)}</textarea></label>
-      <label><span>${t("SSH user")}<small>${t("unless a line says otherwise")}</small></span><input name="user" value="${esc(f.user)}" required placeholder="${esc(d.user || "audit")}"></label>
-      <label><span>${t("Key")}<small>${t("empty: the ssh-agent")}</small></span><input name="key" list="sshkeys" value="${esc(f.key)}"><datalist id="sshkeys">${(d.keys || []).map((k) => `<option value="${esc(k)}">`).join("")}</datalist></label>
+      ${pasteBox(f.hosts, 10)}
+      <label><span>${t("SSH user")}<small>${t("unless a line says otherwise")}</small></span><input name="user" value="${esc(f.user)}" placeholder="${esc(d.user || "audit")}"></label>
+      <label><span>${t("Key")}<small>${t("not needed with an ssh-agent")}</small></span><input name="key" list="sshkeys" value="${esc(f.key)}"><datalist id="sshkeys">${(d.keys || []).map((k) => `<option value="${esc(k)}">`).join("")}</datalist></label>
       <label><span>${t("Environment")}<small>${t("unless a line says otherwise")}</small></span><input name="env" value="${esc(f.env)}"></label>
-      <label><span>${t("Jump host")}<small>${t("[user@]host[:port], empty: direct")}</small></span><input name="jump" value="${esc(f.jump)}" placeholder="bastion.example.com"></label>
+      <label><span>${t("Jump host for all")}<small>${t("[user@]host[:port], empty: direct or per line")}</small></span><input name="jump" value="${esc(f.jump)}" placeholder="bastion.example.com"></label>
       <label class="wide"><span>${t("Groups facing the internet")}<small>${t("comma-separated; their findings get higher priority")}</small></span><input name="front" value="${esc(f.front)}" placeholder="web, edge"></label>
       <label class="check wide"><input type="checkbox" name="sudo" ${f.sudo ? "checked" : ""}> ${t("The user can sudo without a password: also check passwords, keys, the login log and the firewall")}</label>
       <label class="wide"><span>${t("Permission to audit")}<small>${t("where it is documented: a contract, a ticket, an e-mail")}</small></span><input name="consent" value="${esc(f.consent)}" required placeholder="${t("Ticket OPS-123")}"></label>
@@ -981,18 +1030,57 @@ function fleetForm(s) {
     </form></div>`;
 }
 async function submitFleet(form) {
-  const fd = new FormData(form), s = S.setup;
+  const fd = new FormData(form), s = S.setup, d = await discover();
   s.form = { name: fd.get("name").trim(), id: fd.get("id").trim(), hosts: fd.get("hosts"), user: fd.get("user").trim(), key: fd.get("key").trim(),
     env: fd.get("env").trim() || "production", jump: fd.get("jump").trim(), front: fd.get("front").trim(), sudo: !!fd.get("sudo"), consent: fd.get("consent").trim(), confirmed: !!fd.get("confirmed") };
   const f = s.form;
-  await createOrg({ id: f.id, name: f.name, user: f.user, privilege: f.sudo ? "sudo" : "none", key: f.key, hosts: f.hosts, env: f.env, jump: f.jump,
+  await createOrg({ id: f.id, name: f.name, user: f.user || d.user || "audit", privilege: f.sudo ? "sudo" : "none", key: f.key, hosts: f.hosts, env: f.env, jump: f.jump,
     front: f.front.split(/[\s,]+/).filter(Boolean).map((x) => x.toLowerCase()), internet: false, consent: f.consent, confirmed: f.confirmed });
+}
+function clientForm(s) {
+  const f = (s.form ||= { name: "", hosts: "", user: "", key: "", sudo: false, consent: "", confirmed: false });
+  const d = FOUND.v || { hosts: [], keys: [], agent_keys: 0, user: "" };
+  return `<div class="onb">${stepsHead(s)}<h2>${t("A client's servers")}</h2>
+    <form id="clientform" class="form" autocomplete="off">
+      <label class="wide"><span>${t("Client")}</span><input name="name" value="${esc(f.name)}" required placeholder="${t("ACME Corp")}"></label>
+      ${pasteBox(f.hosts, 4)}
+      <details class="wide"><summary>${t("Login details")}</summary>
+        <div class="form inner">
+          <label><span>${t("SSH user")}<small>${t("unless a line says otherwise")}</small></span><input name="user" value="${esc(f.user)}" placeholder="${esc(d.user || "root")}"></label>
+          <label><span>${t("Key")}<small>${t("not needed with an ssh-agent")}</small></span><input name="key" list="sshkeys" value="${esc(f.key)}"><datalist id="sshkeys">${(d.keys || []).map((k) => `<option value="${esc(k)}">`).join("")}</datalist></label>
+          <label class="check wide"><input type="checkbox" name="sudo" ${f.sudo ? "checked" : ""}> ${t("The user can sudo without a password: also check passwords, keys, the login log and the firewall")}</label>
+        </div></details>
+      <label class="wide"><span>${t("The client's permission")}<small>${t("where it is documented: a contract, a ticket, an e-mail")}</small></span><input name="consent" value="${esc(f.consent)}" required placeholder="${t("Contract 42, appendix 3")}"></label>
+      <label class="check wide"><input type="checkbox" name="confirmed" ${f.confirmed ? "checked" : ""} required> ${t("The client allowed me to audit these servers.")}</label>
+      <div id="formerr" class="wide"></div>
+      <div class="wide actions"><button class="btn primary" type="submit">${t("Save and check access")}</button><button class="btn ghost" type="button" data-path="">${t("Back")}</button></div>
+    </form></div>`;
+}
+async function submitClient(form) {
+  const fd = new FormData(form), s = S.setup, d = await discover();
+  s.form = { name: fd.get("name").trim(), hosts: fd.get("hosts"), user: fd.get("user").trim(), key: fd.get("key").trim(), sudo: !!fd.get("sudo"), consent: fd.get("consent").trim(), confirmed: !!fd.get("confirmed") };
+  const f = s.form, id = freeId(f.name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "client");
+  await createOrg({ id, name: f.name, user: f.user || d.user || "root", privilege: f.sudo ? "sudo" : "none", key: f.key, hosts: f.hosts, env: "production",
+    internet: false, consent: f.consent, confirmed: f.confirmed });
+}
+async function addHosts(org, body) {
+  const s = S.setup;
+  try {
+    const r = await post("/api/setup/add", { org: org.id, ...body });
+    await loadOrgs();
+    const o = S.orgs.find((x) => x.id === org.id);
+    s.org = org.id; s.env = (o?.envs.find((e) => e.env === S.env) || o?.envs[0])?.env || "production"; s.only = r.added; s.file = ""; s.skipped = r.skipped || [];
+    s.step = 2; s.results = null; render(); checkAccess();
+  } catch (e) {
+    const errs = e.body?.errors || [e.message];
+    $("#formerr").innerHTML = `<div class="banner err">${icon("alert")}<ul>${errs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
+  }
 }
 async function createOrg(body) {
   const s = S.setup;
   try {
     const r = await post("/api/setup", body);
-    s.org = r.org; s.file = r.path; s.env = body.env; s.step = 2; s.results = null;
+    s.org = r.org; s.file = r.path; s.env = body.env; s.step = 2; s.results = null; s.skipped = r.skipped || [];
     await loadOrgs(); render(); checkAccess();
   } catch (e) {
     const errs = e.body?.errors || [e.message];
@@ -1007,13 +1095,14 @@ function checkView(s) {
   const list = r.length <= 12 ? `<table class="tbl checks"><tbody>${r.map((x) => `<tr><td>${x.ok ? `<span class="st available">${t("ok")}</span>` : `<span class="st bad">${t("failed")}</span>`}</td><td style="font-family:var(--mono);color:var(--host)">${esc(x.host)}</td><td class="note">${esc(x.address)}</td><td>${x.ok ? esc(x.system) : `<div>${esc(x.hint || x.error)}</div><div class="note">${esc(x.error)}</div>`}</td></tr>`).join("")}</tbody></table>`
     : `<div class="kpis2"><div><b style="color:var(--ok)">${ok.length}</b>${t("answered")}</div><div><b style="color:var(--err)">${bad.length}</b>${t("failed")}</div></div>
       ${Object.entries(byHint).map(([h, xs]) => `<div class="failgroup"><b>${xs.length} × ${esc(h)}</b><div class="note">${xs.slice(0, 20).map((x) => esc(x.host)).join(", ")}${xs.length > 20 ? " …" : ""}</div></div>`).join("")}`;
-  return `<div class="onb">${stepsHead(s)}<h2>${t("Access check")}</h2>${list}
-    <p class="note">${t("The settings are in {path}: edit it to fix addresses, add jump hosts or more servers.", { path: esc(s.file || "") })}</p>
+  const skipped = (s.skipped || []).length ? `<div class="skipped">${icon("alert")}<div><b>${t("{n} lines skipped when saving", { n: s.skipped.length })}</b>${s.skipped.map((x) => `<div class="note">${esc(x)}</div>`).join("")}</div></div>` : "";
+  return `<div class="onb">${stepsHead(s)}<h2>${t("Access check")}</h2>${skipped}${list}
+    ${s.file ? `<p class="note">${t("The settings are in {path}: edit it to fix addresses, add jump hosts or more servers.", { path: esc(s.file) })}</p>` : ""}
     <div class="actions"><button class="btn" data-setup-recheck>${t("Check again")}</button><button class="btn primary" data-setup-scan ${ok.length ? "" : "disabled"}>${bad.length && ok.length ? t("Scan the {n} that answered", { n: ok.length }) : t("Start the first scan")}</button></div></div>`;
 }
 async function checkAccess() {
   const s = S.setup; s.results = null; render();
-  try { s.results = (await post("/api/setup/check", { org: s.org, env: s.env })).results; } catch (e) { s.results = [{ host: "—", ok: false, error: e.message }]; }
+  try { s.results = (await post("/api/setup/check", { org: s.org, env: s.env, hosts: s.only })).results; } catch (e) { s.results = [{ host: "—", ok: false, error: e.message }]; }
   render();
 }
 /* ---------- scans ---------- */
@@ -1101,12 +1190,28 @@ document.addEventListener("click", async (e) => {
   if (el.id === "cmdk") { palOpen(); return; }
   if ("setupCancel" in d) { S.view = "todo"; render(); return; }
   if (d.path !== undefined && el.classList.contains("pathcard") || (d.path === "" && el.tagName === "BUTTON")) { S.setup = { step: d.path ? 1 : 0, path: d.path }; await discover(); render(); return; }
+  if ("formats" in d) { const f = $("#formats"); f.hidden = !f.hidden; return; }
+  if ("sshpick" in d) { await discover(); sshPicker(); return; }
+  if ("pickclose" in d) { $("#dlg").close(); return; }
+  if ("pickadd" in d) {
+    const dd = await discover(), ta = $("#pastebox");
+    const hs = [...document.querySelectorAll("#picklist input:checked")].map((c) => dd.hosts[+c.value]);
+    $("#dlg").close();
+    if (hs.length) { ta.value = (ta.value.trim() ? ta.value.trim() + "\n" : "") + hs.map((h) => sshLine(h, dd)).join("\n"); preview(); }
+    return;
+  }
+  if (d.sshhost !== undefined || "sshall" in d) {
+    const dd = await discover(), ta = $("#pastebox");
+    const hs = "sshall" in d ? dd.hosts : [dd.hosts[+d.sshhost]];
+    ta.value = (ta.value.trim() ? ta.value.trim() + "\n" : "") + hs.map((h) => sshLine(h, dd)).join("\n");
+    preview(); return;
+  }
   if ("importSsh" in d) { const dd = await discover(); const ta = $("#fleetform textarea[name=hosts]"); ta.value = (ta.value.trim() ? ta.value.trim() + "\n" : "") + dd.hosts.map((h) => `${h.alias.toLowerCase().replace(/[^a-z0-9_-]+/g, "-")} ${(h.hostname || h.alias)}${h.port ? ":" + h.port : ""}`).join("\n"); return; }
   if ("setupRecheck" in d) { checkAccess(); return; }
   if ("setupScan" in d) {
     const s = S.setup; await loadOrgs(); S.org = s.org; S.env = s.env; store.set("org", S.org); store.set("env", S.env);
     const ok = (s.results || []).filter((x) => x.ok).map((x) => x.host), all = (s.results || []).length;
-    try { const r = await post("/api/scan", { org: s.org, env: s.env, hosts: ok.length < all ? ok : undefined }); s.job = r.id; pollJobs(); } catch (er) { toast(er.message); return; }
+    try { const r = await post("/api/scan", { org: s.org, env: s.env, hosts: ok.length < all || s.only ? ok : undefined }); s.job = r.id; pollJobs(); } catch (er) { toast(er.message); return; }
     s.step = 3; render(); return;
   }
   if ("setupDone" in d) { S.setup = null; S.view = "todo"; await loadOrgs(); render(); return; }
@@ -1114,6 +1219,7 @@ document.addEventListener("click", async (e) => {
 document.addEventListener("submit", (e) => {
   if (e.target.id === "fewform") { e.preventDefault(); submitFew(e.target); }
   else if (e.target.id === "fleetform") { e.preventDefault(); submitFleet(e.target); }
+  else if (e.target.id === "clientform") { e.preventDefault(); submitClient(e.target); }
 });
 document.addEventListener("change", async (e) => {
   const id = e.target.id, v = e.target.value;
@@ -1126,7 +1232,8 @@ document.addEventListener("change", async (e) => {
 });
 let qTimer;
 document.addEventListener("input", (e) => {
-  if (e.target.name === "address" && e.target.form?.id === "fewform") { const g = $("#loginguess"); if (g) g.textContent = guessLogin(e.target.value, FOUND.v); const u = e.target.form.user; if (u) u.placeholder = guessUser(e.target.value, FOUND.v); }
+  if (e.target.id === "pickq") { const q = e.target.value.toLowerCase(); document.querySelectorAll("#picklist .pick").forEach((l) => (l.hidden = !l.dataset.alias.includes(q) && !l.textContent.toLowerCase().includes(q))); return; }
+  if (e.target.id === "pastebox" || e.target.name === "user") { clearTimeout(previewTimer); previewTimer = setTimeout(preview, 250); }
   if (e.target.id === "q") { S.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(loadTree, 200); } else if (e.target.id === "palq") { PI = 0; palRender(); } });
 document.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); palOpen(); return; }

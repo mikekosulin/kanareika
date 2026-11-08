@@ -34,7 +34,7 @@ func (s *Server) apiSetup(w http.ResponseWriter, r *http.Request) {
 		sendErr(w, http.StatusBadRequest, "bad request: "+err.Error())
 		return
 	}
-	path, problems, err := onboard.Create(s.paths, req, setupNow().UTC())
+	path, skipped, problems, err := onboard.CreateWithSkipped(s.paths, req, setupNow().UTC())
 	switch {
 	case errors.Is(err, onboard.ErrExists):
 		sendErr(w, http.StatusConflict, err.Error())
@@ -48,7 +48,68 @@ func (s *Server) apiSetup(w http.ResponseWriter, r *http.Request) {
 	}
 	s.reload()
 	s.log.Printf("dashboard: organization %s created (%s)", req.ID, path)
-	sendJSON(w, http.StatusCreated, map[string]any{"org": req.ID, "path": path})
+	sendJSON(w, http.StatusCreated, map[string]any{"org": req.ID, "path": path, "skipped": skipped})
+}
+
+// apiSetupAdd: POST /api/setup/add {org, hosts, env, front, internet} -> 200 {added: [names]} or 400 {errors}: the
+// hosts go into the org's file (ungrouped unless a line names a group); the old file stays as .bak.
+func (s *Server) apiSetupAdd(w http.ResponseWriter, r *http.Request) {
+	if s.jobs == nil {
+		sendErr(w, http.StatusForbidden, "setup is disabled on this read-only dashboard")
+		return
+	}
+	var req struct {
+		Org string `json:"org"`
+		onboard.Request
+	}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&req); err != nil {
+		sendErr(w, http.StatusBadRequest, "bad request: "+err.Error())
+		return
+	}
+	s.reload()
+	if s.state.Load().byID[req.Org] == nil {
+		sendErr(w, http.StatusNotFound, "unknown org")
+		return
+	}
+	added, skipped, problems, err := onboard.AddWithSkipped(s.paths, req.Org, req.Request)
+	switch {
+	case err != nil:
+		sendErr(w, http.StatusInternalServerError, err.Error())
+		return
+	case len(problems) > 0:
+		sendJSON(w, http.StatusBadRequest, map[string]any{"errors": problems})
+		return
+	}
+	s.reload()
+	s.log.Printf("dashboard: %d hosts added to %s", len(added), req.Org)
+	if skipped == nil {
+		skipped = []string{}
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"added": added, "skipped": skipped})
+}
+
+// apiSetupParse: POST /api/setup/parse {text} -> {hosts, errors}: what the setup understood of a pasted list, for
+// the live preview. Writes nothing.
+func (s *Server) apiSetupParse(w http.ResponseWriter, r *http.Request) {
+	if s.jobs == nil {
+		sendErr(w, http.StatusForbidden, "setup is disabled on this read-only dashboard")
+		return
+	}
+	var req struct {
+		Text string `json:"text"`
+	}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&req); err != nil {
+		sendErr(w, http.StatusBadRequest, "bad request: "+err.Error())
+		return
+	}
+	hosts, errs := onboard.ParseHosts(req.Text)
+	if hosts == nil {
+		hosts = []onboard.Host{}
+	}
+	if errs == nil {
+		errs = []string{}
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"hosts": hosts, "errors": errs})
 }
 
 // apiSetupDiscover: GET /api/setup/discover -> what this machine knows about SSH (~/.ssh/config hosts, keys in
@@ -76,10 +137,11 @@ func (s *Server) apiSetupCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Org string `json:"org"`
-		Env string `json:"env"`
+		Org   string   `json:"org"`
+		Env   string   `json:"env"`
+		Hosts []string `json:"hosts,omitempty"` // only these (the ones just added)
 	}
-	dec := json.NewDecoder(io.LimitReader(r.Body, 4<<10))
+	dec := json.NewDecoder(io.LimitReader(r.Body, 64<<10))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
 		sendErr(w, http.StatusBadRequest, "bad request: "+err.Error())
@@ -99,5 +161,5 @@ func (s *Server) apiSetupCheck(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Minute)
 	defer cancel()
-	sendJSON(w, http.StatusOK, map[string]any{"results": onboard.Check(ctx, o, req.Env, conn)})
+	sendJSON(w, http.StatusOK, map[string]any{"results": onboard.Check(ctx, o, req.Env, conn, req.Hosts...)})
 }
