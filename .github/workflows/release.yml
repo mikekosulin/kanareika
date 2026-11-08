@@ -1,7 +1,9 @@
 # A release on every semver tag (v0.1.0, v1.2.3, v1.0.0-rc.1): tests, static binaries for linux/darwin/windows × amd64/arm64
-# (CGO off, version from the tag), SHA256SUMS, build provenance attestations, a GitHub release with generated notes.
+# (CGO off, version from the tag) packed as kanareika-<os>-<arch>.tar.xz (.zip on Windows; a fifth of the binary's
+# size), SHA256SUMS, build provenance attestations, a GitHub release with generated notes. The bare binaries are
+# published too for one more release, so links and the Homebrew formula made for 0.4 keep working.
 #   git tag -s v0.1.0 -m "v0.1.0" && git push origin v0.1.0
-# Verify a download: gh attestation verify kanareika-linux-amd64 --repo mikekosulin/kanareika
+# Verify a download: gh attestation verify kanareika-linux-amd64.tar.xz --repo mikekosulin/kanareika
 name: Release
 
 on:
@@ -44,6 +46,25 @@ jobs:
           TRIVY_VERSION="$(go list -m -f '{{.Version}}' github.com/aquasecurity/trivy | sed 's/^v//')"
           EXT=""; [ "$GOOS" = windows ] && EXT=.exe
           go build -trimpath -ldflags "-s -w -X main.version=${VERSION} -X github.com/aquasecurity/trivy/pkg/version/app.ver=${TRIVY_VERSION}" -o "dist/kanareika-${GOOS}-${GOARCH}${EXT}" ./cmd/kanareika
+      - name: Pack
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          # an archive holds the binary as `kanareika` (kanareika.exe), the license and the readme
+          name="kanareika-${GOOS}-${GOARCH}"
+          pack="$RUNNER_TEMP/$name"
+          mkdir -p "$pack"
+          if [ "$GOOS" = windows ]; then
+            cp "dist/$name.exe" "$pack/kanareika.exe"
+            cp LICENSE README.md "$pack/"
+            (cd "$pack" && zip -9 -q "$GITHUB_WORKSPACE/dist/$name.zip" kanareika.exe LICENSE README.md)
+          else
+            cp "dist/$name" "$pack/kanareika"
+            cp LICENSE README.md "$pack/"
+            tar -C "$pack" -cf - kanareika LICENSE README.md | xz -9 -T0 > "dist/$name.tar.xz"
+          fi
+          ls -l dist/
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: kanareika-${{ matrix.goos }}-${{ matrix.goarch }}
