@@ -73,7 +73,7 @@ It listens on 127.0.0.1 and answers only requests addressed to localhost. Any po
 elsewhere, bind another --host (or KANAREIKA_HOST) and set --token (or KANAREIKA_TOKEN): the
 printed URL carries it once, the browser keeps it in a cookie. Without a token it is read-only there.
 
-The TUI can connect to it too: kanareika tui --url http://host:8088 --token ...`,
+The TUI can connect to it too: kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if portEnv != "" && !cmd.Flags().Changed("port") {

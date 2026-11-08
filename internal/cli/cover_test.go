@@ -105,7 +105,7 @@ func TestOrgNewWriteFails(t *testing.T) {
 func TestUnknownOrgWithoutOrgs(t *testing.T) {
 	sandbox(t)
 	code, _, errs := cli(t, "validate", "nope")
-	if code != 1 || !strings.Contains(errs, "unknown org 'nope' (known: none: `kanareika org new <id>` creates one)") {
+	if code != 1 || !strings.Contains(errs, "unknown org 'nope' (known: none: `kanareika org new <ORG_ID>` creates one)") {
 		t.Fatal(code, errs)
 	}
 }

@@ -25,7 +25,7 @@ func (a *app) validateCmd() *cobra.Command {
 				return err
 			}
 			if len(orgs) == 0 {
-				return fail(1, "no orgs in %s: `kanareika org new <id>` creates one", a.paths.Orgs)
+				return fail(1, "no orgs in %s: `kanareika org new <ORG_ID>` creates one", a.paths.Orgs)
 			}
 			for _, o := range orgs {
 				if len(ids) > 0 && !contains(ids, o.ID) {
@@ -100,7 +100,7 @@ var migrateFile = config.MigrateFile
 func (a *app) migrateCmd() *cobra.Command {
 	var dryRun bool
 	c := &cobra.Command{
-		Use:   "migrate [orgs/<id>.yml ...]",
+		Use:   "migrate [orgs/<ORG_ID>.yml ...]",
 		Short: fmt.Sprintf("rewrite org files in the current format (version %d); keeps a .bak copy", config.CurrentVersion),
 		RunE: func(cmd *cobra.Command, files []string) error {
 			if len(files) == 0 {
