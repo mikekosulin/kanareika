@@ -23,8 +23,11 @@ func (s *Server) treeOf(a args) (*tree.Tree, tree.Hosts, *report.View, error) {
 		return nil, nil, nil, err
 	}
 	hosts := tree.Hosts(v.Facts)
-	return tree.Build(fs, hosts, tree.Opts{By: a.str("by"), Filters: a.strs("filters"), Query: a.str("query"),
-		Today: mcpToday()}), hosts, v, nil
+	o := tree.Opts{By: a.str("by"), Filters: a.strs("filters"), Query: a.str("query"), Today: mcpToday()}
+	if all, _ := a["all"].(bool); all && o.By == tree.ByHost {
+		o.All, o.Inventory = true, tree.Servers(org, env, v, fs)
+	}
+	return tree.Build(fs, hosts, o), hosts, v, nil
 }
 
 // trimmed: a node without its subtree beyond depth (0: the node only).

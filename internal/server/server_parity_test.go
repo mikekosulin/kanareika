@@ -289,9 +289,26 @@ func sinceGo(got []byte) []byte {
 			}
 		}
 	}
+	dropTotals(m)
 	b, err := json.Marshal(m)
 	if err != nil {
 		return got
 	}
 	return b
+}
+
+// dropTotals removes "totals" at any depth (0.5: fixes to apply and unique CVEs in view.json, run.json and the run
+// lists; Python had no such key anywhere, and report.TestTotalsAgree checks the numbers).
+func dropTotals(v any) {
+	switch t := v.(type) {
+	case map[string]any:
+		delete(t, "totals")
+		for _, x := range t {
+			dropTotals(x)
+		}
+	case []any:
+		for _, x := range t {
+			dropTotals(x)
+		}
+	}
 }

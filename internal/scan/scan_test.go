@@ -250,7 +250,7 @@ func TestScan(t *testing.T) {
 		t.Fatalf("rc %d\n%s", rc, e.out)
 	}
 	for _, want := range []string{"== t1 / default: Test", "web-01", "Debian GNU/Linux 12 (bookworm) (fake-01)",
-		"health: boom", "hosts done 1/1: web-01 ok (1 module errors)", "done: P1=", "report:"} {
+		"health: boom", "hosts done 1/1: web-01 ok (1 module errors)", "done: ", "report:"} {
 		if !strings.Contains(e.out.String(), want) {
 			t.Fatalf("%q not in\n%s", want, e.out)
 		}

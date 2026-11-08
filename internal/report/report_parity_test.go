@@ -366,11 +366,16 @@ func copyTree(t *testing.T, src, dst string) {
 }
 
 // sinceGo drops what the Go views add to the Python ones: the message key and arguments of findings shown as
-// rows (other, inventory, exceptions, new, resolved), so the interfaces render their titles in any language.
+// rows (other, inventory, exceptions, new, resolved), so the interfaces render their titles in any language; and
+// the totals (0.5: fixes to apply and unique CVEs, in view.json and run.json; TestTotalsAgree checks them).
 func sinceGo(v any) {
 	m, ok := v.(map[string]any)
 	if !ok {
 		return
+	}
+	delete(m, "totals")
+	if meta, ok := m["meta"].(map[string]any); ok {
+		delete(meta, "totals")
 	}
 	var lists []any
 	for _, k := range []string{"other", "inventory", "exceptions"} {

@@ -399,7 +399,7 @@ func (s *Scanner) run(ctx context.Context, o *config.Org, env string, selected [
 		fmt.Fprintln(s.Out, "  !", err)
 		return 1
 	}
-	prog.Finish("done", map[string]any{"counts": meta.Counts})
+	prog.Finish("done", map[string]any{"counts": meta.Counts, "totals": meta.Totals})
 	finished = true
 	if _, err := report.UpdateCurrent(envDir, true, false); err != nil {
 		s.log("current state: %v", err)
@@ -407,9 +407,7 @@ func (s *Scanner) run(ctx context.Context, o *config.Org, env string, selected [
 	if _, err := report.Prune(s.Paths, envDir, report.KeepDefault, report.KeepDefault, false); err != nil {
 		s.log("prune: %v", err)
 	}
-	c := meta.Counts
-	fmt.Fprintf(s.Out, "  done: P1=%d P2=%d P3=%d P4=%d accepted=%d; failed hosts: %d\n  report: %s/summary.md\n",
-		c["P1"], c["P2"], c["P3"], c["P4"], c["accepted"], failed.Len(), runDir)
+	fmt.Fprintf(s.Out, "  done: %s; failed hosts: %d\n  report: %s/summary.md\n", meta.Totals.Line(), failed.Len(), runDir)
 	if failed.Len() > 0 {
 		return 1
 	}

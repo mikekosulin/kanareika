@@ -299,9 +299,8 @@ func WriteSummary(runDir string, meta *Meta, findings []finding.Finding) error {
 }
 
 func Summary(meta *Meta, findings []finding.Finding) string {
-	c := CountsOf(findings)
+	tot := TotalsOf(findings)
 	plan := PatchPlan(findings)
-	pc := PlanCountsOf(plan)
 	trivy := "?"
 	if meta.TrivyVersion != nil {
 		trivy = *meta.TrivyVersion
@@ -317,12 +316,14 @@ func Summary(meta *Meta, findings []finding.Finding) string {
 		fmt.Sprintf("- Modules: %s", strings.Join(meta.Modules, ", ")),
 		fmt.Sprintf("- Trivy %s, KEV/EPSS as of %s", trivy, feeds),
 		"",
-		"| | P1 | P2 | P3 | P4 | accepted |",
+		"| | P1 | P2 | P3 | P4 | total |",
 		"|---|---:|---:|---:|---:|---:|",
-		fmt.Sprintf("| packages to update | %d | %d | %d | %d | |", pc.P1, pc.P2, pc.P3, pc.P4),
-		fmt.Sprintf("| findings (CVE × package) | %d | %d | %d | %d | %d |", c.P1, c.P2, c.P3, c.P4, c.Accepted),
+		fmt.Sprintf("| fixes to apply | %d | %d | %d | %d | %d |", tot.P1, tot.P2, tot.P3, tot.P4, tot.Fixes),
 		"",
-		fmt.Sprintf("Already fixed in the installed build (CVE in the package changelog, not counted above): %d", c.Backported),
+		"- " + tot.Line(),
+		"- A fix is one change: one package update on every host that needs it, one image to rebuild, one setting to change.",
+		fmt.Sprintf("- Not counted: %d accepted risks; %d already fixed in the installed build (CVE in the package changelog).",
+			tot.Accepted, tot.Backported),
 		"",
 	}
 	if meta.HostsFailed.Len() > 0 {
@@ -363,6 +364,9 @@ func Summary(meta *Meta, findings []finding.Finding) string {
 				fixed = fv[len(fv)-1]
 			}
 			repo := repoState[deref(g.FixState)]
+			if deref(g.FixState) == finding.FixVendor && finding.IsESM(fixed) {
+				repo = "only in Ubuntu Pro (ESM)"
+			}
 			if deref(g.RepoVersion) != "" {
 				repo += " " + *g.RepoVersion
 			}
