@@ -189,7 +189,10 @@ func (s *Server) Handler() http.Handler {
 	r.Get("/logo.png", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "image/png", s.logo) })
 	index := func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "text/html; charset=utf-8", s.page) }
 	r.Get("/", index)
-	r.Get("/index.html", index)
+	// no .html in addresses: the old one goes to /; the setup steps are addresses of the same page
+	r.Get("/index.html", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/", http.StatusMovedPermanently) })
+	r.Get("/setup", index)
+	r.Get("/setup/{step}", index)
 	r.Get("/classic", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "text/html; charset=utf-8", s.classic) })
 	for path, fn := range map[string]func(query) (any, error){
 		"/api/orgs": s.apiOrgs, "/api/env": s.apiEnv, "/api/run": s.apiRun, "/api/log": s.apiLog,

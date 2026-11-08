@@ -282,6 +282,13 @@ func sinceGo(got []byte) []byte {
 			}
 		}
 	}
+	if hs, ok := m["hosts"].([]any); ok { // /api/env: the login user, added for the setup's access check
+		for _, h := range hs {
+			if h, ok := h.(map[string]any); ok {
+				delete(h, "user")
+			}
+		}
+	}
 	b, err := json.Marshal(m)
 	if err != nil {
 		return got
