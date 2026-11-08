@@ -88,7 +88,7 @@ func replay(t *testing.T, home, goldenPath string) {
 					diffs = append(diffs, "body differs (page changed on purpose? go test -run Parity -update-page)")
 				}
 			}
-		} else if d := jsonDiff(c.JSON, pythonLangs(c.JSON, rec.Body.Bytes())); d != "" {
+		} else if d := jsonDiff(c.JSON, sinceGo(pythonLangs(c.JSON, rec.Body.Bytes()))); d != "" {
 			diffs = append(diffs, d)
 		}
 		if len(diffs) > 0 {
@@ -258,4 +258,33 @@ func must(t *testing.T, err error) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+// sinceGo: an /api/run answer without what Go adds to Python's: the message key and arguments of findings shown
+// as rows (other, inventory, exceptions, new, resolved), so the interfaces render their titles in any language.
+func sinceGo(got []byte) []byte {
+	var m map[string]any
+	if json.Unmarshal(got, &m) != nil {
+		return got
+	}
+	lists := []any{m["other"], m["inventory"], m["exceptions"]}
+	for _, k := range []string{"new", "resolved"} {
+		if d, ok := m[k].(map[string]any); ok {
+			lists = append(lists, d["rows"])
+		}
+	}
+	for _, l := range lists {
+		rows, _ := l.([]any)
+		for _, r := range rows {
+			if row, ok := r.(map[string]any); ok {
+				delete(row, "msg")
+				delete(row, "args")
+			}
+		}
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return got
+	}
+	return b
 }

@@ -11,6 +11,15 @@ import (
 	"github.com/muesli/termenv"
 )
 
+// TestHostCardOtherInLanguage: the other findings of a host card are in the interface's language, as in ToDo.
+func TestHostCardOtherInLanguage(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production", Lang: "ru"}, true)
+	h.size(110, 70)
+	h.key("3", "enter")
+	h.has("Подбор паролей SSH:")
+	h.hasNot("SSH password guessing")
+}
+
 // TestHostCard: Enter on a host opens all a run knows about it; it scrolls, and Esc goes back to the list.
 func TestHostCard(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)

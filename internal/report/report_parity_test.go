@@ -242,6 +242,7 @@ func sameJSON(t *testing.T, what string, want, got []byte) {
 			}
 		}
 	}
+	sinceGo(g)
 	var diffs []string
 	walk("", w, g, &diffs)
 	if len(diffs) > 0 {
@@ -361,5 +362,32 @@ func copyTree(t *testing.T, src, dst string) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// sinceGo drops what the Go views add to the Python ones: the message key and arguments of findings shown as
+// rows (other, inventory, exceptions, new, resolved), so the interfaces render their titles in any language.
+func sinceGo(v any) {
+	m, ok := v.(map[string]any)
+	if !ok {
+		return
+	}
+	var lists []any
+	for _, k := range []string{"other", "inventory", "exceptions"} {
+		lists = append(lists, m[k])
+	}
+	for _, k := range []string{"new", "resolved"} {
+		if d, ok := m[k].(map[string]any); ok {
+			lists = append(lists, d["rows"])
+		}
+	}
+	for _, l := range lists {
+		rows, _ := l.([]any)
+		for _, r := range rows {
+			if row, ok := r.(map[string]any); ok {
+				delete(row, "msg")
+				delete(row, "args")
+			}
+		}
 	}
 }
