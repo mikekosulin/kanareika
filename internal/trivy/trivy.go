@@ -41,6 +41,10 @@ func tail(s string, n int) string {
 	return string(r[len(r)-n:])
 }
 
+// quiet: no call home from trivy, in every subcommand. --skip-version-check alone still sends Aqua anonymous usage
+// data (trivy pkg/notification: the version check request carries telemetry unless it is disabled too).
+var quiet = []string{"TRIVY_DISABLE_TELEMETRY=true", "TRIVY_SKIP_VERSION_CHECK=true"}
+
 func command(ctx context.Context, timeout time.Duration, args ...string) (stdout, stderr string, err error) {
 	bin, prefix, err := Binary()
 	if err != nil {
@@ -49,6 +53,7 @@ func command(ctx context.Context, timeout time.Duration, args ...string) (stdout
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, bin, append(prefix, args...)...)
+	cmd.Env = append(os.Environ(), quiet...)
 	var o, e bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &o, &e
 	err = cmd.Run()
