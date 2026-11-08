@@ -42,5 +42,6 @@ __debug_bin*
 # Python bytecode
 __pycache__/
 
-# tools/brand writes its pages next to the pictures; the pictures are what is published
+# tools/brand and tools/screenshots write their pages next to the pictures; the pictures are what is published
 docs/brand/*.html
+docs/screenshots/*.html

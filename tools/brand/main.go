@@ -113,7 +113,7 @@ var langs = []lang{
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
 			{2, "web-01", "sshd : connexion par mot de passe activée", "accès"},
 			{2, "web-02", ":6379 accessible de partout", "réseau"},
-			{3, "db-01", "noyau 5.14.0-427 · redémarrage en attente", "redémarrage"},
+			{3, "db-01", "noyau 5.14.0-427 · redémarrage en attente", "redémarrage"}, //nolint:misspell // French
 		}},
 	{Code: "pt", Tag: "Auditoria de segurança de servidores via SSH.", Accent: "Comece pelo que importa.",
 		Sub:  "sem agente · somente leitura · TUI + web · MCP",
