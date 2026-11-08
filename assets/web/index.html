@@ -613,8 +613,8 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
 .sbrand p { font-size: 19px; line-height: 1.4; letter-spacing: -.01em; color: var(--ink-2); margin: 0; max-width: 360px; }
 .sbrand p em { display: block; font-style: normal; color: var(--accent-line); }
 [data-theme="light"] .sbrand p em { color: #a87b00; }
-.facts { margin: auto 0 0; padding-top: 40px; display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font: 12.5px/1.5 var(--mono); }
-.facts dt { color: var(--ink-2); } .facts dd { margin: 0; color: var(--ink-3); }
+.sbrand .facts { margin: auto 0 0; padding-top: 40px; display: flex; flex-wrap: wrap; gap: 4px 10px; font: 13px/1.5 var(--mono); color: var(--ink-3); max-width: none; letter-spacing: 0; }
+.facts span { white-space: nowrap; } .facts i { font-style: normal; opacity: .6; }
 .sprefs { display: flex; gap: 8px; align-items: center; margin-top: 22px; }
 
 .win { margin: 48px 0; border: 1px solid var(--line-2); border-right: 0; border-radius: 14px 0 0 14px; background: var(--solid);
@@ -708,24 +708,41 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
 .sbar > span.r { margin-left: auto; border-right: 0; }
 .sbar b { color: var(--ink-2); font-weight: 500; }
 
-@media (max-width: 980px) {
-  .setup { grid-template-columns: minmax(0, 1fr); overflow: visible; }
-  .sbrand { padding: 24px 16px 8px; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
-  .sbrand img { width: 28px; height: 28px; } .sbrand h1 { font-size: 24px; margin: 0; } .sbrand p { flex-basis: 100%; font-size: 15px; }
-  .facts { display: none; } .sprefs { margin: 0 0 0 auto; }
-  .win { margin: 8px 0 0; border-right: 1px solid var(--line-2); border-radius: 12px 12px 0 0; }
-  .wbody { padding: 14px 16px 20px; } .wtop { padding: 14px 16px 0; flex-wrap: wrap; gap: 8px; } .dlline { margin-left: 0; }
-  .ed { grid-template-columns: 30px minmax(0, 1fr); }
-  .ed .dx { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); white-space: normal; }
+@media (max-width: 1100px) {
+  .setup { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; align-content: start; min-height: 100vh; overflow: visible; }
+  .sbrand { padding: 18px 16px 14px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; column-gap: 10px; row-gap: 6px; }
+  .sbrand img { width: 26px; height: 26px; }
+  .sbrand h1 { font-size: 22px; margin: 0; }
+  .sbrand p { grid-column: 1 / -1; font-size: 14px; max-width: none; }
+  .sbrand p em { display: inline; margin-left: 4px; }
+  .sbrand .facts { display: none; }
+  .sprefs { margin: 0; grid-column: 3; grid-row: 1; }
+  .win { margin: 0 12px 12px; border: 1px solid var(--line-2); border-radius: 12px; min-height: 0; }
+  .wbody { flex: none; padding: 16px 16px 20px; overflow: visible; }
+  .wtop { padding: 14px 16px 0; flex-wrap: wrap; row-gap: 10px; }
+  .dlline { margin-left: 0; flex-basis: 100%; }
   .fields { grid-template-columns: minmax(0, 1fr); }
-  .sbar > span:nth-child(3), .sbar > span.r { display: none; }
+  .sbar > span.r { display: none; }
 }
+@media (max-width: 640px) {
+  .sbrand p { display: none; }
+  .win { margin: 0; border-radius: 0; border-left: 0; border-right: 0; }
+  .wt { display: none; }
+  .ed { grid-template-columns: 26px minmax(0, 1fr); }
+  .ed .dx { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); }
+  .ed .dx .gap { display: none; }
+  .ed .dx .dn { display: inline-block; width: 20px; color: var(--ink-3); opacity: .6; }
+  .hr { grid-template-columns: 18px minmax(0, 1fr); } .hr > :nth-child(3) { grid-column: 2; }
+}
+
 
 #formerr:empty { display: none; }
 #setupform .go { margin-top: -6px; }
 
 .qn.mono { font: 12.5px var(--mono); }
 .dlline .tipped { cursor: help; text-decoration: underline dotted; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+
+@media (min-width: 641px) { .ed .dx .dn { display: none; } }
 
 /* end-extra-css */
 </style>
@@ -1121,7 +1138,7 @@ function setupView() {
       <img src="/logo.png" alt="" width="40" height="40">
       <h1>kanareika</h1>
       <p>${t("Security audit of your servers over SSH.")}<em>${t("What to patch first.")}</em></p>
-      <dl class="facts"><dt>${t("read-only")}</dt><dd>${t("logs in, reads, logs out")}</dd><dt>${t("agentless")}</dt><dd>${t("nothing installed")}</dd><dt>${t("local")}</dt><dd>${t("results stay here")}</dd></dl>
+      <p class="facts">${[t("read-only"), t("agentless"), t("local")].map((x) => `<span>${x}</span>`).join(`<i aria-hidden="true">·</i>`)}</p>
       <div class="sprefs">${prefsHTML()}</div>
     </section>
     <section class="win" aria-label="${t("Setup")}">
@@ -1193,15 +1210,15 @@ async function preview() {
   S.setup.parsed = r;
   const d = FOUND.v || {}, defUser = $("[name=user]")?.value || S.setup.form.user || d.user || "root";
   const rows = [];
-  r.hosts.forEach((h) => { if (h.line) rows[h.line] = `<div><span class="arr">→</span> <span class="h">${esc((h.user || defUser) + "@" + h.address)}</span>${h.jump ? `<span class="mut"> via ${esc(h.jump)}</span>` : ""}${h.from ? `<span class="mut"> ${t("from ssh config")}</span>` : ""}</div>`; });
+  r.hosts.forEach((h) => { if (h.line) rows[h.line] = `<div><span class="dn">${h.line}</span><span class="arr">→</span> <span class="h">${esc((h.user || defUser) + "@" + h.address)}</span>${h.jump ? `<span class="mut"> via ${esc(h.jump)}</span>` : ""}${h.from ? `<span class="mut"> ${t("from ssh config")}</span>` : ""}</div>`; });
   const loose = [];
   r.errors.forEach((x) => {
     const m = x.match(/^line (\d+): (?:"[^"]*"(?::\s*|\s+))?(.*)$/);
-    const msg = `<div><span class="arr">→</span> <span class="wn">${esc(m ? m[2] : x)}</span><span class="mut"> · ${t("skipped")}</span></div>`;
+    const msg = `<div>${m ? `<span class="dn">${m[1]}</span>` : ""}<span class="arr">→</span> <span class="wn">${esc(m ? m[2] : x)}</span><span class="mut"> · ${t("skipped")}</span></div>`;
     if (m && !rows[+m[1]]) rows[+m[1]] = msg; else loose.push(msg);
   });
   const n = text.split("\n").length;
-  out.innerHTML = Array.from({ length: n }, (_, i) => rows[i + 1] || "<div>&nbsp;</div>").join("") + loose.join("");
+  out.innerHTML = Array.from({ length: n }, (_, i) => rows[i + 1] || `<div class="gap">&nbsp;</div>`).join("") + loose.join("");
 }
 function sshPicker() {
   const d = FOUND.v || { hosts: [] };
