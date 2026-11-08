@@ -329,7 +329,19 @@ func (s *Server) apiPrompt(q query) (any, error) {
 	if lang == "" {
 		lang = "en"
 	}
-	return map[string]string{"text": s.prompt(o, env, &v, q.list("ids", 200), lang)}, nil
+	ids := q.list("ids", 200)
+	if nodes := q.list("nodes", 200); len(nodes) > 0 { // tree nodes: the actions under them
+		more, err := s.nodeActions(q, nodes)
+		if err != nil {
+			return nil, err
+		}
+		for _, id := range more {
+			if !slices.Contains(ids, id) {
+				ids = append(ids, id)
+			}
+		}
+	}
+	return map[string]string{"text": s.prompt(o, env, &v, ids, lang)}, nil
 }
 
 var errNoPrompt = errors.New("prompt builder not configured")

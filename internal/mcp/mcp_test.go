@@ -14,6 +14,7 @@ import (
 
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/prompt"
+	"github.com/mikekosulin/kanareika/internal/pyfmt"
 	"github.com/mikekosulin/kanareika/internal/remediate"
 )
 
@@ -62,6 +63,19 @@ func checkParity(t *testing.T, root string) {
 	}
 	b, _ := json.Marshal(instructionsData)
 	body = strings.ReplaceAll(body, strings.Trim(string(b), `"`), "")
+	// newer still: the tree tools and their line in the instructions
+	b, _ = json.Marshal(instructionsTree)
+	body = strings.ReplaceAll(body, strings.Trim(string(b), `"`), "")
+	for _, tl := range Tools[len(Tools)-treeTools:] {
+		tb, err := pyfmt.MarshalLine(tl, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(body, ", "+string(tb)) {
+			t.Fatalf("tools/list: %s not found as recorded bytes", tb[:60])
+		}
+		body = strings.ReplaceAll(body, ", "+string(tb), "")
+	}
 	got, exp := strings.Split(strings.TrimSuffix(body, "\n"), "\n"), strings.Split(strings.TrimSuffix(string(want), "\n"), "\n")
 	if len(got) != len(exp) {
 		t.Fatalf("%d responses, want %d", len(got), len(exp))

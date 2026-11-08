@@ -18,7 +18,7 @@ import (
 
 // Instructions: what the server tells the agent on initialize.
 const Instructions = "Kanareika: security audit results for our servers, by organization and environment (production/staging). " +
-	"Start with list_orgs, then get_summary. list_actions — what to fix by priority (P1 urgent … P4 background); " +
+	"Start with list_orgs, then get_summary. " + instructionsTree + "list_actions — what to fix by priority (P1 urgent … P4 background); " +
 	"get_host — everything about one server (packages, SSH access, ports, firewall, health, time); " +
 	"search_packages — where a vulnerable package or CVE is installed; fix_prompt / fix_plan — a ready task or " +
 	"rollback-capable fix steps for selected actions. Data is the latest known state of each host. " +
@@ -27,6 +27,13 @@ const Instructions = "Kanareika: security audit results for our servers, by orga
 	"until available). CVEs already fixed in the installed build (package changelog) are left out of actions. " +
 	"All tools are read-only; scans are started by a human. Pass lang=ru or lang=zh for Russian or Chinese texts." +
 	instructionsData
+
+// instructionsTree: the tree tools (0.5), newer than the recorded sessions.
+const instructionsTree = "list_fixes / get_fix — what to do grouped by fix, CVE or host, with details (the same view " +
+	"the human has open); "
+
+// treeTools: how many of the last Tools are the tree tools (0.5).
+const treeTools = 2
 
 func orgEnv() pyfmt.Obj {
 	return pyfmt.O(
@@ -72,6 +79,17 @@ var Tools = []pyfmt.Obj{
 	tool("fix_plan", "Step-by-step fix plan for selected actions: per host how to connect, commands to apply (with backups), verify and roll back. Execute one step at a time and show results; nothing reboots automatically.",
 		schema(append(orgEnv(), pyfmt.KV{K: "action_ids", V: pyfmt.O("type", "array", "items", pyfmt.O("type", "string"))}), "org", "action_ids")),
 	tool("list_runs", "Run history of an environment: full and partial runs with priority counts.", schema(orgEnv(), "org")),
+	tool("list_fixes", "What to do, grouped: by fix (one package update on many hosts, one image to rebuild), by CVE, or by host; most urgent first, with hosts per group, CVEs, max EPSS, KEV/RCE, fix states and the due date (due_why: first_seen, kev, escalated, ...). The same tree the TUI and the web page show.",
+		schema(append(orgEnv(),
+			pyfmt.KV{K: "by", V: pyfmt.O("enum", []string{"fix", "cve", "host"}, "default", "fix")},
+			pyfmt.KV{K: "filters", V: pyfmt.O("type", "array", "items", pyfmt.O("enum", []string{"kev", "rce", "epss", "front", "ready", "nofix", "overdue"}))},
+			pyfmt.KV{K: "query", V: pyfmt.O("type", "string", "description", "substring of host, group, package, image, CVE id or title")},
+			pyfmt.KV{K: "limit", V: pyfmt.O("type", "integer", "default", 50)}), "org")),
+	tool("get_fix", "One node of list_fixes in detail: why its priority, the due date and where it comes from, every CVE (CVSS vector, EPSS, KEV, description), where it is per host group, the commands to apply, and action ids for fix_prompt / fix_plan.",
+		schema(append(orgEnv(),
+			pyfmt.KV{K: "id", V: pyfmt.O("type", "string", "description", "a node id from list_fixes")},
+			pyfmt.KV{K: "by", V: pyfmt.O("enum", []string{"fix", "cve", "host"}, "default", "fix")},
+			pyfmt.KV{K: "filters", V: pyfmt.O("type", "array", "items", pyfmt.O("type", "string"))}), "org", "id")),
 }
 
 // args of a tools/call, as the client sent them.

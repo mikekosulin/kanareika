@@ -78,6 +78,7 @@ type Server struct {
 
 	mu    sync.Mutex // view builds and current/ updates, one at a time (each can take seconds on big runs)
 	views []cachedView
+	trees *treeInput // the last tree input (findings + view), by view mtime
 }
 
 type cachedView struct {
@@ -175,7 +176,7 @@ func (s *Server) Handler() http.Handler {
 	for path, fn := range map[string]func(query) (any, error){
 		"/api/orgs": s.apiOrgs, "/api/env": s.apiEnv, "/api/run": s.apiRun, "/api/log": s.apiLog,
 		"/api/hostfile": s.apiHostfile, "/api/ipinfo": s.apiIPInfo, "/api/prompt": s.apiPrompt,
-		"/api/i18n": s.apiI18n,
+		"/api/i18n": s.apiI18n, "/api/tree": s.apiTree, "/api/node": s.apiNode,
 	} {
 		r.Get(path, s.api(fn))
 	}
