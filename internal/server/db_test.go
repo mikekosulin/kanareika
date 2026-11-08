@@ -161,7 +161,8 @@ func TestDBSize(t *testing.T) {
 		return map[string]int64{"db": 100, "java-db": 1000, "kev": 1, "epss": 2, "dbip-city": 3}
 	}
 	dbSizes = nil
-	t.Setenv("TRIVY_CACHE_DIR", t.TempDir()) // nothing downloaded: both trivy DBs needed
+	t.Setenv("TRIVY_CACHE_DIR", t.TempDir()) // nothing downloaded: everything needed
+	t.Setenv("KANAREIKA_FEEDS_DIR", t.TempDir())
 	_, h := newTest(t, Options{UpdateDB: func(context.Context, io.Writer) error { return nil }})
 	var d struct {
 		Sizes map[string]int64
