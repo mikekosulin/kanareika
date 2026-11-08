@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 	"unicode/utf8"
@@ -71,13 +72,15 @@ type dbKind struct {
 	trivyEnv string   // trivy's own setting for the repositories: when set, kanareika leaves the choice to trivy
 	ourEnv   string   // kanareika's override: comma-separated repositories, tried in order
 	repos    []string // default: GitHub Container Registry (published there by Aqua), then its mirrors
+	// lazy: downloaded only when a scan needs it (java-db, ~1 GB: only for .jar files); refreshed once present
+	lazy bool
 }
 
 var dbKinds = []dbKind{
 	{"db", "--download-db-only", "--db-repository", "TRIVY_DB_REPOSITORY", "KANAREIKA_TRIVY_DB_REPOS",
-		[]string{"ghcr.io/aquasecurity/trivy-db:2", "mirror.gcr.io/aquasec/trivy-db:2", "public.ecr.aws/aquasecurity/trivy-db:2"}},
+		[]string{"ghcr.io/aquasecurity/trivy-db:2", "mirror.gcr.io/aquasec/trivy-db:2", "public.ecr.aws/aquasecurity/trivy-db:2"}, false},
 	{"java-db", "--download-java-db-only", "--java-db-repository", "TRIVY_JAVA_DB_REPOSITORY", "KANAREIKA_TRIVY_JAVA_DB_REPOS",
-		[]string{"ghcr.io/aquasecurity/trivy-java-db:1", "mirror.gcr.io/aquasec/trivy-java-db:1", "public.ecr.aws/aquasecurity/trivy-java-db:1"}},
+		[]string{"ghcr.io/aquasecurity/trivy-java-db:1", "mirror.gcr.io/aquasec/trivy-java-db:1", "public.ecr.aws/aquasecurity/trivy-java-db:1"}, true},
 }
 
 // dbTimeout: per download attempt. Passed to trivy as well: its own default (5m) is too short for a slow link.
@@ -190,7 +193,11 @@ func (k dbKind) download(ctx context.Context, logf func(string, ...any)) error {
 // several trivy processes break each other. Later runs then skip the DB update. When no repository can be reached
 // but a DB is already cached, the scan goes on with it and logf says how old it is; with nothing cached it fails.
 func Prepare(ctx context.Context, logf func(string, ...any)) error {
+	prepLog.Store(&logf)
 	for _, k := range dbKinds {
+		if k.lazy && k.cachedAt().IsZero() {
+			continue // downloaded by the first run that needs it (Run)
+		}
 		err := k.download(ctx, logf)
 		if err == nil {
 			continue
@@ -219,6 +226,9 @@ const OfflineMaxAge = 7 * 24 * time.Hour
 func PrepareOffline(logf func(string, ...any)) error {
 	for _, k := range dbKinds {
 		at := k.cachedAt()
+		if at.IsZero() && k.lazy {
+			continue // offline: hosts with .jar files report the missing Java DB
+		}
 		if at.IsZero() {
 			return fmt.Errorf("trivy %s: %w", k.name, ErrNoDB)
 		}
@@ -247,11 +257,16 @@ type DBInfo struct {
 	Updated time.Time `json:"updated"` // zero: not downloaded
 	// Next: when the next build of this DB is published (trivy's metadata); after it, a newer one is out
 	Next time.Time `json:"next_update"`
+	// OnDemand: downloaded the first time a scan finds what needs it (the Java DB: .jar files), not before
+	OnDemand bool `json:"on_demand,omitempty"`
 }
 
 // Outdated: a newer build has been published since this one (or there is none yet).
 func (d DBInfo) Outdated(now time.Time) bool {
-	return d.Updated.IsZero() || !d.Next.IsZero() && now.After(d.Next)
+	if d.Updated.IsZero() {
+		return !d.OnDemand // an on-demand DB not downloaded yet is fine: nothing has needed it
+	}
+	return !d.Next.IsZero() && now.After(d.Next)
 }
 
 // DBStatus: the cached DBs, in a fixed order.
@@ -262,7 +277,7 @@ func DBStatus() []DBInfo {
 		if c := trivyCacheDir(); c != "" {
 			dir = filepath.Join(c, k.name)
 		}
-		out = append(out, DBInfo{Name: k.name, Dir: dir, Updated: k.cachedAt(), Next: k.nextUpdate()})
+		out = append(out, DBInfo{Name: k.name, Dir: dir, Updated: k.cachedAt(), Next: k.nextUpdate(), OnDemand: k.lazy})
 	}
 	return out
 }
@@ -275,6 +290,9 @@ func Run(ctx context.Context, args []string, output string, timeout time.Duratio
 		cmd = append(cmd, "--skip-db-update", "--skip-java-db-update")
 	}
 	_, stderr, err := command(ctx, timeout, cmd...)
+	if err != nil && prepared.Load() && strings.Contains(stderr, javaDBMissing) && fetchLazy(ctx) {
+		_, stderr, err = command(ctx, timeout, cmd...) // the Java DB is there now
+	}
 	var exit *exec.ExitError
 	if errors.As(err, &exit) {
 		var lines []string
@@ -548,4 +566,51 @@ func VulnFindings(r *Report, base finding.Finding) []finding.Finding {
 		}
 	}
 	return out
+}
+
+// javaDBMissing: trivy's words when it met .jar files and the Java DB is not downloaded (--skip-java-db-update).
+const javaDBMissing = "Unable to initialize the Java DB"
+
+var (
+	lazyMu  sync.Mutex
+	prepLog atomic.Pointer[func(string, ...any)]
+)
+
+// DownloadOnDemand: the on-demand DBs (the Java DB) now, for a bundle carried to an isolated network or a fleet
+// known to run Java; a normal scan gets them by itself when it finds .jar files.
+func DownloadOnDemand(ctx context.Context, logf func(string, ...any)) error {
+	for _, k := range dbKinds {
+		if k.lazy {
+			if err := k.download(ctx, logf); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// fetchLazy downloads the on-demand DBs that are missing, once for all parallel runs; true when they are there.
+func fetchLazy(ctx context.Context) bool {
+	lazyMu.Lock()
+	defer lazyMu.Unlock()
+	var logf func(string, ...any)
+	if p := prepLog.Load(); p != nil {
+		logf = *p
+	}
+	ok := true
+	for _, k := range dbKinds {
+		if !k.lazy || !k.cachedAt().IsZero() {
+			continue
+		}
+		if logf != nil {
+			logf("trivy %s: found .jar files, downloading the Java DB once (about 1 GB)", k.name)
+		}
+		if err := k.download(ctx, logf); err != nil {
+			if logf != nil {
+				logf("WARNING: trivy %s: %v", k.name, err)
+			}
+			ok = false
+		}
+	}
+	return ok
 }

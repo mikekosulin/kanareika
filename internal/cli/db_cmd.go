@@ -18,6 +18,7 @@ import (
 var (
 	updateFeeds = priority.UpdateFeeds
 	prepareDB   = trivy.Prepare
+	fetchJavaDB = trivy.DownloadOnDemand
 )
 
 // dbParts: what `db export` packs and `db import` restores.
@@ -34,9 +35,10 @@ func (a *app) dbCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "db",
 		Short: "vulnerability DBs and feeds: update, status, export/import for isolated networks",
-		Long: `kanareika needs data it downloads: trivy's vulnerability DBs (OS packages, languages, Java),
-CISA KEV and EPSS (prioritization) and the DB-IP Lite IP database. "db update" downloads all of
-it; a scan also refreshes trivy's DBs by itself unless --offline.
+		Long: `kanareika needs data it downloads: trivy's vulnerability DB (OS packages and languages, about
+140 MB), CISA KEV and EPSS (prioritization) and the DB-IP Lite IP database (about 65 MB). "db update"
+downloads them; a scan also refreshes trivy's DB by itself unless --offline. The Java DB (about 1 GB)
+is downloaded only when a scan first finds .jar files, or with "db update --java".
 
 Isolated network: "db export bundle.tar.gz" on a connected machine, carry the file over,
 "db import bundle.tar.gz" there, then "scan --offline". The bundle holds public data only.`,
@@ -47,7 +49,7 @@ Isolated network: "db export bundle.tar.gz" on a connected machine, carry the fi
 
 // dbUpdateCmd: `db update`, and `feeds` (its old name) when hidden.
 func (a *app) dbUpdateCmd(use string) *cobra.Command {
-	var skipTrivy bool
+	var skipTrivy, java bool
 	c := &cobra.Command{
 		Use:   use,
 		Short: "download trivy's vulnerability DBs, CISA KEV, EPSS and the IP database",
@@ -55,10 +57,15 @@ func (a *app) dbUpdateCmd(use string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, stop := interruptible()
 			defer stop()
-			return a.updateDBs(ctx, cmd.OutOrStdout(), cmd.ErrOrStderr(), skipTrivy)
+			if err := a.updateDBs(ctx, cmd.OutOrStdout(), cmd.ErrOrStderr(), skipTrivy); err != nil || !java {
+				return err
+			}
+			errOut := cmd.ErrOrStderr()
+			return fetchJavaDB(ctx, func(f string, a ...any) { fmt.Fprintf(errOut, f+"\n", a...) })
 		},
 	}
 	c.Flags().BoolVar(&skipTrivy, "skip-trivy", false, "feeds only, not trivy's vulnerability DBs")
+	c.Flags().BoolVar(&java, "java", false, "also the Java DB (about 1 GB; otherwise downloaded when a scan first finds .jar files)")
 	return c
 }
 
@@ -95,6 +102,10 @@ func (a *app) updateDBs(ctx context.Context, out, errOut io.Writer, skipTrivy bo
 
 func printDBStatus(out io.Writer, now time.Time) {
 	for _, d := range trivy.DBStatus() {
+		if d.Updated.IsZero() && d.OnDemand {
+			fmt.Fprintf(out, "trivy %s: not needed yet (downloaded when a scan first finds .jar files, or db update --java)\n", d.Name)
+			continue
+		}
 		if d.Updated.IsZero() {
 			fmt.Fprintf(out, "trivy %s: not downloaded (%s)\n", d.Name, d.Dir)
 			continue

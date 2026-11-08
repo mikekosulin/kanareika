@@ -345,3 +345,13 @@ func TestCheck(t *testing.T) {
 		t.Fatal("hints")
 	}
 }
+
+func TestBadIPv4Skipped(t *testing.T) {
+	hosts, errs := ParseHosts("10.0.0.300\nadmin@10.0.0.5\n10.0.0\nweb-01 192.0.2.256:22\nnas")
+	if len(hosts) != 2 || hosts[0].Address != "10.0.0.5" || hosts[1].Address != "nas" {
+		t.Fatalf("%+v", hosts)
+	}
+	if len(errs) != 3 || !strings.Contains(errs[0], `"10.0.0.300" is not an IP address`) {
+		t.Fatal(errs)
+	}
+}

@@ -112,7 +112,7 @@ func TestOfflineAndStatus(t *testing.T) {
 	}
 	must(t, os.MkdirAll(filepath.Join(cache, "db"), 0o755))
 	must(t, os.WriteFile(filepath.Join(cache, "db", "metadata.json"), []byte(`{"UpdatedAt":"2026-11-01T19:08:08Z"}`), 0o644))
-	if err := PrepareOffline(nil); !errors.Is(err, ErrNoDB) || !strings.Contains(err.Error(), "java-db") {
+	if err := PrepareOffline(nil); err != nil { // the Java DB is on demand: its absence is no reason to stop
 		t.Fatal(err)
 	}
 	must(t, os.MkdirAll(filepath.Join(cache, "java-db"), 0o755))

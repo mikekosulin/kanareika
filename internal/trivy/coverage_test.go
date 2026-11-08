@@ -20,7 +20,7 @@ func TestNoUserCacheDir(t *testing.T) {
 		t.Fatal(d)
 	}
 	for _, d := range DBStatus() {
-		if d.Dir != "" || !d.Updated.IsZero() || !d.Next.IsZero() || !d.Outdated(time.Now()) {
+		if d.Dir != "" || !d.Updated.IsZero() || !d.Next.IsZero() || d.Outdated(time.Now()) == d.OnDemand {
 			t.Fatal(d)
 		}
 	}
@@ -41,8 +41,8 @@ func TestNextUpdateAndOutdated(t *testing.T) {
 	if st[0].Outdated(before) || !st[0].Outdated(after) {
 		t.Fatal("db: fresh before NextUpdate, outdated after")
 	}
-	if !st[1].Outdated(before) {
-		t.Fatal("java-db never downloaded: outdated")
+	if st[1].Outdated(before) || !st[1].OnDemand {
+		t.Fatal("java-db never downloaded: on demand, so not outdated")
 	}
 	if (DBInfo{Updated: before}).Outdated(after) {
 		t.Fatal("unknown NextUpdate: not outdated")
