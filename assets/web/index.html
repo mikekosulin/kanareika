@@ -552,6 +552,23 @@ main { background: var(--bg); }
 .side .scope2 { margin-top: 0; }
 @media (max-width: 720px) { .form { grid-template-columns: 1fr; } }
 
+/* extra-css */
+.onb.wide { max-width: 900px; }
+.paths { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0; }
+.pathcard { text-align: left; display: grid; align-content: start; justify-items: start; gap: 8px; padding: 18px; border: 1px solid var(--line-2); border-radius: var(--r-panel); background: var(--solid); color: var(--ink); cursor: pointer; }
+.pathcard:hover { border-color: var(--accent-line); background: var(--sel); }
+.pathcard svg { width: 22px; height: 22px; color: var(--accent-line); }
+.pathcard b { font-size: 15px; } .pathcard span { color: var(--ink-2); font-size: 13px; line-height: 1.45; }
+.form details { border: 1px solid var(--line); border-radius: var(--r-ctl); padding: 8px 12px; }
+.form details summary { cursor: pointer; color: var(--ink); font-size: 13px; }
+.form details summary small { color: var(--ink-3); margin-left: 8px; font-family: var(--mono); }
+.form .inner { margin-top: 12px; }
+.form select { font: 13px var(--mono); padding: 8px 10px; border: 1px solid var(--line-2); border-radius: var(--r-ctl); background: var(--solid); color: var(--ink); }
+.btn.small { height: 24px; padding: 0 8px; font-size: 12px; margin-left: auto; }
+.failgroup { padding: 10px 0; border-top: 1px solid var(--line); } .failgroup b { font-weight: 500; }
+@media (max-width: 720px) { .paths { grid-template-columns: 1fr; } }
+
+/* end-extra-css */
 </style>
 </head>
 <body>
@@ -669,7 +686,7 @@ function sel(id, label, opts, cur) {
 function renderSide() {
   const o = orgOf(), e = envOf();
   const orgOpts = S.orgs.map((x) => [x.id, x.name || x.id]);
-  if (S.scans) orgOpts.push(["__new", "+ " + t("New organization…")]);
+  if (S.scans) orgOpts.push(["__new", "+ " + t("Add servers…")]);
   $("#scope").innerHTML = S.orgs.length ? sel("org", t("Org"), orgOpts, S.org) +
     sel("env", t("Env"), (o?.envs || []).map((x) => [x.env, `${x.env} · ${x.hosts}${x.last ? "" : " · " + t("no scans")}`]), S.env) +
     sel("run", t("Data"), [["current", t("Current state")], ...S.runs.slice(-20).reverse().map((r) => [r.run_id, r.run_id.replace("_", " ").replace(/(\d\d)(\d\d)(\d\d)$/, "$1:$2") + (r.partial ? " · " + t("partial") : "")])], S.run) : "";
@@ -871,65 +888,134 @@ function context(d) {
   return lines.join("\n");
 }
 
-/* ---------- onboarding ---------- */
+/* ---------- onboarding: two paths. A few servers: one address, everything else guessed from this machine's SSH
+   setup. A fleet: a list (CSV, Ansible inventory, ~/.ssh/config), groups, environments, a jump host. ---------- */
+const FOUND = { v: null };
+async function discover() { if (!FOUND.v) { try { FOUND.v = await api("/api/setup/discover"); } catch { FOUND.v = { user: "", keys: [], agent_keys: 0, hosts: [] }; } } return FOUND.v; }
+function freeId(base) { let id = base, i = 2; while (S.orgs.some((o) => o.id === id)) id = base + "-" + i++; return id; }
+function stepsHead(s) {
+  const steps = [t("Your servers"), t("Access check"), t("First scan")];
+  return `<div class="steps2">${steps.map((x, i) => `<span class="${i + 1 === s.step ? "on" : i + 1 < s.step ? "done" : ""}">${i + 1 < s.step ? icon("check") : i + 1}</span><b>${x}</b>`).join("")}</div>`;
+}
 function setupView() {
-  const s = S.setup ||= { step: 1, form: { id: "", name: "", user: "audit", privilege: "none", key: "", port: "", hosts: "", env: "production", internet: false, consent: "", confirmed: false } };
-  const f = s.form, steps = [t("Your servers"), t("Access check"), t("First scan")];
-  const head = `<div class="onb"><div class="steps2">${steps.map((x, i) => `<span class="${i + 1 === s.step ? "on" : i + 1 < s.step ? "done" : ""}">${i + 1 < s.step ? icon("check") : i + 1}</span><b>${x}</b>`).join("")}</div>`;
-  if (!S.scans) return head + `<h2>${t("Read-only dashboard")}</h2><p>${t("Organizations are added where kanareika web runs on localhost (or with a token). On that machine: kanareika org new <ORG_ID>.")}</p></div>`;
-  if (s.step === 1) return head + `<h2>${S.orgs.length ? t("Add an organization") : t("Welcome to Kanareika")}</h2>
-    <p>${t("Tell it which servers to audit and how to log in. Nothing is changed on the servers: Kanareika only reads.")}</p>
-    <form id="setupform" class="form" autocomplete="off">
-      <label><span>${t("Organization name")}</span><input name="name" value="${esc(f.name)}" required placeholder="${t("ACME Corp")}"></label>
-      <label><span>${t("Short id")}<small>${t("for files and commands: a-z, 0-9, -")}</small></span><input name="id" value="${esc(f.id)}" required pattern="[a-z0-9][a-z0-9_-]*" placeholder="acme"></label>
-      <label class="wide"><span>${t("Servers")}<small>${t("one per line: an address, or a name and an address; a port after a colon")}</small></span><textarea name="hosts" rows="6" required placeholder="web-01 192.0.2.11&#10;192.0.2.12&#10;db.example.com:2222">${esc(f.hosts)}</textarea></label>
-      <label><span>${t("SSH user")}</span><input name="user" value="${esc(f.user)}" required></label>
-      <label><span>${t("SSH key")}<small>${t("empty: the keys in your ssh-agent")}</small></span><input name="key" value="${esc(f.key)}" placeholder="~/.ssh/id_ed25519"></label>
-      <label><span>${t("SSH port")}<small>${t("empty: 22")}</small></span><input name="port" value="${esc(f.port)}" inputmode="numeric" placeholder="22"></label>
-      <label><span>${t("Environment")}</span><input name="env" value="${esc(f.env)}"></label>
-      <fieldset><legend>${t("Root-only reads")}</legend>
-        <label class="radio"><input type="radio" name="privilege" value="none" ${f.privilege !== "sudo" ? "checked" : ""}> ${t("No: read what the user can")}</label>
-        <label class="radio"><input type="radio" name="privilege" value="sudo" ${f.privilege === "sudo" ? "checked" : ""}> ${t("Yes, with sudo -n (passwordless)")}</label></fieldset>
-      <fieldset><legend>${t("Reachable from the internet?")}</legend>
-        <label class="radio"><input type="radio" name="internet" value="0" ${!f.internet ? "checked" : ""}> ${t("No, internal")}</label>
-        <label class="radio"><input type="radio" name="internet" value="1" ${f.internet ? "checked" : ""}> ${t("Yes: priorities rise for exposed hosts")}</label></fieldset>
-      <label class="wide"><span>${t("Permission to audit")}<small>${t("where it is documented: a contract, a ticket, an e-mail")}</small></span><input name="consent" value="${esc(f.consent)}" required placeholder="${t("Ticket OPS-123")}"></label>
-      <label class="check wide"><input type="checkbox" name="confirmed" ${f.confirmed ? "checked" : ""}> ${t("I am allowed to audit these servers.")}</label>
-      <div id="formerr" class="wide"></div>
-      <div class="wide actions"><button class="btn primary" type="submit">${t("Save and check access")}</button>${S.orgs.length ? `<button class="btn ghost" type="button" data-setup-cancel>${t("Cancel")}</button>` : ""}</div>
-    </form></div>`;
-  if (s.step === 2) {
-    const r = s.results;
-    return head + `<h2>${t("Access check")}</h2><p>${t("Kanareika logs in to every server and runs uname -sr.")}</p>
-      ${!r ? `<div class="sk" style="height:60px"></div>` : `<table class="tbl checks"><tbody>${r.map((x) => `<tr><td>${x.ok ? `<span class="st available">${t("ok")}</span>` : `<span class="st bad">${t("failed")}</span>`}</td><td style="font-family:var(--mono);color:var(--host)">${esc(x.host)}</td><td class="note">${esc(x.address)}</td><td>${x.ok ? esc(x.system) : `<div>${esc(x.hint || x.error)}</div><div class="note">${esc(x.error)}</div>`}</td></tr>`).join("")}</tbody></table>
-      <p class="note">${t("The org file is {path}: edit it to fix addresses, add jump hosts or more servers.", { path: esc(s.path || "") })}</p>
-      <div class="actions"><button class="btn" data-setup-recheck>${t("Check again")}</button><button class="btn primary" data-setup-scan ${r.some((x) => x.ok) ? "" : "disabled"}>${t("Start the first scan")}</button></div>`}</div>`;
-  }
+  const s = S.setup ||= { step: 0, path: "" };
+  if (!S.scans) return `<div class="onb"><h2>${t("Read-only dashboard")}</h2><p>${t("Organizations are added where kanareika web runs on localhost (or with a token). On that machine: kanareika org new <ORG_ID>.")}</p></div>`;
+  if (s.step === 0) return `<div class="onb"><h2>${S.orgs.length ? t("Add servers") : t("Welcome to Kanareika")}</h2>
+    <p>${t("A read-only security audit over SSH: what to patch first, who can get in, what is exposed. Nothing is installed or changed on the servers.")}</p>
+    <div class="paths">
+      <button class="pathcard" data-path="few">${icon("server")}<b>${t("One or two servers")}</b><span>${t("A home server, a VPS, a NAS. Just the address; the rest comes from your SSH setup.")}</span></button>
+      <button class="pathcard" data-path="fleet">${icon("list")}<b>${t("A fleet")}</b><span>${t("Tens or hundreds of servers: import from ~/.ssh/config, an Ansible inventory or a list; groups, environments, a jump host.")}</span></button>
+    </div>${S.orgs.length ? `<div class="actions"><button class="btn ghost" data-setup-cancel>${t("Cancel")}</button></div>` : ""}</div>`;
+  if (s.step === 1 && s.path === "few") return fewForm(s);
+  if (s.step === 1) return fleetForm(s);
+  if (s.step === 2) return checkView(s);
   const job = S.jobs.find((j) => j.id === s.job);
-  return head + `<h2>${t("First scan")}</h2><p>${t("Databases download first, then every server is read. This takes a few minutes; you can leave the page.")}</p>
+  return `<div class="onb">${stepsHead(s)}<h2>${t("First scan")}</h2><p>${t("Databases download first, then every server is read. This takes a few minutes; you can leave the page.")}</p>
     <div class="jobout">${job ? `<div class="meta"><span class="st ${job.state === "running" ? "reboot" : job.code ? "bad" : "available"}">${t(job.state)}</span></div><pre>${esc((job.output || []).slice(-14).join("\n"))}</pre>` : `<div class="sk" style="height:120px"></div>`}</div>
     ${job && job.state !== "running" ? `<div class="actions"><button class="btn primary" data-setup-done>${t("See the results")}</button></div>` : ""}</div>`;
 }
-async function submitSetup(form) {
+function fewForm(s) {
+  const f = (s.form ||= { address: "", user: "", port: "", key: "", sudo: false, confirmed: false });
+  const d = FOUND.v || { hosts: [], keys: [], agent_keys: 0, user: "" };
+  const keyOpts = [["", d.agent_keys ? t("the ssh-agent ({n} keys)", { n: d.agent_keys }) : t("the ssh-agent")], ...d.keys.map((k) => [k, k])];
+  return `<div class="onb">${stepsHead(s)}<h2>${t("Which server?")}</h2>
+    <form id="fewform" class="form" autocomplete="off">
+      <label class="wide"><span>${t("Address")}<small>${t("an IP, a name, or a Host from your ~/.ssh/config")}</small></span>
+        <input name="address" list="sshhosts" value="${esc(f.address)}" required placeholder="192.0.2.10" autofocus>
+        <datalist id="sshhosts">${d.hosts.map((h) => `<option value="${esc(h.alias)}">${esc(h.hostname || "")}${h.user ? " · " + esc(h.user) : ""}</option>`).join("")}</datalist></label>
+      <details class="wide"><summary>${t("Login details")} <small id="loginguess">${esc(guessLogin(f.address, d))}</small></summary>
+        <div class="form inner">
+          <label><span>${t("SSH user")}</span><input name="user" value="${esc(f.user)}" placeholder="${esc(guessUser(f.address, d))}"></label>
+          <label><span>${t("SSH port")}</span><input name="port" value="${esc(f.port)}" inputmode="numeric" placeholder="22"></label>
+          <label class="wide"><span>${t("Key")}</span><select name="key">${keyOpts.map(([v, l]) => `<option value="${esc(v)}" ${v === f.key ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
+          <label class="check wide"><input type="checkbox" name="sudo" ${f.sudo ? "checked" : ""}> ${t("The user can sudo without a password: also check passwords, keys, the login log and the firewall")}</label>
+        </div></details>
+      <label class="check wide"><input type="checkbox" name="confirmed" ${f.confirmed ? "checked" : ""} required> ${t("This is my server, or I am allowed to audit it.")}</label>
+      <div id="formerr" class="wide"></div>
+      <div class="wide actions"><button class="btn primary" type="submit">${t("Check access")}</button><button class="btn ghost" type="button" data-path="">${t("Back")}</button></div>
+    </form></div>`;
+}
+const sshHost = (addr, d) => (d?.hosts || []).find((h) => h.alias === addr.trim());
+function guessUser(addr, d) { return sshHost(addr, d)?.user || d?.user || "root"; }
+function guessLogin(addr, d) {
+  const h = sshHost(addr, d);
+  if (!addr) return "";
+  if (h) return t("from ~/.ssh/config: {u}@{h}", { u: h.user || d.user, h: (h.hostname || h.alias) + (h.port ? ":" + h.port : "") }) + (h.jump ? " · " + t("via {j}", { j: h.jump }) : "");
+  return t("{u}@{h}, port 22, keys from the ssh-agent", { u: d.user || "root", h: addr });
+}
+async function submitFew(form) {
+  const fd = new FormData(form), s = S.setup, d = await discover();
+  s.form = { address: fd.get("address").trim(), user: fd.get("user").trim(), port: fd.get("port").trim(), key: fd.get("key"), sudo: !!fd.get("sudo"), confirmed: !!fd.get("confirmed") };
+  const f = s.form, h = sshHost(f.address, d);
+  let address = h ? (h.hostname || h.alias) : f.address;
+  const port = +f.port || h?.port || 0;
+  if (port && port !== 22 && !/:\d+$/.test(address)) address = address.includes(":") ? `[${address}]:${port}` : `${address}:${port}`;
+  const name = (h ? h.alias : f.address).toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "server";
+  let jump = "";
+  if (h?.jump) { const j = sshHost(h.jump, d); jump = j ? `${j.user ? j.user + "@" : ""}${j.hostname || j.alias}${j.port ? ":" + j.port : ""}` : h.jump; }
+  const body = { id: freeId("servers"), name: t("My servers"), user: f.user || h?.user || d.user || "root", privilege: f.sudo ? "sudo" : "none",
+    key: f.key || (h?.identity || ""), hosts: `${name} ${address}`, env: "production", internet: false, jump,
+    consent: t("Confirmed in the setup on {d}", { d: today() }), confirmed: f.confirmed };
+  await createOrg(body);
+}
+function fleetForm(s) {
+  const f = (s.form ||= { name: "", id: "", hosts: "", user: "", key: "", env: "production", jump: "", front: "", sudo: false, consent: "", confirmed: false });
+  const d = FOUND.v || { hosts: [], keys: [], user: "" };
+  return `<div class="onb wide">${stepsHead(s)}<h2>${t("Your fleet")}</h2>
+    <form id="fleetform" class="form" autocomplete="off">
+      <label><span>${t("Organization")}</span><input name="name" value="${esc(f.name)}" required placeholder="${t("ACME Corp")}"></label>
+      <label><span>${t("Short id")}<small>${t("for files and commands")}</small></span><input name="id" value="${esc(f.id)}" required pattern="[a-z0-9][a-z0-9_-]*" placeholder="acme"></label>
+      <label class="wide"><span>${t("Servers")}<small>${t("paste a list, CSV name,address,group,env, or an Ansible INI inventory")}</small>
+        ${d.hosts.length ? `<button class="btn ghost small" type="button" data-import-ssh>${icon("ext")}${t("Import {n} hosts from ~/.ssh/config", { n: d.hosts.length })}</button>` : ""}</span>
+        <textarea name="hosts" rows="10" required placeholder="web-01,192.0.2.11,web,production&#10;db-01,192.0.2.31,db,production&#10;&#10;[web]&#10;web-02 ansible_host=192.0.2.12 ansible_user=deploy">${esc(f.hosts)}</textarea></label>
+      <label><span>${t("SSH user")}<small>${t("unless a line says otherwise")}</small></span><input name="user" value="${esc(f.user)}" required placeholder="${esc(d.user || "audit")}"></label>
+      <label><span>${t("Key")}<small>${t("empty: the ssh-agent")}</small></span><input name="key" list="sshkeys" value="${esc(f.key)}"><datalist id="sshkeys">${(d.keys || []).map((k) => `<option value="${esc(k)}">`).join("")}</datalist></label>
+      <label><span>${t("Environment")}<small>${t("unless a line says otherwise")}</small></span><input name="env" value="${esc(f.env)}"></label>
+      <label><span>${t("Jump host")}<small>${t("[user@]host[:port], empty: direct")}</small></span><input name="jump" value="${esc(f.jump)}" placeholder="bastion.example.com"></label>
+      <label class="wide"><span>${t("Groups facing the internet")}<small>${t("comma-separated; their findings get higher priority")}</small></span><input name="front" value="${esc(f.front)}" placeholder="web, edge"></label>
+      <label class="check wide"><input type="checkbox" name="sudo" ${f.sudo ? "checked" : ""}> ${t("The user can sudo without a password: also check passwords, keys, the login log and the firewall")}</label>
+      <label class="wide"><span>${t("Permission to audit")}<small>${t("where it is documented: a contract, a ticket, an e-mail")}</small></span><input name="consent" value="${esc(f.consent)}" required placeholder="${t("Ticket OPS-123")}"></label>
+      <label class="check wide"><input type="checkbox" name="confirmed" ${f.confirmed ? "checked" : ""} required> ${t("I am allowed to audit these servers.")}</label>
+      <div id="formerr" class="wide"></div>
+      <div class="wide actions"><button class="btn primary" type="submit">${t("Save and check access")}</button><button class="btn ghost" type="button" data-path="">${t("Back")}</button></div>
+    </form></div>`;
+}
+async function submitFleet(form) {
   const fd = new FormData(form), s = S.setup;
-  s.form = { id: fd.get("id").trim(), name: fd.get("name").trim(), user: fd.get("user").trim(), privilege: fd.get("privilege"), key: fd.get("key").trim(),
-    port: fd.get("port").trim(), hosts: fd.get("hosts"), env: fd.get("env").trim() || "production", internet: fd.get("internet") === "1", consent: fd.get("consent").trim(), confirmed: !!fd.get("confirmed") };
-  const body = { ...s.form, port: +s.form.port || 0 };
+  s.form = { name: fd.get("name").trim(), id: fd.get("id").trim(), hosts: fd.get("hosts"), user: fd.get("user").trim(), key: fd.get("key").trim(),
+    env: fd.get("env").trim() || "production", jump: fd.get("jump").trim(), front: fd.get("front").trim(), sudo: !!fd.get("sudo"), consent: fd.get("consent").trim(), confirmed: !!fd.get("confirmed") };
+  const f = s.form;
+  await createOrg({ id: f.id, name: f.name, user: f.user, privilege: f.sudo ? "sudo" : "none", key: f.key, hosts: f.hosts, env: f.env, jump: f.jump,
+    front: f.front.split(/[\s,]+/).filter(Boolean).map((x) => x.toLowerCase()), internet: false, consent: f.consent, confirmed: f.confirmed });
+}
+async function createOrg(body) {
+  const s = S.setup;
   try {
     const r = await post("/api/setup", body);
-    s.org = r.org; s.path = r.path; s.env = s.form.env; s.step = 2; s.results = null;
-    render(); checkAccess();
+    s.org = r.org; s.file = r.path; s.env = body.env; s.step = 2; s.results = null;
+    await loadOrgs(); render(); checkAccess();
   } catch (e) {
     const errs = e.body?.errors || [e.message];
     $("#formerr").innerHTML = `<div class="banner err">${icon("alert")}<ul>${errs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
   }
+}
+function checkView(s) {
+  const r = s.results;
+  if (!r) return `<div class="onb">${stepsHead(s)}<h2>${t("Access check")}</h2><p>${t("Kanareika logs in to every server and runs uname -sr.")}</p><div class="sk" style="height:60px"></div></div>`;
+  const ok = r.filter((x) => x.ok), bad = r.filter((x) => !x.ok);
+  const byHint = {}; bad.forEach((x) => (byHint[x.hint || x.error] ||= []).push(x));
+  const list = r.length <= 12 ? `<table class="tbl checks"><tbody>${r.map((x) => `<tr><td>${x.ok ? `<span class="st available">${t("ok")}</span>` : `<span class="st bad">${t("failed")}</span>`}</td><td style="font-family:var(--mono);color:var(--host)">${esc(x.host)}</td><td class="note">${esc(x.address)}</td><td>${x.ok ? esc(x.system) : `<div>${esc(x.hint || x.error)}</div><div class="note">${esc(x.error)}</div>`}</td></tr>`).join("")}</tbody></table>`
+    : `<div class="kpis2"><div><b style="color:var(--ok)">${ok.length}</b>${t("answered")}</div><div><b style="color:var(--err)">${bad.length}</b>${t("failed")}</div></div>
+      ${Object.entries(byHint).map(([h, xs]) => `<div class="failgroup"><b>${xs.length} × ${esc(h)}</b><div class="note">${xs.slice(0, 20).map((x) => esc(x.host)).join(", ")}${xs.length > 20 ? " …" : ""}</div></div>`).join("")}`;
+  return `<div class="onb">${stepsHead(s)}<h2>${t("Access check")}</h2>${list}
+    <p class="note">${t("The settings are in {path}: edit it to fix addresses, add jump hosts or more servers.", { path: esc(s.file || "") })}</p>
+    <div class="actions"><button class="btn" data-setup-recheck>${t("Check again")}</button><button class="btn primary" data-setup-scan ${ok.length ? "" : "disabled"}>${bad.length && ok.length ? t("Scan the {n} that answered", { n: ok.length }) : t("Start the first scan")}</button></div></div>`;
 }
 async function checkAccess() {
   const s = S.setup; s.results = null; render();
   try { s.results = (await post("/api/setup/check", { org: s.org, env: s.env })).results; } catch (e) { s.results = [{ host: "—", ok: false, error: e.message }]; }
   render();
 }
-
 /* ---------- scans ---------- */
 async function startScan(org, env) {
   try { const r = await post("/api/scan", { org, env }); toast(t("Scan started")); pollJobs(); return r.id; }
@@ -976,7 +1062,7 @@ function palItems(q) {
   NAV.filter((n) => n !== "-").forEach((n) => it.push({ g: t("Go to"), label: t(n[1]), hint: "", go: () => { if (n[0] === "todo") { S.view = "todo"; render(); } else location.href = "/classic#" + qs({ org: S.org, env: S.env }); } }));
   [["fix", "Group by fix"], ["cve", "Group by CVE"], ["host", "Group by host"]].forEach(([k, l]) => it.push({ g: t("Commands"), label: t(l), hint: "", go: () => { S.by = k; store.set("by", k); S.open.clear(); S.cur = null; render(); } }));
   if (S.scans && S.env) it.push({ g: t("Commands"), label: t("Scan {env}", { env: S.env }), hint: "", go: () => startScan(S.org, S.env) });
-  if (S.scans) it.push({ g: t("Commands"), label: t("New organization…"), hint: "", go: () => { S.setup = null; S.view = "setup"; render(); } });
+  if (S.scans) it.push({ g: t("Commands"), label: t("Add servers…"), hint: "", go: () => { S.setup = null; S.view = "setup"; render(); } });
   return (q ? it.filter((x) => x.label.toLowerCase().includes(q)) : it.filter((x) => x.g !== t("Inside"))).slice(0, 50);
 }
 function palRender() {
@@ -1013,13 +1099,22 @@ document.addEventListener("click", async (e) => {
   if (d.cancel) { try { await post(`/api/jobs/${d.cancel}/cancel`); } catch (er) { toast(er.message); } return; }
   if (el.id === "scanbtn" || "scanNow" in d) { await startScan(S.org, S.env); return; }
   if (el.id === "cmdk") { palOpen(); return; }
-  if (el.id === "menubtn") { $("#side").classList.toggle("open"); return; }
   if ("setupCancel" in d) { S.view = "todo"; render(); return; }
+  if (d.path !== undefined && el.classList.contains("pathcard") || (d.path === "" && el.tagName === "BUTTON")) { S.setup = { step: d.path ? 1 : 0, path: d.path }; await discover(); render(); return; }
+  if ("importSsh" in d) { const dd = await discover(); const ta = $("#fleetform textarea[name=hosts]"); ta.value = (ta.value.trim() ? ta.value.trim() + "\n" : "") + dd.hosts.map((h) => `${h.alias.toLowerCase().replace(/[^a-z0-9_-]+/g, "-")} ${(h.hostname || h.alias)}${h.port ? ":" + h.port : ""}`).join("\n"); return; }
   if ("setupRecheck" in d) { checkAccess(); return; }
-  if ("setupScan" in d) { const s = S.setup; await loadOrgs(); S.org = s.org; S.env = s.env; store.set("org", S.org); store.set("env", S.env); s.job = await startScan(s.org, s.env); s.step = 3; render(); return; }
+  if ("setupScan" in d) {
+    const s = S.setup; await loadOrgs(); S.org = s.org; S.env = s.env; store.set("org", S.org); store.set("env", S.env);
+    const ok = (s.results || []).filter((x) => x.ok).map((x) => x.host), all = (s.results || []).length;
+    try { const r = await post("/api/scan", { org: s.org, env: s.env, hosts: ok.length < all ? ok : undefined }); s.job = r.id; pollJobs(); } catch (er) { toast(er.message); return; }
+    s.step = 3; render(); return;
+  }
   if ("setupDone" in d) { S.setup = null; S.view = "todo"; await loadOrgs(); render(); return; }
 });
-document.addEventListener("submit", (e) => { if (e.target.id === "setupform") { e.preventDefault(); submitSetup(e.target); } });
+document.addEventListener("submit", (e) => {
+  if (e.target.id === "fewform") { e.preventDefault(); submitFew(e.target); }
+  else if (e.target.id === "fleetform") { e.preventDefault(); submitFleet(e.target); }
+});
 document.addEventListener("change", async (e) => {
   const id = e.target.id, v = e.target.value;
   if (id === "org") {
@@ -1030,7 +1125,9 @@ document.addEventListener("change", async (e) => {
   else if (id === "lang") { store.set("lang", v); const u = new URL(location.href); u.searchParams.delete("lang"); location.href = u; }
 });
 let qTimer;
-document.addEventListener("input", (e) => { if (e.target.id === "q") { S.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(loadTree, 200); } else if (e.target.id === "palq") { PI = 0; palRender(); } });
+document.addEventListener("input", (e) => {
+  if (e.target.name === "address" && e.target.form?.id === "fewform") { const g = $("#loginguess"); if (g) g.textContent = guessLogin(e.target.value, FOUND.v); const u = e.target.form.user; if (u) u.placeholder = guessUser(e.target.value, FOUND.v); }
+  if (e.target.id === "q") { S.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(loadTree, 200); } else if (e.target.id === "palq") { PI = 0; palRender(); } });
 document.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); palOpen(); return; }
   if (e.target.id === "palq") {

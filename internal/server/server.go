@@ -190,6 +190,7 @@ func (s *Server) Handler() http.Handler {
 	r.Get("/api/session", s.apiSession)
 	r.Get("/api/jobs", s.apiJobs)
 	r.Get("/api/db", s.apiDB)
+	r.Get("/api/setup/discover", s.apiSetupDiscover)
 	r.With(s.csrfCheck).Post("/api/db/update", s.apiDBUpdate)
 	r.With(s.csrfCheck).Post("/api/scan", s.apiScan)
 	r.With(s.csrfCheck).Post("/api/setup", s.apiSetup)

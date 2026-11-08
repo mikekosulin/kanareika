@@ -51,6 +51,23 @@ func (s *Server) apiSetup(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusCreated, map[string]any{"org": req.ID, "path": path})
 }
 
+// apiSetupDiscover: GET /api/setup/discover -> what this machine knows about SSH (~/.ssh/config hosts, keys in
+// ~/.ssh and in the agent, the local user), to fill the setup form. Where scans are allowed only: it reads the
+// files of the machine kanareika web runs on.
+func (s *Server) apiSetupDiscover(w http.ResponseWriter, _ *http.Request) {
+	if s.jobs == nil {
+		sendErr(w, http.StatusForbidden, "setup is disabled on this read-only dashboard")
+		return
+	}
+	sendJSON(w, http.StatusOK, discover())
+}
+
+// discover: onboard.Discover with the ssh-agent's keys counted; tests replace it.
+var discover = func() onboard.Found {
+	onboard.SetAgentKeys(func() int { k, _ := sshx.AgentKeys(); return len(k) })
+	return onboard.Discover()
+}
+
 // apiSetupCheck: POST /api/setup/check {org, env} -> 200 {results}: logs in to every host of the env and runs
 // `uname -sr`. Read-only on the servers; allowed where scans are.
 func (s *Server) apiSetupCheck(w http.ResponseWriter, r *http.Request) {

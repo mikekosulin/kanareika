@@ -23,23 +23,28 @@ import (
 
 // Request: the answers of the setup form.
 type Request struct {
-	ID        string `json:"id"`        // org id: a-z, 0-9, '-', '_'
-	Name      string `json:"name"`      // organization name
-	User      string `json:"user"`      // SSH user on the servers
-	Privilege string `json:"privilege"` // none (default), sudo
-	Key       string `json:"key"`       // a private key file on this machine; "": the ssh-agent
-	Port      int    `json:"port"`      // SSH port, 0: 22
-	Hosts     string `json:"hosts"`     // one per line: "address" or "name address", address may carry :port
-	Env       string `json:"env"`       // environment, "": production
-	Internet  bool   `json:"internet"`  // the servers are reachable from the internet (raises priorities)
-	Consent   string `json:"consent"`   // where the permission to audit is documented
-	Confirmed bool   `json:"confirmed"` // "I am allowed to audit these servers"
+	ID        string   `json:"id"`              // org id: a-z, 0-9, '-', '_'
+	Name      string   `json:"name"`            // organization name
+	User      string   `json:"user"`            // SSH user on the servers
+	Privilege string   `json:"privilege"`       // none (default), sudo
+	Key       string   `json:"key"`             // a private key file on this machine; "": the ssh-agent
+	Port      int      `json:"port"`            // SSH port, 0: 22
+	Hosts     string   `json:"hosts"`           // one per line: "address" or "name address", address may carry :port
+	Env       string   `json:"env"`             // environment, "": production
+	Internet  bool     `json:"internet"`        // the servers are reachable from the internet (raises priorities)
+	Front     []string `json:"front,omitempty"` // only these groups face the internet (overrides Internet)
+	Jump      string   `json:"jump,omitempty"`  // a jump host for all of them: [user@]host[:port]
+	Consent   string   `json:"consent"`         // where the permission to audit is documented
+	Confirmed bool     `json:"confirmed"`       // "I am allowed to audit these servers"
 }
 
 // Host: one parsed line of Request.Hosts.
 type Host struct {
 	Name    string `json:"name"`
 	Address string `json:"address"`
+	Group   string `json:"group,omitempty"` // "": servers
+	Env     string `json:"env,omitempty"`   // "": the form's environment
+	User    string `json:"user,omitempty"`  // "": the form's SSH user
 }
 
 var (
@@ -60,33 +65,100 @@ func slug(s string) string {
 	return s
 }
 
-// ParseHosts: the hosts of the form, one per line; comments (#) and blank lines skipped. Errors say which line.
+// ParseHosts: the hosts of the form, one per line, in any of these shapes (comments # and blank lines skipped):
+//
+//	192.0.2.11                      an address (name made from it)
+//	web-01 192.0.2.11:2222          a name and an address
+//	web-01,192.0.2.11,web,staging   CSV: name, address, group, environment
+//	[web]                           an Ansible INI inventory: groups, then
+//	web-01 ansible_host=192.0.2.11 ansible_port=2222 ansible_user=deploy
+//
+// Errors say which line.
 func ParseHosts(text string) ([]Host, []string) {
 	var out []Host
 	var errs []string
 	seen := map[string]bool{}
+	group, skip := "", false // the current INI section; :vars / :children sections are skipped
 	for i, line := range strings.Split(text, "\n") {
 		line, _, _ = strings.Cut(line, "#")
-		f := strings.FieldsFunc(line, func(r rune) bool { return r == ' ' || r == '\t' || r == ',' || r == ';' })
-		var h Host
-		switch len(f) {
-		case 0:
+		line = strings.TrimSpace(strings.TrimSuffix(line, "\r"))
+		if line == "" || strings.HasPrefix(line, ";") {
 			continue
-		case 1:
-			h = Host{Address: f[0]}
-			host := f[0]
-			if hp, _, err := net.SplitHostPort(f[0]); err == nil {
-				host = hp
+		}
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			sec := strings.Trim(line, "[]")
+			skip = strings.Contains(sec, ":")
+			group = strings.ToLower(nameBad.ReplaceAllString(strings.ToLower(sec), "-"))
+			continue
+		}
+		if skip {
+			continue
+		}
+		var h Host
+		switch f := strings.Fields(line); {
+		case strings.Contains(line, ","): // CSV
+			c := strings.Split(line, ",")
+			for j := range c {
+				c[j] = strings.TrimSpace(c[j])
 			}
-			h.Name = slug(host)
-		case 2:
-			h = Host{Name: strings.ToLower(f[0]), Address: f[1]}
+			for len(c) > 1 && c[len(c)-1] == "" { // trailing commas
+				c = c[:len(c)-1]
+			}
+			if len(c) == 1 { // "address," is just an address
+				c = []string{"", c[0]}
+			}
+			if c[1] == "" {
+				errs = append(errs, fmt.Sprintf("line %d: %q: CSV is name,address[,group[,env]]", i+1, line))
+				continue
+			}
+			h = Host{Name: strings.ToLower(c[0]), Address: c[1]}
+			if len(c) > 2 {
+				h.Group = strings.ToLower(c[2])
+			}
+			if len(c) > 3 {
+				h.Env = strings.ToLower(c[3])
+			}
+			if h.Name == "" {
+				h.Name = slug(hostOnly(h.Address))
+			}
+		case len(f) >= 2 && strings.Contains(f[1], "="): // Ansible host line
+			h = Host{Name: strings.ToLower(f[0]), Address: f[0], Group: group}
+			port := ""
+			for _, kv := range f[1:] {
+				k, v, _ := strings.Cut(kv, "=")
+				switch k {
+				case "ansible_host":
+					h.Address = v
+				case "ansible_port":
+					port = v
+				case "ansible_user":
+					h.User = v
+				}
+			}
+			if port != "" {
+				h.Address = net.JoinHostPort(strings.Trim(h.Address, "[]"), port)
+			}
+			if !slugRE.MatchString(h.Name) {
+				h.Name = slug(hostOnly(h.Name))
+			}
+		case len(f) == 1:
+			h = Host{Name: slug(hostOnly(f[0])), Address: f[0], Group: group}
+		case len(f) == 2:
+			h = Host{Name: strings.ToLower(f[0]), Address: f[1], Group: group}
 		default:
-			errs = append(errs, fmt.Sprintf("line %d: %q: write `address` or `name address`", i+1, strings.TrimSpace(line)))
+			errs = append(errs, fmt.Sprintf("line %d: %q: write `address`, `name address`, CSV or an Ansible inventory line", i+1, line))
 			continue
 		}
 		if !slugRE.MatchString(h.Name) {
 			errs = append(errs, fmt.Sprintf("line %d: %q is not a usable host name (a-z, 0-9, '-', '_')", i+1, h.Name))
+			continue
+		}
+		if h.Group != "" && !slugRE.MatchString(h.Group) {
+			errs = append(errs, fmt.Sprintf("line %d: group %q: a-z, 0-9, '-', '_'", i+1, h.Group))
+			continue
+		}
+		if h.Env != "" && !slugRE.MatchString(h.Env) {
+			errs = append(errs, fmt.Sprintf("line %d: environment %q: a-z, 0-9, '-', '_'", i+1, h.Env))
 			continue
 		}
 		if seen[h.Name] {
@@ -102,6 +174,17 @@ func ParseHosts(text string) ([]Host, []string) {
 	return out, errs
 }
 
+// hostOnly: the host of "host:port" / "[v6]:port" / "user@host".
+func hostOnly(s string) string {
+	if _, h, ok := strings.Cut(s, "@"); ok {
+		s = h
+	}
+	if h, _, err := net.SplitHostPort(s); err == nil {
+		return h
+	}
+	return s
+}
+
 func quote(s string) string { return strconv.Quote(s) }
 
 // Render: the org file for r, commented like the template. keyRef: the key under secrets/ ("" = ssh-agent).
@@ -113,10 +196,6 @@ func Render(r Request, hosts []Host, keyRef string, today time.Time) []byte {
 	priv := r.Privilege
 	if priv == "" {
 		priv = "none"
-	}
-	role, exposure := "internal", 3
-	if r.Internet {
-		role, exposure = "front", 1
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, `# Created by kanareika's first-run setup on %s. Edit freely; every key: docs/org-file.md
@@ -146,16 +225,58 @@ access:
 	if r.Port != 0 && r.Port != 22 {
 		fmt.Fprintf(&b, "  port: %d\n", r.Port)
 	}
-	fmt.Fprintf(&b, `
-groups:
-  servers:
-    role: %s
-    env: %s
-    exposure: %d                  # 1 internet-facing, 2 neighbours, 3 internal
-    hosts:
-`, role, env, exposure)
+	if r.Jump != "" {
+		ju, jh, ok := strings.Cut(r.Jump, "@")
+		if !ok {
+			ju, jh = "", r.Jump
+		}
+		b.WriteString("  jumps:                         # reached first, the servers through it\n    bastion:\n")
+		fmt.Fprintf(&b, "      address: %s\n", jh)
+		if ju != "" {
+			fmt.Fprintf(&b, "      user: %s\n", ju)
+		}
+	}
+	type key struct{ group, env string }
+	var order []key
+	byGroup := map[key][]Host{}
 	for _, h := range hosts {
-		fmt.Fprintf(&b, "      %s:\n        address: %s\n", h.Name, h.Address)
+		k := key{h.Group, h.Env}
+		if k.group == "" {
+			k.group = "servers"
+		}
+		if k.env == "" {
+			k.env = env
+		}
+		if byGroup[k] == nil {
+			order = append(order, k)
+		}
+		byGroup[k] = append(byGroup[k], h)
+	}
+	names := map[string]int{}
+	for _, k := range order {
+		names[k.group]++
+	}
+	b.WriteString("\ngroups:\n")
+	for _, k := range order {
+		name := k.group
+		if names[k.group] > 1 { // the same group in two environments: two groups
+			name = k.group + "-" + k.env
+		}
+		role, exposure := "internal", 3
+		if r.Internet && len(r.Front) == 0 || slices.Contains(r.Front, k.group) {
+			role, exposure = "front", 1
+		}
+		fmt.Fprintf(&b, "  %s:\n    role: %s\n    env: %s\n    exposure: %d                  # 1 internet-facing, 2 neighbours, 3 internal\n", name, role, k.env, exposure)
+		if r.Jump != "" {
+			b.WriteString("    jump: bastion\n")
+		}
+		b.WriteString("    hosts:\n")
+		for _, h := range byGroup[k] {
+			fmt.Fprintf(&b, "      %s:\n        address: %s\n", h.Name, h.Address)
+			if h.User != "" && h.User != r.User {
+				fmt.Fprintf(&b, "        user: %s\n", h.User)
+			}
+		}
 	}
 	return []byte(b.String())
 }

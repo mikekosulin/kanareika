@@ -76,12 +76,23 @@ func TestSetup(t *testing.T) {
 	if r := do(h, "POST", "/api/setup/check", map[string]string{"org": "neworg", "env": "production"}, s.postHdr()); r.code != 400 {
 		t.Fatal(r.code)
 	}
+	oldDiscover := discover
+	t.Cleanup(func() { discover = oldDiscover })
+	discover = func() onboard.Found {
+		return onboard.Found{User: "me", Hosts: []onboard.SSHHost{{Alias: "nas", HostName: "192.0.2.40"}}}
+	}
+	if r := do(h, "GET", "/api/setup/discover", nil, nil); r.code != 200 || !strings.Contains(r.body, `"alias":"nas"`) {
+		t.Fatal(r.code, r.body)
+	}
 	// read-only dashboards neither write org files nor connect
 	ro, hro := newTest(t, Options{Paths: p})
 	for _, path := range []string{"/api/setup", "/api/setup/check"} {
 		if r := do(hro, "POST", path, map[string]any{}, ro.postHdr()); r.code != 403 {
 			t.Fatal(path, r.code)
 		}
+	}
+	if r := do(hro, "GET", "/api/setup/discover", nil, nil); r.code != 403 {
+		t.Fatal("discover on a read-only dashboard:", r.code)
 	}
 	_ = io.Discard
 }
