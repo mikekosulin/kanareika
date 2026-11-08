@@ -82,7 +82,36 @@ Check the result with `kanareika validate <id>` and `kanareika show <id>`.
 ## Priorities and exceptions
 
 `assets/policy/priority.yml` (overridable like the profiles): rules top to bottom, first match wins. Conditions: `kev`, `epss_gte`, `severity`, `exposure`,
-`fixable`, `kind`, `kernel`, `preauth`, `rce`, `id`. Due date = scan date + `sla_days[Pn]`.
+`fixable`, `kind`, `kernel`, `preauth`, `rce`, `id`.
+
+### Due dates
+
+Due date = start + `sla_days[Pn]`. The start is the first scan that saw the finding on that host (`first_seen`), so
+a finding that stays open becomes overdue instead of moving forward with every scan. Each finding keeps
+`first_seen`, `clock_start` and `due_why` (what set the date), and the interfaces show them.
+
+| key | values (default first) | meaning |
+|---|---|---|
+| `start` | `first_seen`, `fix_available`, `published`, `scan` | count from the first scan that saw it; from the first scan that saw an installable fix (no fix yet: no date); from the advisory's publication; from every scan (before 0.5) |
+| `kev` | `cisa`, `off` | never later than CISA's due date for a KEV entry |
+| `escalation` | `restart`, `keep` | priority went up: the new SLA from that day, never later than the date it had |
+| `after_exception` | `restart`, `keep` | an accepted risk expired: the clock starts again that day |
+| `sla_days` | `{P1: 7, P2: 30, P3: 90, P4: 180}` | days per priority |
+
+The defaults are in `assets/policy/priority.yml` (`due:` and `sla_days:`). An org overrides any of them, and one
+environment on top of that:
+
+```yaml
+due:
+  sla_days: {P1: 3}
+  envs:
+    staging:
+      sla_days: {P1: 14, P2: 60}
+      kev: off
+```
+
+Findings from before 0.5 have no `first_seen`: the first scan after the upgrade takes the oldest kept run that had
+them, so long-open findings show up as overdue.
 
 An exception applies when `id`, the host (if `hosts` is set) and a substring of the package (if `package` is set)
 match. After `review_by` it stops applying and the finding returns to the plan, marked as expired.

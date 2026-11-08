@@ -58,13 +58,21 @@ func f(id string, mod func(*finding.Finding)) finding.Finding {
 
 func day(s string) time.Time { d, _ := time.Parse(time.DateOnly, s); return d }
 
+// apply: Apply without a previous state, failing the test on a policy error.
+func apply(t *testing.T, fs []finding.Finding, org *config.Org, pol *Policy, feeds Feeds, at time.Time) []finding.Finding {
+	t.Helper()
+	out, err := Apply(fs, org, "production", pol, feeds, at, nil)
+	must(t, err)
+	return out
+}
+
 func TestPriorityAndExceptions(t *testing.T) {
 	org, pol := acme(t), policy(t)
 	feeds := Feeds{KEV: map[string]bool{"CVE-KEV": true}, EPSS: map[string]float64{"CVE-EPSS": 0.9}}
 	sev := func(s string, e int) func(*finding.Finding) {
 		return func(x *finding.Finding) { x.Severity, x.Exposure = s, e }
 	}
-	fs := Apply([]finding.Finding{
+	fs := apply(t, []finding.Finding{
 		f("CVE-KEV", sev("LOW", 3)),
 		f("CVE-KEV", sev("LOW", 1)),
 		f("CVE-1", sev("CRITICAL", 1)),
@@ -82,7 +90,7 @@ func TestPriorityAndExceptions(t *testing.T) {
 	if fs[1].DueOr() != "2026-11-08" || !fs[5].Accepted || fs[5].Exception.Expired {
 		t.Fatal(fs[1].DueOr(), fs[5].Accepted, fs[5].Exception)
 	}
-	fs = Apply([]finding.Finding{f("CVE-2023-4911", func(x *finding.Finding) { x.Host, x.Pkg = "ci-01", "glibc" })},
+	fs = apply(t, []finding.Finding{f("CVE-2023-4911", func(x *finding.Finding) { x.Host, x.Pkg = "ci-01", "glibc" })},
 		org, pol, feeds, day("2027-01-01"))
 	if fs[0].Accepted || !fs[0].Exception.Expired {
 		t.Fatal(fs[0])
@@ -104,7 +112,7 @@ func TestExceptionUntilAvailable(t *testing.T) {
 	state := func(s string) func(*finding.Finding) {
 		return func(x *finding.Finding) { x.Pkg, x.FixState = "rsync", s }
 	}
-	fs := Apply([]finding.Finding{f("CVE-V", state("vendor")), f("CVE-V", state("available"))}, org, pol, Feeds{},
+	fs := apply(t, []finding.Finding{f("CVE-V", state("vendor")), f("CVE-V", state("available"))}, org, pol, Feeds{},
 		day("2026-11-02"))
 	if !fs[0].Accepted || fs[1].Accepted || !fs[1].Exception.FixAvailable {
 		t.Fatal(fs[0].Accepted, fs[1].Accepted, fs[1].Exception)
@@ -112,7 +120,7 @@ func TestExceptionUntilAvailable(t *testing.T) {
 	setExceptions(org, map[string]any{"id": "*", "package": "rsync", "reason": "r", "owner": "x",
 		"review_by": "2026-12-31", "until_available": true},
 		map[string]any{"id": "*", "reason": "no package: ignored", "owner": "x", "review_by": "2026-12-31"})
-	fs = Apply([]finding.Finding{f("CVE-NEW", state("vendor")), f("CVE-NEW", nil)}, org, pol, Feeds{}, day("2026-11-02"))
+	fs = apply(t, []finding.Finding{f("CVE-NEW", state("vendor")), f("CVE-NEW", nil)}, org, pol, Feeds{}, day("2026-11-02"))
 	if !fs[0].Accepted || fs[1].Accepted {
 		t.Fatal(fs[0].Accepted, fs[1].Accepted)
 	}
@@ -189,7 +197,7 @@ func TestMatchesPython(t *testing.T) {
 	}
 	for name, want := range g.Runs {
 		pname, date, _ := strings.Cut(name, " ")
-		fs := Apply(slices.Clone(in.Findings), org, pols[pname], feeds, day(date))
+		fs := apply(t, slices.Clone(in.Findings), org, pols[pname], feeds, day(date))
 		for i, x := range fs {
 			var w out
 			must(t, json.Unmarshal(want[i], &w))

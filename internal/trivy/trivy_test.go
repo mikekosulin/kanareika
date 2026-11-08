@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/mikekosulin/kanareika/internal/finding"
 )
@@ -72,10 +73,41 @@ func TestMatchesPython(t *testing.T) {
 			t.Fatalf("%s: %d findings, want %d", name, len(got), len(c.want))
 		}
 		for i := range got {
-			if !reflect.DeepEqual(got[i], c.want[i]) {
-				t.Errorf("%s: %+v\nwant %+v", name, got[i], c.want[i])
+			// the frozen fixture predates the advisory facts (TestAdvisoryFacts covers them)
+			g := got[i]
+			g.Published, g.CVSSScore, g.Description = "", nil, ""
+			if !reflect.DeepEqual(g, c.want[i]) {
+				t.Errorf("%s: %+v\nwant %+v", name, g, c.want[i])
 			}
 		}
+	}
+}
+
+// TestAdvisoryFacts: the publication date, the base score of the vector Classify reads, and the description,
+// whitespace collapsed and cut at maxDescription runes with an ellipsis.
+func TestAdvisoryFacts(t *testing.T) {
+	r := &Report{Results: []Result{{Target: "os", Vulnerabilities: []Vulnerability{
+		{VulnerabilityID: "CVE-0000-1", PublishedDate: "2024-03-11T15:15:00Z", Description: "Line one.\n\n  Line   two.",
+			CVSS: CVSS{Sources: []string{"ghsa", "nvd"}, Vectors: map[string]Vectors{
+				"ghsa": {V3Vector: "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H", V3Score: 7.8},
+				"nvd":  {V3Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", V3Score: 9.8}}}},
+		{VulnerabilityID: "CVE-0000-2", PublishedDate: "bad", Description: strings.Repeat("ü", 700),
+			CVSS: CVSS{Sources: []string{"x"}, Vectors: map[string]Vectors{"x": {V40Vector: "CVSS:4.0/AV:N", V40Score: 6.1}}}},
+		{VulnerabilityID: "CVE-0000-3", CVSS: CVSS{Sources: []string{"nvd"}, Vectors: map[string]Vectors{
+			"nvd": {V3Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}}}},
+		{VulnerabilityID: "CVE-0000-4"},
+	}}}}
+	fs := VulnFindings(r, finding.Finding{Target: "os"})
+	if fs[0].Published != "2024-03-11" || fs[0].CVSSScore == nil || *fs[0].CVSSScore != 9.8 ||
+		fs[0].Description != "Line one. Line two." {
+		t.Errorf("nvd first, date only, whitespace collapsed: %+v", fs[0])
+	}
+	if fs[1].Published != "bad"[:0] || fs[1].CVSSScore == nil || *fs[1].CVSSScore != 6.1 ||
+		utf8.RuneCountInString(fs[1].Description) != maxDescription || !strings.HasSuffix(fs[1].Description, "…") {
+		t.Errorf("CVSS 4 score, a short date is dropped, long text cut: %q %v", fs[1].Published, fs[1].CVSSScore)
+	}
+	if fs[2].CVSSScore != nil || fs[3].CVSSScore != nil || fs[3].Description != "" || fs[3].Published != "" {
+		t.Errorf("no score without one for the chosen vector, nothing invented: %+v %+v", fs[2], fs[3])
 	}
 }
 

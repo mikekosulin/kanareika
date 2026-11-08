@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -52,9 +53,109 @@ type Rule struct {
 
 type Policy struct {
 	Rules   []Rule
-	SLADays map[string]float64 // priority -> days to fix, counted from the scan date
+	SLADays map[string]float64 // priority -> days to fix (Due.SLADays; kept for callers that read it)
+	Due     DueRules
 	KEVURL  string
 	EPSSURL string
+}
+
+// DueRules: how a due date is counted. SLA days per priority from a start date:
+//
+//	start: first_seen     the first scan that saw the finding on this host (default)
+//	       fix_available  the first scan that saw an installable fix (no fix: no due date yet)
+//	       published      the advisory's publication date (first_seen for findings without one)
+//	       scan           every scan restarts it (the behaviour before 0.5)
+//	kev: cisa             never later than CISA's KEV due date (default); off
+//	escalation: restart   priority went up: the new SLA counts from that day, never later than the old date
+//	            keep      the new SLA from the start date, even if that is already past
+//	after_exception: restart  an accepted risk expired: the clock starts again that day (default); keep
+type DueRules struct {
+	SLADays        map[string]float64
+	Start          string
+	KEV            string
+	Escalation     string
+	AfterException string
+}
+
+var dueEnums = map[string][]string{
+	"start":           {finding.DueFirstSeen, finding.DueFixSince, finding.DuePublished, finding.DueScan},
+	"kev":             {"cisa", "off"},
+	"escalation":      {"restart", "keep"},
+	"after_exception": {"restart", "keep"},
+}
+
+func defaultDue() DueRules {
+	return DueRules{SLADays: map[string]float64{}, Start: finding.DueFirstSeen, KEV: "cisa", Escalation: "restart",
+		AfterException: "restart"}
+}
+
+// overlay: d with the keys of m (a `due:` block) applied; unknown keys and values are errors.
+func (d DueRules) overlay(m map[string]any, where string) (DueRules, error) {
+	out := d
+	out.SLADays = maps.Clone(d.SLADays)
+	for k, v := range m {
+		switch k {
+		case "sla_days":
+			sla, ok := v.(map[string]any)
+			if !ok {
+				return d, fmt.Errorf("%s.sla_days: a map of priority -> days is required", where)
+			}
+			for p, n := range sla {
+				days, ok := n.(float64)
+				if !ok || days < 0 {
+					return d, fmt.Errorf("%s.sla_days.%s: a number of days is required", where, p)
+				}
+				out.SLADays[p] = days
+			}
+		case "start", "kev", "escalation", "after_exception":
+			sv, _ := v.(string)
+			if !slices.Contains(dueEnums[k], sv) {
+				return d, fmt.Errorf("%s.%s: one of %s", where, k, strings.Join(dueEnums[k], ", "))
+			}
+			switch k {
+			case "start":
+				out.Start = sv
+			case "kev":
+				out.KEV = sv
+			case "escalation":
+				out.Escalation = sv
+			default:
+				out.AfterException = sv
+			}
+		case "envs":
+			if where != "due" {
+				return d, fmt.Errorf("%s.envs: only at the top of the org's due block", where)
+			}
+		default:
+			return d, fmt.Errorf("%s.%s: unknown key", where, k)
+		}
+	}
+	return out, nil
+}
+
+// DueFor: the policy's due rules with the org's `due:` block on top, then its `due.envs.<env>` block.
+func (pol *Policy) DueFor(org *config.Org, env string) (DueRules, error) {
+	d := pol.Due
+	if d.SLADays == nil {
+		d = defaultDue()
+		d.SLADays = maps.Clone(pol.SLADays)
+	}
+	if org == nil {
+		return d, nil
+	}
+	m, ok := org.Data["due"].(map[string]any)
+	if !ok {
+		return d, nil
+	}
+	d, err := d.overlay(m, "due")
+	if err != nil {
+		return d, err
+	}
+	envs, _ := m["envs"].(map[string]any)
+	if e, ok := envs[env].(map[string]any); ok {
+		return d.overlay(e, "due.envs."+env)
+	}
+	return d, nil
 }
 
 // policyFile reads a policy file; tests replace it (the built-in fallback never fails otherwise).
@@ -118,6 +219,19 @@ func ParsePolicy(b []byte) (*Policy, error) {
 		}
 		pol.SLADays[k] = n
 	}
+	pol.Due = defaultDue()
+	pol.Due.SLADays = maps.Clone(pol.SLADays)
+	if due, ok := m["due"].(map[string]any); ok {
+		d, err := pol.Due.overlay(due, "due")
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := due["envs"]; ok {
+			return nil, errors.New("due.envs: per-environment rules belong in orgs/<org>.yml")
+		}
+		pol.Due = d
+		pol.SLADays = maps.Clone(d.SLADays)
+	}
 	feeds, _ := m["feeds"].(map[string]any)
 	pol.KEVURL, _ = feeds["kev_url"].(string)
 	pol.EPSSURL, _ = feeds["epss_url"].(string)
@@ -130,6 +244,7 @@ func isString(v any) bool { _, ok := v.(string); return ok }
 
 type Feeds struct {
 	KEV     map[string]bool
+	KEVDue  map[string]string // CVE -> CISA's due date (YYYY-MM-DD), from kev_due.json
 	EPSS    map[string]float64
 	Updated string // when `kanareika feeds` last ran, "" = never
 }
@@ -204,12 +319,16 @@ func UpdateFeeds(ctx context.Context, pol *Policy) (Stats, error) {
 	if pol.KEVURL == "" || pol.EPSSURL == "" {
 		return st, errors.New("priority.yml: feeds.kev_url and feeds.epss_url are required")
 	}
-	ids, err := fetchKEV(ctx, pol.KEVURL)
+	ids, due, err := fetchKEV(ctx, pol.KEVURL)
 	if err != nil {
 		return st, err
 	}
 	b, _ := json.Marshal(ids)
 	if err := writeFile(filepath.Join(dir, "kev.json"), b); err != nil {
+		return st, err
+	}
+	b, _ = json.Marshal(due)
+	if err := writeFile(filepath.Join(dir, "kev_due.json"), b); err != nil {
 		return st, err
 	}
 	st.KEV = len(ids)
@@ -228,30 +347,38 @@ func UpdateFeeds(ctx context.Context, pol *Policy) (Stats, error) {
 	return st, writeFile(filepath.Join(dir, "updated"), []byte(updated))
 }
 
-func fetchKEV(ctx context.Context, url string) ([]string, error) {
+// fetchKEV: the catalog's CVE ids, and CISA's due date of each (the earliest when listed twice).
+func fetchKEV(ctx context.Context, url string) ([]string, map[string]string, error) {
 	r, err := get(ctx, url, 60*time.Second)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer r.Close()
 	var kev struct {
 		Vulnerabilities []struct {
-			CveID string `json:"cveID"`
+			CveID   string `json:"cveID"`
+			DueDate string `json:"dueDate"`
 		} `json:"vulnerabilities"`
 	}
 	if err := json.NewDecoder(r).Decode(&kev); err != nil {
-		return nil, fmt.Errorf("KEV: %w", err)
+		return nil, nil, fmt.Errorf("KEV: %w", err)
 	}
 	set := map[string]bool{}
+	due := map[string]string{}
 	for _, v := range kev.Vulnerabilities {
 		set[v.CveID] = true
+		if d, err := time.Parse(time.DateOnly, v.DueDate); err == nil {
+			if old, ok := due[v.CveID]; !ok || d.Format(time.DateOnly) < old {
+				due[v.CveID] = d.Format(time.DateOnly)
+			}
+		}
 	}
 	ids := make([]string, 0, len(set))
 	for id := range set {
 		ids = append(ids, id)
 	}
 	slices.Sort(ids)
-	return ids, nil
+	return ids, due, nil
 }
 
 // fetchEPSS: a gzipped CSV, "#" comment lines first, then cve,epss,percentile.
@@ -351,7 +478,7 @@ func download(ctx context.Context, url, dest string) error {
 
 // LoadFeeds: what `kanareika feeds` stored; missing files leave the rest empty (no feeds = no KEV/EPSS).
 func LoadFeeds() (Feeds, error) {
-	f := Feeds{KEV: map[string]bool{}, EPSS: map[string]float64{}}
+	f := Feeds{KEV: map[string]bool{}, KEVDue: map[string]string{}, EPSS: map[string]float64{}}
 	dir := FeedsDir()
 	b, err := os.ReadFile(filepath.Join(dir, "kev.json"))
 	if errors.Is(err, fs.ErrNotExist) {
@@ -365,6 +492,11 @@ func LoadFeeds() (Feeds, error) {
 	}
 	for _, id := range ids {
 		f.KEV[id] = true
+	}
+	if b, err := os.ReadFile(filepath.Join(dir, "kev_due.json")); err == nil { // feeds from before 0.5 have none
+		if err := json.Unmarshal(b, &f.KEVDue); err != nil {
+			return f, fmt.Errorf("kev_due.json: %w", err)
+		}
 	}
 	if b, err = os.ReadFile(filepath.Join(dir, "epss.json")); errors.Is(err, fs.ErrNotExist) {
 		return f, nil
@@ -525,11 +657,113 @@ func exceptionFor(f *finding.Finding, org *config.Org, today string) (map[string
 	return nil, false
 }
 
+// Prev: the same finding (report.KeyOf) in the env's state before this scan, nil when it is new.
+type Prev func(*finding.Finding) *finding.Finding
+
+func prioRank(p string) int {
+	switch p {
+	case "P1":
+		return 1
+	case "P2":
+		return 2
+	case "P3":
+		return 3
+	case "P4":
+		return 4
+	}
+	return 9
+}
+
+// fixKnown: an installable fix exists. OS packages: the host's repositories say so; images and libraries: the
+// advisory names a fixed version; misconfigurations and health findings are always fixable.
+func fixKnown(f *finding.Finding) bool {
+	if f.Kind != finding.Vuln {
+		return true
+	}
+	if f.FixState != "" {
+		return fixInstallable(f)
+	}
+	return f.Fixed != ""
+}
+
+func addDays(date string, days float64) string {
+	t, err := time.Parse(time.DateOnly, date)
+	if err != nil {
+		return ""
+	}
+	return t.AddDate(0, 0, int(days)).Format(time.DateOnly)
+}
+
+// clock sets FirstSeen, FixSince, ClockStart, DueWhy and Due of a prioritized finding (see DueRules).
+func clock(f *finding.Finding, p *finding.Finding, d DueRules, kevDue map[string]string, today string) {
+	f.FirstSeen, f.FixSince, f.ClockStart, f.DueWhy, f.KEVDue, f.Due = today, "", "", "", "", nil
+	if p != nil && p.FirstSeen != "" && p.FirstSeen < today {
+		f.FirstSeen = p.FirstSeen
+	}
+	if fixKnown(f) {
+		f.FixSince = today
+		switch {
+		case f.Kind != finding.Vuln:
+			f.FixSince = f.FirstSeen
+		case p != nil && p.FixSince != "" && p.FixSince < today:
+			f.FixSince = p.FixSince
+		}
+	}
+	if f.Kind == finding.Vuln {
+		f.KEVDue = kevDue[f.ID]
+	}
+	days, ok := d.SLADays[f.PriorityOr()]
+	if f.Priority == nil || !ok {
+		return
+	}
+	start, why := f.FirstSeen, finding.DueFirstSeen
+	switch d.Start {
+	case finding.DueScan:
+		start, why = today, finding.DueScan
+	case finding.DueFixSince:
+		if f.FixSince == "" {
+			f.DueWhy = finding.DueNoFix
+			return
+		}
+		start, why = f.FixSince, finding.DueFixSince
+	case finding.DuePublished:
+		if f.Published != "" {
+			start, why = f.Published, finding.DuePublished
+		}
+	}
+	due := addDays(start, days)
+	if p != nil && d.Start != finding.DueScan {
+		pr, cur := prioRank(p.PriorityOr()), prioRank(f.PriorityOr())
+		switch {
+		case p.Accepted && !f.Accepted && d.AfterException == "restart":
+			start, why, due = today, finding.DueAfterExcept, addDays(today, days)
+		case cur < pr && d.Escalation == "restart":
+			// went up: the new SLA from today, but never later than the date it already had
+			start, why, due = today, finding.DueEscalated, addDays(today, days)
+			if p.DueOr() != "" && p.DueOr() < due {
+				due = p.DueOr()
+			}
+		case cur == pr && (p.DueWhy == finding.DueEscalated || p.DueWhy == finding.DueAfterExcept) &&
+			p.ClockStart != "" && p.DueOr() != "":
+			start, why, due = p.ClockStart, p.DueWhy, p.DueOr() // still the restarted clock
+		}
+	}
+	if d.KEV == "cisa" && f.KEVDue != "" && f.KEVDue < due {
+		due, why = f.KEVDue, finding.DueKEV
+	}
+	f.ClockStart, f.DueWhy, f.Due = start, why, &due
+}
+
 // Apply sets kev / epss / priority / due / accepted / exception on every finding (in place; returned for
-// convenience). scanDate: the date the run started, SLA days count from it.
-func Apply(findings []finding.Finding, org *config.Org, pol *Policy, feeds Feeds,
-	scanDate time.Time) []finding.Finding {
+// convenience). scanDate: the date the run started; env: the environment (its due rules); prev: the env's state
+// before this scan (nil: none), where the due date's clock carries over from.
+func Apply(findings []finding.Finding, org *config.Org, env string, pol *Policy, feeds Feeds,
+	scanDate time.Time, prev Prev) ([]finding.Finding, error) {
 	today := scanDate.Format(time.DateOnly)
+	rules, err := pol.DueFor(org, env)
+	if err != nil {
+		return findings, err
+	}
 	for i := range findings {
 		f := &findings[i]
 		f.KEV = feeds.KEV[f.ID]
@@ -550,11 +784,6 @@ func Apply(findings []finding.Finding, org *config.Org, pol *Policy, feeds Feeds
 				}
 			}
 		}
-		f.Due = nil
-		if days, ok := pol.SLADays[f.PriorityOr()]; ok && f.Priority != nil {
-			d := scanDate.AddDate(0, 0, int(days)).Format(time.DateOnly)
-			f.Due = &d
-		}
 		ex, active := exceptionFor(f, org, today)
 		f.Accepted = ex != nil && active
 		f.Exception = nil
@@ -563,6 +792,11 @@ func Apply(findings []finding.Finding, org *config.Org, pol *Policy, feeds Feeds
 				ReviewBy: str(ex, "review_by"), Expired: !active,
 				FixAvailable: truthy(ex["until_available"]) && !active && fixInstallable(f)}
 		}
+		var p *finding.Finding
+		if prev != nil {
+			p = prev(f)
+		}
+		clock(f, p, rules, feeds.KEVDue, today)
 	}
-	return findings
+	return findings, nil
 }

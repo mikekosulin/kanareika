@@ -51,6 +51,11 @@ func TestOrgFileErrors(t *testing.T) {
 			mapOf(d["access"])["port"] = "twenty-two"
 		}, []string{"acme.yml: access/port: got string, want integer"}},
 		{"schema: unknown top-level key", func(d map[string]any) { d["colour"] = "blue" }, []string{"acme.yml: <root>:"}},
+		{"schema: due start", func(d map[string]any) { d["due"] = map[string]any{"start": "yesterday"} }, []string{"acme.yml: due/start"}},
+		{"schema: due days", func(d map[string]any) {
+			d["due"] = map[string]any{"envs": map[string]any{"staging": map[string]any{"sla_days": map[string]any{"P1": -3}}}}
+		}, []string{"acme.yml: due/envs/staging/sla_days/P1"}},
+		{"schema: due unknown key", func(d map[string]any) { d["due"] = map[string]any{"grace": 3} }, []string{"acme.yml: due:"}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			p := home(t)
@@ -62,6 +67,20 @@ func TestOrgFileErrors(t *testing.T) {
 				t.Fatalf("want %v in %v", c.parts, errs)
 			}
 		})
+	}
+}
+
+// TestDueBlockAccepted: an org's due block with per-environment overrides is valid.
+func TestDueBlockAccepted(t *testing.T) {
+	p := home(t)
+	f := filepath.Join(p.Orgs, "acme.yml")
+	d := readYAML(t, f)
+	d["due"] = map[string]any{"sla_days": map[string]any{"P1": 3}, "start": "fix_available", "kev": "off",
+		"escalation": "keep", "after_exception": "restart",
+		"envs": map[string]any{"staging": map[string]any{"sla_days": map[string]any{"P1": 14}, "start": "first_seen"}}}
+	writeYAML(t, f, d)
+	if _, errs := loadAll(t, p); len(errs) > 0 {
+		t.Fatal(errs)
 	}
 }
 

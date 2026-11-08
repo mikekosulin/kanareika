@@ -73,12 +73,22 @@ rules:
       severity: [MEDIUM, HIGH, CRITICAL]
   - priority: P4                # no conditions: everything else
 
-# days to fix, counted from the scan date
+# days to fix per priority (see `due` for where they count from)
 sla_days:
   P1: 7
   P2: 30
   P3: 90
   P4: 180
+
+# How a due date is counted; orgs/<org>.yml may override any key in its own `due:` block, and per environment
+# under `due.envs.<env>`.
+due:
+  start: first_seen        # first_seen: the first scan that saw it on the host | fix_available: the first scan
+                           # that saw an installable fix (none yet: no date) | published: the advisory's date |
+                           # scan: every scan restarts it (before 0.5)
+  kev: cisa                # cisa: never later than CISA's KEV due date | off
+  escalation: restart      # priority went up: the new SLA from that day, never later than before | keep
+  after_exception: restart # an accepted risk expired: the clock starts again that day | keep
 
 feeds:
   kev_url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json

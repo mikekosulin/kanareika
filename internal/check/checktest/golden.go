@@ -222,6 +222,19 @@ func firstDiff(got, want string) string {
 // goOnly: fields the Go finding always has and the Python module dicts did not (prioritization fills them later).
 var goOnly = []string{"kev", "epss", "priority", "due", "accepted", "exception"}
 
+// advisoryOnly: advisory facts added in 0.5 (trivy.VulnFindings); fixtures recorded before them have none. A fixture
+// that has one of them is compared on it as usual.
+var advisoryOnly = []string{"published", "cvss_score", "description"}
+
+// DropAdvisory removes from got the advisory facts that want does not have.
+func DropAdvisory(got, want map[string]any) {
+	for _, k := range advisoryOnly {
+		if _, ok := want[k]; !ok {
+			delete(got, k)
+		}
+	}
+}
+
 // CompareFindings: same findings in the same order, field by field as JSON. Python's empty "args": {} and the Go
 // zero-valued prioritization fields are not differences (encoding/json omits empty maps; the report layer sets
 // the rest).
@@ -240,6 +253,7 @@ func CompareFindings(t testing.TB, got []finding.Finding, wantJSON string) {
 		t.Errorf("findings: got %d, want %d", len(g), len(w))
 	}
 	for i := range min(len(g), len(w)) {
+		DropAdvisory(g[i], w[i])
 		for _, k := range goOnly {
 			if _, ok := w[i][k]; !ok {
 				switch v := g[i][k]; v {

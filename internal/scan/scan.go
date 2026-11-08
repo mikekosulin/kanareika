@@ -331,7 +331,15 @@ func (s *Scanner) run(ctx context.Context, o *config.Org, env string, selected [
 		return 1
 	}
 	feeds, _ := priority.LoadFeeds()
-	findings = priority.Apply(findings, o, pol, feeds, started)
+	prev, err := report.PrevIndex(envDir)
+	if err != nil {
+		s.log("previous state: %v (due dates count from this scan)", err)
+		prev = nil
+	}
+	if findings, err = priority.Apply(findings, o, env, pol, feeds, started, prev); err != nil {
+		fmt.Fprintln(s.Out, "  !", err)
+		return 1
+	}
 
 	tv := trivy.Version(ctx)
 	var fu *string

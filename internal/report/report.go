@@ -376,3 +376,54 @@ func Prune(p config.Paths, env string, keepFull, keepPartial int, dryRun bool) (
 }
 
 func exists(path string) bool { _, err := os.Stat(path); return err == nil }
+
+// PrevIndex: the env's current state (reports/<org>/<env>/current) by finding key, for the due date's clock
+// (priority.Prev). Findings saved before 0.5 have no first_seen: they get the date of the oldest kept run that
+// has them (and fix_since of the oldest that had an installable fix), so upgrading does not restart every clock.
+func PrevIndex(env string) (func(*finding.Finding) *finding.Finding, error) {
+	cur := filepath.Join(env, Current)
+	idx := map[Key]*finding.Finding{}
+	if exists(filepath.Join(cur, "findings.json.gz")) {
+		fs, err := LoadFindings(cur)
+		if err != nil {
+			return nil, err
+		}
+		for i := range fs {
+			idx[KeyOf(&fs[i])] = &fs[i]
+		}
+	}
+	missing := 0
+	for _, f := range idx {
+		if f.FirstSeen == "" {
+			missing++
+		}
+	}
+	if missing > 0 {
+		for _, run := range runDirs(env) { // oldest first
+			day := filepath.Base(run)
+			if len(day) < 10 {
+				continue
+			}
+			day = day[:10]
+			fs, err := LoadFindings(run)
+			if err != nil {
+				continue // a damaged old run: the clock starts later, nothing else depends on it
+			}
+			for i := range fs {
+				f := idx[KeyOf(&fs[i])]
+				if f == nil {
+					continue
+				}
+				if f.FirstSeen == "" || day < f.FirstSeen {
+					f.FirstSeen = day
+				}
+				installable := fs[i].FixState == finding.FixAvailable || fs[i].FixState == finding.FixReboot ||
+					(fs[i].FixState == "" && fs[i].Fixed != "")
+				if installable && (f.FixSince == "" || day < f.FixSince) {
+					f.FixSince = day
+				}
+			}
+		}
+	}
+	return func(f *finding.Finding) *finding.Finding { return idx[KeyOf(f)] }, nil
+}

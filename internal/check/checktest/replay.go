@@ -351,7 +351,13 @@ func RunReplay(t testing.TB, c *Replay, org *config.Org, setTrivy func(TrivyFunc
 		}
 		bad := 0
 		for j := range min(len(gotN), len(want.Findings)) {
-			if g, w := asJSON(t, gotN[j]), asJSON(t, want.Findings[j]); !reflect.DeepEqual(g, w) && bad < 5 {
+			g, w := asJSON(t, gotN[j]), asJSON(t, want.Findings[j])
+			if gm, ok := g.(map[string]any); ok {
+				if wm, ok := w.(map[string]any); ok {
+					DropAdvisory(gm, wm)
+				}
+			}
+			if !reflect.DeepEqual(g, w) && bad < 5 {
 				bad++
 				gb, _ := json.Marshal(g)
 				wb, _ := json.Marshal(w)

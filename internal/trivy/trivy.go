@@ -352,6 +352,7 @@ type Vulnerability struct {
 	PrimaryURL       string   `json:"PrimaryURL"`
 	CweIDs           []string `json:"CweIDs"`
 	CVSS             CVSS     `json:"CVSS"`
+	PublishedDate    string   `json:"PublishedDate,omitempty"`
 }
 
 // CVSS: source -> vectors, in the report's order (the fallback source is the first one listed).
@@ -361,8 +362,10 @@ type CVSS struct {
 }
 
 type Vectors struct {
-	V3Vector  string `json:"V3Vector"`
-	V40Vector string `json:"V40Vector"`
+	V3Vector  string  `json:"V3Vector"`
+	V40Vector string  `json:"V40Vector"`
+	V3Score   float64 `json:"V3Score,omitempty"`
+	V40Score  float64 `json:"V40Score,omitempty"`
 }
 
 func (c *CVSS) UnmarshalJSON(b []byte) error {
@@ -440,6 +443,37 @@ func vector(v Vulnerability) string {
 	return ""
 }
 
+// score: the base score of the vector vector() picks (same sources, same order); nil when there is none.
+func score(v Vulnerability) *float64 {
+	for _, src := range append([]string{"nvd", "redhat", "ghsa", "ubuntu"}, v.CVSS.Sources...) {
+		s := v.CVSS.Vectors[src]
+		if s.V3Vector != "" {
+			if s.V3Score > 0 {
+				return &s.V3Score
+			}
+			return nil
+		}
+		if s.V40Vector != "" {
+			if s.V40Score > 0 {
+				return &s.V40Score
+			}
+			return nil
+		}
+	}
+	return nil
+}
+
+// maxDescription: runes of an advisory's description kept in a finding (the rest is on the advisory page).
+const maxDescription = 600
+
+func shorten(s string, n int) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if utf8.RuneCountInString(s) <= n {
+		return s
+	}
+	return strings.TrimSpace(string([]rune(s)[:n-1])) + "…"
+}
+
 type Class struct {
 	Vector  string `json:"vector"`
 	Preauth bool   `json:"preauth"`
@@ -489,6 +523,10 @@ func VulnFindings(r *Report, base finding.Finding) []finding.Finding {
 			}
 			c := Classify(v)
 			f.Vector, f.Preauth, f.RCE = c.Vector, c.Preauth, c.RCE
+			f.CVSSScore, f.Description = score(v), shorten(v.Description, maxDescription)
+			if len(v.PublishedDate) >= 10 {
+				f.Published = v.PublishedDate[:10]
+			}
 			out = append(out, f)
 		}
 	}

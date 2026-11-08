@@ -151,14 +151,18 @@ func generate(out string, last time.Time, days int) error {
 
 	for _, env := range []string{"production", "staging"} {
 		envDir := report.EnvDir(paths, "acme", env)
-		for d := 0; d < days; d++ {
+		for d := 0; d < days; d++ { // like scans: each run counts its due dates from the state before it
 			started := last.AddDate(0, 0, d-days+1).Add(3 * time.Hour)
-			if err := saveRun(r, envDir, org, env, d, days, started, vulns, pol, feeds); err != nil {
+			prev, err := report.PrevIndex(envDir)
+			if err != nil {
 				return err
 			}
-		}
-		if _, err := updateCurrent(envDir, true, false); err != nil {
-			return err
+			if err := saveRun(r, envDir, org, env, d, days, started, vulns, pol, feeds, prev); err != nil {
+				return err
+			}
+			if _, err := updateCurrent(envDir, true, false); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -200,7 +204,7 @@ func makeVulns(r *rand.Rand, days int) []vuln {
 }
 
 func saveRun(r *rand.Rand, envDir string, org *config.Org, env string, day, days int, started time.Time,
-	vulns []vuln, pol *priority.Policy, feeds priority.Feeds) error {
+	vulns []vuln, pol *priority.Policy, feeds priority.Feeds, prev priority.Prev) error {
 	runID := started.Format("2006-01-02_150405")
 	runDir := filepath.Join(envDir, runID)
 	var names []string
@@ -259,7 +263,10 @@ func saveRun(r *rand.Rand, envDir string, org *config.Org, env string, day, days
 				i18n.Msg("ssh.bruteforce", map[string]any{"n": 3000 + r.IntN(4000), "ips": 40 + r.IntN(60)}), i18n.Plain("203.0.113.66 (812)"))
 		}
 	}
-	fs = priority.Apply(fs, org, pol, feeds, started)
+	fs, err := priority.Apply(fs, org, env, pol, feeds, started, prev)
+	if err != nil {
+		return err
+	}
 	tv := "0.76.2"
 	fu := feeds.Updated
 	meta := &report.Meta{Org: "acme", Env: env, RunID: runID, Kanareika: "demo", TrivyVersion: &tv,

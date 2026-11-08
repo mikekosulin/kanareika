@@ -17,6 +17,18 @@ const (
 	Inventory = "inventory" // facts worth keeping, not a to-do
 )
 
+// Why a due date is what it is (Finding.DueWhy).
+const (
+	DueFirstSeen   = "first_seen"      // SLA days from the first scan that saw it
+	DueFixSince    = "fix_available"   // ... from the first scan that saw an installable fix
+	DuePublished   = "published"       // ... from the advisory's publication date
+	DueScan        = "scan"            // ... from this scan (the behaviour before 0.5)
+	DueEscalated   = "escalated"       // the priority went up: the new SLA from that day, never later than before
+	DueAfterExcept = "exception_ended" // an accepted risk expired: the clock starts again that day
+	DueKEV         = "kev"             // CISA's KEV due date comes first
+	DueNoFix       = "no_fix"          // counting from the fix, and there is none yet
+)
+
 // Fix states of an OS package fix, as the host's own repositories see it (see package vendor).
 const (
 	FixAvailable = "available" // the repositories have a newer build: update
@@ -74,6 +86,17 @@ type Finding struct {
 	Due       *string    `json:"due"`
 	Accepted  bool       `json:"accepted"`
 	Exception *Exception `json:"exception"`
+	// the due date's clock (see priority.Apply): when the finding was first seen here, when a fix first became
+	// installable, the date the clock counts from and why it starts there
+	FirstSeen  string `json:"first_seen,omitempty"`
+	FixSince   string `json:"fix_since,omitempty"`
+	ClockStart string `json:"clock_start,omitempty"`
+	DueWhy     string `json:"due_why,omitempty"`
+	// advisory facts: publication date, CISA's KEV due date, CVSS base score, description (shortened)
+	Published   string   `json:"published,omitempty"`
+	KEVDue      string   `json:"kev_due,omitempty"`
+	CVSSScore   *float64 `json:"cvss_score,omitempty"`
+	Description string   `json:"description,omitempty"`
 
 	// Extra keeps fields this version does not know (newer or older writers), so they survive a rewrite.
 	Extra map[string]json.RawMessage `json:"-"`
@@ -111,7 +134,8 @@ func (f Finding) MarshalJSON() ([]byte, error) {
 var known = []string{"org", "host", "group", "exposure", "module", "kind", "id", "pkg", "pkg_path", "installed", "fixed",
 	"status", "severity", "title", "url", "target", "msg", "args", "target_msg", "target_args", "vector", "preauth",
 	"rce", "kernel", "inactive", "pending_reboot", "backported", "fix_state", "repo_version", "image_in_use", "kev",
-	"epss", "priority", "due", "accepted", "exception"}
+	"epss", "priority", "due", "accepted", "exception", "first_seen", "fix_since", "clock_start", "due_why", "published",
+	"kev_due", "cvss_score", "description"}
 
 // PriorityOr: the priority or "" when none was assigned.
 func (f *Finding) PriorityOr() string {
