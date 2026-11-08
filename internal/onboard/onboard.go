@@ -142,6 +142,9 @@ func ParseHosts(text string) ([]Host, []string) {
 			if len(c) == 1 { // "address," is just an address
 				c = []string{"", c[0]}
 			}
+			if strings.EqualFold(c[0], "name") && len(c) > 1 && strings.EqualFold(c[1], "address") {
+				continue // the header line of a spreadsheet export
+			}
 			if c[1] == "" {
 				errs = append(errs, fmt.Sprintf("line %d: %q: CSV is name,address[,group[,env]]", i+1, line))
 				continue

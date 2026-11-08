@@ -1042,7 +1042,7 @@ function pasteBox(text, rows) {
   return `<label class="wide"><span>${t("Servers")}<small>${t("an IP, user@host or an ssh command, one per line")}</small>
       <button type="button" class="linkbtn" data-formats>${t("more formats")}</button></span>
     <textarea name="hosts" id="pastebox" rows="${rows}" required spellcheck="false" placeholder="admin@192.0.2.10">${esc(text)}</textarea></label>
-    <div class="wide formats" id="formats" hidden><code>ssh -p 2222 -J jump@203.0.113.10 deploy@10.0.0.5</code> · <code>Host</code> ${t("blocks from an ssh config")} · <code>name,address,group,env</code> · ${t("an Ansible INI inventory")}</div>
+    <div class="wide formats" id="formats" hidden><code>ssh -p 2222 -J jump@203.0.113.10 deploy@198.51.100.5</code> · <code>Host</code> ${t("blocks from an ssh config")} · <code>name,address,group,env</code> · ${t("an Ansible INI inventory")}</div>
     ${d.hosts.length ? `<div class="wide"><button type="button" class="btn ghost small left" data-sshpick>${icon("list")}${t("Choose from ~/.ssh/config ({n})", { n: d.hosts.length })}</button></div>` : ""}
     <div class="wide" id="preview"></div>`;
 }

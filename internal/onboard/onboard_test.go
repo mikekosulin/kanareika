@@ -355,3 +355,10 @@ func TestBadIPv4Skipped(t *testing.T) {
 		t.Fatal(errs)
 	}
 }
+
+func TestCSVHeaderIgnored(t *testing.T) {
+	hosts, errs := ParseHosts("name,address,group,env\nweb-01,192.0.2.11,web,staging")
+	if len(hosts) != 1 || hosts[0].Name != "web-01" || len(errs) != 0 {
+		t.Fatal(hosts, errs)
+	}
+}
