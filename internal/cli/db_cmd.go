@@ -47,7 +47,7 @@ Isolated network: "db export bundle.tar.gz" on a connected machine, carry the fi
 
 // dbUpdateCmd: `db update`, and `feeds` (its old name) when hidden.
 func (a *app) dbUpdateCmd(use string) *cobra.Command {
-	var skipTrivy bool
+	var skipTrivy, yes bool
 	c := &cobra.Command{
 		Use:   use,
 		Short: "download trivy's vulnerability DBs, CISA KEV, EPSS and the IP database",
@@ -55,10 +55,14 @@ func (a *app) dbUpdateCmd(use string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, stop := interruptible()
 			defer stop()
+			if !a.confirmDownload(ctx, yes) {
+				return fail(1, "nothing downloaded")
+			}
 			return a.updateDBs(ctx, cmd.OutOrStdout(), cmd.ErrOrStderr(), skipTrivy)
 		},
 	}
 	c.Flags().BoolVar(&skipTrivy, "skip-trivy", false, "feeds only, not trivy's vulnerability DBs")
+	c.Flags().BoolVarP(&yes, "yes", "y", false, "don't ask before downloading (also KANAREIKA_YES=1, or without a terminal)")
 	return c
 }
 

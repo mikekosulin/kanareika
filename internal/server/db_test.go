@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mikekosulin/kanareika/internal/dbsize"
 	"github.com/mikekosulin/kanareika/internal/priority"
 )
 
@@ -153,14 +154,14 @@ func TestDBTrivyVersion(t *testing.T) {
 }
 
 func TestDBSize(t *testing.T) {
-	old := sizeLookup
-	t.Cleanup(func() { sizeLookup, dbSizes = old, nil })
+	old := dbsize.Lookup
+	t.Cleanup(func() { dbsize.Lookup = old; dbsize.Reset() })
 	calls := 0
-	sizeLookup = func(context.Context, priority.Policy) map[string]int64 {
+	dbsize.Lookup = func(context.Context, priority.Policy) map[string]int64 {
 		calls++
 		return map[string]int64{"db": 100, "java-db": 1000, "kev": 1, "epss": 2, "dbip-city": 3}
 	}
-	dbSizes = nil
+	dbsize.Reset()
 	t.Setenv("TRIVY_CACHE_DIR", t.TempDir()) // nothing downloaded: everything needed
 	t.Setenv("KANAREIKA_FEEDS_DIR", t.TempDir())
 	_, h := newTest(t, Options{UpdateDB: func(context.Context, io.Writer) error { return nil }})

@@ -33,7 +33,7 @@ func (a *app) scanCmd() *cobra.Command {
 		flagOrgs, groups, hosts, modules []string
 		env                              string
 		all, dryRun, ignoreWindow        bool
-		offline                          bool
+		offline, yes                     bool
 		parallel                         int
 	)
 	c := &cobra.Command{
@@ -74,6 +74,9 @@ report directory and history. An org with several environments needs --env (or -
 			}
 			ctx, stop := interruptible()
 			defer stop()
+			if !offline && !dryRun && !a.confirmDownload(ctx, yes) {
+				return fail(1, "refusing to scan: the vulnerability DBs are not downloaded (kanareika db update, or db import and --offline)")
+			}
 			s := &scan.Scanner{Paths: a.paths, Out: cmd.OutOrStdout(), Err: cmd.ErrOrStderr()}
 			rc := 0
 			for _, o := range targets {
@@ -109,6 +112,7 @@ report directory and history. An org with several environments needs --env (or -
 	f.IntVar(&parallel, "parallel", 4, "hosts in parallel within one org")
 	f.BoolVar(&offline, "offline", os.Getenv("KANAREIKA_OFFLINE") != "",
 		"don't download vulnerability DBs, use what db update or db import left (env KANAREIKA_OFFLINE=1)")
+	f.BoolVarP(&yes, "yes", "y", false, "don't ask before downloading the DBs (also KANAREIKA_YES=1, or without a terminal)")
 	return c
 }
 
