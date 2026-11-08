@@ -11,7 +11,8 @@ Please **do not open a public issue**. Report privately via
 (Security tab → *Report a vulnerability*).
 
 Include what you need to reproduce it: version (`kanareika --version`), OS, the command or org file (with your
-addresses and names removed), and what an attacker gains.
+addresses and names removed), and what an attacker gains. Reproduce it against a real kanareika build first:
+speculative or unverified reports, AI-generated or not, are closed ([AI_POLICY.md](AI_POLICY.md#security-reports)).
 
 What to expect:
 
