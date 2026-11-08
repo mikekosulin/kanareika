@@ -254,10 +254,6 @@
     "clear": "снять",
     "how": "как",
     "Copy prompt": "Скопировать промпт",
-    "remote, no account and no user interaction, code execution": "удалённо, без учётки и без действий пользователя, с выполнением кода",
-    "has": "есть",
-    "from the catalog": "из каталога",
-    "exploited in the wild": "эксплуатируются в атаках",
     "Nothing matches the filters": "Ничего не найдено по фильтрам",
     "Copied": "Скопировано",
     "package, image": "пакет, образ",
@@ -270,10 +266,8 @@
     "not booted": "не загружено",
     "no fix": "нет исправления",
     "without a fix": "без исправления",
-    "more": "ещё",
     "changes": "изменения",
     "package / check": "пакет / проверка",
-    "first 1000 of": "первые 1000 из",
     "A partial run is not compared with full runs.": "Частичный прогон не сравнивается с полными.",
     "No previous full run.": "Нет предыдущего полного прогона.",
     "Only hosts scanned in both.": "Только хосты, просканированные в обоих.",
@@ -533,6 +527,13 @@
     "{avail} / {total} MB free": "свободно {avail} / {total} МБ",
     "{avail} of {total} MB free": "свободно {avail} из {total} МБ",
     "{n} unique": "{n} уникальных",
-    "{pct}% free": "{pct}% своб."
+    "{pct}% free": "{pct}% своб.",
+    "+{n} more": "ещё {n}",
+    "show {n} more": "показать ещё {n}",
+    "has CVEs from the CISA KEV catalog: exploited in the wild": "есть CVE из каталога CISA KEV: эксплуатируются в атаках",
+    "has CVEs with remote code execution, no account and no user interaction": "есть CVE с удалённым выполнением кода без учётки и без действий пользователя",
+    "{n} CVE: remote code execution with no account and no user interaction": "{n} CVE: удалённое выполнение кода без учётки и без действий пользователя",
+    "filtering": "фильтрация есть",
+    "first 1000 of {n}": "первые 1000 из {n}"
   }
 }

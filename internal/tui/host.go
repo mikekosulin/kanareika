@@ -88,7 +88,7 @@ func (m *Model) hostCard(name string, w int) []string {
 		section("Packages")
 		for i, p := range pk {
 			if i == 8 {
-				out = append(out, " "+sMuted.Render(fmt.Sprintf("+%d %s", len(pk)-8, m.t.T("more")))+" "+sKey.Render("<4>"))
+				out = append(out, " "+sMuted.Render(m.t.F("+{n} more", "n", strconv.Itoa(len(pk)-8)))+" "+sKey.Render("<4>"))
 				break
 			}
 			kev := ""
