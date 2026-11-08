@@ -83,7 +83,7 @@ func TestPictures(t *testing.T) {
 		}
 	}
 	for name, want := range map[string][]string{
-		"og":        {"What to patch first.", "Network", "■ 2 P1", "■ 3 P3", "■ 2 P4", "CVE-0000-90210", "stage-web-01"},
+		"og":        {"What to patch first.", "Access", "■ 2 P1", "■ 3 P3", "■ 2 P4", "openssl 3.0.13 → 3.0.15", "kernel 5.14.0-427"},
 		"banner-en": {`lang="en"`, "What to patch first.", "ToDo"},
 		"banner-ru": {`lang="ru"`, "Начните с главного.", "Что делать", "Здоровье"},
 		"banner-zh": {`lang="zh"`, "从最重要的开始", "待办", "健康"},
@@ -96,6 +96,12 @@ func TestPictures(t *testing.T) {
 	}
 	if strings.Contains(page["banner-en"], "CVE-0000-90210") {
 		t.Error("banner shows more than its rows")
+	}
+	// the social preview is read at ~450px wide: few tabs, few rows, no CVE column
+	for _, w := range []string{"Network", "NTP drift", "CVE-0000-90017"} {
+		if strings.Contains(page["og"], w) {
+			t.Errorf("og shows more than it can at preview size: %q", w)
+		}
 	}
 }
 
