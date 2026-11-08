@@ -636,6 +636,9 @@ main { background: var(--bg); }
 .cause details.raw code { display: block; margin-top: 6px; font: 11.5px var(--mono); color: var(--ink-3); white-space: pre-wrap; word-break: break-word; }
 code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); border-bottom: 1px dashed var(--line-2); }
 .btn[disabled] { opacity: .45; cursor: not-allowed; filter: saturate(.4); }
+/* host names and addresses never break across lines */
+.hostn, .tbl td.mono, .tbl.preview td, .understood code, .cause .chips code, code.from, code.to, .pick b { white-space: nowrap; }
+.tbl.preview { display: block; overflow-x: auto; }
 
 /* end-extra-css */
 </style>
