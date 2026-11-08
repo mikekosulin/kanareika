@@ -127,6 +127,11 @@ func Mode(cfg map[string]any) string {
 	return fmt.Sprint(cfg["scan_images"])
 }
 
+// DeniedError: docker could not be asked, in plain words, with the raw error after them.
+func DeniedError(h config.Host, err error) error {
+	return fmt.Errorf("%s (%w)", i18n.T("denied.docker", i18n.Default, map[string]any{"why": check.DeniedWhy(h).Text}), err)
+}
+
 // Run is the module. Writes docker.json ({"version", "containers", "images"} as docker printed them, the shape the
 // report layer reads) and, when images are scanned, images/<short id>.json.gz (raw trivy reports).
 func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts check.Facts) ([]finding.Finding, error) {
@@ -157,7 +162,7 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 		}
 	}
 	if err != nil {
-		return nil, fmt.Errorf("no access to docker (privilege=%s): %w", h.Privilege, err)
+		return nil, DeniedError(h, err)
 	}
 	raw, err = runOp(ctx, h, "docker-ps")
 	if err != nil {

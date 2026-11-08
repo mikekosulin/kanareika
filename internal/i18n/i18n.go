@@ -122,6 +122,22 @@ func T(key, lang string, args map[string]any) string {
 				args = withArg(args, strings.TrimSuffix(k, "_key"), T(s, lang, nil))
 			}
 		}
+		if strings.HasSuffix(k, "_keys") { // a list of message keys, rendered and joined (as stored: []string or []any)
+			var parts []string
+			switch l := v.(type) {
+			case []string:
+				for _, s := range l {
+					parts = append(parts, T(s, lang, nil))
+				}
+			case []any:
+				for _, s := range l {
+					if s, ok := s.(string); ok {
+						parts = append(parts, T(s, lang, nil))
+					}
+				}
+			}
+			args = withArg(args, strings.TrimSuffix(k, "_keys"), strings.Join(parts, T("list.sep", lang, nil)))
+		}
 	}
 	missing := false
 	out := placeholder.ReplaceAllStringFunc(text, func(m string) string {
