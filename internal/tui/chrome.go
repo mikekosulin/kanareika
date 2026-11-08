@@ -290,7 +290,10 @@ func (m *Model) menuBox() []string {
 		if i == d.cur {
 			l = sSel.Render(fit(ansi.Strip(l), inner, false))
 		}
-		lines = append(lines, l)
+		lines = append(lines, m.zone(fmt.Sprintf("menu:%d", i), l, func(int) tea.Cmd { // a click: as enter on it
+			d.cur = i
+			return m.menuKey(keyMsg("enter"))
+		}))
 	}
 	if len(items) == 0 {
 		lines = append(lines, " "+sMuted.Render(m.t.T("nothing here")))
@@ -300,7 +303,11 @@ func (m *Model) menuBox() []string {
 		hint = sKey.Render("<space>") + " " + sMuted.Render(m.t.T("toggle")) + "  " + sKey.Render("<esc>") + " " + sMuted.Render(m.t.T("close"))
 	}
 	lines = append(lines, "", " "+hint)
-	return panel(sTitle.Render(m.t.T(title)), lines, w, len(lines)+2)
+	box := panel(sTitle.Render(m.t.T(title)), lines, w, len(lines)+2)
+	for i, l := range box { // a click inside the list but not on an item keeps it open
+		box[i] = m.zone(fmt.Sprintf("menubox:%d", i), l, func(int) tea.Cmd { return nil })
+	}
+	return box
 }
 
 // overlay: box drawn over lines at column x, line y.
@@ -364,13 +371,13 @@ func (m *Model) hints() string {
 	help := sKey.Render("?") + " " + sMuted.Render(m.t.T("all keys"))
 	out := " "
 	for _, x := range l {
-		part := sKey.Render(x.key) + " " + sMuted.Render(m.t.T(x.what)) + sep
+		part := m.zoneKey(x.key, sKey.Render(x.key)+" "+sMuted.Render(m.t.T(x.what))) + sep
 		if ansi.StringWidth(out+part+help) > m.w {
 			break
 		}
 		out += part
 	}
-	return out + help
+	return out + m.zoneKey("?", help)
 }
 
 // statusBar: org │ env │ hosts · data age · DB, the last message; at the right what is selected and the time.
@@ -380,7 +387,7 @@ func (m *Model) statusBar() string {
 	}
 	l := ""
 	if m.org != "" {
-		l = sCrumb2.Render(m.org) + sEnv.Render(m.envLabel(m.env))
+		l = m.zoneKey("O", sCrumb2.Render(m.org)) + m.zoneKey("E", sEnv.Render(m.envLabel(m.env)))
 	} else {
 		l = sCrumb.Render("Kanareika")
 	}
@@ -405,6 +412,9 @@ func (m *Model) statusBar() string {
 		info = append(info, s)
 	}
 	if db := m.dbShort(); db != "" {
+		if m.dbAttention() != "" { // a click updates, as U
+			db = m.zoneKey("U", db)
+		}
 		info = append(info, db)
 	}
 	if len(info) > 0 {

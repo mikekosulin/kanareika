@@ -82,7 +82,8 @@ func TestAnalysisViewsRich(t *testing.T) {
 	h.has("192.0.2.9!", "80 443", "✓ firewalld · ufw · INPUT DROP · docker", "no access", "no filtering", "Listening ports 3",
 		"outside", "local", "nginx")
 	h.key("7")
-	h.has("96% /", "88%", "25% free", "0.4/2", "2", "OOM", "12", "Europe/Moscow!", "✓ 2 ms", "✗", "! 1.5 s", "unknown", "87% /")
+	h.has("96% /", "88%", "25%", "0.4/2", "2", "OOM", "12", "Europe/Moscow!", "2 ms",
+		"MEM FREE", "LOAD /CPU", "JOURNAL /7D", "✗", "! 1.5 s", "unknown", "87% /")
 
 	rd.New, rd.Resolved = nil, nil // no previous full run
 	h.key("4")

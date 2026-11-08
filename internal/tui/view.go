@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/mikekosulin/kanareika/assets"
@@ -78,78 +79,22 @@ func fit(s string, w int, right bool) string {
 	return s + pad
 }
 
-// col: a table column. Columns are as wide as their content (up to width); a narrow terminal drops them by drop.
+// col: a table column. A column is as wide as its widest value (or its header), up to width; a narrow terminal first
+// squeezes the squeezable ones (width 0, or min set) down to their minimum, then drops columns by drop.
 type col struct {
 	title string
-	width int // the widest it gets; 0: flexible, takes the rest
+	width int // the widest it gets; 0: as wide as its content, squeezed first when there is no room
 	right bool
-	min   int                         // flexible: the narrowest it is still of use (default 12)
+	min   int                         // squeezed: the narrowest it is still of use (default 12)
 	drop  int                         // dropped when there is no room, the higher first; 0: never. >0 can be switched off
-	fill  func(row, width int) string // drawn at its final width (bars)
+	fill  func(row, width int) string // drawn at its final width (bars); width is its width
+	tight bool                        // one space after it instead of two (the tree's narrow marks)
+	grow  bool                        // takes the width left over (the tree's text: its numbers at the right edge)
 }
 
 func (c col) key() string { return c.title }
 
-// layout: which columns fit in width and how wide each is.
-func (m *Model) layout(v view, cols []col, rows [][]string, width int) (keep, widths []int) {
-	natural := make([]int, len(cols))
-	for i, c := range cols {
-		if m.set.hidden(v, c.key()) && c.drop > 0 {
-			continue
-		}
-		keep = append(keep, i)
-		n := ansi.StringWidth(m.t.T(c.title))
-		switch {
-		case c.fill != nil:
-			n = max(c.width, c.min)
-		default:
-			for _, r := range rows {
-				n = max(n, ansi.StringWidth(r[i]))
-			}
-		}
-		if c.width > 0 && !c.right { // numbers (right-aligned) are never cut: they take what they need
-			n = min(n, c.width)
-		}
-		if c.width == 0 {
-			n = max(c.minW(), 1)
-		}
-		natural[i] = n
-	}
-	need := func() int {
-		t := 0
-		for _, i := range keep {
-			t += natural[i] + 1
-		}
-		return t
-	}
-	for need() > width {
-		worst := -1
-		for _, i := range keep {
-			if cols[i].drop > 0 && (worst < 0 || cols[i].drop > cols[worst].drop) {
-				worst = i
-			}
-		}
-		if worst < 0 {
-			break
-		}
-		keep = slices.DeleteFunc(keep, func(i int) bool { return i == worst })
-	}
-	flex := 0
-	for _, i := range keep {
-		if cols[i].width == 0 {
-			flex++
-		}
-	}
-	rest := width - need()
-	widths = make([]int, len(cols))
-	for _, i := range keep {
-		widths[i] = natural[i]
-		if cols[i].width == 0 && rest > 0 {
-			widths[i] += rest / flex
-		}
-	}
-	return keep, widths
-}
+func (c col) squeezable() bool { return c.fill == nil && (c.width == 0 || c.min > 0) }
 
 func (c col) minW() int {
 	if c.min > 0 {
@@ -158,18 +103,99 @@ func (c col) minW() int {
 	return 12
 }
 
+// gapAfter: the space after a column: two, so that columns never run together; one for tight ones.
+func (c col) gapAfter() int {
+	if c.tight {
+		return 1
+	}
+	return 2
+}
+
+// layout: which columns fit in width and how wide each is. Columns empty in every row are left out; what does not
+// fit is squeezed, then the least useful columns go. Leftover width stays at the right, never as gaps.
+func (m *Model) layout(v view, cols []col, rows [][]string, width int) (keep, widths []int) {
+	natural := make([]int, len(cols))
+	for i, c := range cols {
+		if m.set.hidden(v, c.key()) && c.drop > 0 {
+			continue
+		}
+		empty := len(rows) > 0 && c.fill == nil && c.title != ""
+		n := ansi.StringWidth(m.t.T(c.title))
+		if c.fill != nil {
+			n = max(n, c.width, c.min)
+		}
+		for _, r := range rows {
+			if i < len(r) && c.fill == nil {
+				w := ansi.StringWidth(r[i])
+				n = max(n, w)
+				if strings.TrimSpace(ansi.Strip(r[i])) != "" {
+					empty = false
+				}
+			}
+		}
+		if empty { // nothing to show in any row: no column
+			continue
+		}
+		if c.width > 0 && !c.right && c.fill == nil { // numbers (right-aligned) are never cut: they take what they need
+			n = min(n, c.width)
+		}
+		keep = append(keep, i)
+		natural[i] = max(n, 1)
+	}
+	for {
+		widths = slices.Clone(natural)
+		need := 0
+		for j, i := range keep {
+			need += widths[i]
+			if j < len(keep)-1 {
+				need += cols[i].gapAfter()
+			}
+		}
+		excess := need - width
+		for _, i := range keep { // squeeze the squeezable, the widest first
+			if excess <= 0 {
+				break
+			}
+			if cols[i].squeezable() {
+				r := min(excess, max(widths[i]-cols[i].minW(), 0))
+				widths[i] -= r
+				excess -= r
+			}
+		}
+		if excess <= 0 {
+			for _, i := range keep {
+				if cols[i].grow {
+					widths[i] -= excess // excess <= 0: what is left over
+					break
+				}
+			}
+			return keep, widths
+		}
+		worst := -1
+		for _, i := range keep {
+			if cols[i].drop > 0 && (worst < 0 || cols[i].drop > cols[worst].drop) {
+				worst = i
+			}
+		}
+		if worst < 0 {
+			return keep, widths
+		}
+		keep = slices.DeleteFunc(keep, func(i int) bool { return i == worst })
+	}
+}
+
 // table: rows under headers in width cells and height lines, the cursor row a full-width bar kept in view.
 func (m *Model) table(cols []col, rows [][]string, width, height int) []string {
 	return m.grid(cols, rows, width, height, true)
 }
 
-// grid: a table; without a cursor it shows the first rows that fit.
+// grid: a table; without a cursor it shows the first rows that fit. With one, every row is clickable (rowClick).
 func (m *Model) grid(cols []col, rows [][]string, width, height int, cursor bool) []string {
 	keep, widths := m.layout(m.view, cols, rows, width)
 	// line: a row; the selected one as a bar, its charts (fill columns) keeping their colors on it
 	line := func(r int, cells []string, selected bool) string {
 		var l strings.Builder
-		for _, i := range keep {
+		for j, i := range keep {
 			c := cells[i]
 			chart := cols[i].fill != nil && r >= 0
 			if chart {
@@ -180,10 +206,12 @@ func (m *Model) grid(cols []col, rows [][]string, width, height int, cursor bool
 				c = sSel.Render(ansi.Strip(c))
 			}
 			l.WriteString(c)
-			if selected {
-				l.WriteString(sSel.Render(" "))
-			} else {
-				l.WriteString(" ")
+			if j < len(keep)-1 {
+				gap := strings.Repeat(" ", cols[i].gapAfter())
+				if selected {
+					gap = sSel.Render(gap)
+				}
+				l.WriteString(gap)
 			}
 		}
 		out := l.String()
@@ -211,7 +239,12 @@ func (m *Model) grid(cols []col, rows [][]string, width, height int, cursor bool
 		m.off[m.view] = off
 	}
 	for i := off; i < min(off+h, len(rows)); i++ {
-		out = append(out, line(i, rows[i], i == cur))
+		l := line(i, rows[i], i == cur)
+		if cursor {
+			i := i
+			l = m.zone(fmt.Sprintf("row:%d", i), l, func(dx int) tea.Cmd { return m.rowClick(i, dx) })
+		}
+		out = append(out, l)
 	}
 	return out
 }
@@ -273,7 +306,7 @@ func (m *Model) tabs() string {
 	}{{true, "  "}, {true, " "}, {false, "  "}} {
 		parts := make([]string, nViews)
 		for v := range nViews {
-			parts[v] = label(v, f.full)
+			parts[v] = m.zone(fmt.Sprintf("tab:%d", v), label(v, f.full), func(int) tea.Cmd { m.setView(v); return nil })
 		}
 		if l = " " + strings.Join(parts, f.sep); ansi.StringWidth(l) <= m.w {
 			break
@@ -283,11 +316,17 @@ func (m *Model) tabs() string {
 		g := sMuted.Render(m.t.T("group by")) + " "
 		for _, by := range groupings {
 			name := m.t.T(groupNames[by])
+			s := sMuted.Render(" " + name + " ")
 			if by == m.by {
-				g += sCrumb2.Render(name)
-			} else {
-				g += sMuted.Render(" " + name + " ")
+				s = sCrumb2.Render(name)
 			}
+			g += m.zone("by:"+by, s, func(int) tea.Cmd {
+				if m.by != by {
+					m.by = by
+					m.cur[vActions], m.off[vActions], m.curID = 0, 0, ""
+				}
+				return nil
+			})
 		}
 		g += " " + sKey.Render("g") + " "
 		if room := m.w - ansi.StringWidth(l) - ansi.StringWidth(g); room >= 2 {
@@ -302,6 +341,8 @@ func (m *Model) View() string {
 	if m.w == 0 || m.h == 0 {
 		return ""
 	}
+	m.handlers = map[string]func(int) tea.Cmd{}
+	m.zoneSeq = 0
 	var lines []string
 	if m.w < minW || m.h < minH {
 		lines = m.tooSmall()
@@ -321,6 +362,7 @@ func (m *Model) View() string {
 	for i, l := range lines {
 		lines[i] = fit(l, m.w, false)
 	}
+	lines = m.scanZones(lines)
 	return strings.Join(lines, "\n")
 }
 
@@ -459,31 +501,31 @@ func (m *Model) body(w, h int) (string, []string) {
 
 // viewCols: the columns of each view, in the order of its cells. drop: what goes first on a narrow terminal.
 var viewCols = [nViews][]col{
-	vHosts: {{title: "host", width: 26}, {title: "OS", width: 32, drop: 3}, {title: "P1", width: 4, right: true},
-		{title: "P2", width: 4, right: true}, {title: "P3", width: 4, right: true, drop: 1}, {title: "P4", width: 4, right: true, drop: 1},
-		{title: "CVE", width: 5, right: true, drop: 2}, {title: "chart", min: 8, drop: 4}},
-	vPackages: {{width: 2}, {title: "host", width: 20, drop: 3}, {title: "where", width: 28, drop: 4}, {title: "package", min: 12},
-		{title: "installed", width: 20, drop: 5}, {title: "fixed in", width: 20}, {title: "CVE", width: 4, right: true, drop: 2},
-		{title: "KEV", width: 3, drop: 1}, {title: "due by", width: 10, drop: 6}},
-	vChanges: {{width: 1}, {width: 2}, {title: "host", width: 20}, {title: "package / check", width: 40},
-		{title: "where", min: 12, drop: 2}, {title: "CVE", width: 5, right: true, drop: 1}},
+	vHosts: {{title: "host", width: 24}, {title: "group", width: 16, drop: 3}, {title: "OS", width: 28, min: 12, drop: 4},
+		{title: "P1", right: true}, {title: "P2", right: true}, {title: "P3", right: true, drop: 2}, {title: "P4", right: true, drop: 1},
+		{title: "CVE", right: true, drop: 2}, {width: barW, min: barW, drop: 6}, {title: "facing", width: 10, drop: 5}},
+	vPackages: {{width: 2}, {title: "host", width: 20, drop: 3}, {title: "where", width: 24, min: 8, drop: 4},
+		{title: "package", width: 32, min: 14}, {title: "installed", width: 28, right: true, drop: 5}, {title: "fixed in", width: 28},
+		{title: "CVE", right: true, drop: 2}, {title: "KEV", drop: 1}, {title: "due by", width: 10, drop: 6}},
+	vChanges: {{width: 1, tight: true}, {width: 2}, {title: "host", width: 20}, {title: "package / check", width: 40, min: 16},
+		{title: "where", width: 32, min: 12, drop: 2}, {title: "CVE", right: true, drop: 1}},
 	vAccess: {{title: "host", width: 22}, {title: "password", width: 10}, {title: "root", width: 12, drop: 4},
-		{title: "with password", width: 20, drop: 3}, {title: "keys", width: 5, right: true, drop: 2},
-		{title: "logins", width: 6, right: true, drop: 1}, {title: "IPs", width: 4, right: true, drop: 1},
-		{title: "failed", width: 8, right: true}, {title: "failed IPs", width: 6, right: true, drop: 2}},
-	vNetwork: {{title: "host", width: 22}, {title: "public IP", width: 34, drop: 2}, {title: "open to the outside", width: 30},
-		{title: "firewall", min: 12, drop: 1}},
-	vHealth: {{title: "host", width: 22}, {title: "disk", width: 16}, {title: "inode", width: 5, right: true, drop: 3},
-		{title: "memory", width: 10, drop: 2}, {title: "load", width: 8, drop: 2}, {title: "units", width: 5, right: true, drop: 4},
-		{title: "kernel", width: 30, drop: 5}, {title: "journal", width: 7, right: true, drop: 4}, {title: "time zone", width: 16, drop: 6},
-		{title: "time", width: 12, drop: 1}},
-	vExceptions: {{width: 1}, {title: "host", width: 20}, {title: "id", width: 20}, {title: "package", width: 20, drop: 2},
-		{title: "until", width: 10, drop: 3}, {title: "who", width: 12, drop: 4}, {title: "reason", min: 12, drop: 1}},
-	vRuns: {{title: "run", width: 18}, {title: "state", width: 14}, {title: "kind", width: 10, drop: 3},
-		{title: "hosts ok", width: 9, right: true, drop: 2}, {title: "P1", width: 4, right: true}, {title: "P2", width: 4, right: true, drop: 1},
-		{title: "P3", width: 4, right: true, drop: 1}},
+		{title: "with password", width: 24, min: 10, drop: 3}, {title: "keys", right: true, drop: 2},
+		{title: "logins", right: true, drop: 1}, {title: "IPs", right: true, drop: 1},
+		{title: "failed", right: true}, {title: "failed IPs", right: true, drop: 2}},
+	vNetwork: {{title: "host", width: 22}, {title: "public IP", width: 34, min: 15, drop: 2}, {title: "open to the outside", width: 30, min: 12},
+		{title: "firewall", width: 48, min: 12, drop: 1}},
+	vHealth: {{title: "host", width: 22}, {title: "disk", width: 18}, {title: "inode", right: true, drop: 3},
+		{title: "mem free", right: true, drop: 2}, {title: "load /cpu", right: true, drop: 2}, {title: "failed units", right: true, drop: 4},
+		{title: "kernel", width: 30, min: 12, drop: 5}, {title: "journal /7d", right: true, drop: 4}, {title: "time zone", width: 18, drop: 6},
+		{title: "clock offset", width: 12, drop: 1}},
+	vExceptions: {{width: 1, tight: true}, {title: "host", width: 20}, {title: "id", width: 20}, {title: "package", width: 24, drop: 2},
+		{title: "until", width: 10, drop: 3}, {title: "who", width: 16, drop: 4}, {title: "reason", width: 60, min: 12, drop: 1}},
+	vRuns: {{title: "run", width: 18}, {title: "state", width: 22}, {title: "kind", width: 10, drop: 3},
+		{title: "hosts ok", right: true, drop: 2}, {title: "P1", right: true}, {title: "P2", right: true, drop: 1},
+		{title: "P3", right: true, drop: 1}},
 	vScans: {{title: "environment", width: 24}, {title: "state", width: 22}, {title: "started", width: 12, drop: 1},
-		{title: "scope", min: 10, drop: 2}},
+		{title: "scope", width: 60, min: 10, drop: 2}},
 }
 
 func (m *Model) noData() []string {
@@ -510,16 +552,20 @@ func (m *Model) noData() []string {
 }
 
 // stack: a host's P1..P4 as one stacked bar of width w (btop style).
+const barW = 16 // the hosts' bar: a line, never the whole free width
+
+// stack: a host's P1..P3 as one thin line of at most w cells, scaled to top (the largest row's); P4 is background
+// and left out.
 func stack(c map[string]int, top, w int) string {
 	if top == 0 {
 		return ""
 	}
 	var b strings.Builder
 	used := 0
-	for _, p := range []string{"P1", "P2", "P3", "P4"} {
+	for _, p := range []string{"P1", "P2", "P3"} {
 		n := (c[p]*w + top - 1) / top
 		n = min(n, w-used)
-		b.WriteString(lipgloss.NewStyle().Foreground(cP[p]).Render(strings.Repeat("▇", n)))
+		b.WriteString(lipgloss.NewStyle().Foreground(cP[p]).Render(strings.Repeat("━", n)))
 		used += n
 	}
 	return b.String()
@@ -531,16 +577,24 @@ func (m *Model) hostsView(list []hostItem, w, h int) []string {
 	}
 	top := 0
 	for _, x := range list {
-		top = max(top, x.counts["P1"]+x.counts["P2"]+x.counts["P3"]+x.counts["P4"])
+		top = max(top, x.counts["P1"]+x.counts["P2"]+x.counts["P3"])
+	}
+	group, facing := map[string]string{}, map[string]string{}
+	for _, h := range m.envd.Hosts {
+		group[h.Name] = h.Group
+		if h.Exposure == 1 {
+			facing[h.Name] = lipgloss.NewStyle().Foreground(cP["P2"]).Render(m.t.T("internet"))
+		}
 	}
 	var rows [][]string
 	for _, x := range list {
 		c := x.counts
-		rows = append(rows, []string{sBold.Render(x.name), sText.Render(x.os), count("P1", c["P1"], true), count("P2", c["P2"], true),
-			count("P3", c["P3"], true), count("P4", c["P4"], true), compact(float64(c["cves"])), ""})
+		rows = append(rows, []string{sBold.Render(x.name), sMuted.Render(group[x.name]), sText.Render(x.os), count("P1", c["P1"], true),
+			count("P2", c["P2"], true), count("P3", c["P3"], true), sDim.Render(strconv.Itoa(c["P4"])), compact(float64(c["cves"])),
+			"", facing[x.name]})
 	}
 	cols := slices.Clone(viewCols[vHosts])
-	cols[len(cols)-1].fill = func(r, w int) string { return stack(list[r].counts, top, w) }
+	cols[len(cols)-2].fill = func(r, w int) string { return stack(list[r].counts, top, w) }
 	return m.table(cols, rows, w, h)
 }
 
@@ -559,7 +613,7 @@ func (m *Model) packagesView(list []planRow, w, h int) []string {
 			target = m.t.T("OS")
 		}
 		rows = append(rows, []string{prio(p.Priority), sText.Render(p.Host), sMuted.Render(target), sBold.Render(p.Pkg),
-			sMuted.Render(p.Installed), sOK.Render(p.Fixed), compact(float64(p.CVEs)), kev, sMuted.Render(p.Due)})
+			sMuted.Render(p.Installed + " →"), sOK.Render(p.Fixed), compact(float64(p.CVEs)), kev, sMuted.Render(p.Due)})
 	}
 	return m.table(viewCols[vPackages], rows, w, h)
 }
@@ -715,6 +769,7 @@ var helpRows = [][2]string{
 	{"U", "check for newer vulnerability DBs and download them (kanareika db update)"},
 	{"L", "language"},
 	{"r", "refresh"},
+	{"mouse", "click tabs, rows, the check and caret of a node, commands, hints, the org and env below; the wheel scrolls. Shift+drag selects text; o turns the mouse off"},
 	{"q, ctrl+c", "quit"},
 }
 

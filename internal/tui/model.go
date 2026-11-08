@@ -118,8 +118,11 @@ type Model struct {
 	dbSize       *dbSizeResp
 	dlStart      time.Time // when the download asked for here started
 	dbPolled     time.Time
-	spinning     bool // a spinner frame is due
-	setupCurLine int  // the line of the setup form the cursor is on (kept in view)
+	spinning     bool                            // a spinner frame is due
+	setupCurLine int                             // the line of the setup form the cursor is on (kept in view)
+	handlers     map[string]func(dx int) tea.Cmd // what a click on a zone does (drawn this frame)
+	zones        []hitZone                       // where the zones are on screen
+	zoneSeq      int
 
 	toast   string
 	toastAt time.Time
@@ -286,7 +289,7 @@ func (m *Model) tick() tea.Cmd {
 }
 
 func (m *Model) Init() tea.Cmd {
-	return tea.Batch(m.fetchI18n(), m.refresh(), m.tick())
+	return tea.Batch(m.fetchI18n(), m.refresh(), m.tick(), m.mouseCmd())
 }
 
 func (m *Model) say(s string) { m.toast, m.toastAt = s, m.now() }
@@ -295,32 +298,32 @@ func (m *Model) say(s string) { m.toast, m.toastAt = s, m.now() }
 
 // Update: the message, then whatever the screen now needs fetched.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	_, cmd := m.update(msg)
+	cmd := m.update(msg)
 	if c := m.sync(); c != nil {
 		cmd = tea.Batch(cmd, c)
 	}
 	return m, cmd
 }
 
-func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
 	case i18nMsg:
 		m.t.catalog = msg.Messages
 	case orgsMsg:
-		return m, m.onOrgs(orgsResp(msg))
+		return m.onOrgs(orgsResp(msg))
 	case envMsg:
 		if msg.org != m.org || msg.env != m.env {
-			return m, nil // an answer for a selection left meanwhile
+			return nil // an answer for a selection left meanwhile
 		}
-		return m, m.onEnv(msg.d)
+		return m.onEnv(msg.d)
 	case runMsg:
 		if msg.key == m.wantKey() {
 			m.rund, m.runKey, m.err = msg.d, msg.key, ""
 		}
 	case dbMsg:
-		return m, m.onDB(dbResp(msg))
+		return m.onDB(dbResp(msg))
 	case jobsMsg:
 		was := m.busy()
 		m.jobs, m.scanOK = jobsResp(msg), msg.Enabled
@@ -329,7 +332,7 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.autoSetup()
 		if was && !m.busy() {
-			return m, m.refresh() // a scan just ended: its results
+			return m.refresh() // a scan just ended: its results
 		}
 	case treeMsg:
 		m.onTree(msg)
@@ -343,9 +346,9 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.menu.trees[msg.by] = msg.d
 		}
 	case setupMsg, foundMsg, parsedMsg, parseDueMsg, hostsMsg, checkedMsg, dbSizeMsg, spinMsg, dlStartedMsg:
-		return m, m.setupUpdate(msg)
+		return m.setupUpdate(msg)
 	case tickMsg:
-		return m, tea.Batch(m.refresh(), m.tick())
+		return tea.Batch(m.refresh(), m.tick())
 	case errMsg:
 		m.err = msg.err.Error()
 		if m.setup != nil {
@@ -362,15 +365,18 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case startedMsg:
 		if w := m.setup; w != nil && w.step == 2 { // the first scan: its output in the setup
 			w.step, w.job, w.busy, w.off = 3, msg.id, false, 0
-			return m, m.fetchJobs()
+			return m.fetchJobs()
 		}
 		m.form, m.open, m.view = nil, msg.id, vScans
 		m.say(m.t.T("Scan started"))
-		return m, m.fetchJobs()
+		return m.fetchJobs()
 	case tea.KeyMsg:
-		return m.key(msg)
+		_, cmd := m.key(msg)
+		return cmd
+	case tea.MouseMsg:
+		return m.mouse(msg)
 	}
-	return m, nil
+	return nil
 }
 
 func (m *Model) onOrgs(o orgsResp) tea.Cmd {
@@ -507,8 +513,7 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.menuKey(k)
 	}
 	if m.panels != nil {
-		m.panelsKey(s)
-		return m, nil
+		return m, m.panelsKey(s)
 	}
 	if m.langs != nil {
 		m.langKey(s)
@@ -682,7 +687,7 @@ func (m *Model) move(d int) {
 		if rows := m.treeRows(); c < len(rows) {
 			m.curID = rows[c].n.ID
 		}
-		m.cmdCur = 0
+		m.cmdCur, m.detOff = 0, 0
 	}
 }
 
@@ -888,6 +893,7 @@ func (m *Model) panelItems() []formItem {
 	items := []formItem{{kind: itemHead, label: "Layout"},
 		{kind: itemFlag, label: "view tabs", value: "tabs", on: !m.set.NoTabs},
 		{kind: itemFlag, label: "show P4 too", value: "p4", on: m.set.ShowP4},
+		{kind: itemFlag, label: "mouse (shift+drag still selects text)", value: "mouse", on: !m.set.NoMouse},
 		{kind: itemChoice, label: "time zone", value: zone},
 		{kind: itemHead, label: "Columns"}}
 	cols := viewCols[m.view]
@@ -902,7 +908,7 @@ func (m *Model) panelItems() []formItem {
 	return items
 }
 
-func (m *Model) panelsKey(s string) {
+func (m *Model) panelsKey(s string) tea.Cmd {
 	items := m.panelItems()
 	d := m.panels
 	step := func(dir int) {
@@ -925,11 +931,16 @@ func (m *Model) panelsKey(s string) {
 		switch it.kind {
 		case itemChoice: // the time zone
 			m.toggleZone()
-			return
+			return nil
 		case itemFlag:
-			if it.value == "tabs" {
+			switch it.value {
+			case "tabs":
 				m.set.NoTabs = !m.set.NoTabs
-			} else {
+			case "mouse":
+				m.set.NoMouse = !m.set.NoMouse
+				m.saveSettings()
+				return m.mouseCmd()
+			default:
 				m.set.ShowP4 = !m.set.ShowP4
 				m.move(0)
 			}
@@ -938,6 +949,7 @@ func (m *Model) panelsKey(s string) {
 		}
 		m.saveSettings()
 	}
+	return nil
 }
 
 // --- scan form ----------------------------------------------------------------------------------------------------

@@ -56,8 +56,13 @@ type liveInfo struct {
 }
 
 type envResp struct {
-	Runs []runInfo `json:"runs"`
-	Live *liveInfo `json:"live"`
+	Runs  []runInfo `json:"runs"`
+	Live  *liveInfo `json:"live"`
+	Hosts []struct {
+		Name     string `json:"name"`
+		Group    string `json:"group"`
+		Exposure int    `json:"exposure"`
+	} `json:"hosts"`
 }
 
 type pkgRow struct {

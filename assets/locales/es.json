@@ -781,6 +781,15 @@
     "what is downloaded": "qué se descarga",
     "{n} connecting": "{n} conectando",
     "{n} keys": "{n} claves",
-    "~/.ssh/config": "~/.ssh/config"
+    "~/.ssh/config": "~/.ssh/config",
+    "click tabs, rows, the check and caret of a node, commands, hints, the org and env below; the wheel scrolls. Shift+drag selects text; o turns the mouse off": "clic en pestañas, filas, la marca y la flecha de un nodo, comandos, atajos, la org y el entorno abajo; la rueda desplaza. Mayús+arrastrar selecciona texto; o desactiva el ratón",
+    "clock offset": "desfase reloj",
+    "copy": "copiar",
+    "facing": "expuesto",
+    "internet": "internet",
+    "journal /7d": "journal /7d",
+    "load /cpu": "carga /cpu",
+    "mem free": "mem libre",
+    "mouse (shift+drag still selects text)": "ratón (Mayús+arrastrar sigue seleccionando texto)"
   }
 }

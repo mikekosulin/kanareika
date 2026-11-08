@@ -801,9 +801,10 @@ func (m *Model) dueCell(due string) string {
 // every cell, so they line up.
 func (m *Model) treeCols() []col {
 	text := groupNames[m.by]
-	return []col{{width: 1}, {width: 1}, {width: 2}, {width: 6}, {title: text, min: 18},
-		{title: "hosts", width: 5, right: true, drop: 2}, {title: "CVE", width: 4, right: true, drop: 4},
-		{title: "EPSS", width: 5, right: true, drop: 5}, {width: 3, drop: 3}, {title: "due by", width: 11, right: true, drop: 1}}
+	return []col{{width: 1, tight: true}, {width: 1, tight: true}, {width: 2, tight: true}, {width: 6, tight: true},
+		{title: text, min: 18, grow: true, tight: true}, {title: "hosts", width: 5, right: true, drop: 2, tight: true},
+		{title: "CVE", width: 4, right: true, drop: 4, tight: true}, {title: "EPSS", width: 5, right: true, drop: 5, tight: true},
+		{width: 3, drop: 3, tight: true}, {title: "due by", width: 11, right: true, drop: 1}}
 }
 
 func (m *Model) treeView(w, h int) []string {
@@ -918,9 +919,11 @@ func (m *Model) todoMain(h int) []string {
 	}
 	right := min(max(w*2/5, 50), 80)
 	left := panel(m.todoTitle(), m.treeView(w-right-2, h-2), w-right, h)
-	det := panel(sTitle.Render(m.t.T("Details")), m.detailView(right-2, false), right, h)
-	for i := range left {
-		left[i] = fit(left[i], w-right, false) + det[i]
+	lines := m.detailView(right-2, false)
+	m.detOff = min(m.detOff, max(len(lines)-(h-2), 0))
+	det := panel(sTitle.Render(m.t.T("Details")), lines[m.detOff:], right, h)
+	for i := range left { // the wheel over the pane scrolls it
+		left[i] = fit(left[i], w-right, false) + m.zone(fmt.Sprintf("detpane:%d", i), det[i], func(int) tea.Cmd { return nil })
 	}
 	return left
 }
@@ -1132,8 +1135,23 @@ func (m *Model) detailView(w int, full bool) []string {
 			if i == cur {
 				mark = sKey.Render(" ▶ ")
 			}
-			out = append(out, mark+sMuted.Render(a.OS+" · "+m.hostsN(len(a.Hosts))))
+			choose := func(int) tea.Cmd { // a click chooses the command; on the chosen one, copies it
+				if m.cmdCur == i {
+					return m.detailKey("c")
+				}
+				m.cmdCur = i
+				return nil
+			}
+			head := mark + sMuted.Render(a.OS+" · "+m.hostsN(len(a.Hosts)))
+			if i == cur {
+				head += "  " + m.zoneKey("c", sKey.Render("c")+" "+sMuted.Render(m.t.T("copy")))
+			}
+			out = append(out, m.zone(fmt.Sprintf("cmdh:%d", i), head, choose))
+			from := len(out)
 			wrap("   "+sMuted.Render("$ "), sText.Render(a.Command))
+			for j := from; j < len(out); j++ {
+				out[j] = m.zone(fmt.Sprintf("cmd:%d:%d", i, j), out[j], choose)
+			}
 			if a.Reboot {
 				out = append(out, "     "+lipgloss.NewStyle().Foreground(cP["P3"]).Render(m.t.T("then reboot")))
 			}

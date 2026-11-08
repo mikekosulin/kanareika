@@ -781,6 +781,15 @@
     "what is downloaded": "다운로드 항목",
     "{n} connecting": "{n}대 연결 중",
     "{n} keys": "키 {n}개",
-    "~/.ssh/config": "~/.ssh/config"
+    "~/.ssh/config": "~/.ssh/config",
+    "click tabs, rows, the check and caret of a node, commands, hints, the org and env below; the wheel scrolls. Shift+drag selects text; o turns the mouse off": "탭, 행, 노드의 체크와 화살표, 명령, 키 힌트, 아래의 조직과 환경을 클릭; 휠로 스크롤. Shift+드래그로 텍스트 선택; o로 마우스 끄기",
+    "clock offset": "시계 오차",
+    "copy": "복사",
+    "facing": "외부 노출",
+    "internet": "인터넷",
+    "journal /7d": "journal /7일",
+    "load /cpu": "부하 /cpu",
+    "mem free": "여유 메모리",
+    "mouse (shift+drag still selects text)": "마우스 (Shift+드래그로 텍스트 선택 가능)"
   }
 }

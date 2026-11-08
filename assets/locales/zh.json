@@ -781,6 +781,15 @@
     "what is downloaded": "下载内容",
     "{n} connecting": "{n} 台连接中",
     "{n} keys": "{n} 个密钥",
-    "~/.ssh/config": "~/.ssh/config"
+    "~/.ssh/config": "~/.ssh/config",
+    "click tabs, rows, the check and caret of a node, commands, hints, the org and env below; the wheel scrolls. Shift+drag selects text; o turns the mouse off": "点击标签、行、节点的勾选和箭头、命令、按键提示、底部的组织和环境；滚轮滚动。Shift+拖动选择文本；o 关闭鼠标",
+    "clock offset": "时钟偏差",
+    "copy": "复制",
+    "facing": "对外",
+    "internet": "互联网",
+    "journal /7d": "journal /7天",
+    "load /cpu": "负载 /cpu",
+    "mem free": "空闲内存",
+    "mouse (shift+drag still selects text)": "鼠标（Shift+拖动仍可选择文本）"
   }
 }

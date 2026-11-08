@@ -781,6 +781,15 @@
     "what is downloaded": "что скачивается",
     "{n} connecting": "подключается: {n}",
     "{n} keys": "ключей: {n}",
-    "~/.ssh/config": "~/.ssh/config"
+    "~/.ssh/config": "~/.ssh/config",
+    "click tabs, rows, the check and caret of a node, commands, hints, the org and env below; the wheel scrolls. Shift+drag selects text; o turns the mouse off": "клик по вкладкам, строкам, отметке и стрелке узла, командам, подсказкам, орг. и окружению внизу; колесо прокручивает. Shift+перетаскивание выделяет текст; o выключает мышь",
+    "clock offset": "сдвиг часов",
+    "copy": "копировать",
+    "facing": "снаружи",
+    "internet": "интернет",
+    "journal /7d": "journal /7д",
+    "load /cpu": "нагрузка /cpu",
+    "mem free": "своб. память",
+    "mouse (shift+drag still selects text)": "мышь (Shift+перетаскивание выделяет текст)"
   }
 }

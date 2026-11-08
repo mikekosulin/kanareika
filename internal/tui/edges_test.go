@@ -280,7 +280,7 @@ func TestPanelsScroll(t *testing.T) {
 	for range 12 {
 		h.key("down")
 	}
-	h.has("Panels(Hosts)", "chart")
+	h.has("Panels(Hosts)", "facing")
 	h.hasNot("Layout")
 }
 
@@ -351,7 +351,7 @@ func TestOddData(t *testing.T) {
 	h.m.rund.New = &diffSet{Total: 3, Rows: []diffRow{{Host: "web-01", Pkg: "openssl", Priority: "P1", KEV: true, RCE: 1, Count: 3}}}
 	h.m.rund.Resolved = nil
 	h.key("4")
-	h.has("Changes(acme/production)[1]", "+ P1 web-01", "KEV RCE openssl")
+	h.has("Changes(acme/production)[1]", "+ P1  web-01", "KEV RCE openssl")
 	// logins: none accepted; attackers sorted by attempts, users by tries then name
 	h.m.rund.Access = map[string]map[string]any{"web-01": {"logins": map[string]any{"attackers": []any{
 		map[string]any{"ip": "203.0.113.7", "n": 5.0, "users": []any{[]any{"root", 2.0}, []any{"admin", 2.0}}},

@@ -148,7 +148,7 @@ func TestSelectedRowKeepsChart(t *testing.T) {
 	h.key("2")
 	for _, l := range strings.Split(h.m.View(), "\n") {
 		if strings.Contains(ansi.Strip(l), "web-01") {
-			chart := strings.Index(l, "▇")
+			chart := strings.Index(l, "━")
 			// the chart's cells: a priority color in front of them, not the cursor bar's black on cyan
 			if chart < 0 || !strings.Contains(l[:chart], "38;2;229;72;77") {
 				t.Fatalf("selected row without its colored chart: %q", l)

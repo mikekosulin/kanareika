@@ -48,7 +48,8 @@ func TestNarrow(t *testing.T) {
 
 	h.size(80, 24)
 	h.key("2")
-	h.has("CHART", "? all keys")
+	h.has("P1", "? all keys")
+	h.hasNot("CHART")
 }
 
 func TestTooSmall(t *testing.T) {
@@ -81,15 +82,16 @@ func TestPanels(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "conf", "tui.json")
 	h := newHarness(t, Options{Org: "acme", Env: "production", Settings: path}, true)
 	h.key("2", "o")
-	h.has("Panels(Hosts)", "[x] view tabs", "[ ] show P4 too", "time zone: < system >", "[x] OS", "[x] chart")
+	h.has("Panels(Hosts)", "[x] view tabs", "[ ] show P4 too", "[x] mouse (shift+drag still selects text)", "time zone: < system >",
+		"[x] OS", "[x] facing")
 	h.hasNot("[x] host", "header:") // never switched off; the header is gone
 
 	h.key("down", "space") // P4
 	h.has("[x] show P4 too")
-	h.key("down", "down", "space", "down", "x", "k", "up", "up", "up", "up", "up", "up") // OS and P3 off; up stops at the first item
+	h.key("down", "down", "down", "down", "space", "down", "x", "k", "up", "up", "up", "up", "up", "up", "up", "up") // OS and P3 off; up stops at the first item
 	h.has("[ ] OS", "[ ] P3")
 	h.key("esc")
-	h.has("Hosts(acme/production)", "CHART", "? all keys")
+	h.has("Hosts(acme/production)", "━", "? all keys")
 	h.hasNot("Debian")
 	for _, l := range strings.Split(h.screen(), "\n") {
 		if strings.Contains(l, "HOST") && strings.Contains(l, "P3") {
@@ -113,7 +115,7 @@ func TestPanels(t *testing.T) {
 	h2.has("P4 os")
 
 	// switched back on, the column returns and the view's entry leaves the file
-	h2.key("2", "o", "down", "down", "down", "space", "q")
+	h2.key("2", "o", "down", "down", "down", "down", "down", "space", "q")
 	h2.has("Debian")
 	h2.key("p") // P4 off from the Hosts view too
 	b, _ = os.ReadFile(path)
@@ -184,9 +186,9 @@ func TestTabsAndZone(t *testing.T) {
 	h.has("2026-11-02 11:00", "times in UTC")
 	h.key("1")
 	h.has("UTC")
-	h.key("o", "down", "down", "space") // the zone from the settings: back to the system's
+	h.key("o", "down", "down", "down", "space") // the zone from the settings: back to the system's
 	h.has("time zone: < system >")
-	h.key("up", "up", "space", "esc") // tabs off
+	h.key("up", "up", "up", "space", "esc") // tabs off
 	h.hasNot("1 ToDo")
 	b, _ := os.ReadFile(path)
 	if !strings.Contains(string(b), `"no_tabs": true`) || strings.Contains(string(b), `"utc"`) {

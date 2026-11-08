@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"regexp"
 	"slices"
@@ -1125,9 +1126,9 @@ func (m *Model) serversView(w int) []string {
 	var opts []string
 	for _, k := range m.kinds() {
 		if k == wz.kind {
-			opts = append(opts, sBrand.Render("(•) "+m.kindName(k)))
+			opts = append(opts, m.zone("kind:"+k, sBrand.Render("(•) "+m.kindName(k)), m.clickKind(k)))
 		} else {
-			opts = append(opts, sMuted.Render("( ) "+m.kindName(k)))
+			opts = append(opts, m.zone("kind:"+k, sMuted.Render("( ) "+m.kindName(k)), m.clickKind(k)))
 		}
 	}
 	out = append(out, " "+heading(m.t.T("Whose servers?"), focus("kind"))+"   "+strings.Join(opts, "  "))
@@ -1140,25 +1141,26 @@ func (m *Model) serversView(w int) []string {
 		if focus("name") || focus("consent") {
 			mark()
 		}
-		out = append(out, "   "+heading(m.t.T(name.label), focus("name"))+"  "+fit(textBox(name, focus("name"))[0], 24, false)+"   "+
-			heading(m.t.T(consent.label), focus("consent"))+"  "+textBox(consent, focus("consent"))[0])
+		out = append(out, "   "+m.zone("field:name", heading(m.t.T(name.label), focus("name"))+"  "+fit(textBox(name, focus("name"))[0], 24, false), m.clickField("name"))+"   "+
+			m.zone("field:consent", heading(m.t.T(consent.label), focus("consent"))+"  "+textBox(consent, focus("consent"))[0], m.clickField("consent")))
 	}
 	out = append(out, "")
 	// the servers: what was written, and beside each line what it becomes
 	if focus("hosts") {
 		mark()
 	}
-	out = append(out, " "+heading(m.t.T("Servers"), focus("hosts"))+"   "+sMuted.Render(m.t.T("One per line: user@host, an ssh command, ssh config, CSV")))
+	out = append(out, " "+m.zone("field:hosts", heading(m.t.T("Servers"), focus("hosts")), m.clickField("hosts"))+"   "+sMuted.Render(m.t.T("One per line: user@host, an ssh command, ssh config, CSV")))
 	out = append(out, m.editor(w)...)
 	if m.found != nil && len(m.found.Hosts) > 0 {
-		out = append(out, "    "+sKey.Render("ctrl+o")+" "+sMuted.Render("+ ~/.ssh/config ("+strconv.Itoa(len(m.found.Hosts))+")"))
+		out = append(out, "    "+m.zoneKey("ctrl+o", sKey.Render("ctrl+o")+" "+sMuted.Render("+ ~/.ssh/config ("+strconv.Itoa(len(m.found.Hosts))+")")))
 	}
 	out = append(out, "")
 	// login
 	if focus("login") {
 		mark()
 	}
-	out = append(out, " "+heading(m.t.T("Login"), focus("login"))+"  "+m.loginSummary()+"   "+sKey.Render("c")+" "+sMuted.Render(m.t.T("change")))
+	out = append(out, " "+m.zone("field:login", heading(m.t.T("Login"), focus("login"))+"  "+m.loginSummary(), m.clickField("login"))+"   "+
+		m.zone("login:open", sKey.Render("c")+" "+sMuted.Render(m.t.T("change")), func(int) tea.Cmd { m.setup.loginOpen = !m.setup.loginOpen; return nil }))
 	if wz.loginOpen {
 		for i := range wz.fields {
 			f := &wz.fields[i]
@@ -1170,19 +1172,19 @@ func (m *Model) serversView(w int) []string {
 			}
 			switch f.kind {
 			case fCheck:
-				out = append(out, "     "+checkBox(f, m.t.T(f.label), focus(f.key)))
+				out = append(out, "     "+m.zone("check:"+f.key, checkBox(f, m.t.T(f.label), focus(f.key)), m.clickCheck(f.key)))
 			case fChoice:
 				var o []string
 				for j := range f.opts {
+					opt := sMuted.Render("( ) " + f.shown[j])
 					if j == f.opt {
-						o = append(o, sBrand.Render("(•) "+f.shown[j]))
-					} else {
-						o = append(o, sMuted.Render("( ) "+f.shown[j]))
+						opt = sBrand.Render("(•) " + f.shown[j])
 					}
+					o = append(o, m.zone(fmt.Sprintf("opt:%s:%d", f.key, j), opt, m.clickOpt(f.key, j)))
 				}
 				out = append(out, "   "+heading(fit(m.t.T(f.label), 12, false), focus(f.key))+strings.Join(o, "  "))
 			default:
-				out = append(out, "   "+heading(fit(m.t.T(f.label), 12, false), focus(f.key))+textBox(f, focus(f.key))[0])
+				out = append(out, "   "+m.zone("field:"+f.key, heading(fit(m.t.T(f.label), 12, false), focus(f.key))+textBox(f, focus(f.key))[0], m.clickField(f.key)))
 			}
 		}
 	}
@@ -1190,7 +1192,7 @@ func (m *Model) serversView(w int) []string {
 	if focus("confirmed") {
 		mark()
 	}
-	out = append(out, " "+checkBox(wz.field("confirmed"), m.t.T("I’m allowed to audit these servers"), focus("confirmed")))
+	out = append(out, " "+m.zone("check:confirmed", checkBox(wz.field("confirmed"), m.t.T("I’m allowed to audit these servers"), focus("confirmed")), m.clickCheck("confirmed")))
 	for _, e := range wz.errs {
 		out = append(out, " "+sErr.Render("✗ "+e))
 	}
@@ -1204,7 +1206,45 @@ func (m *Model) serversView(w int) []string {
 	if wz.busy {
 		b += " " + sRun.Render(m.spinChar())
 	}
-	return append(out, "", " "+b)
+	return append(out, "", " "+m.zone("btn:submit", b, func(int) tea.Cmd { return m.submit() }))
+}
+
+// The setup's clicks: a choice, a field (the keyboard to it), a check box, a choice's option.
+func (m *Model) clickKind(k string) func(int) tea.Cmd {
+	return func(int) tea.Cmd {
+		w := m.setup
+		w.kind, w.errs = k, nil
+		w.cur = slices.IndexFunc(w.fields, func(f field) bool { return f.key == "kind" })
+		return m.parseSoon()
+	}
+}
+
+func (m *Model) clickField(key string) func(int) tea.Cmd {
+	return func(int) tea.Cmd {
+		w := m.setup
+		if i := slices.IndexFunc(w.fields, func(f field) bool { return f.key == key }); i >= 0 {
+			w.cur = i
+		}
+		return nil
+	}
+}
+
+func (m *Model) clickCheck(key string) func(int) tea.Cmd {
+	return func(int) tea.Cmd {
+		m.clickField(key)(0)
+		f := m.setup.field(key)
+		f.on = !f.on
+		m.setup.errs = nil
+		return nil
+	}
+}
+
+func (m *Model) clickOpt(key string, j int) func(int) tea.Cmd {
+	return func(int) tea.Cmd {
+		m.clickField(key)(0)
+		m.setup.field(key).opt = j
+		return nil
+	}
 }
 
 func checkBox(f *field, label string, focus bool) string {
@@ -1259,7 +1299,20 @@ func (m *Model) editor(w int) []string {
 		if i < n {
 			num = strconv.Itoa(i + 1)
 		}
-		out = append(out, "   "+sDim.Render(fit(num, 2, true))+" "+fit(get(box, i), leftW, false)+"  "+get(right, i))
+		line := i
+		out = append(out, m.zone(fmt.Sprintf("edit:%d", i), "   "+sDim.Render(fit(num, 2, true))+" "+fit(get(box, i), leftW, false), func(int) tea.Cmd {
+			m.clickField("hosts")(0) // the keyboard to the field, the cursor at the end of the clicked line
+			f.pos = 0
+			for l := 0; l < line && f.pos < len(f.val); f.pos++ {
+				if f.val[f.pos] == '\n' {
+					l++
+				}
+			}
+			for f.pos < len(f.val) && f.val[f.pos] != '\n' {
+				f.pos++
+			}
+			return nil
+		})+"  "+get(right, i))
 	}
 	return out
 }
@@ -1345,6 +1398,7 @@ func (m *Model) pickView(w int) []string {
 		if j == p.cur {
 			l = sSel.Render(fit(ansi.Strip(l), min(w-4, 70), false))
 		}
+		l = m.zone(fmt.Sprintf("pick:%d", j), l, func(int) tea.Cmd { p.cur = j; p.on[i] = !p.on[i]; return nil })
 		lines = append(lines, l)
 	}
 	if len(list) == 0 {
@@ -1482,14 +1536,14 @@ func (m *Model) checkView(w int) []string {
 		if m.dlNeeded() && (m.db == nil || !m.db.Updating) {
 			scan += " · " + m.t.F("downloads the vuln list first ({size})", "size", dbsize.Bytes(m.dbSize.Total))
 		}
-		keys = append(keys, sCrumb.Render("⏎ "+scan))
+		keys = append(keys, m.zoneKey("enter", sCrumb.Render("⏎ "+scan)))
 		if len(bad) > 0 {
-			keys = append(keys, sKey.Render("r")+" "+sText.Render(m.t.T("Check again")))
+			keys = append(keys, m.zoneKey("r", sKey.Render("r")+" "+sText.Render(m.t.T("Check again"))))
 		}
 	default:
-		keys = append(keys, sCrumb.Render("r "+m.t.T("Check again")))
+		keys = append(keys, m.zoneKey("r", sCrumb.Render("r "+m.t.T("Check again"))))
 		if wz.fields != nil {
-			keys = append(keys, sKey.Render("esc")+" "+sText.Render(m.t.T("Back")))
+			keys = append(keys, m.zoneKey("esc", sKey.Render("esc")+" "+sText.Render(m.t.T("Back"))))
 		}
 	}
 	if len(keys) > 0 {
@@ -1526,9 +1580,9 @@ func (m *Model) scanView(w int) []string {
 		}
 		return append(out, "", " "+sRun.Render(m.spinChar())+" "+sMuted.Render(m.t.T(state)))
 	case j.Code != 0:
-		return append(out, "", " "+sCrumb.Render("⏎ "+m.t.T("See the results"))+"   "+sErr.Render(m.t.T("finished with errors")))
+		return append(out, "", " "+m.zoneKey("enter", sCrumb.Render("⏎ "+m.t.T("See the results")))+"   "+sErr.Render(m.t.T("finished with errors")))
 	}
-	return append(out, "", " "+sCrumb.Render("⏎ "+m.t.T("See the results")))
+	return append(out, "", " "+m.zoneKey("enter", sCrumb.Render("⏎ "+m.t.T("See the results"))))
 }
 
 // dlLine: the vulnerability list a scan needs, at the right of the steps: its size and d to download it;
@@ -1548,12 +1602,12 @@ func (m *Model) dlLine(w int) string {
 		bar := []string{"▬  ", "▬▬ ", "▬▬▬", " ▬▬", "  ▬"}[int(m.now().UnixMilli()/250)%5]
 		return label + sRun.Render(bar) + " " + sMuted.Render(strconv.Itoa(secs)+" s") + " "
 	case db != nil && db.Error != "" && wz != nil && wz.dlAsked:
-		return label + sErr.Render(m.t.T("failed")) + "  " + sKey.Render("d") + " " + sText.Render(m.t.T("retry")) + " "
+		return label + sErr.Render(m.t.T("failed")) + "  " + m.zone("dl", sKey.Render("d")+" "+sText.Render(m.t.T("retry")), func(int) tea.Cmd { return m.download() }) + " "
 	case len(z.Need) == 0:
 		return label + sOK.Render("✓ "+m.t.T("ready")) + " "
 	}
 	_ = w
-	return label + sText.Render(dbsize.Bytes(z.Total)) + "  " + sKey.Render("↓ d") + " " + sText.Render(m.t.T("download")) + " "
+	return label + sText.Render(dbsize.Bytes(z.Total)) + "  " + m.zone("dl", sKey.Render("↓ d")+" "+sText.Render(m.t.T("download")), func(int) tea.Cmd { return m.download() }) + " "
 }
 
 // dlBreakdown: what the vulnerability list is made of (i), on demand only.
