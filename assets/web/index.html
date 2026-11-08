@@ -559,8 +559,11 @@ main { background: var(--bg); }
 .pathcard:hover { border-color: var(--accent-line); background: var(--sel); }
 .pathcard svg { width: 22px; height: 22px; color: var(--accent-line); }
 .pathcard b { font-size: 15px; } .pathcard span { color: var(--ink-2); font-size: 13px; line-height: 1.45; }
-.form details { border: 1px solid var(--line); border-radius: var(--r-ctl); padding: 8px 12px; }
-.form details summary { cursor: pointer; color: var(--ink); font-size: 13px; }
+.form details > summary { cursor: pointer; color: var(--ink-2); font-size: 13px; list-style: none; display: inline-flex; gap: 6px; align-items: center; }
+.form details > summary::-webkit-details-marker { display: none; }
+.form details > summary::after { content: "›"; font-size: 15px; transition: transform .15s var(--ease); }
+.form details[open] > summary::after { transform: rotate(90deg); }
+.form details > summary:hover { color: var(--ink); }
 .form details summary small { color: var(--ink-3); margin-left: 8px; font-family: var(--mono); }
 .form .inner { margin-top: 12px; }
 .form select { font: 13px var(--mono); padding: 8px 10px; border: 1px solid var(--line-2); border-radius: var(--r-ctl); background: var(--solid); color: var(--ink); }
@@ -591,47 +594,51 @@ main { background: var(--bg); }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
 .st .spin { margin-right: 4px; }
-/* onboarding: stepper, two columns, downloads card */
-.onbwrap { max-width: 1080px; margin: 28px auto; padding: 0 24px 48px; }
+/* onboarding: stepper and the vulnerability-list line */
+.onbwrap { max-width: 760px; margin: 32px auto; padding: 0 24px 48px; }
+.onbwrap.roomy { max-width: 920px; }
 .onbwrap .onb, .onbwrap .onb.wide { max-width: none; margin: 0; padding: 0; }
 .onbwrap .onb h2:first-child { margin-top: 0; }
-.onbcols { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
-.stepper { list-style: none; margin: 0 0 30px; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); max-width: 720px; }
-.stepper li { position: relative; display: grid; justify-items: start; gap: 2px; padding-right: 16px; }
-.stepper li + li::before { content: ""; position: absolute; top: 15px; left: calc(-100% + 46px); width: calc(100% - 54px); height: 2px; border-radius: 2px; background: var(--line-2); }
-.stepper li.done + li::before { background: linear-gradient(90deg, var(--ok), color-mix(in oklab, var(--ok) 40%, var(--line-2))); }
-.stepper li.on::before { background: linear-gradient(90deg, var(--ok), var(--accent)) !important; }
-.stepper .dotn { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font: 600 13px var(--mono); color: var(--ink-3);
-  border: 1.5px solid var(--line-2); background: var(--solid); margin-bottom: 8px; transition: box-shadow .2s var(--ease), background .2s var(--ease); }
-.stepper .dotn svg { width: 15px; height: 15px; }
-.stepper li.on .dotn { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 5px color-mix(in oklab, var(--accent) 22%, transparent); }
+.stepper { list-style: none; margin: 0 0 32px; padding: 0; display: flex; align-items: center; max-width: 560px; }
+.stepper li { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.stepper li + li { flex: 1; }
+.stepper li + li::before { content: ""; flex: 1; height: 2px; margin: 0 6px; border-radius: 2px; background: var(--line-2); }
+.stepper li.done + li::before, .stepper li.done + li.done::before { background: var(--ok); }
+.stepper li.on:not(:first-child)::before { background: linear-gradient(90deg, var(--ok), var(--accent)); }
+.stepper .dotn { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font: 600 12.5px var(--mono); color: var(--ink-3);
+  border: 1.5px solid var(--line-2); background: var(--solid); transition: box-shadow .2s var(--ease); }
+.stepper .dotn svg { width: 14px; height: 14px; }
+.stepper li.on .dotn { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 22%, transparent); }
 .stepper li.done .dotn { background: color-mix(in oklab, var(--ok) 14%, var(--solid)); border-color: var(--ok); color: var(--ok); }
 .stepper b { font-size: 13.5px; font-weight: 600; color: var(--ink-3); }
 .stepper li.on b, .stepper li.done b { color: var(--ink); }
-.stepper small { font-size: 12px; color: var(--ink-3); }
-.dlcard { position: sticky; top: 20px; border: 1px solid var(--line-2); border-radius: var(--r-panel); background: var(--solid); padding: 16px; display: grid; gap: 12px; box-shadow: var(--shadow); }
-.dlcard header { display: flex; align-items: center; gap: 8px; }
-.dlcard header svg { width: 18px; height: 18px; color: var(--accent-line); }
-.dlcard header b { font-size: 14px; flex: 1; }
-.dlcard .total { font: 600 13px var(--mono); padding: 2px 8px; border-radius: var(--r-pill); background: color-mix(in oklab, var(--accent) 16%, transparent); color: var(--ink); }
-.dlcard .okb { display: inline-flex; gap: 5px; align-items: center; color: var(--ok); font-size: 13px; font-weight: 600; } .dlcard .okb svg { width: 14px; height: 14px; }
-.dlcard p.note { margin: 0; font-size: 12.5px; line-height: 1.45; }
-.dllist { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
-.dllist li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
-.dllist b { display: block; font-size: 13px; font-weight: 500; } .dllist small { display: block; font-size: 11.5px; color: var(--ink-3); }
-.dllist code { font: 500 12.5px var(--mono); color: var(--ink-2); white-space: nowrap; }
-.dlcard .warnline { display: flex; gap: 7px; align-items: flex-start; } .dlcard .warnline svg { flex: none; width: 14px; height: 14px; margin-top: 2px; color: var(--p2); }
-.dlcard .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 0; }
-.dlcard .bar { height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
-.dlcard .bar i { display: block; height: 100%; width: 35%; border-radius: 4px; background: var(--accent); animation: dlbar 1.4s var(--ease) infinite; }
+.dlline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.dlline:empty { display: none; }
+.dlline > svg { flex: none; width: 16px; height: 16px; color: var(--ink-3); }
+.dlline > span { flex: 1; min-width: 220px; } .dlline b { color: var(--ink); font-family: var(--mono); font-weight: 600; }
+.dlline.ok > svg { color: var(--ok); } .dlline.bad > svg { color: var(--err); }
+.dlline .bar { flex-basis: 100%; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.dlline .bar i { display: block; height: 100%; width: 35%; border-radius: 3px; background: var(--accent); animation: dlbar 1.4s var(--ease) infinite; }
 @keyframes dlbar { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
-@media (prefers-reduced-motion: reduce) { .dlcard .bar i { animation: none; width: 100%; opacity: .5; } }
-.dlnow { display: flex; gap: 8px; align-items: center; font-size: 13px; }
-.dllast { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dlcard.ok { border-color: color-mix(in oklab, var(--ok) 40%, var(--line-2)); }
-.dlcard.bad { border-color: color-mix(in oklab, var(--err) 45%, var(--line-2)); }
-@media (max-width: 1100px) { .onbcols { grid-template-columns: 1fr; } .dlcard { position: static; order: -1; } }
-@media (max-width: 640px) { .stepper small { display: none; } .stepper li + li::before { left: calc(-100% + 42px); width: calc(100% - 50px); } .onbwrap { padding: 0 16px 40px; } }
+@media (prefers-reduced-motion: reduce) { .dlline .bar i { animation: none; width: 100%; opacity: .5; } }
+@media (max-width: 640px) { .stepper li:not(.on) b { display: none; } .onbwrap { padding: 0 16px 40px; margin-top: 20px; } }
+
+#pastebox { resize: vertical; overflow: auto; min-height: 84px; }
+.understood.skip li { color: var(--ink-3); } .understood.skip svg { color: var(--p2); }
+.causes { display: grid; gap: 10px; margin: 4px 0 14px; }
+.cause { display: grid; grid-template-columns: 18px 1fr; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-panel); background: var(--solid); }
+.cause > svg, .cause > .spin { width: 16px; height: 16px; margin-top: 2px; color: var(--err); }
+.cause.good > svg { color: var(--ok); }
+.cause b { font-weight: 500; font-size: 13.5px; line-height: 1.45; display: block; }
+.cause .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.cause .chips code { font: 12px var(--mono); padding: 2px 8px; border-radius: var(--r-pill); background: var(--sel); color: var(--host); white-space: nowrap; }
+.cause details.raw { margin-top: 8px; font-size: 12px; } .cause details.raw summary { cursor: pointer; color: var(--ink-3); }
+.cause details.raw code { display: block; margin-top: 6px; font: 11.5px var(--mono); color: var(--ink-3); white-space: pre-wrap; word-break: break-word; }
+code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); border-bottom: 1px dashed var(--line-2); }
+.btn[disabled] { opacity: .45; cursor: not-allowed; filter: saturate(.4); }
+/* host names and addresses never break across lines */
+.hostn, .tbl td.mono, .tbl.preview td, .understood code, .cause .chips code, code.from, code.to, .pick b { white-space: nowrap; }
+.tbl.preview { display: block; overflow-x: auto; }
 
 /* end-extra-css */
 </style>
@@ -764,8 +771,8 @@ function renderSide() {
   const db = S.db, dbOld = db && (db.dbs || []).some((d) => d.outdated), feedsOld = db?.feeds_outdated;
   const dbAt = db && (db.dbs || []).map((d) => d.updated).filter(Boolean).sort()[0];
   $("#status").innerHTML = (e ? `<div class="row"><span class="dot ${e.last ? "" : "warn"}"></span><span>${t("Data")} <b>${e.last ? ago(e.last.finished) : t("none yet")}</b>${e.last ? ` · ${e.last.hosts_total - (e.last.hosts_failed || 0)}/${e.last.hosts_total} ${t("hosts")}` : ""}</span></div>` : "") +
-    (db ? `<div class="row"><span class="dot ${dbOld || feedsOld ? "warn" : ""}"></span><span>${t("Vulnerability DB")} <b>${dbAt ? ago(dbAt) : t("not downloaded")}</b>${feedsOld ? " · " + t("KEV/EPSS old") : ""}</span></div>` : "") +
-    (S.scans && e ? `<button class="btn" id="scanbtn">${icon("scan")}${t("Scan {env}…", { env: S.env })}</button>` : "") +
+    (db ? `<div class="row"><span class="dot ${dbOld || feedsOld ? "warn" : ""}"></span><span>${t("Vulnerability list")} <b>${db.updating ? t("downloading…") : dbAt ? ago(dbAt) : t("not downloaded")}</b>${feedsOld && dbAt ? " · " + t("exploit data old") : ""}</span></div>` : "") +
+    (S.scans && e && S.view !== "setup" ? `<button class="btn" id="scanbtn">${icon("scan")}${t("Scan {env}…", { env: S.env })}</button>` : "") +
     `<div class="foot2"><label class="langw" title="${t("Language")}"><select id="lang" aria-label="${t("Language")}">${Object.entries(LANG_NAMES).map(([k, n]) => `<option value="${k}" ${k === LANG ? "selected" : ""}>${esc(n)}</option>`).join("")}</select><span class="lv">${LANG.toUpperCase()}</span>${icon("chev")}</label>
       <div class="seg3" role="radiogroup" aria-label="${t("Theme")}">${[["light", "sun", "Light"], ["system", "monitor", "System"], ["dark", "moon", "Dark"]].map(([v, i, l]) => `<button role="radio" data-theme-set="${v}" aria-checked="${S.theme === v}" title="${t(l)}" aria-label="${t(l)}">${icon(i)}</button>`).join("")}</div></div>`;
 }
@@ -964,49 +971,26 @@ async function discover() { if (!FOUND.v) { try { FOUND.v = await api("/api/setu
 function freeId(base) { let id = base, i = 2; while (S.orgs.some((o) => o.id === id)) id = base + "-" + i++; return id; }
 function stepsHead(s) {
   const cur = Math.max(1, s.step);
-  const steps = [["Servers", "what to audit"], ["Access", "an SSH login to each"], ["First scan", "read-only, a few minutes"]];
-  return `<ol class="stepper" aria-label="${t("Setup steps")}">${steps.map(([l, sub], i) => {
+  const steps = ["Servers", "Access", "First scan"];
+  return `<ol class="stepper" aria-label="${t("Setup steps")}">${steps.map((l, i) => {
     const n = i + 1, st = n < cur ? "done" : n === cur ? "on" : "";
-    return `<li class="${st}" ${n === cur ? 'aria-current="step"' : ""}><span class="dotn">${n < cur ? icon("check") : n}</span><b>${t(l)}</b><small>${t(sub)}</small></li>`;
+    return `<li class="${st}" ${n === cur ? 'aria-current="step"' : ""}><span class="dotn">${n < cur ? icon("check") : n}</span><b>${t(l)}</b></li>`;
   }).join("")}</ol>`;
 }
-/* ---------- vulnerability DB downloads: asked, never started on their own (mobile data) ---------- */
-const DL = [["db", "Linux packages", "OS and library CVEs (trivy-db)"], ["java-db", "Java libraries", "jar files in images and on servers"],
-  ["ip", "IP locations", "DB-IP Lite, used offline"], ["feeds", "Exploit data", "CISA KEV and EPSS"]];
-const DLKEYS = { db: ["db"], "java-db": ["java-db"], ip: ["dbip-city", "dbip-asn"], feeds: ["kev", "epss"] };
+/* ---------- the vulnerability list: one quiet line, downloaded only on a click (mobile data) ---------- */
 function bytes(n) { return n >= 1e9 ? (n / 1e9).toFixed(1) + " GB" : n >= 1e6 ? Math.round(n / 1e6) + " MB" : n > 0 ? Math.max(1, Math.round(n / 1e3)) + " KB" : "?"; }
 function dlTotal() { const z = S.dbsize; return z ? z.total : 0; }
 function dlNeeded() { const z = S.dbsize; return !!z && z.need.length > 0; }
 function dbCard() {
   const z = S.dbsize, db = S.db || {}, s = S.setup || {};
-  if (!z) return `<aside class="dlcard"><div class="sk" style="height:132px"></div></aside>`;
-  const head = (right) => `<header>${icon("box")}<b>${t("Vulnerability databases")}</b>${right}</header>`;
+  if (!z) return `<div class="dlline"></div>`;
   if (db.updating) {
     const secs = Math.round((Date.now() - Date.parse(S.dlStart || new Date())) / 1000);
-    const last = (db.output || []).filter(Boolean).slice(-1)[0] || t("starting…");
-    return `<aside class="dlcard busy">${head(`<span class="total">${bytes(z.total)}</span>`)}
-      <div class="bar"><i></i></div>
-      <div class="dlnow"><i class="spin"></i><span>${t("Downloading… {s} s", { s: secs })}</span></div>
-      <div class="note mono dllast" title="${esc(last)}">${esc(last)}</div>
-      <p class="note">${t("Go on with the setup: the first scan waits for the download.")}</p></aside>`;
+    return `<div class="dlline busy"><i class="spin"></i><span>${t("Downloading the vulnerability list… {s} s", { s: secs })}</span><div class="bar"><i></i></div></div>`;
   }
-  if (db.error && s.dlAsked) return `<aside class="dlcard bad">${head("")}<div class="skipped">${icon("alert")}<div><b>${t("The download failed")}</b><div class="note">${esc(db.error)}</div></div></div>
-      <div class="actions"><button class="btn" data-dl-start>${t("Try again")}</button></div></aside>`;
-  if (!z.need.length) return `<aside class="dlcard ok">${head(`<span class="okb">${icon("check")}${t("up to date")}</span>`)}<p class="note">${t("Everything a scan needs is downloaded.")}</p></aside>`;
-  const rows = DL.map(([k, l, sub]) => {
-    const keys = DLKEYS[k].filter((x) => z.need.includes(x));
-    if (!keys.length) return "";
-    const n = keys.reduce((a, x) => a + (z.sizes[x] || 0), 0);
-    return `<li><span><b>${t(l)}</b><small>${t(sub)}</small></span><code>${bytes(n)}</code></li>`;
-  }).join("");
-  if (s.dlLater) return `<aside class="dlcard later">${head(`<span class="total">${bytes(z.total)}</span>`)}
-      <p class="note">${t("Not downloaded yet: the first scan downloads them before it starts.")}</p>
-      <div class="actions"><button class="btn small" data-dl-start>${t("Download now")}</button></div></aside>`;
-  return `<aside class="dlcard">${head(`<span class="total">${bytes(z.total)}</span>`)}
-    <p class="note">${t("Needed for the first scan. You can download them now, while you set up.")}</p>
-    <ul class="dllist">${rows}</ul>
-    <p class="note warnline">${icon("alert")}${t("On mobile data or a metered link? Choose later; nothing is downloaded without asking.")}</p>
-    <div class="actions"><button class="btn primary" data-dl-start>${t("Download now ({size})", { size: bytes(z.total) })}</button><button class="btn ghost" data-dl-later>${t("Later")}</button></div></aside>`;
+  if (db.error && s.dlAsked) return `<div class="dlline bad">${icon("alert")}<span>${t("The download failed: {err}", { err: esc(db.error.split("\n")[0]) })}</span><button class="linkbtn" data-dl-start>${t("Try again")}</button></div>`;
+  if (!z.need.length) return `<div class="dlline ok">${icon("check")}<span>${t("Vulnerability list ready")}</span></div>`;
+  return `<div class="dlline">${icon("shield")}<span>${t("Kanareika needs a list of known vulnerabilities: {size}, downloaded once.", { size: `<b>${bytes(z.total)}</b>` })}</span><button class="btn small" data-dl-start>${t("Download now")}</button></div>`;
 }
 let dbTick;
 async function pollDB() {
@@ -1018,7 +1002,7 @@ async function pollDB() {
   if (S.view === "setup") refreshDLCard();
 }
 let dbSizeReq;
-function refreshDLCard() { document.querySelectorAll(".dlcard").forEach((c) => { c.outerHTML = dbCard(); }); }
+function refreshDLCard() { document.querySelectorAll(".dlline").forEach((c) => { c.outerHTML = dbCard(); }); }
 function loadDBSize() {
   if (S.dbsize || !S.scans) return;
   dbSizeReq ||= api("/api/db/size").catch(() => ({ sizes: {}, need: [], total: 0 })).then((z) => { S.dbsize = z; dbSizeReq = null; requestAnimationFrame(refreshDLCard); });
@@ -1027,7 +1011,7 @@ function setupView() {
   const s = S.setup ||= { step: 0, path: "" };
   if (!S.scans) return setupMain(s);
   loadDBSize();
-  return `<div class="onbwrap ${s.step === 0 || s.path === "fleet" && s.step === 1 ? "roomy" : ""}">${stepsHead(s)}<div class="onbcols"><div class="onbmain">${setupMain(s)}</div>${dbCard()}</div></div>`;
+  return `<div class="onbwrap ${s.step === 0 || s.path === "fleet" && s.step === 1 ? "roomy" : ""}">${stepsHead(s)}${setupMain(s)}${dbCard()}</div>`;
 }
 function setupMain(s) {
   if (!S.scans) return `<div class="onb"><h2>${t("Read-only dashboard")}</h2><p>${t("Organizations are added where kanareika web runs on localhost (or with a token). On that machine: kanareika org new <ORG_ID>.")}</p></div>`;
@@ -1078,8 +1062,10 @@ function sshLine(h, d) {
   return `ssh${h.port && h.port !== 22 ? " -p " + h.port : ""}${jump} ${h.user ? h.user + "@" : ""}${h.hostname || h.alias}`;
 }
 let previewTimer;
+function grow(ta) { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight + 2, 360) + "px"; }
 async function preview() {
   const ta = $("#pastebox"), out = $("#preview"); if (!ta || !out) return;
+  grow(ta);
   if (!ta.value.trim()) { out.innerHTML = ""; return; }
   let r; try { r = await post("/api/setup/parse", { text: ta.value }); } catch (e) { out.innerHTML = `<div class="note">${esc(e.message)}</div>`; return; }
   const defUser = $("[name=user]")?.value || $("[name=user]")?.placeholder || "";
@@ -1088,7 +1074,7 @@ async function preview() {
     ? `<table class="tbl preview"><thead><tr><th>${t("Name")}</th><th>${t("User")}</th><th>${t("Address")}</th><th>${t("Via")}</th><th>${t("Group")}</th></tr></thead><tbody>${r.hosts.map((h) =>
       `<tr><td style="font-family:var(--mono);color:var(--host)">${esc(h.name)}</td><td class="mono">${esc(h.user || defUser)}</td><td class="mono">${esc(h.address)}</td><td class="mono note">${esc(h.jump || "")}</td><td class="note">${esc([h.group, h.env].filter(Boolean).join(" · "))}</td></tr>`).join("")}</tbody></table>`
     : `<ul class="understood">${r.hosts.map((h) => `<li>${icon("check")}<code>${esc((h.user || defUser) + "@" + h.address)}</code>${h.jump ? `<span class="note">${t("via {j}", { j: esc(h.jump) })}</span>` : ""}</li>`).join("")}</ul>`;
-  out.innerHTML = (r.hosts.length ? list : "") + (r.errors.length ? `<div class="skipped">${icon("alert")}<div><b>${t("{n} skipped", { n: r.errors.length })}</b>${r.errors.map((x) => `<div class="note">${esc(x)}</div>`).join("")}</div></div>` : "");
+  out.innerHTML = (r.hosts.length ? list : "") + (r.errors.length ? `<ul class="understood skip">${r.errors.map((x) => `<li>${icon("alert")}<span>${esc(x)} · ${t("skipped")}</span></li>`).join("")}</ul>` : "");
 }
 function fewForm(s) {
   const f = (s.form ||= { hosts: "", user: "", key: "", sudo: false, confirmed: false });
@@ -1198,30 +1184,29 @@ async function createOrg(body) {
 }
 // checkView: every host from the start, each one filled in as its own check answers.
 function checkView(s) {
-  const hosts = s.hosts || [];
-  const res = s.res || {};
+  const hosts = s.hosts || [], res = s.res || {};
   const done = hosts.filter((h) => res[h.name]), ok = done.filter((h) => res[h.name].ok), bad = done.filter((h) => !res[h.name].ok);
-  const waiting = hosts.length - done.length;
+  const waiting = hosts.filter((h) => !res[h.name]);
   const secs = Math.round((Date.now() - (s.started || Date.now())) / 1000);
-  const row = (h) => {
-    const r = res[h.name];
-    const st = !r ? `<span class="st reboot"><i class="spin"></i>${t("connecting… {s} s", { s: secs })}</span>` : r.ok ? `<span class="st available">${t("ok")}</span>` : `<span class="st bad">${t("failed")}</span>`;
-    return `<tr><td>${st}</td><td style="font-family:var(--mono);color:var(--host)">${esc(h.name)}</td><td class="note mono">${esc(h.address || "")}</td><td>${!r ? "" : r.ok ? esc(r.system) : `<div>${esc(r.hint || r.error)}</div><div class="note">${esc(r.error)}</div>`}</td></tr>`;
-  };
-  const many = hosts.length > 12;
-  const byHint = {}; bad.forEach((h) => (byHint[res[h.name].hint || res[h.name].error] ||= []).push(h.name));
-  const body = many
-    ? `${Object.entries(byHint).map(([hint, names]) => `<div class="failgroup"><b>${names.length} × ${esc(hint)}</b><div class="note">${esc(names.slice(0, 20).join(", "))}${names.length > 20 ? " …" : ""}</div></div>`).join("")}`
-    : `<table class="tbl checks"><tbody>${hosts.map(row).join("")}</tbody></table>`;
-  const skipped = (s.skipped || []).length ? `<div class="skipped">${icon("alert")}<div><b>${t("{n} lines skipped when saving", { n: s.skipped.length })}</b>${s.skipped.map((x) => `<div class="note">${esc(x)}</div>`).join("")}</div></div>` : "";
+  const label = (h) => { const a = h.address || h.name, slug = a.toLowerCase().replace(/[^a-z0-9]+/g, "-"); return h.name === slug || h.name === a ? a : `${h.name} · ${a}`; };
+  // failures grouped by cause: one explanation, the hosts under it, the raw error folded away
+  const causes = {};
+  bad.forEach((h) => { const r = res[h.name], k = r.hint || r.error; (causes[k] ||= { hint: r.hint, error: r.error, hosts: [] }).hosts.push(h); });
+  const causeHTML = Object.values(causes).map((c) => `<div class="cause">${icon("x")}<div><b>${esc(c.hint || c.error)}</b>
+      <div class="chips">${c.hosts.slice(0, 40).map((h) => `<code>${esc(label(h))}</code>`).join("")}${c.hosts.length > 40 ? `<span class="note">+${c.hosts.length - 40}</span>` : ""}</div>
+      ${c.hint ? `<details class="raw"><summary>${t("Details")}</summary><code>${esc(c.error)}</code></details>` : ""}</div></div>`).join("");
+  const okHTML = ok.length ? `<div class="cause good">${icon("check")}<div><b>${t("{n} answered", { n: ok.length })}</b><div class="chips">${ok.slice(0, 40).map((h) => `<code title="${esc(res[h.name].system || "")}">${esc(label(h))}</code>`).join("")}</div></div></div>` : "";
+  const waitHTML = waiting.length ? `<div class="cause wait"><i class="spin"></i><div><b>${t("Checking {n}… {s} s", { n: waiting.length, s: secs })}</b><div class="chips">${waiting.slice(0, 40).map((h) => `<code>${esc(label(h))}</code>`).join("")}</div></div></div>` : "";
+  const skipped = (s.skipped || []).length ? `<ul class="understood skip">${s.skipped.map((x) => `<li>${icon("alert")}<span>${esc(x)} · ${t("skipped")}</span></li>`).join("")}</ul>` : "";
+  const file = s.file ? `<p class="note">${t("Addresses and logins are saved in {file}.", { file: `<code class="copyable" data-copy-text="${esc(s.file)}" title="${esc(s.file)} · ${t("click to copy")}">${esc(s.file.split("/").pop())}</code>` })}</p>` : "";
+  const dl = dlNeeded() && !S.db?.updating ? `<span class="note">${t("downloads {size} first", { size: bytes(dlTotal()) })}</span>` : "";
+  const actions = waiting.length ? "" : ok.length
+    ? `<button class="btn primary" data-setup-scan>${bad.length ? t("Scan the {n} that answered", { n: ok.length }) : t("Start the first scan")}</button>${bad.length ? `<button class="btn" data-setup-recheck>${t("Check the failed again")}</button>` : ""}${dl}`
+    : `<button class="btn primary" data-setup-recheck>${t("Check again")}</button>`;
   return `<div class="onb"><h2>${t("Access check")}</h2>
-    <p>${t("Kanareika logs in to each server and runs uname -sr. Nothing is changed.")}</p>${skipped}
-    <div class="checksum"><span><b style="color:var(--ok)">${ok.length}</b> ${t("answered")}</span><span><b style="color:var(--err)">${bad.length}</b> ${t("failed")}</span>${waiting ? `<span><i class="spin"></i><b>${waiting}</b> ${t("still checking")}</span>` : ""}</div>
-    ${body}
-    ${s.file ? `<p class="note">${t("The settings are in {path}: edit it to fix addresses, add jump hosts or more servers.", { path: esc(s.file) })}</p>` : ""}
-    <div class="actions"><button class="btn" data-setup-recheck ${waiting ? "disabled" : ""}>${bad.length ? t("Check the failed again") : t("Check again")}</button>
-      <button class="btn primary" data-setup-scan ${ok.length ? "" : "disabled"}>${bad.length || waiting ? t("Scan the {n} that answered", { n: ok.length }) : t("Start the first scan")}</button>
-      ${dlNeeded() && !S.db?.updating ? `<span class="note">${t("downloads {size} first", { size: bytes(dlTotal()) })}</span>` : ""}</div></div>`;
+    <p>${t("Kanareika logs in to each server and runs uname -sr. Nothing is changed.")}</p>
+    <div class="causes">${waitHTML}${causeHTML}${okHTML}</div>${skipped}${file}
+    <div class="actions">${actions}</div></div>`;
 }
 let checkTick;
 async function checkAccess(onlyFailed) {
@@ -1311,7 +1296,7 @@ function palClose() { $("#pal").classList.remove("on"); }
 
 /* ---------- events ---------- */
 document.addEventListener("click", async (e) => {
-  const el = e.target.closest(".hc, button, a, .node, tr.link, [data-goto], input"); if (!el) return;
+  const el = e.target.closest(".hc, button, a, .node, tr.link, [data-goto], [data-copy-text], input"); if (!el) return;
   const d = el.dataset;
   if (d.themeSet) { S.theme = d.themeSet; store.set("theme", S.theme); applyTheme(); renderSide(); return; }
   if (d.view) { if (d.view === "todo") { e.preventDefault(); S.view = "todo"; render(); } return; }
@@ -1359,7 +1344,7 @@ document.addEventListener("click", async (e) => {
     try { await post("/api/db/update", {}); } catch (er) { if (!/already running/.test(er.message)) { toast(er.message); return; } }
     S.dlStart = new Date().toISOString(); pollDB(); return;
   }
-  if ("dlLater" in d) { S.setup.dlLater = true; refreshDLCard(); return; }
+  if ("copyText" in d) { copy(d.copyText, t("Path copied")); return; }
   if ("setupRecheck" in d) { const s = S.setup; checkAccess(Object.values(s.res || {}).some((r) => !r.ok)); return; }
   if ("setupScan" in d) {
     const s = S.setup; await loadOrgs(); S.org = s.org; S.env = s.env; store.set("org", S.org); store.set("env", S.env);
@@ -1386,6 +1371,7 @@ document.addEventListener("change", async (e) => {
 let qTimer;
 document.addEventListener("input", (e) => {
   if (e.target.id === "pickq") { const q = e.target.value.toLowerCase(); document.querySelectorAll("#picklist .pick").forEach((l) => (l.hidden = !l.dataset.alias.includes(q) && !l.textContent.toLowerCase().includes(q))); return; }
+  if (e.target.id === "pastebox") grow(e.target);
   if (e.target.id === "pastebox" || e.target.name === "user") { clearTimeout(previewTimer); previewTimer = setTimeout(preview, 250); }
   if (e.target.id === "q") { S.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(loadTree, 200); } else if (e.target.id === "palq") { PI = 0; palRender(); } });
 document.addEventListener("keydown", (e) => {

@@ -155,7 +155,14 @@ func (s *Server) apiSetupCheck(w http.ResponseWriter, r *http.Request) {
 	}
 	conn, err := newConn(o, s.paths)
 	if err != nil {
-		sendErr(w, http.StatusBadRequest, err.Error())
+		// no way to log in at all (no key, no agent): every host fails the same way, with the same advice
+		var out []onboard.Result
+		for _, h := range o.Hosts {
+			if h.Env == req.Env && (len(req.Hosts) == 0 || slices.Contains(req.Hosts, h.Name)) {
+				out = append(out, onboard.Result{Host: h.Name, Address: h.Address, Error: err.Error(), Hint: onboard.Hint(err.Error())})
+			}
+		}
+		sendJSON(w, http.StatusOK, map[string]any{"results": out})
 		return
 	}
 	defer conn.Close()

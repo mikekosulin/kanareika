@@ -608,9 +608,14 @@ type Runner interface {
 }
 
 // hint: the usual cause of an SSH error, in plain words.
+// Hint: what to do about an SSH error, in plain words ("" when there is nothing better than the error itself).
+func Hint(msg string) string { return hint(msg) }
+
 func hint(msg string) string {
 	m := strings.ToLower(msg)
 	switch {
+	case strings.Contains(m, "no ssh-agent"), strings.Contains(m, "ssh_auth_sock"):
+		return "no SSH key to log in with: no ssh-agent is running here. Run ssh-add in a terminal, then check again"
 	case strings.Contains(m, "unable to authenticate"), strings.Contains(m, "permission denied"), strings.Contains(m, "no supported methods"):
 		return "the server refused the login: is the public key in ~<user>/.ssh/authorized_keys, and is the key loaded (ssh-add -l) or set in the org file?"
 	case strings.Contains(m, "timeout"), strings.Contains(m, "timed out"), strings.Contains(m, "i/o timeout"):
