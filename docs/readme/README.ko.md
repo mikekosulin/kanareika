@@ -22,17 +22,31 @@
 
 ### 설치
 
-Linux, macOS: 이 머신에 맞는 빌드를 골라 체크섬을 검증하고 `/usr/local/bin`(또는 `~/.local/bin`)에 설치합니다:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
-```
-
-Homebrew (macOS, Linux):
+Homebrew (macOS, Linux). formula가 버전과 체크섬을 고정합니다:
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
+
+또는 설치 스크립트로. 먼저 읽어 본 다음 실행합니다:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh
+less install.sh
+sh install.sh
+```
+
+이 머신에 맞는 빌드를 골라 체크섬(GitHub CLI가 있으면 빌드 attestation도)을 검증하고, `/usr/local/bin` 또는 `~/.local/bin`에 설치하기 전에 묻습니다. `KANAREIKA_YES=1`이면 묻지 않습니다.
+
+또는 직접 (Linux, macOS): [최신 릴리스](https://github.com/mikekosulin/kanareika/releases/latest)에서 `kanareika-<OS>-<ARCH>.tar.xz`와 `SHA256SUMS`를 내려받은 뒤:
+
+```bash
+sha256sum -c --ignore-missing SHA256SUMS
+gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
+tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+```
+
+`<OS>`는 `linux` 또는 `darwin`, `<ARCH>`는 `amd64` 또는 `arm64`입니다. macOS에서는 `sha256sum -c` 대신 `shasum -a 256 -c`를 씁니다. attestation 검증에는 GitHub CLI가 필요하며 선택 사항입니다. `tar`는 `kanareika`를 현재 디렉터리에 풉니다.
 
 Windows (PowerShell):
 
@@ -101,9 +115,9 @@ kanareika scan <ORG_ID> --offline
 
 **네 가지 사용 방식, 같은 데이터와 규칙:**
 
-- **TUI**, 기본 인터페이스 — `kanareika`: `?` 키 목록, `o` 패널, `L` 언어. 원격 웹 서버에도 연결할 수 있습니다: `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`.
+- **TUI**, 기본 인터페이스 — `kanareika`: `?` 키 목록, `o` 패널, `L` 언어. 원격 웹 서버에도 연결할 수 있습니다.
 - **웹** — `kanareika web`: 대시보드, 추이, 호스트 상세; 스캔은 페이지에서 시작합니다.
-- **CLI 명령** — 스크립트와 cron용: `kanareika --help`.
+- **CLI 명령** — 스크립트와 cron용.
 - **MCP** — `kanareika mcp`: AI 에이전트(Claude Code 등)를 위한 읽기 전용 도구.
 
 **점검 항목:**
@@ -113,6 +127,7 @@ kanareika scan <ORG_ID> --offline
 - **상태** — 커널 오류, 디스크, 메모리, 시간 동기화, 대기 중인 재부팅.
 - **수정** — 선택한 조치가 엔지니어나 AI 에이전트를 위한 작업으로 바로 만들어집니다: 적용, 확인, 롤백.
 - **안전한 설계** — 읽기 전용, 조직 간 격리, 변경된 호스트 키 거부, 동의 없이는 스캔하지 않음, 웹 인터페이스는 localhost 전용 (또는 토큰 사용).
+- **프라이버시** — 텔레메트리 없음: 사용자나 서버에 관한 정보를 어디에도 보내지 않으며, 보고서는 내 머신에만 남습니다. 내려받는 것은 공개 데이터뿐입니다: 취약점 DB(ghcr.io, 예비로 mirror.gcr.io와 public.ecr.aws), CISA KEV(cisa.gov), EPSS(FIRST, empiricalsecurity.com), DB-IP Lite IP 데이터베이스(db-ip.com)이며, IP 조회는 이를 이용해 오프라인으로 합니다. 내장된 trivy의 텔레메트리도 꺼져 있습니다.
 
 **면책 조항.** Kanareika는 찾은 것을 보고할 뿐, 모든 것을 찾아낸다고 보장하지 않습니다. 우선순위와 수정 단계는 권고 사항이므로 호스트에서 무엇이든 실행하기 전에 검토하세요. 감사 권한이 있는 서버만 점검하세요. 어떠한 보증도 없이 "있는 그대로" 제공됩니다 ([MIT](../../LICENSE)).
 

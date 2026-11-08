@@ -24,17 +24,31 @@ Kanareika проверяет безопасность Linux-серверов п�
 
 ### Установка
 
-Linux, macOS — скрипт выберет сборку под эту машину, сверит контрольную сумму и установит в `/usr/local/bin` (или `~/.local/bin`):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
-```
-
-Homebrew (macOS и Linux):
+Homebrew (macOS и Linux) — формула фиксирует версию и её контрольную сумму:
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
+
+Или скриптом установки — сначала прочитайте его, потом запустите:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh
+less install.sh
+sh install.sh
+```
+
+Скрипт выберет сборку под эту машину, сверит контрольную сумму (и аттестацию сборки, если установлен GitHub CLI) и спросит, прежде чем ставить в `/usr/local/bin` или `~/.local/bin`; с `KANAREIKA_YES=1` вопроса не будет.
+
+Или вручную (Linux, macOS): скачайте `kanareika-<OS>-<ARCH>.tar.xz` и `SHA256SUMS` со [страницы последнего релиза](https://github.com/mikekosulin/kanareika/releases/latest), затем:
+
+```bash
+sha256sum -c --ignore-missing SHA256SUMS
+gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
+tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+```
+
+`<OS>` — `linux` или `darwin`, `<ARCH>` — `amd64` или `arm64`. На macOS вместо `sha256sum -c` используйте `shasum -a 256 -c`. Проверка аттестации необязательна и требует GitHub CLI; `tar` распакует `kanareika` в текущую папку.
 
 Windows (PowerShell):
 
@@ -103,9 +117,9 @@ kanareika scan <ORG_ID> --offline
 
 ### Как пользоваться
 
-- **Терминал** — `kanareika`, основной интерфейс. `?` — горячие клавиши, `o` — настройка панелей, `L` — язык. Можно подключиться к удалённому серверу: `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`.
+- **Терминал** — `kanareika`, основной интерфейс. `?` — горячие клавиши, `o` — настройка панелей, `L` — язык. Можно подключиться к удалённому серверу.
 - **Браузер** — `kanareika web`: сводка, графики, карточки хостов, сканирование запускается прямо со страницы.
-- **Командная строка** — для скриптов и cron, список команд: `kanareika --help`.
+- **Командная строка** — для скриптов и cron.
 - **MCP** — `kanareika mcp`: инструменты только на чтение, чтобы с результатами могли работать ИИ-агенты (Claude Code и другие).
 
 Данные и правила везде одни и те же.
@@ -120,6 +134,8 @@ kanareika scan <ORG_ID> --offline
 ### Безопасность
 
 Kanareika только читает данные с серверов. Организации изолированы друг от друга, при смене ключа хоста подключение отклоняется, без явного согласия сканирование не запускается. Веб-интерфейс по умолчанию слушает только localhost, снаружи — только с токеном.
+
+Kanareika не собирает телеметрию и никуда не отправляет данные о вас и ваших серверах, отчёты остаются у вас. Скачиваются только публичные данные: базы уязвимостей (ghcr.io, запасные — mirror.gcr.io и public.ecr.aws), CISA KEV (cisa.gov), EPSS (FIRST, empiricalsecurity.com) и IP-базы DB-IP Lite (db-ip.com), по которым IP-адреса определяются офлайн. Телеметрия встроенного trivy тоже отключена.
 
 **Отказ от ответственности.** Kanareika показывает то, что нашла, но не гарантирует, что нашла всё. Приоритеты и шаги исправления — это рекомендации: проверьте их, прежде чем что-то запускать на серверах. Сканируйте только те серверы, на которые у вас есть права. Программа распространяется «как есть», без каких-либо гарантий ([MIT](../../LICENSE)).
 
