@@ -39,7 +39,7 @@ func TestGenerate(t *testing.T) {
 		t.Fatalf("%d runs", len(runs))
 	}
 	m, err := report.LoadMeta(runs[5])
-	if err != nil || m.PlanCounts == nil || m.PlanCounts.P1+m.PlanCounts.P2+m.PlanCounts.P3 == 0 || m.HostsOK != 7 {
+	if err != nil || m.PlanCounts == nil || m.PlanCounts.P1+m.PlanCounts.P2+m.PlanCounts.P3 == 0 || m.HostsOK != 118 {
 		t.Fatalf("%+v %v", m, err)
 	}
 	for _, f := range []string{"reports/acme/production/current/run.json", "reports/acme/staging/current/run.json", "feeds/kev.json",
@@ -47,6 +47,57 @@ func TestGenerate(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(out, f)); err != nil {
 			t.Fatal(err)
 		}
+	}
+	// what the fleet is for: one CVE on dozens of hosts and under several package names, one update closing
+	// several CVEs, images in docker and k8s
+	fs, err := report.LoadFindings(runs[5])
+	if err != nil {
+		t.Fatal(err)
+	}
+	hostsOf, pkgsOf, cvesOf := map[string]map[string]bool{}, map[string]map[string]bool{}, map[string]map[string]bool{}
+	add := func(m map[string]map[string]bool, k, v string) {
+		if m[k] == nil {
+			m[k] = map[string]bool{}
+		}
+		m[k][v] = true
+	}
+	docker, k8s := 0, 0
+	for _, f := range fs {
+		if f.Kind != "vuln" {
+			continue
+		}
+		add(hostsOf, f.ID, f.Host)
+		add(pkgsOf, f.ID, f.Pkg)
+		add(cvesOf, f.Pkg+" "+f.Fixed, f.ID)
+		switch f.Module {
+		case "docker":
+			docker++
+		case "k8s":
+			if f.Image == "" || f.Host != "k8s:prod-eu" {
+				t.Fatalf("k8s finding without its image or cluster: %+v", f)
+			}
+			k8s++
+		}
+		if f.FirstSeen == "" || f.Published == "" || f.CVSSScore == nil {
+			t.Fatalf("no clock or advisory facts: %+v", f)
+		}
+	}
+	wide, multi, bundle := 0, 0, 0
+	for id := range hostsOf {
+		if len(hostsOf[id]) >= 20 {
+			wide++
+		}
+		if len(pkgsOf[id]) >= 2 {
+			multi++
+		}
+	}
+	for _, ids := range cvesOf {
+		if len(ids) >= 2 {
+			bundle++
+		}
+	}
+	if wide == 0 || multi == 0 || bundle == 0 || docker == 0 || k8s == 0 {
+		t.Fatalf("wide %d, multi-package %d, bundles %d, docker %d, k8s %d", wide, multi, bundle, docker, k8s)
 	}
 	m4, _ := report.LoadMeta(runs[4])
 	if m4.HostsFailed.Len() != 1 { // cache-01 is flaky on day 4

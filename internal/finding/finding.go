@@ -62,7 +62,7 @@ type Finding struct {
 	Severity  string `json:"severity"`
 	Title     string `json:"title"`
 	URL       string `json:"url"`
-	Target    string `json:"target"` // "os", "image:<ref>", a path, or human text for config findings
+	Target    string `json:"target"`          // "os", "image:<ref>", a path, or human text for config findings
 	Image     string `json:"image,omitempty"` // k8s: the image of the workload the finding is in (Target is the workload)
 	// i18n: the English title/target above + key and args to render other languages
 	Msg        string         `json:"msg,omitempty"`
