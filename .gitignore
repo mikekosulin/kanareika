@@ -22,7 +22,7 @@ dist/
 *.test
 *.out
 *.prof
-coverage.*
+/coverage.*
 go.work
 go.work.sum
 __debug_bin*
