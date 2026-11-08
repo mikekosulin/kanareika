@@ -22,78 +22,86 @@
 
 ### 安装
 
+Linux、macOS：自动选择适合本机的版本，校验校验和，并安装到 `/usr/local/bin`（或 `~/.local/bin`）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
+```
+
 Homebrew（macOS、Linux）：
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
 
-不使用 Homebrew 的 Linux：下载对应架构（amd64 或 arm64）的二进制文件，用 Release 中的校验和验证后安装到 `/usr/local/bin`：
-
-```bash
-arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-curl -fsSLO "https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-linux-$arch"
-curl -fsSL https://github.com/mikekosulin/kanareika/releases/latest/download/SHA256SUMS | sha256sum -c --ignore-missing
-sudo install -m 755 "kanareika-linux-$arch" /usr/local/bin/kanareika
-```
-
 Windows（PowerShell）：
 
 ```powershell
-Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.exe -OutFile kanareika.exe
+Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.zip -OutFile kanareika.zip; Expand-Archive kanareika.zip -DestinationPath kanareika
 ```
 
-ARM 设备请改用 `kanareika-windows-arm64.exe`。所有二进制文件见[最新 Release](https://github.com/mikekosulin/kanareika/releases/latest)。
+然后在 `kanareika` 文件夹中运行 `kanareika.exe`。ARM 设备请改用 `kanareika-windows-arm64.zip`。
 
-### 快速开始
+### 启动
 
-1. 创建工作目录：在当前目录生成 `orgs/`、`secrets/`、`reports/`（或用 `--home DIR` 指定其他目录）。
+在终端中：
 
-   ```bash
-   kanareika init
-   ```
+```bash
+kanareika
+```
 
-2. 添加组织，然后在 `orgs/myorg.yml` 中填写主机、跳板机和扫描授权。
+或在浏览器中，地址为 http://127.0.0.1:8088（仅监听 localhost）：
 
-   ```bash
-   kanareika org new myorg
-   ```
+```bash
+kanareika web
+```
 
-3. 检查配置文件。
+首次启动时会引导你添加服务器（SSH 用户和密钥、主机、扫描授权）并运行第一次扫描；漏洞库会自动下载。
 
-   ```bash
-   kanareika validate myorg
-   ```
+### 用于脚本和 cron
 
-4. 下载漏洞库。离线环境下用 `db export` 导出、`db import` 导入。
+创建组织，配置保存在 `orgs/<ORG_ID>.yml`：
 
-   ```bash
-   kanareika db update
-   ```
+```bash
+kanareika org new <ORG_ID>
+```
 
-5. 开始扫描。
+扫描该组织；扫描前会先检查配置文件并下载漏洞库：
 
-   ```bash
-   kanareika scan myorg
-   ```
+```bash
+kanareika scan <ORG_ID>
+```
 
-6. 在终端界面中查看结果：
+在其他端口运行 Web 界面（`--port 0` 自动选择空闲端口）：
 
-   ```bash
-   kanareika
-   ```
+```bash
+kanareika web --port <PORT>
+```
 
-   或在 Web 界面中查看，地址为 http://127.0.0.1:8088（仅监听 localhost）：
+将终端界面连接到远程 Web：
 
-   ```bash
-   kanareika web
-   ```
+```bash
+kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>
+```
 
-   换端口：`--port 9000`；`--port 0` 自动选择空闲端口。
+离线环境：先在能联网的机器上导出漏洞库，
+
+```bash
+kanareika db export <BUNDLE.tar.gz>
+```
+
+再在离线机器上导入并离线扫描：
+
+```bash
+kanareika db import <BUNDLE.tar.gz>
+kanareika scan <ORG_ID> --offline
+```
+
+其他所有命令：`kanareika --help`。
 
 **四种使用方式，同一份数据和规则：**
 
-- **TUI**（主要）— `kanareika`：`?` 查看按键，`o` 设置面板，`L` 切换语言。也可连接远程 Web： `kanareika tui --url http://host:8088 --token …`。
+- **TUI**（主要）— `kanareika`：`?` 查看按键，`o` 设置面板，`L` 切换语言。也可连接远程 Web： `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`。
 - **Web** — `kanareika web`：概览、趋势、主机详情；可直接在页面上发起扫描。
 - **命令** — 用于脚本和 cron：`kanareika --help`。
 - **MCP** — `kanareika mcp`：供 AI 智能体（Claude Code 等）使用的只读工具。

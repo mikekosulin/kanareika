@@ -22,78 +22,86 @@ Lancez `kanareika web` pour retrouver les mêmes données dans un navigateur, av
 
 ### Installation
 
+Linux, macOS : choisit la version pour cette machine, vérifie sa somme de contrôle et l'installe dans `/usr/local/bin` (ou `~/.local/bin`) :
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
+```
+
 Homebrew (macOS, Linux) :
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
 
-Linux sans Homebrew : télécharge le binaire pour votre architecture (amd64 ou arm64), le vérifie avec les sommes de contrôle de la release et l'installe dans `/usr/local/bin` :
-
-```bash
-arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-curl -fsSLO "https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-linux-$arch"
-curl -fsSL https://github.com/mikekosulin/kanareika/releases/latest/download/SHA256SUMS | sha256sum -c --ignore-missing
-sudo install -m 755 "kanareika-linux-$arch" /usr/local/bin/kanareika
-```
-
 Windows (PowerShell) :
 
 ```powershell
-Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.exe -OutFile kanareika.exe
+Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.zip -OutFile kanareika.zip; Expand-Archive kanareika.zip -DestinationPath kanareika
 ```
 
-Sur ARM, téléchargez plutôt `kanareika-windows-arm64.exe`. Tous les binaires sont sur la page de la [dernière release](https://github.com/mikekosulin/kanareika/releases/latest).
+Lancez ensuite `kanareika.exe` depuis le dossier `kanareika`. Sur ARM, prenez plutôt `kanareika-windows-arm64.zip`.
 
-### Démarrage rapide
+### Démarrer
 
-1. Créez le répertoire de travail : `orgs/`, `secrets/` et `reports/` apparaissent dans le répertoire courant (ou dans un autre, avec `--home DIR`).
+Dans le terminal :
 
-   ```bash
-   kanareika init
-   ```
+```bash
+kanareika
+```
 
-2. Ajoutez une organisation, puis décrivez ses hôtes, ses hôtes de rebond et le consentement au scan dans `orgs/myorg.yml`.
+ou dans le navigateur, sur http://127.0.0.1:8088 (il n'écoute que sur localhost) :
 
-   ```bash
-   kanareika org new myorg
-   ```
+```bash
+kanareika web
+```
 
-3. Vérifiez le fichier.
+Au premier lancement, il vous guide pour ajouter vos serveurs (utilisateur et clé SSH, hôtes, consentement au scan) et lance le premier scan ; les bases de vulnérabilités se téléchargent toutes seules.
 
-   ```bash
-   kanareika validate myorg
-   ```
+### Pour les scripts et cron
 
-4. Téléchargez les bases de vulnérabilités. Sur un réseau isolé, transférez-les avec `db export` et `db import`.
+Créez une organisation ; ses réglages vont dans `orgs/<ORG_ID>.yml` :
 
-   ```bash
-   kanareika db update
-   ```
+```bash
+kanareika org new <ORG_ID>
+```
 
-5. Lancez le scan.
+Scannez-la ; le fichier est d'abord vérifié et les bases téléchargées :
 
-   ```bash
-   kanareika scan myorg
-   ```
+```bash
+kanareika scan <ORG_ID>
+```
 
-6. Ouvrez les résultats dans l'interface terminal :
+L'interface web sur un autre port (`--port 0` prend n'importe quel port libre) :
 
-   ```bash
-   kanareika
-   ```
+```bash
+kanareika web --port <PORT>
+```
 
-   ou dans l'interface web, sur http://127.0.0.1:8088 (elle n'écoute que sur localhost) :
+L'interface terminal connectée à une instance web distante :
 
-   ```bash
-   kanareika web
-   ```
+```bash
+kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>
+```
 
-   Autre port : `--port 9000` ; `--port 0` prend n'importe quel port libre.
+Réseau isolé : exportez les bases sur une machine qui a accès à internet,
+
+```bash
+kanareika db export <BUNDLE.tar.gz>
+```
+
+puis importez-les sur la machine isolée et scannez hors ligne :
+
+```bash
+kanareika db import <BUNDLE.tar.gz>
+kanareika scan <ORG_ID> --offline
+```
+
+Tout le reste : `kanareika --help`.
 
 **Quatre points d'entrée, mêmes données et mêmes règles :**
 
-- **TUI**, l'interface principale — `kanareika` : `?` pour les raccourcis, `o` pour les panneaux, `L` pour la langue. Peut aussi se connecter à une instance web distante : `kanareika tui --url http://host:8088 --token …`.
+- **TUI**, l'interface principale — `kanareika` : `?` pour les raccourcis, `o` pour les panneaux, `L` pour la langue. Peut aussi se connecter à une instance web distante : `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`.
 - **Web** — `kanareika web` : tableaux de bord, tendances, fiches des hôtes ; les scans se lancent depuis la page.
 - **Commandes** — pour les scripts et le cron : `kanareika --help`.
 - **MCP** — `kanareika mcp` : outils en lecture seule pour les agents IA (Claude Code et autres).

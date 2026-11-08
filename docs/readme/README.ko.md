@@ -22,78 +22,86 @@
 
 ### 설치
 
+Linux, macOS: 이 머신에 맞는 빌드를 골라 체크섬을 검증하고 `/usr/local/bin`(또는 `~/.local/bin`)에 설치합니다:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
+```
+
 Homebrew (macOS, Linux):
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
 
-Homebrew 없는 Linux: 아키텍처(amd64 또는 arm64)에 맞는 바이너리를 내려받아 릴리스 체크섬으로 검증한 뒤 `/usr/local/bin`에 설치합니다:
-
-```bash
-arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-curl -fsSLO "https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-linux-$arch"
-curl -fsSL https://github.com/mikekosulin/kanareika/releases/latest/download/SHA256SUMS | sha256sum -c --ignore-missing
-sudo install -m 755 "kanareika-linux-$arch" /usr/local/bin/kanareika
-```
-
 Windows (PowerShell):
 
 ```powershell
-Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.exe -OutFile kanareika.exe
+Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.zip -OutFile kanareika.zip; Expand-Archive kanareika.zip -DestinationPath kanareika
 ```
 
-ARM용은 `kanareika-windows-arm64.exe`입니다. 모든 바이너리는 [최신 릴리스](https://github.com/mikekosulin/kanareika/releases/latest)에 있습니다.
+그런 다음 `kanareika` 폴더에서 `kanareika.exe`를 실행합니다. ARM용은 `kanareika-windows-arm64.zip`입니다.
 
-### 빠른 시작
+### 시작
 
-1. 작업 디렉터리를 만듭니다. 현재 디렉터리에 `orgs/`, `secrets/`, `reports/`가 생깁니다(다른 위치는 `--home DIR`).
+터미널에서:
 
-   ```bash
-   kanareika init
-   ```
+```bash
+kanareika
+```
 
-2. 조직을 추가하고 `orgs/myorg.yml`에 호스트, 점프 호스트, 스캔 동의를 적습니다.
+또는 브라우저에서. 주소는 http://127.0.0.1:8088이며 localhost에서만 수신합니다:
 
-   ```bash
-   kanareika org new myorg
-   ```
+```bash
+kanareika web
+```
 
-3. 파일을 검증합니다.
+처음 실행하면 서버 추가(SSH 사용자와 키, 호스트, 스캔 동의)를 안내하고 첫 스캔을 실행합니다. 취약점 DB는 자동으로 내려받습니다.
 
-   ```bash
-   kanareika validate myorg
-   ```
+### 스크립트와 cron용
 
-4. 취약점 DB를 내려받습니다. 폐쇄망에서는 `db export`와 `db import`로 옮깁니다.
+조직을 만듭니다. 설정은 `orgs/<ORG_ID>.yml`에 저장됩니다:
 
-   ```bash
-   kanareika db update
-   ```
+```bash
+kanareika org new <ORG_ID>
+```
 
-5. 스캔합니다.
+스캔합니다. 먼저 파일을 검증하고 DB를 내려받습니다:
 
-   ```bash
-   kanareika scan myorg
-   ```
+```bash
+kanareika scan <ORG_ID>
+```
 
-6. 터미널 인터페이스에서 결과를 엽니다:
+다른 포트로 웹 인터페이스 실행(`--port 0`이면 빈 포트를 자동으로 고릅니다):
 
-   ```bash
-   kanareika
-   ```
+```bash
+kanareika web --port <PORT>
+```
 
-   또는 웹 인터페이스에서 엽니다. 주소는 http://127.0.0.1:8088이며 localhost에서만 수신합니다:
+터미널 인터페이스를 원격 웹 서버에 연결:
 
-   ```bash
-   kanareika web
-   ```
+```bash
+kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>
+```
 
-   다른 포트는 `--port 9000`, `--port 0`이면 빈 포트를 자동으로 고릅니다.
+폐쇄망: 인터넷이 되는 머신에서 DB를 내보내고,
+
+```bash
+kanareika db export <BUNDLE.tar.gz>
+```
+
+폐쇄망 머신에서 가져온 뒤 오프라인으로 스캔합니다:
+
+```bash
+kanareika db import <BUNDLE.tar.gz>
+kanareika scan <ORG_ID> --offline
+```
+
+그 밖의 모든 것: `kanareika --help`.
 
 **네 가지 사용 방식, 같은 데이터와 규칙:**
 
-- **TUI**, 기본 인터페이스 — `kanareika`: `?` 키 목록, `o` 패널, `L` 언어. 원격 웹 서버에도 연결할 수 있습니다: `kanareika tui --url http://host:8088 --token …`.
+- **TUI**, 기본 인터페이스 — `kanareika`: `?` 키 목록, `o` 패널, `L` 언어. 원격 웹 서버에도 연결할 수 있습니다: `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`.
 - **웹** — `kanareika web`: 대시보드, 추이, 호스트 상세; 스캔은 페이지에서 시작합니다.
 - **CLI 명령** — 스크립트와 cron용: `kanareika --help`.
 - **MCP** — `kanareika mcp`: AI 에이전트(Claude Code 등)를 위한 읽기 전용 도구.

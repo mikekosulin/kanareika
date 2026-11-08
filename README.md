@@ -22,78 +22,86 @@ Run `kanareika web` for the same data in a browser, with the trend of the last 3
 
 ### Install
 
+Linux, macOS: picks the build for this machine, checks its checksum and installs it into `/usr/local/bin` (or `~/.local/bin`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
+```
+
 Homebrew (macOS, Linux):
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
 
-Linux without Homebrew: downloads the binary for your architecture (amd64 or arm64), checks it against the release checksums and installs it to `/usr/local/bin`:
-
-```bash
-arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-curl -fsSLO "https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-linux-$arch"
-curl -fsSL https://github.com/mikekosulin/kanareika/releases/latest/download/SHA256SUMS | sha256sum -c --ignore-missing
-sudo install -m 755 "kanareika-linux-$arch" /usr/local/bin/kanareika
-```
-
 Windows (PowerShell):
 
 ```powershell
-Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.exe -OutFile kanareika.exe
+Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.zip -OutFile kanareika.zip; Expand-Archive kanareika.zip -DestinationPath kanareika
 ```
 
-On ARM, download `kanareika-windows-arm64.exe` instead. All binaries are on the [latest release](https://github.com/mikekosulin/kanareika/releases/latest) page.
+Then run `kanareika.exe` from the `kanareika` folder. On ARM, take `kanareika-windows-arm64.zip` instead.
 
-### Quick start
+### Start
 
-1. Create the working directory: `orgs/`, `secrets/` and `reports/` appear in the current directory (or in another one, with `--home DIR`).
+In the terminal:
 
-   ```bash
-   kanareika init
-   ```
+```bash
+kanareika
+```
 
-2. Add an organization, then describe its hosts, jump hosts and consent to scan in `orgs/myorg.yml`.
+or in the browser, at http://127.0.0.1:8088 (it listens on localhost only):
 
-   ```bash
-   kanareika org new myorg
-   ```
+```bash
+kanareika web
+```
 
-3. Check the file.
+On first start it walks you through adding your servers (SSH user and key, hosts, consent to scan) and runs the first scan; the vulnerability databases download by themselves.
 
-   ```bash
-   kanareika validate myorg
-   ```
+### For scripts and cron
 
-4. Download the vulnerability databases. On an isolated network, carry them over with `db export` and `db import`.
+Create an organization; its settings go to `orgs/<ORG_ID>.yml`:
 
-   ```bash
-   kanareika db update
-   ```
+```bash
+kanareika org new <ORG_ID>
+```
 
-5. Run the scan.
+Scan it; the org file is checked and the databases are downloaded first:
 
-   ```bash
-   kanareika scan myorg
-   ```
+```bash
+kanareika scan <ORG_ID>
+```
 
-6. Open the results in the terminal interface:
+The web interface on another port (`--port 0` takes any free one):
 
-   ```bash
-   kanareika
-   ```
+```bash
+kanareika web --port <PORT>
+```
 
-   or in the web interface, at http://127.0.0.1:8088 (it listens on localhost only):
+The terminal interface connected to a remote web interface:
 
-   ```bash
-   kanareika web
-   ```
+```bash
+kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>
+```
 
-   Another port: `--port 9000`; `--port 0` takes any free one.
+Isolated network: export the databases on a machine with internet access,
+
+```bash
+kanareika db export <BUNDLE.tar.gz>
+```
+
+then import them on the isolated one and scan offline:
+
+```bash
+kanareika db import <BUNDLE.tar.gz>
+kanareika scan <ORG_ID> --offline
+```
+
+Everything else: `kanareika --help`.
 
 **Four ways in, same data and rules:**
 
-- **TUI**, the main one — `kanareika`: `?` for keys, `o` for panels, `L` for language. Attaches to a remote web too: `kanareika tui --url http://host:8088 --token …`.
+- **TUI**, the main one — `kanareika`: `?` for keys, `o` for panels, `L` for language. Attaches to a remote web too: `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`.
 - **Web** — `kanareika web`: dashboards, trends, host details; scans start from the page.
 - **Commands** — for scripts and cron: `kanareika --help`.
 - **MCP** — `kanareika mcp`: read-only tools for AI agents (Claude Code and others).
