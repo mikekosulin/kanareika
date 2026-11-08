@@ -84,7 +84,7 @@ func TestPictures(t *testing.T) {
 		}
 	}
 	for name, want := range map[string][]string{
-		"og":        {"What to patch first.", "Network", "■ 2 P1", "■ 3 P3", "■ 2 P4", "CVE-2026-90210", "stage-web-01"},
+		"og":        {"What to patch first.", "Network", "■ 2 P1", "■ 3 P3", "■ 2 P4", "CVE-0000-90210", "stage-web-01"},
 		"banner-en": {`lang="en"`, "What to patch first.", "ToDo"},
 		"banner-ru": {`lang="ru"`, "Начните с главного.", "Что делать", "Здоровье"},
 		"banner-zh": {`lang="zh"`, "从最重要的开始", "待办", "健康"},
@@ -95,14 +95,15 @@ func TestPictures(t *testing.T) {
 			}
 		}
 	}
-	if strings.Contains(page["banner-en"], "CVE-2026-90210") {
+	if strings.Contains(page["banner-en"], "CVE-0000-90210") {
 		t.Error("banner shows more than its rows")
 	}
 }
 
-// TestDemoData: what the pictures show is invented: CVE ids of the demo's made-up range, the demo's hosts.
+// TestDemoData: what the pictures show is invented: CVE ids of the year 0000, which the CVE program never
+// assigns (made-up ids of the current year turn real as its numbers come up), and the demo's hosts.
 func TestDemoData(t *testing.T) {
-	cve := regexp.MustCompile(`^CVE-2026-9\d{4}$`)
+	cve := regexp.MustCompile(`^CVE-0000-\d{4,}$`)
 	hosts := map[string]bool{"web-01": true, "web-02": true, "db-01": true, "stage-web-01": true}
 	for _, l := range langs {
 		for _, r := range l.Rows {

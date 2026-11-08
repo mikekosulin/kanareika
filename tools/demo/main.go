@@ -5,7 +5,8 @@
 //
 // One organization, a production and a staging environment, a month of daily full runs: vulnerabilities fixed
 // over time and new ones appearing, logins and password guessing, open ports, disks filling up. Everything is
-// invented: documentation addresses (RFC 5737), example.com, CVE ids that do not exist.
+// invented: documentation addresses (RFC 5737), example.com, CVE ids of the year 0000, which are never assigned
+// (the CVE program starts at 1999; ids of the current year are, as soon as their numbers come up).
 package main
 
 import (
@@ -174,7 +175,7 @@ func makeVulns(r *rand.Rand, days int) []vuln {
 			installed := fmt.Sprintf("%d.%d.%d", 1+r.IntN(3), r.IntN(20), r.IntN(10))
 			for range k {
 				n++
-				v := vuln{host: h.name, pkg: p, id: fmt.Sprintf("CVE-2026-9%04d", n), sev: sevs[r.IntN(len(sevs))],
+				v := vuln{host: h.name, pkg: p, id: fmt.Sprintf("CVE-0000-9%04d", n), sev: sevs[r.IntN(len(sevs))],
 					installed: installed, fixedIn: installed + "-1", from: from, fixed: fixed, epss: r.Float64() * 0.2}
 				if r.IntN(12) == 0 {
 					v.kev, v.epss = true, 0.6+r.Float64()*0.39

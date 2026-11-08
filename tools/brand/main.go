@@ -5,7 +5,7 @@
 //
 // Each picture is an HTML page (og.html, banner.html, style.css next to this file, read from -pages: edit them),
 // rendered to PNG at 2x by headless Chrome (-chrome, or found on its own). Without Chrome only the pages are
-// written. The data on them is invented like the demo's: hosts from tools/demo, CVE ids that do not exist.
+// written. The data on them is invented like the demo's: hosts from tools/demo, CVE ids of the year 0000 (never assigned).
 package main
 
 import (
@@ -79,22 +79,22 @@ var langs = []lang{
 		Sub: "agentless · read-only · TUI + web · MCP", DB: "db ok", Keys: "↑↓ move · space select · f fix plan · / search",
 		Tabs: []string{"ToDo", "Hosts", "Packages", "Access", "Network", "Health"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-2026-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-2026-90042"},
+			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
+			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
 			{2, "web-01", "sshd: password login enabled", "access"},
 			{2, "web-02", ":6379 reachable from anywhere", "network"},
 			{3, "db-01", "kernel 5.14.0-427 · reboot pending", "reboot"},
 			{3, "web-02", "NTP drift 4.2 s", "health"},
 			{3, "stage-web-01", "firewall · default policy ACCEPT", "network"},
 			{4, "web-02", "libxml2 · no fix in repo yet", "vendor"},
-			{4, "db-01", "curl · low, EPSS 0.02%", "CVE-2026-90210"},
+			{4, "db-01", "curl · low, EPSS 0.02%", "CVE-0000-90210"},
 		}},
 	{Code: "ru", Tag: "Аудит безопасности серверов по SSH.", Accent: "Начните с главного.",
 		Sub:  "без агента · только чтение · TUI + веб · MCP",
 		Tabs: []string{"Что делать", "Хосты", "Пакеты", "Доступ", "Сеть", "Здоровье"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-2026-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-2026-90042"},
+			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
+			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
 			{2, "web-01", "sshd: вход по паролю включён", "доступ"},
 			{2, "web-02", ":6379 доступен отовсюду", "сеть"},
 			{3, "db-01", "ядро 5.14.0-427 · ждёт перезагрузки", "перезагрузка"},
@@ -103,8 +103,8 @@ var langs = []lang{
 		Sub:  "无代理 · 只读 · TUI + Web · MCP",
 		Tabs: []string{"待办", "主机", "软件包", "访问", "网络", "健康"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-2026-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-2026-90042"},
+			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
+			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
 			{2, "web-01", "sshd：已启用密码登录", "访问"},
 			{2, "web-02", ":6379 对外开放", "网络"},
 			{3, "db-01", "内核 5.14.0-427 · 等待重启", "重启"},
