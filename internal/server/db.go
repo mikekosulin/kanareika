@@ -4,6 +4,8 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -157,7 +159,8 @@ var (
 )
 
 // apiDBSize: bytes per download ("db", "java-db", "kev", "epss", "dbip-city", "dbip-asn"; a missing one: the
-// source did not say), which of them the next update needs (trivy DBs missing or outdated; the feeds always) and
+// source did not say), which of them the next update needs (trivy DBs missing or outdated, KEV/EPSS older than a
+// scan accepts, IP DBs missing) and
 // the sum of those.
 func (s *Server) apiDBSize(w http.ResponseWriter, r *http.Request) {
 	if s.db == nil {
@@ -175,7 +178,16 @@ func (s *Server) apiDBSize(w http.ResponseWriter, r *http.Request) {
 	sizes := dbSizes
 	dbSizesMu.Unlock()
 	now := time.Now()
-	need := []string{"kev", "epss", "dbip-city", "dbip-asn"}
+	var need []string
+	feeds, _ := priority.LoadFeeds()
+	if at, err := priority.FeedsTime(feeds.Updated); err != nil || now.Sub(at) > priority.FeedsMaxAge {
+		need = append(need, "kev", "epss")
+	}
+	for _, k := range []string{"city", "asn"} {
+		if _, err := os.Stat(filepath.Join(priority.FeedsDir(), "dbip-"+k+".mmdb")); err != nil {
+			need = append(need, "dbip-"+k)
+		}
+	}
 	for _, d := range trivy.DBStatus() {
 		if d.Outdated(now) {
 			need = append(need, d.Name)
