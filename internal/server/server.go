@@ -130,6 +130,9 @@ func New(o Options) (*Server, error) {
 // webFS and localesFS: where the page and the UI strings come from (variables so tests can break them).
 var webFS, localesFS = assets.Web, assets.Locales
 
+// views: the page's views besides the ToDo at /, each at its own address (/hosts?org=…&env=…), all the same page.
+var views = []string{"hosts", "changes", "access", "network", "health", "exceptions", "runs"}
+
 // page: index.html with the /*I18N_UI*/{} placeholder replaced by the UI strings of every language, encoded
 // as Python's json.dumps did ("</" escaped so a string cannot close the script tag).
 func page(name string) ([]byte, error) {
@@ -193,6 +196,9 @@ func (s *Server) Handler() http.Handler {
 	r.Get("/index.html", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/", http.StatusMovedPermanently) })
 	r.Get("/setup", index)
 	r.Get("/setup/{step}", index)
+	for _, v := range views {
+		r.Get("/"+v, index)
+	}
 	r.Get("/classic", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "text/html; charset=utf-8", s.classic) })
 	for path, fn := range map[string]func(query) (any, error){
 		"/api/orgs": s.apiOrgs, "/api/env": s.apiEnv, "/api/run": s.apiRun, "/api/log": s.apiLog,

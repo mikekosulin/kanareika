@@ -136,7 +136,7 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--line-2);
 .rowi[aria-selected="true"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent-line); }
 .rowi.checked .cb { accent-color: var(--accent); }
 .cb { width: 16px; height: 16px; accent-color: var(--accent); margin: 0 auto; cursor: pointer; }
-.pb { font: 600 11px/1 var(--font); padding: 4px 0; width: 28px; text-align: center; border-radius: 4px; color: #0b0d12; font-family: var(--mono); }
+.pb { display: inline-flex; align-items: center; justify-content: center; flex: none; align-self: center; box-sizing: border-box; height: 18px; min-width: 24px; width: 28px; padding: 0; font: 600 11px/18px var(--mono); text-align: center; border-radius: 4px; color: #0b0d12; vertical-align: middle; }
 .pb.P1 { background: var(--p1); } .pb.P2 { background: var(--p2); } .pb.P3 { background: var(--p3); } .pb.P4 { background: var(--p4); }
 .t { min-width: 0; display: flex; align-items: baseline; gap: 8px; }
 .t .title { font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -745,6 +745,59 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
 @media (min-width: 641px) { .ed .dx .dn { display: none; } }
 
 /* end-extra-css */
+
+/* ===== data views: Hosts, Changes, Access, Network, Health, Exceptions, Runs. The ToDo's rows and details panel,
+   columns per view; a column of level 2 leaves below 620px of list, level 3 below 900px ===== */
+.vhead, .vrow { display: grid; grid-template-columns: var(--c1); align-items: center; column-gap: 12px; padding: 0 16px 0 14px; }
+.vhead { position: sticky; top: 0; z-index: 3; height: 32px; font-size: 11.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; background: var(--bg); border-bottom: 1px solid var(--line); }
+.vhead button { background: none; border: 0; padding: 0; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vhead button:hover, .vhead button[aria-sort] { color: var(--ink); }
+.vrow { min-height: 38px; border-bottom: 1px solid var(--line); cursor: pointer; position: relative; font-size: 13px; }
+.vrow:hover { background: var(--hover); }
+.vrow[aria-selected="true"] { background: var(--sel); }
+.vrow[aria-selected="true"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent-line); }
+.vrow > span, .vhead > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vrow .r, .vhead .r { text-align: right; font-variant-numeric: tabular-nums; }
+.vrow .m, .vrow .r { font-family: var(--mono); font-size: 12.5px; }
+.vrow .h { font-family: var(--mono); color: var(--host); }
+.vrow .d { color: var(--ink-2); }
+.vrow .pk { font-family: var(--mono); font-weight: 500; }
+.vrow .flags { display: inline-flex; margin-left: 6px; vertical-align: 1px; overflow: visible; }
+.detail .tbl td { vertical-align: middle; }
+.tbl td.pkc { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.detail .tbl td:has(> .pb) { width: 36px; }
+.z { color: var(--ink-3); }
+.cP1 { color: var(--p1); font-weight: 600; } .cP2 { color: var(--p2); font-weight: 600; } .cP3, .cP4 { color: var(--ink); }
+.sgn { font: 600 13px var(--mono); }
+.dot.bad { background: var(--err); } .dot.wn { background: var(--p2); } .dot.mut { background: var(--ink-3); }
+.vrow .dot { display: inline-block; vertical-align: 1px; }
+.ipi { color: var(--ink-3); margin-left: 8px; font-family: var(--font); font-size: 12px; }
+@container list (max-width: 900px) { .vhead, .vrow { grid-template-columns: var(--c2); } .vt .k3 { display: none; } }
+@container list (max-width: 620px) { .vhead, .vrow { grid-template-columns: var(--c3); padding: 0 12px 0 12px; column-gap: 10px; } .vt .k2 { display: none; } }
+.u { display: inline-flex; align-items: center; gap: 8px; font: 12.5px var(--mono); }
+.u i { width: 40px; height: 4px; border-radius: 2px; background: var(--line-2); overflow: hidden; display: block; flex: none; }
+.u i b { display: block; height: 100%; background: var(--ink-3); }
+.u.hi i b { background: var(--p2); } .u.hi { color: var(--p2); }
+.u.crit i b { background: var(--p1); } .u.crit { color: var(--p1); font-weight: 600; }
+.spk { display: flex; align-items: flex-end; gap: 1px; height: 22px; }
+.spk i { width: 3px; min-height: 1px; background: var(--p2); display: block; }
+.spk i.z { background: var(--line-2); }
+.spkw { display: flex; align-items: flex-end; gap: 10px; font: 12px var(--mono); color: var(--ink-3); }
+.spkw b { color: var(--ink); font-weight: 600; }
+.kv { display: grid; grid-template-columns: 132px minmax(0, 1fr); column-gap: 12px; font-size: 13px; line-height: 1.55; padding: 2px 0; }
+.kv > span:first-child { color: var(--ink-3); }
+.kv > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.kv code, .kv .m { font-family: var(--mono); font-size: 12.5px; }
+.bigmono.hn { color: var(--host); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tbl td.h { font-family: var(--mono); color: var(--host); white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+.tbl td.m { font: 12.5px var(--mono); }
+.tbl .nw { white-space: nowrap; }
+.tbl .ell { max-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail .term { margin: 10px 0 0; max-height: 420px; }
+.dnote { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; }
+.vt { padding-bottom: 96px; }
+.vt .empty { margin: 24px 16px; }
+@media (max-width: 860px) { .counts.vc { padding: 0; } .spkw { display: none; } }
 </style>
 </head>
 <body>
@@ -860,6 +913,19 @@ function sel(id, label, opts, cur) {
   return `<label class="srow"><span class="sl">${label}</span><select id="${id}" aria-label="${label}">${opts.map(([v, txt]) =>
     `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(txt)}</option>`).join("")}</select>${icon("chev")}</label>`;
 }
+const viewHref = (v) => (v === "todo" ? "/" : "/" + v) + "?" + qs({ org: S.org, env: S.env });
+// the number beside a view: what needs a look there (from the run shown, once loaded)
+function navCount(v) {
+  const rd = RD.key === [S.org, S.env, S.run].join("|") ? RD.data : null;
+  if (v === "todo") return S.tree ? `<span class="n hot">${S.tree.fixes}</span>` : "";
+  if (v === "hosts") return envOf() ? `<span class="n">${envOf().hosts}</span>` : "";
+  if (!rd) return "";
+  const n = v === "changes" ? (rd.new ? `+${rd.new.rows.length} −${rd.resolved?.rows.length || 0}` : "")
+    : v === "network" ? Object.values(rd.exposure || {}).filter((e) => e.listen.some((x) => x.public)).length || ""
+    : v === "health" ? (rd.other || []).filter((f) => f.kind === "health").length || ""
+    : v === "exceptions" ? (rd.exceptions || []).length || "" : "";
+  return n === "" ? "" : `<span class="n">${n}</span>`;
+}
 function renderSide() {
   const o = orgOf(), e = envOf();
   const orgOpts = S.orgs.map((x) => [x.id, x.name || x.id]);
@@ -871,7 +937,7 @@ function renderSide() {
     $("#nav").innerHTML = NAV.map((n) => n === "-" ? "<hr>" : `<a class="off" aria-disabled="true" title="${t("Available after the first scan")}">${icon(n[2])}${t(n[1])}</a>`).join("") +
       `<div class="navnote">${t("Available after the first scan")}</div>`;
   } else $("#nav").innerHTML = S.orgs.length ? NAV.map((n) => n === "-" ? "<hr>" :
-    `<a href="${n[0] === "todo" ? "#" : "/classic#" + qs({ org: S.org, env: S.env })}" data-view="${n[0]}" ${S.view === n[0] ? 'aria-current="page"' : ""}>${icon(n[2])}${t(n[1])}${n[0] === "todo" && S.tree ? `<span class="n hot">${S.tree.fixes}</span>` : n[0] !== "todo" ? `<span class="n">${icon("ext")}</span>` : ""}</a>`).join("") : "";
+    `<a href="${viewHref(n[0])}" data-view="${n[0]}" ${S.view === n[0] ? 'aria-current="page"' : ""}>${icon(n[2])}${t(n[1])}${navCount(n[0])}</a>`).join("") : "";
   const db = S.db, dbOld = db && (db.dbs || []).some((d) => d.outdated), feedsOld = db?.feeds_outdated;
   const dbAt = db && (db.dbs || []).map((d) => d.updated).filter(Boolean).sort()[0];
   $("#status").innerHTML = (e ? `<div class="row"><span class="dot ${e.last ? "" : "warn"}"></span><span>${t("Data")} <b>${e.last ? ago(e.last.finished) : t("none yet")}</b>${e.last ? ` · ${e.last.hosts_total - (e.last.hosts_failed || 0)}/${e.last.hosts_total} ${t("hosts")}` : ""}</span></div>` : "") +
@@ -1357,7 +1423,8 @@ async function pollJobs() {
   if (S.view === "setup") $("#view").innerHTML = setupView();
   banner();
   if (running) polling = setTimeout(pollJobs, 1500);
-  else if (S.wasRunning) { S.wasRunning = false; await loadOrgs(); if (S.view === "todo") loadTree(); }
+  else if (S.wasRunning) { S.wasRunning = false; await loadOrgs(); await loadEnv(); RD.key = ""; if (S.view === "todo") loadTree(); else if (isData(S.view)) loadData(); }
+  if (S.view === "runs" && $("#vtable")) drawData(RD.data, true);
   S.wasRunning ||= running;
 }
 function banner() {
@@ -1365,6 +1432,550 @@ function banner() {
   const el = $("#banner"); if (!el) return;
   el.innerHTML = j ? `<div class="banner">${icon("scan")}<span><b>${t("Scanning {env}", { env: esc(S.env) })}</b> · ${esc((j.output || []).slice(-1)[0] || "")}</span><button class="btn ghost" data-cancel="${j.id}">${t("Cancel")}</button></div>` : "";
 }
+
+/* ---------- data views: Hosts, Changes, Access, Network, Health, Exceptions, Runs and log. One run's data
+   (/api/run), the environment (/api/env), a run's log (/api/log), firewall rules (/api/hostfile), address owners
+   (/api/ipinfo). The same content as the TUI's views and its host card (and MCP get_host). ---------- */
+const DATA_VIEWS = ["hosts", "changes", "access", "network", "health", "exceptions", "runs"];
+const isData = (v) => DATA_VIEWS.includes(v);
+const RD = { key: "", data: null };
+const VS = { q: "", flt: new Set(), tab: {}, sort: {}, sel: "", all: false, stack: [], item: null };
+let VLIST = [], CATALOG = null;
+const fmtN = (n) => (n ?? 0).toLocaleString(LANG);
+// finding and action texts in the page's language: the server's message catalog, by key (English as sent)
+function L(o, field = "title") {
+  const key = field === "title" ? o.msg : o[field + "_msg"], m = key && CATALOG?.[key];
+  if (!m || LANG === "en") return o[field] || "";
+  const a = { ...((field === "title" ? o.args : o[field + "_args"]) || {}) };
+  for (const k of Object.keys(a)) if (k.endsWith("_key") && CATALOG[a[k]]) a[k.slice(0, -4)] = CATALOG[a[k]][LANG] || CATALOG[a[k]].en;
+  return (m[LANG] || m.en).replace(/\{(\w+)\}/g, (_, k) => a[k] ?? `{${k}}`);
+}
+const catMsg = (key, fb) => (CATALOG?.[key] && (CATALOG[key][LANG] || CATALOG[key].en)) || fb || key;
+const runLabel = (id) => (id === "current" ? t("Current state") : String(id || "").replace("_", " ").replace(/(\d\d)(\d\d)(\d\d)$/, "$1:$2"));
+const tsShort = (v) => (v || "").replace("T", " ").slice(0, 16);
+const took = (a, b) => { if (!a || !b) return ""; const s = Math.max(0, (new Date(b) - new Date(a)) / 1000); return s < 60 ? Math.round(s) + " s" : s < 3600 ? Math.round(s / 60) + " min" : (s / 3600).toFixed(1) + " h"; };
+const partialRun = (m) => !!(m?.selection && (m.selection.hosts?.length || m.selection.groups?.length || m.selection.modules?.length));
+const EXPO = { 1: "internet", 2: "neighbours", 3: "internal" };
+const envHost = (n) => (S.envd?.hosts || []).find((h) => h.name === n) || {};
+const hcell = (n) => `<span class="h" title="${esc(n)}">${esc(n)}</span>`;
+const pcount = (n, p) => (n ? `<span class="c${p}">${fmtN(n)}</span>` : `<span class="z">0</span>`);
+const stl = (cls, txt, title) => `<span class="st ${cls}" ${title ? `title="${esc(title)}"` : ""}>${esc(txt)}</span>`;
+const ipcell = (ip) => `<span class="m">${esc(ip)}</span><span class="ipi" data-ip="${esc(ip)}"></span>`;
+const lastAttack = (lg) => [lg?.failed_last, ...(lg?.attackers || []).map((a) => a.last)].filter(Boolean).sort().at(-1) || "";
+const deniedKey = (x) => (String(x).startsWith("denied.") ? x : "denied." + x);
+function hostState(rd, n) {
+  const m = rd.meta;
+  if (!(m.hosts_scanned || []).includes(n)) return ["mut", t("not scanned")];
+  if (m.hosts_failed?.[n]) return ["bad", m.hosts_failed[n]];
+  if (m.module_errors?.[n]) return ["wn", m.module_errors[n].join("\n")];
+  return ["ok", t("answered")];
+}
+const lastScan = (rd, n) => { const src = rd.meta.sources?.[n]; return src ? Object.values(src).sort().at(-1) : rd.meta.run_id; };
+const whereTxt = (tg) => !tg ? "" : tg.startsWith("image:") ? tg.slice(6).split("@")[0].split("/").pop() : tg === "os" ? t("OS") : tg.startsWith("os:") ? t("OS · old kernels") : tg;
+function fwState(fw) {
+  if (!fw || !fw.readable) return ["mut", t("no access"), ""];
+  const parts = [fw.firewalld === "running" && "firewalld", fw.ufw_active && "ufw", fw.iptables_input_policy && `INPUT ${fw.iptables_input_policy}`, fw.docker_rules && "docker"].filter(Boolean);
+  return fw.has_input_filtering ? ["ok", parts[0] || t("filtering"), parts.join(" · ")] : ["bad", t("no filtering"), parts.join(" · ")];
+}
+function timeState(x) {
+  const tm = x.time;
+  if (!tm) return x.ntp_synced === "yes" ? ["ok", t("synced"), ""] : x.ntp_synced === "no" ? ["wn", t("not synced"), ""] : ["mut", "?", ""];
+  const off = tm.offset_s, offTxt = off == null ? "" : Math.abs(off) < 1 ? `${Math.round(off * 1000)} ms` : `${off.toFixed(1)} s`;
+  const tip = [`${t("synchronized")}: ${tm.synced ?? "?"}`, `${t("service")}: ${tm.service || "?"}`, tm.source && `${t("source")}: ${tm.source}`,
+    offTxt && `${t("offset")}: ${offTxt}`, tm.skew_s != null && `${t("clock skew")}: ${tm.skew_s.toFixed(1)} s`].filter(Boolean).join("\n");
+  const bad = tm.synced === "no" || (tm.skew_s != null && Math.abs(tm.skew_s) > 30);
+  const warn = !bad && ((off != null && Math.abs(off) > 1) || (tm.skew_s != null && Math.abs(tm.skew_s) > 2) || !tm.service_active);
+  return [bad ? "bad" : warn ? "wn" : "ok", offTxt || (tm.synced === "yes" ? t("synced") : tm.synced || "?"), tip];
+}
+const maxUse = (rows) => (rows?.length ? rows.reduce((a, b) => (b.use > a.use ? b : a)) : null);
+const meter = (v, extra = "") => `<span class="u ${v >= 95 ? "crit" : v >= 85 ? "hi" : ""}"><i><b style="width:${Math.min(100, v)}%"></b></i>${v}%${extra}</span>`;
+const pwState = (a) => (a.password_auth == null ? ["mut", "?", a.sshd_source || ""] : !a.password_auth ? ["ok", t("off"), ""]
+  : a.users_with_password?.length ? ["bad", t("on"), t("password set for") + ": " + a.users_with_password.join(", ")] : ["wn", t("on"), t("no account has a password")]);
+const ROOT = { "without-password": "key only", "prohibit-password": "key only", "forced-commands-only": "commands", no: "no", yes: "yes" };
+const rootTxt = (v) => (ROOT[v] ? t(ROOT[v]) : v || "—");
+function fixTxt(p) {
+  if (p.fix_state === "vendor") return `<span class="z">${t("no fix in the repositories yet")}</span>`;
+  if (p.fix_state === "reboot") return `${esc(p.repo_version || p.fixed)} <span class="z">· ${t("reboot pending")}</span>`;
+  return p.fixed || p.repo_version ? `<span class="ok">${esc(p.repo_version || p.fixed)}</span>` : `<span class="z">${t("no fix")}</span>`;
+}
+
+/* the data of the run shown (Data in the sidebar), cached per org/env/run */
+async function loadRunData() {
+  const key = [S.org, S.env, S.run].join("|");
+  if (RD.key === key && RD.data) return RD.data;
+  if (LANG !== "en" && !CATALOG) CATALOG = (await api("/api/i18n").catch(() => ({}))).messages || {};
+  RD.data = null; RD.key = key;
+  RD.data = await api("/api/run?" + qs(scope()));
+  return RD.data;
+}
+
+/* ---- the views: header line, sub-lists, filters, columns. Column: l label, w width, k level (1 always, 2 from 620px,
+   3 from 900px of list), c class, v cell, s sort value (d0 -1: descending first) ---- */
+const VIEWS = {
+  hosts: {
+    title: "Hosts",
+    chips: [["front", "internet-facing"], ["p1", "with P1"], ["err", "with errors"]],
+    sub: (rd, xs) => t("{n} hosts · {ok} answered · {bad} unreachable", { n: xs.length, ok: rd.meta.hosts_ok ?? 0, bad: Object.keys(rd.meta.hosts_failed || {}).length }),
+    right: (rd) => ["P1", "P2", "P3", "P4"].map((p) => `<span class="cnt"><i style="background:var(--${p.toLowerCase()})"></i><b>${fmtN(rd.plan_counts?.[p])}</b> ${p}</span>`).join(""),
+    items: (rd) => (S.envd?.hosts || []).map((h) => ({ ...h, kind: "host", os: rd.facts?.[h.name]?.os || "", c: rd.hosts?.[h.name] || {}, s: hostState(rd, h.name), last: lastScan(rd, h.name) })),
+    sort: (a, b) => ({ bad: 0, wn: 1, ok: 2, mut: 3 }[a.s[0]] - { bad: 0, wn: 1, ok: 2, mut: 3 }[b.s[0]] || (b.c.P1 || 0) - (a.c.P1 || 0) || (b.c.P2 || 0) - (a.c.P2 || 0) || a.name.localeCompare(b.name)),
+    flt: (x, f) => (!f.has("front") || x.exposure === 1 || x.public) && (!f.has("p1") || x.c.P1 > 0) && (!f.has("err") || x.s[0] === "bad" || x.s[0] === "wn"),
+    text: (x) => `${x.name} ${x.group} ${x.os} ${x.address}`,
+    cols: () => [
+      { l: "", w: "8px", v: (x) => `<span class="dot ${x.s[0]}" title="${esc(x.s[1])}"></span>` },
+      { l: t("Host"), w: "minmax(96px, 1fr)", v: (x) => hcell(x.name), s: (x) => x.name },
+      { l: t("Group"), w: "minmax(0, .55fr)", k: 3, c: "d", v: (x) => esc(x.group), s: (x) => x.group },
+      { l: "OS", w: "minmax(0, 1fr)", k: 2, c: "d", v: (x) => `<span title="${esc(x.os)}">${esc(x.os) || "—"}</span>`, s: (x) => x.os },
+      { l: t("Exposure"), w: "84px", k: 3, v: (x) => (x.exposure === 1 || x.public ? `<span class="wn">${t("internet")}</span>` : `<span class="d">${t(EXPO[x.exposure] || "internal")}</span>`), s: (x) => (x.public ? 0 : x.exposure) },
+      ...["P1", "P2", "P3", "P4"].map((p) => ({ l: p, w: "38px", c: "r", v: (x) => pcount(x.c[p], p), s: (x) => x.c[p] || 0, d0: -1 })),
+      { l: "CVE", w: "52px", k: 3, c: "r", v: (x) => (x.c.cves ? fmtN(x.c.cves) : `<span class="z">0</span>`), s: (x) => x.c.cves || 0, d0: -1 },
+      { l: t("Scanned"), w: "124px", k: 2, c: "m d", v: (x) => (x.last && x.last !== "current" ? `<span title="${esc(runLabel(x.last))}">${esc(runLabel(x.last))}</span>` : "—"), s: (x) => x.last || "" },
+    ],
+    key: (x) => x.name, open: (x) => ({ kind: "host", name: x.name }),
+  },
+  changes: {
+    title: "Changes",
+    tabs: [["all", "All"], ["new", "New"], ["resolved", "Resolved"]],
+    sub: (rd) => (rd.new ? t("vs. the full run {run} · hosts scanned in both", { run: runLabel(rd.prev) }) : ""),
+    right: (rd) => (rd.new ? `<span class="cnt"><b class="bad">+${fmtN(rd.new.rows.length)}</b> ${fmtN(rd.new.total)} CVE</span><span class="cnt"><b class="ok">−${fmtN(rd.resolved?.rows.length)}</b> ${fmtN(rd.resolved?.total)} CVE</span>` : ""),
+    empty: (rd) => (rd.new ? "" : partialRun(rd.meta) ? t("A partial run is not compared with full runs.") : t("No previous full run.")),
+    items: (rd, tab) => [...(tab !== "resolved" ? (rd.new?.rows || []).map((r) => ({ ...r, plus: true })) : []), ...(tab !== "new" ? (rd.resolved?.rows || []).map((r) => ({ ...r, plus: false })) : [])],
+    text: (x) => `${x.host} ${x.pkg} ${x.target} ${(x.ids || []).join(" ")}`,
+    cols: () => [
+      { l: "", w: "12px", v: (x) => (x.plus ? `<span class="sgn bad" title="${t("New")}">+</span>` : `<span class="sgn ok" title="${t("Resolved")}">−</span>`), s: (x) => (x.plus ? 0 : 1) },
+      { l: t("Pri"), w: "30px", v: (x) => (x.priority ? `<span class="pb ${x.priority}">${x.priority}</span>` : ""), s: (x) => x.priority || "P9" },
+      { l: t("Host"), w: "minmax(84px, .7fr)", v: (x) => hcell(x.host), s: (x) => x.host },
+      { l: t("Package / check"), w: "minmax(0, 1.2fr)", v: (x) => `<span class="pk" title="${esc((x.ids || []).join(", "))}">${esc(x.pkg)}</span>${x.kev || x.rce ? `<span class="flags">${flags(x)}</span>` : ""}`, s: (x) => x.pkg },
+      { l: t("Where"), w: "minmax(0, .8fr)", k: 3, c: "d", v: (x) => `<span title="${esc(x.target)}">${esc(whereTxt(x.target))}</span>`, s: (x) => x.target },
+      { l: "CVE", w: "52px", k: 2, c: "r", v: (x) => fmtN(x.count), s: (x) => x.count, d0: -1 },
+    ],
+    key: (x) => `${x.plus ? "+" : "-"}${x.host}/${x.pkg}/${x.target}`, open: (x) => ({ kind: "host", name: x.host }),
+  },
+  access: {
+    title: "Access",
+    tabs: [["hosts", "Hosts"], ["logins", "Logins"], ["keys", "Keys"], ["attackers", "Password guessing"]],
+    sub: (rd) => { const A = rd.access || {}, hs = Object.keys(A); return hs.length ? t("{n} hosts · password login on {p} · {f} failed logins, 30 d", { n: hs.length, p: hs.filter((h) => A[h].password_auth).length, f: fmtN(hs.reduce((n, h) => n + (A[h].logins?.failed_total || 0), 0)) }) : ""; },
+    right: (rd) => {
+      const daily = {}; Object.values(rd.access || {}).forEach((a) => Object.entries(a.logins?.failed_daily || {}).forEach(([d, n]) => { daily[d] = (daily[d] || 0) + n; }));
+      const end = new Date(); end.setUTCHours(0, 0, 0, 0);
+      const ds = Array.from({ length: 30 }, (_, i) => new Date(end - (29 - i) * 864e5).toISOString().slice(0, 10)), vs = ds.map((d) => daily[d] || 0), max = Math.max(1, ...vs);
+      if (!vs.some(Boolean)) return "";
+      return `<div class="spkw"><span>${t("failed, 30 d")}</span><span class="spk" role="img" aria-label="${t("failed, 30 d")}">${vs.map((v, i) => `<i class="${v ? "" : "z"}" style="height:${v ? Math.max(8, (v / max) * 100) : 4}%" title="${ds[i]}: ${fmtN(v)}"></i>`).join("")}</span></div>`;
+    },
+    note: (rd) => deniedNote(rd.access),
+    items: (rd, tab) => {
+      const A = rd.access || {}, hs = Object.keys(A).sort();
+      if (tab === "logins") return hs.flatMap((h) => (A[h].logins?.accepted || []).map((x) => ({ host: h, ...x }))).sort((a, b) => (b.last || "").localeCompare(a.last || ""));
+      if (tab === "keys") {
+        const keys = {}; hs.forEach((h) => (A[h].keys || []).forEach((k) => { (keys[k.fp] ||= { ...k, kind: "key", where: [] }).where.push(`${k.user}@${h}`); }));
+        return Object.values(keys).sort((a, b) => b.where.length - a.where.length);
+      }
+      if (tab === "attackers") {
+        const by = {};
+        hs.forEach((h) => { const lg = A[h].logins || {}; (lg.attackers || (lg.failed_top_ips || []).map(([ip, n]) => ({ ip, n, users: [] }))).forEach((x) => {
+          const a = (by[x.ip] ||= { kind: "ip", ip: x.ip, n: 0, first: x.first, last: x.last, users: {}, hosts: [] });
+          a.n += x.n; a.hosts.push(h);
+          if (x.first && (!a.first || x.first < a.first)) a.first = x.first;
+          if (x.last && (!a.last || x.last > a.last)) a.last = x.last;
+          (x.users || []).forEach(([u, n]) => { a.users[u] = (a.users[u] || 0) + n; });
+        }); });
+        return Object.values(by).map((a) => ({ ...a, users: Object.entries(a.users).sort((x, y) => y[1] - x[1]) })).sort((a, b) => b.n - a.n);
+      }
+      return hs.map((h) => ({ host: h, ...A[h] }));
+    },
+    text: (x) => [x.host, x.user, x.ip, x.comment, x.fp, ...(x.where || []), ...(x.hosts || [])].filter(Boolean).join(" "),
+    cols: (tab) => tab === "logins" ? [
+      { l: t("Host"), w: "minmax(84px, .8fr)", v: (x) => hcell(x.host), s: (x) => x.host },
+      { l: t("User"), w: "minmax(60px, .6fr)", c: "m", v: (x) => esc(x.user), s: (x) => x.user },
+      { l: t("From"), w: "minmax(0, 1.2fr)", k: 2, v: (x) => ipcell(x.ip), s: (x) => x.ip },
+      { l: t("How"), w: "72px", k: 3, v: (x) => (x.method === "publickey" ? `<span class="d">${t("key")}</span>` : stl("wn", t("password"))), s: (x) => x.method },
+      { l: t("Times"), w: "52px", k: 3, c: "r", v: (x) => fmtN(x.count), s: (x) => x.count, d0: -1 },
+      { l: t("Last"), w: "112px", c: "m d", v: (x) => `<span title="${t("first")}: ${esc(tsShort(x.first))}">${esc(tsShort(x.last))}</span>`, s: (x) => x.last || "", d0: -1 },
+    ] : tab === "keys" ? [
+      { l: t("Key"), w: "minmax(120px, .8fr)", c: "m", v: (x) => `<span title="${esc(x.fp)}">${esc(x.type.replace("ssh-", "").replace("ecdsa-sha2-", ""))} ${esc(x.fp.slice(7, 15))}</span>`, s: (x) => x.fp },
+      { l: t("Comment"), w: "minmax(0, 1fr)", k: 2, c: "d", v: (x) => (x.comment ? esc(x.comment) : `<span class="z">—</span>`), s: (x) => x.comment || "" },
+      { l: t("Where"), w: "minmax(0, 1.4fr)", k: 3, c: "m d", v: (x) => esc(x.where.join(", ")) },
+      { l: t("Hosts"), w: "52px", c: "r", v: (x) => fmtN(new Set(x.where.map((w) => w.split("@")[1])).size), s: (x) => x.where.length, d0: -1 },
+    ] : tab === "attackers" ? [
+      { l: t("Address"), w: "minmax(110px, 1.1fr)", v: (x) => ipcell(x.ip), s: (x) => x.ip },
+      { l: t("Attempts"), w: "72px", c: "r", v: (x) => fmtN(x.n), s: (x) => x.n, d0: -1 },
+      { l: t("First"), w: "112px", k: 3, c: "m d", v: (x) => esc(tsShort(x.first)), s: (x) => x.first || "" },
+      { l: t("Last"), w: "84px", k: 2, c: "d", v: (x) => `<span title="${esc(tsShort(x.last))}">${esc(ago(x.last))}</span>`, s: (x) => x.last || "", d0: -1 },
+      { l: t("Logins tried"), w: "minmax(0, .8fr)", k: 3, c: "m d", v: (x) => esc(x.users.slice(0, 4).map(([u]) => u).join(" ")) },
+      { l: t("Hosts"), w: "52px", c: "r", v: (x) => fmtN(x.hosts.length), s: (x) => x.hosts.length, d0: -1 },
+    ] : [
+      { l: t("Host"), w: "minmax(96px, 1fr)", v: (x) => hcell(x.host), s: (x) => x.host },
+      { l: t("Password"), w: "72px", v: (x) => { const p = pwState(x); return stl(p[0], p[1], p[2]); }, s: (x) => (x.password_auth ? 0 : 1) },
+      { l: "root", w: "84px", k: 2, v: (x) => (x.sshd?.permitrootlogin === "yes" ? stl("bad", t("yes")) : `<span class="d">${esc(rootTxt(x.sshd?.permitrootlogin))}</span>`), s: (x) => x.sshd?.permitrootlogin || "" },
+      { l: t("With password"), w: "minmax(0, .7fr)", k: 3, c: "m", v: (x) => (x.users_with_password == null ? `<span class="z">?</span>` : x.users_with_password.length ? `<span class="bad">${esc(x.users_with_password.join(", "))}</span>` : `<span class="z">—</span>`) },
+      { l: t("Keys"), w: "44px", k: 3, c: "r", v: (x) => fmtN((x.keys || []).length), s: (x) => (x.keys || []).length, d0: -1 },
+      { l: t("Logins"), w: "56px", k: 3, c: "r", v: (x) => fmtN((x.logins?.accepted || []).reduce((n, a) => n + a.count, 0)), s: (x) => (x.logins?.accepted || []).reduce((n, a) => n + a.count, 0), d0: -1 },
+      { l: t("Failed"), w: "64px", c: "r", v: (x) => (x.logins?.failed_total ? fmtN(x.logins.failed_total) : `<span class="z">0</span>`), s: (x) => x.logins?.failed_total || 0, d0: -1 },
+      { l: t("Attackers"), w: "72px", k: 3, c: "r", v: (x) => fmtN(x.logins?.failed_ips), s: (x) => x.logins?.failed_ips || 0, d0: -1 },
+      { l: t("Last attack"), w: "84px", k: 2, c: "d", v: (x) => { const l = lastAttack(x.logins); return l ? `<span title="${esc(tsShort(l))}">${esc(ago(l))}</span>` : `<span class="z">—</span>`; }, s: (x) => lastAttack(x.logins), d0: -1 },
+    ],
+    key: (x) => x.fp || (x.kind === "ip" ? "ip:" + x.ip : x.ip ? `${x.host}/${x.user}/${x.ip}` : x.host),
+    open: (x) => (x.kind === "key" || x.kind === "ip" ? x : { kind: "host", name: x.host }),
+  },
+  network: {
+    title: "Network",
+    tabs: [["hosts", "Hosts"], ["ports", "Ports"]],
+    chips: [["outside", "open to the outside"], ["nofw", "no filtering"]],
+    sub: (rd) => { const E = rd.exposure || {}, hs = Object.keys(E); const open = hs.filter((h) => E[h].listen.some((x) => x.public)); return hs.length ? t("{n} hosts · {o} open to the outside · {f} without filtering", { n: hs.length, o: open.length, f: hs.filter((h) => fwState(E[h].firewall)[0] === "bad").length }) : ""; },
+    note: (rd) => deniedNote(rd.exposure),
+    items: (rd, tab) => { const E = rd.exposure || {}, hs = Object.keys(E).sort(); return tab === "ports" ? hs.flatMap((h) => E[h].listen.map((x) => ({ host: h, fw: E[h].firewall, ...x }))) : hs.map((h) => ({ host: h, ...E[h], fw: E[h].firewall })); },
+    flt: (x, f) => (!f.has("outside") || (x.listen ? x.listen.some((y) => y.public) : x.public)) && (!f.has("nofw") || fwState(x.fw)[0] === "bad"),
+    text: (x) => [x.host, x.process, x.port, x.addr, ...(x.public && Array.isArray(x.public) ? x.public : [])].filter((v) => v != null).join(" "),
+    cols: (tab) => tab === "ports" ? [
+      { l: t("Host"), w: "minmax(84px, .8fr)", v: (x) => hcell(x.host), s: (x) => x.host },
+      { l: t("Port"), w: "52px", c: "r", v: (x) => `<b>${x.port}</b>`, s: (x) => x.port },
+      { l: "proto", w: "44px", k: 3, c: "d", v: (x) => esc(x.proto), s: (x) => x.proto },
+      { l: t("Address"), w: "minmax(0, 1fr)", k: 2, v: (x) => (x.addr && !["0.0.0.0", "*", "::", "::1"].includes(x.addr) && !x.addr.startsWith("127.") ? ipcell(x.addr) : `<span class="m">${esc(x.addr || "*")}</span>`), s: (x) => x.addr },
+      { l: t("Process"), w: "minmax(0, .8fr)", c: "m", v: (x) => (x.process ? esc(x.process) : `<span class="z">?</span>`), s: (x) => x.process || "" },
+      { l: t("Access"), w: "76px", v: (x) => (x.local_only ? `<span class="z">${t("local")}</span>` : x.public ? stl("wn", t("outside")) : `<span class="d">${t("internal")}</span>`), s: (x) => (x.public ? 0 : x.local_only ? 2 : 1) },
+    ] : [
+      { l: t("Host"), w: "minmax(96px, .9fr)", v: (x) => hcell(x.host), s: (x) => x.host },
+      { l: t("Public IP"), w: "minmax(0, 1fr)", k: 2, c: "m", v: (x) => (x.public.length ? x.public.map((ip) => (x.unlisted_public.includes(ip) ? `<span class="bad" title="${t("not in the organization config")}">${esc(ip)}</span>` : esc(ip))).join(" ") : `<span class="z" title="${t("no public addresses on the interfaces")}">NAT</span>`) },
+      { l: t("Open to the outside"), w: "minmax(0, 1.1fr)", c: "m", v: (x) => { const ps = [...new Set(x.listen.filter((y) => y.public).map((y) => y.port))].sort((a, b) => a - b); return ps.length ? `<span title="${esc(ps.join(", "))}">${esc(ps.join(" "))}</span>` : `<span class="z">—</span>`; }, s: (x) => x.listen.filter((y) => y.public).length, d0: -1 },
+      { l: t("Firewall"), w: "minmax(0, .8fr)", v: (x) => { const f = fwState(x.fw); return stl(f[0], f[1], f[2]); }, s: (x) => fwState(x.fw)[0] },
+    ],
+    key: (x) => (x.port != null ? `${x.host}/${x.proto}/${x.addr}/${x.port}` : x.host), open: (x) => ({ kind: "host", name: x.host }),
+  },
+  health: {
+    title: "Health",
+    chips: [["disk", "disk ≥ 85%"], ["units", "failed units"], ["time", "clock off"]],
+    sub: (rd) => { const H = rd.health || {}, hs = Object.keys(H); return hs.length ? t("{n} hosts · disk ≥ 85%: {d} · failed units: {u} · clock off: {c}", { n: hs.length, d: hs.filter((h) => (maxUse(H[h].disks)?.use || 0) >= 85).length, u: hs.filter((h) => H[h].failed_units?.length).length, c: hs.filter((h) => timeState(H[h])[0] !== "ok").length }) : ""; },
+    note: (rd) => deniedNote(rd.health),
+    items: (rd) => { const H = rd.health || {}, hs = Object.keys(H).sort(), tzs = hs.map((h) => H[h].time?.timezone).filter(Boolean); const cnt = {}; tzs.forEach((z) => { cnt[z] = (cnt[z] || 0) + 1; }); const main = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0]; return hs.map((h) => ({ host: h, ...H[h], tzMain: main })); },
+    flt: (x, f) => (!f.has("disk") || (maxUse(x.disks)?.use || 0) >= 85 || (maxUse(x.inodes)?.use || 0) >= 85) && (!f.has("units") || x.failed_units?.length) && (!f.has("time") || timeState(x)[0] !== "ok"),
+    text: (x) => x.host,
+    cols: () => [
+      { l: t("Host"), w: "minmax(96px, 1fr)", v: (x) => hcell(x.host), s: (x) => x.host },
+      { l: t("Disk"), w: "minmax(132px, .9fr)", v: (x) => { const d = maxUse(x.disks); return d ? `<span title="${esc((x.disks || []).map((r) => `${r.mount} ${r.use}%`).join("\n"))}">${meter(d.use, ` <span class="z">${esc(d.mount)}</span>`)}</span>` : "—"; }, s: (x) => maxUse(x.disks)?.use || 0, d0: -1 },
+      { l: "inode", w: "52px", k: 3, c: "r", v: (x) => { const i = maxUse(x.inodes); return i ? `<span class="${i.use >= 85 ? "wn" : ""}">${i.use}%</span>` : "—"; }, s: (x) => maxUse(x.inodes)?.use || 0, d0: -1 },
+      { l: t("Memory free"), w: "84px", k: 2, c: "r", v: (x) => (x.mem ? `<span title="${esc(t("{avail} / {total} MB free", { avail: fmtN(x.mem.available_mb), total: fmtN(x.mem.total_mb) }))}">${Math.round((100 * x.mem.available_mb) / x.mem.total_mb)}%</span>` : "—"), s: (x) => (x.mem ? x.mem.available_mb / x.mem.total_mb : 1) },
+      { l: "load", w: "64px", k: 3, c: "r", v: (x) => (x.load?.load15 != null ? `${x.load.load15}<span class="z">/${x.load.cpus}</span>` : "—"), s: (x) => (x.load ? x.load.load15 / (x.load.cpus || 1) : 0), d0: -1 },
+      { l: t("Units"), w: "48px", k: 3, c: "r", v: (x) => (x.failed_units?.length ? `<span class="wn" title="${esc(x.failed_units.join("\n"))}">${x.failed_units.length}</span>` : `<span class="z">—</span>`), s: (x) => x.failed_units?.length || 0, d0: -1 },
+      { l: t("Kernel"), w: "minmax(0, .8fr)", k: 3, c: "d", v: (x) => { const cls = Object.values(x.dmesg?.classes || {}); return (x.denied || []).some((d) => /dmesg/.test(d)) ? `<span class="z">${t("no access")}</span>` : cls.length ? `<span class="wn">${esc(cls.map((c) => `${catMsg(c.key, c.title).split(" (")[0]} ${c.count}`).join(", "))}</span>` : `<span class="z">—</span>`; } },
+      { l: "journal", w: "60px", k: 3, c: "r", v: (x) => ((x.denied || []).some((d) => /journal/.test(d)) ? `<span class="z">?</span>` : fmtN(x.journal?.errors_7d)), s: (x) => x.journal?.errors_7d || 0, d0: -1 },
+      { l: t("Time zone"), w: "minmax(0, .7fr)", k: 3, c: "m", v: (x) => { const z = x.time?.timezone; return z ? (z !== x.tzMain ? `<span class="wn" title="${esc(t("differs from most hosts"))} (${esc(x.tzMain)})">${esc(z)}</span>` : `<span class="d">${esc(z)}</span>`) : `<span class="z">?</span>`; } },
+      { l: t("Time"), w: "84px", k: 2, v: (x) => { const s = timeState(x); return stl(s[0], s[1], s[2]); }, s: (x) => ({ bad: 0, wn: 1, mut: 2, ok: 3 })[timeState(x)[0]] },
+    ],
+    key: (x) => x.host, open: (x) => ({ kind: "host", name: x.host }),
+  },
+  exceptions: {
+    title: "Exceptions",
+    tabs: [["accepted", "Accepted"], ["backported", "Fixed by a backport"]],
+    sub: (rd) => { const ex = rd.exceptions || []; return t("{n} accepted · {e} expired · {b} fixed by a backport", { n: ex.length, e: ex.filter((f) => f.exception?.expired || f.exception?.fix_available).length, b: (rd.backported || []).length }); },
+    empty: (rd, tab) => (tab === "backported" ? "" : t("No exceptions. Accepted risks live in {section} of the organization file.", { section: "<code>exceptions</code>" })),
+    items: (rd, tab) => (tab === "backported" ? (rd.backported || []).map((r) => ({ ...r, kind: "bp" })) : (rd.exceptions || []).map((f) => ({ ...f, kind: "exc" }))),
+    text: (x) => `${x.host} ${x.pkg} ${x.id || ""} ${(x.ids || []).join(" ")} ${x.exception?.owner || ""} ${x.exception?.reason || ""}`,
+    cols: (tab) => tab === "backported" ? [
+      { l: t("Host"), w: "minmax(84px, .8fr)", v: (x) => hcell(x.host), s: (x) => x.host },
+      { l: t("Package"), w: "minmax(0, .8fr)", c: "pk", v: (x) => esc(x.pkg), s: (x) => x.pkg },
+      { l: t("Installed"), w: "minmax(0, 1fr)", k: 3, c: "m d", v: (x) => esc(x.installed) },
+      { l: "CVE", w: "48px", c: "r", v: (x) => fmtN(x.cves), s: (x) => x.cves, d0: -1 },
+      { l: "ID", w: "minmax(0, 1.2fr)", k: 2, c: "m d", v: (x) => `<span title="${esc(x.ids.join(" "))}">${esc(x.ids.join(" "))}</span>` },
+    ] : [
+      { l: "", w: "8px", v: (x) => { const e = x.exception || {}; return e.fix_available ? `<span class="dot bad" title="${t("fix in the repositories: back in the plan")}"></span>` : e.expired ? `<span class="dot bad" title="${t("expired: back in the plan")}"></span>` : `<span class="dot ok" title="${t("accepted")}"></span>`; } },
+      { l: t("Host"), w: "minmax(84px, .7fr)", v: (x) => hcell(x.host), s: (x) => x.host },
+      { l: "ID", w: "minmax(0, .8fr)", k: 2, c: "m d", v: (x) => esc(x.id), s: (x) => x.id },
+      { l: t("Package"), w: "minmax(0, .7fr)", c: "pk", v: (x) => esc(x.pkg), s: (x) => x.pkg },
+      { l: t("Until"), w: "96px", c: "m", v: (x) => `<span class="${x.exception?.expired ? "bad" : ""}">${esc(x.exception?.review_by)}</span>`, s: (x) => x.exception?.review_by || "" },
+      { l: t("Who"), w: "minmax(0, .5fr)", k: 3, c: "d", v: (x) => esc(x.exception?.owner), s: (x) => x.exception?.owner || "" },
+      { l: t("Reason"), w: "minmax(0, 1.2fr)", k: 3, c: "d", v: (x) => `<span title="${esc(x.exception?.reason)}">${esc(x.exception?.reason)}</span>` },
+    ],
+    key: (x) => `${x.kind}/${x.host}/${x.id || x.pkg}`, open: (x) => (x.kind === "exc" ? x : { kind: "host", name: x.host }),
+  },
+  runs: {
+    title: "Runs and log",
+    sub: () => { const rs = (S.envd?.runs || []).filter((r) => r.state === "done"); return rs.length ? t("{n} runs · last {ago}", { n: rs.length, ago: ago(rs.at(-1).finished) }) : ""; },
+    items: () => [...(S.jobs || []).filter((j) => j.request?.org === S.org && j.request?.env === S.env).map((j) => ({ ...j, kind: "job" })),
+      ...[...(S.envd?.runs || [])].reverse().map((r) => ({ ...r, kind: "run" }))],
+    text: (x) => `${x.run_id || ""} ${x.state} ${JSON.stringify(x.selection || x.request || {})}`,
+    cols: () => [
+      { l: t("Run"), w: "minmax(128px, 1fr)", c: "m", v: (x) => (x.kind === "job" ? `${esc(tsShort(x.started))} <span class="z">· ${t("started here")}</span>` : `${esc(runLabel(x.run_id))}${x.run_id === S.run ? ` <span class="z">· ${t("shown")}</span>` : ""}`), s: (x) => x.run_id || x.started },
+      { l: t("State"), w: "112px", v: (x) => runState(x), s: (x) => x.state },
+      { l: t("Kind"), w: "minmax(0, .8fr)", k: 3, c: "d", v: (x) => esc(runScope(x)) },
+      { l: t("Took"), w: "64px", k: 3, c: "r", v: (x) => esc(took(x.started, x.finished)) },
+      { l: t("Hosts"), w: "72px", k: 2, c: "r", v: (x) => (x.hosts_total ? `${x.hosts_total - (x.hosts_failed || 0)}<span class="z">/${x.hosts_total}</span>` : "") },
+      ...["P1", "P2", "P3"].map((p, i) => ({ l: p, w: "40px", k: i ? i + 1 : 1, c: "r", v: (x) => (x.plan_counts ? pcount(x.plan_counts[p], p) : ""), s: (x) => x.plan_counts?.[p] || 0, d0: -1 })),
+    ],
+    key: (x) => x.id || x.run_id, open: (x) => x,
+  },
+};
+const JOBST = { running: ["run", "running"], done: ["ok", "done"], failed: ["bad", "finished with errors"], cancelled: ["mut", "cancelled"], stale: ["wn", "not responding"] };
+function runState(x) {
+  const s = JOBST[x.state] || ["mut", x.state];
+  return s[0] === "run" ? `<span class="st"><i class="spin"></i>${t(s[1])}</span>` : stl(s[0], t(s[1]), x.kind === "job" && x.code ? t("exit code {n}", { n: x.code }) : "");
+}
+function runScope(x) {
+  const r = x.selection || x.request || {};
+  const parts = [r.hosts?.join(", "), r.groups?.join(", "), r.modules?.join("+"), r.dry_run ? t("dry run") : ""].filter(Boolean).join(" · ");
+  return x.kind === "job" ? parts || t("full") : x.partial ? parts : t("full");
+}
+function deniedNote(map) {
+  const hs = Object.entries(map || {}).filter(([, d]) => d.denied?.length);
+  return hs.length ? `<span title="${esc(hs.map(([h, d]) => `${h}: ${d.denied.map((x) => catMsg(deniedKey(x), x)).join(", ")}`).join("\n"))}">${t("Not readable on {n} hosts: needs root or {sudo}", { n: hs.length, sudo: "<code>access.sudo: true</code>" })}</span>` : "";
+}
+
+/* ---- the view shell and the table ---- */
+const vkey = () => S.view + "/" + (VS.tab[S.view] || "");
+function vtable(cols, items, key) {
+  const tpl = (lv) => cols.filter((c) => (c.k || 1) <= lv).map((c) => c.w).join(" ");
+  const sk = VS.sort[vkey()];
+  const xs = sk && cols[sk.i]?.s ? [...items].sort((a, b) => { const f = cols[sk.i].s, x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * sk.d; }) : items;
+  VLIST = xs;
+  const lim = VS.all ? xs.length : 400, cls = (c) => `${c.c || ""} ${c.k === 2 ? "k2" : c.k === 3 ? "k3" : ""}`;
+  return `<div class="vt" role="table" style="--c1:${tpl(3)};--c2:${tpl(2)};--c3:${tpl(1)}">
+    <div class="vhead" role="row">${cols.map((c, i) => `<span class="${cls(c)}" role="columnheader">${c.s ? `<button data-vsort="${i}" ${sk?.i === i ? `aria-sort="${sk.d > 0 ? "ascending" : "descending"}"` : ""}>${esc(c.l)}${sk?.i === i ? (sk.d > 0 ? " ↑" : " ↓") : ""}</button>` : esc(c.l)}</span>`).join("")}</div>
+    ${xs.slice(0, lim).map((x, i) => `<div class="vrow" role="row" tabindex="-1" data-vrow="${i}" aria-selected="${key(x) === VS.sel}">${cols.map((c) => `<span class="${cls(c)}">${c.v(x)}</span>`).join("")}</div>`).join("")}
+    ${xs.length > lim ? `<div class="hidden-note"><button data-vall>${t("Show all {n}", { n: fmtN(xs.length) })}</button></div>` : ""}</div>`;
+}
+function dataShell() {
+  const V = VIEWS[S.view], tab = VS.tab[S.view] || V.tabs?.[0][0];
+  return `<div class="work"><div class="listcol"><div class="work-top"><div class="hdr"><div style="min-width:0"><h1>${t(V.title)}</h1><div class="sub" id="vsub"></div></div>
+      <div class="counts vc" id="vright"></div></div></div>
+      <div class="bar2">
+        ${V.tabs ? `<div class="seg2" role="group" aria-label="${t(V.title)}">${V.tabs.map(([k, l]) => `<button data-vtab="${k}" aria-pressed="${tab === k}">${t(l)}<small class="z" data-vtabn="${k}"></small></button>`).join("")}</div>` : ""}
+        <label class="search">${icon("search")}<span class="sr">${t("Filter")}</span><input id="vq" placeholder="${t("Filter")}" value="${esc(VS.q)}" autocomplete="off"><kbd>/</kbd></label>
+        ${V.chips ? `<div class="chips">${V.chips.map(([k, l]) => `<button class="chip" data-vflt="${k}" aria-pressed="${VS.flt.has(k)}">${t(l)}</button>`).join("")}</div>` : ""}
+      </div>
+      <div class="hidden-note" id="vnote" hidden></div>
+      <div class="scroll" id="scroll"><div id="vtable"><div class="nodetail"><i class="spin"></i></div></div></div>
+    </div><aside class="detail" id="detail" aria-label="${t("Details")}"></aside></div>`;
+}
+async function loadData() {
+  const view = S.view;
+  let rd;
+  try { rd = view === "runs" ? await loadRunData().catch(() => null) : await loadRunData(); }
+  catch (e) {
+    if (S.view !== view) return;
+    if (e.status === 404) { $("#view").innerHTML = `<div id="banner"></div>` + noRuns(); banner(); return; }
+    $("#vtable").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return;
+  }
+  if (S.view === view) drawData(rd);
+}
+function drawData(rd, keepDetail) {
+  const V = VIEWS[S.view]; if (!V || !$("#vtable")) return;
+  const tab = VS.tab[S.view] || V.tabs?.[0][0], q = VS.q.trim().toLowerCase();
+  rd ||= { meta: { hosts_scanned: [], hosts_failed: {}, selection: {} } };
+  const all = V.items(rd, tab), xs = all.filter((x) => (!q || V.text(x).toLowerCase().includes(q)) && (!V.flt || V.flt(x, VS.flt)));
+  if (!VS.sort[vkey()] && V.sort) xs.sort(V.sort);
+  $("#vsub").innerHTML = V.sub(rd, all);
+  $("#vright").innerHTML = V.right ? V.right(rd) : "";
+  const note = V.note ? V.note(rd) : ""; $("#vnote").hidden = !note; $("#vnote").innerHTML = note;
+  (V.tabs || []).forEach(([k]) => { const el = document.querySelector(`[data-vtabn="${k}"]`); if (el) el.textContent = " " + fmtN(V.items(rd, k).length); });
+  const empty = V.empty?.(rd, tab);
+  $("#vtable").innerHTML = empty && !all.length ? `<div class="empty">${empty}</div>`
+    : !xs.length ? `<div class="empty"><h3>${all.length ? t("Nothing matches") : t("No data")}</h3>${all.length ? `<button class="btn ghost" data-vreset>${t("Clear filters")}</button>` : ""}</div>`
+    : vtable(V.cols(tab), xs, V.key);
+  enrichIps($("#vtable"));
+  if (keepDetail) return;
+  // the details: the host in the address, the selected row, or the first row on a wide screen
+  const want = VS.want; VS.want = "";
+  if (VS.item) vshow(VS.item, false, true);
+  else if (want && (S.envd?.hosts || []).some((h) => h.name === want)) { VS.sel = want; markSel(); vshow({ kind: "host", name: want }); }
+  else if (VLIST[0] && !matchMedia("(max-width: 1240px)").matches) { VS.sel = V.key(VLIST[0]); markSel(); vshow(V.open(VLIST[0]), false, true); }
+  else $("#detail").innerHTML = `<div class="nodetail">${t("Pick a row")}</div>`;
+}
+function markSel() { const V = VIEWS[S.view]; document.querySelectorAll(".vrow[data-vrow]").forEach((r) => r.setAttribute("aria-selected", V.key(VLIST[+r.dataset.vrow]) === VS.sel)); }
+
+/* ---- the details panel ---- */
+async function vshow(item, push, quiet) {
+  if (push === "back") {} else if (push && VS.item) VS.stack.push(VS.item); else if (!push) VS.stack = [];
+  VS.item = item;
+  const el = $("#detail"); if (!el) return;
+  const rd = RD.data;
+  el.innerHTML = item.kind === "host" ? (rd ? hostDetail(rd, item.name) : `<div class="nodetail">${t("No data")}</div>`)
+    : item.kind === "key" ? keyDetail(item) : item.kind === "ip" ? ipDetail(item) : item.kind === "exc" ? excDetail(item)
+    : item.kind === "run" || item.kind === "job" ? runDetail(item) : "";
+  el.scrollTop = 0;
+  enrichIps(el);
+  syncURL();
+  if (!quiet && matchMedia("(max-width: 1240px)").matches) el.classList.add("open");
+  if (item.kind === "run" && item.state !== "running") loadLog(item.run_id);
+}
+function dhead(meta, title, sub, extra = "") {
+  const crumb = VS.stack.length ? `<div class="crumb"><button data-vback>${icon("left")} ${esc(VS.stack.at(-1).name || VS.stack.at(-1).ip || VS.stack.at(-1).pkg || t("Back"))}</button></div>` : "";
+  return `<div class="dh"><button class="btn ghost back" data-close>${icon("left")}${t("Back")}</button>${crumb}<div class="meta">${meta}</div>${title}${sub}${extra}</div>`;
+}
+const kv = (k, v) => (v === "" || v == null ? "" : `<div class="kv"><span>${k}</span><span>${v}</span></div>`);
+const sec = (title, body) => (body ? `<div class="sec"><h4>${title}</h4>${body}</div>` : "");
+function deniedKV(x) { return x?.denied?.length ? kv(t("no access to"), `<span class="z">${esc(x.denied.map((d) => catMsg(deniedKey(d), d)).join(", "))}</span>`) : ""; }
+function hostDetail(rd, n) {
+  const eh = envHost(n), f = rd.facts?.[n] || {}, c = rd.hosts?.[n] || {}, s = hostState(rd, n), last = lastScan(rd, n);
+  const acts = (rd.actions || []).filter((a) => a.hosts.includes(n)), pk = (rd.plan || []).filter((p) => p.host === n);
+  const A = rd.access?.[n], E = rd.exposure?.[n], H = rd.health?.[n];
+  const other = [...(rd.other || []), ...(rd.inventory || [])].filter((o) => o.host === n);
+  const ex = (rd.exceptions || []).filter((x) => x.host === n);
+  const head = dhead(`<span class="dot ${s[0]}" style="display:inline-block"></span><span>${esc(s[0] === "bad" ? t("unreachable") : s[0] === "wn" ? t("with errors") : s[1])}</span>${eh.group ? `<span class="z">·</span><span>${esc(eh.group)}</span>` : ""}${eh.exposure === 1 || eh.public ? `<span class="z">·</span><span class="wn">${t("internet")}</span>` : ""}`,
+    `<div class="bigmono hn" title="${esc(n)}">${esc(n)}</div>`, `<div class="vers">${esc(f.os || "?")}${f.kernel?.length ? " · " + esc(f.kernel.join(", ")) : ""}</div>`,
+    `<div class="kpis2">${["P1", "P2", "P3", "P4"].map((p) => `<div><b class="${c[p] ? "c" + p : "z"}">${fmtN(c[p])}</b>${p}</div>`).join("")}<div><b>${fmtN(c.cves)}</b>CVE</div></div>`);
+  const status = kv(t("Address"), eh.address ? `<code>${esc((eh.user ? eh.user + "@" : "") + eh.address)}</code>${eh.jump ? ` <span class="z">via ${esc(eh.jump)}</span>` : ""}` : "")
+    + kv(t("Exposure"), eh.exposure ? t(EXPO[eh.exposure] || "internal") : "")
+    + kv(t("Scanned"), last && last !== "current" ? `<code>${esc(runLabel(last))}</code>` : "")
+    + (s[0] === "bad" || s[0] === "wn" ? kv(t("Error"), `<code class="${s[0]}">${esc(s[1])}</code>`) : "");
+  const todo = acts.length ? `<table class="tbl"><tbody>${acts.slice(0, 15).map((a) => `<tr><td style="width:36px"><span class="pb ${a.priority}">${a.priority}</span></td><td class="ell" title="${esc(L(a))}">${esc(L(a))}${a.kev || a.rce ? ` <span class="flags" style="display:inline-flex">${flags(a)}</span>` : ""}</td><td class="r nw note">${esc(dueText(a.due))}</td></tr>`).join("")}</tbody></table>${acts.length > 15 ? `<div class="dnote">${t("+{n} more", { n: acts.length - 15 })}</div>` : ""}` : "";
+  const pks = pk.length ? `<table class="tbl"><tbody>${pk.slice(0, 15).map((p) => `<tr><td style="width:36px"><span class="pb ${p.priority}">${p.priority}</span></td><td class="m nw pkc" title="${esc(p.pkg)}"><b style="font-weight:500">${esc(p.pkg)}</b>${p.kev ? ` <span class="fl kev">KEV</span>` : ""}</td><td class="m ell" title="${esc(p.installed)} → ${esc(p.fixed || "")}"><span class="z">${esc(p.installed)} →</span> ${fixTxt(p)}</td><td class="r m">${fmtN(p.cves)}</td></tr>`).join("")}</tbody></table>${pk.length > 15 ? `<div class="dnote">${t("+{n} more", { n: pk.length - 15 })}</div>` : ""}` : "";
+  let ssh = "";
+  if (A) {
+    const lg = A.logins || {}, pw = pwState(A), keys = A.keys || [], acc = lg.accepted || [];
+    ssh = kv(t("Port"), A.sshd?.port ? `<code>${esc(A.sshd.port)}</code>` : "") + kv(t("Password login"), stl(pw[0], pw[1], pw[2]))
+      + kv(t("Root login"), A.sshd?.permitrootlogin === "yes" ? stl("bad", t("yes")) : esc(rootTxt(A.sshd?.permitrootlogin)))
+      + (A.users_with_password?.length ? kv(t("With password"), `<code class="bad">${esc(A.users_with_password.join(", "))}</code>`) : "")
+      + kv(t("Authorized keys"), `${keys.length} <span class="z">· root ${keys.filter((k) => k.user === "root").length}</span>`)
+      + kv(t("Logins, 30 d"), `${fmtN(acc.reduce((m, x) => m + x.count, 0))} <span class="z">· ${t("from {n} addresses", { n: new Set(acc.map((x) => x.ip)).size })}</span>`)
+      + kv(t("Failed logins"), lg.failed_total ? `<span class="wn">${fmtN(lg.failed_total)}</span> <span class="z">· ${t("from {n} addresses", { n: fmtN(lg.failed_ips) })}${lastAttack(lg) ? " · " + esc(ago(lastAttack(lg))) : ""}</span>` : `<span class="z">0</span>`)
+      + deniedKV(A)
+      + (keys.length ? `<table class="tbl" style="margin-top:10px"><thead><tr><th>${t("User")}</th><th>${t("Key")}</th><th>${t("Comment")}</th></tr></thead><tbody>${keys.slice(0, 12).map((k) => `<tr><td class="m nw">${esc(k.user)}</td><td class="m nw" title="${esc(k.fp)}">${esc(k.type.replace("ssh-", ""))} ${esc(k.fp.slice(7, 15))}</td><td class="ell note" title="${esc(k.comment)}">${esc(k.comment) || "—"}</td></tr>`).join("")}</tbody></table>` : "")
+      + (acc.length ? `<table class="tbl" style="margin-top:10px"><thead><tr><th>${t("User")}</th><th>${t("From")}</th><th class="r">${t("Last")}</th></tr></thead><tbody>${acc.slice(0, 10).map((x) => `<tr><td class="m nw">${esc(x.user)}${x.method === "publickey" ? "" : ` <span class="wn">${t("password")}</span>`}</td><td class="ell">${ipcell(x.ip)}</td><td class="r m nw note">${esc(tsShort(x.last))}</td></tr>`).join("")}</tbody></table>` : "");
+  }
+  let net = "";
+  if (E) {
+    const fw = fwState(E.firewall), ls = [...(E.listen || [])].sort((a, b) => (b.public ? 1 : 0) - (a.public ? 1 : 0) || a.port - b.port);
+    net = kv(t("Public IP"), E.public?.length ? E.public.map((ip) => `<code class="${E.unlisted_public?.includes(ip) ? "bad" : ""}" title="${E.unlisted_public?.includes(ip) ? t("not in the organization config") : ""}">${esc(ip)}</code>`).join(" ") : `<span class="z">${t("none")}</span>`)
+      + kv(t("Firewall"), `${stl(fw[0], fw[1])}${fw[2] ? ` <span class="z">· ${esc(fw[2])}</span>` : ""}${E.firewall?.readable ? ` <button class="lnk" data-fwrules="${esc(n)}">${t("rules")}</button>` : ""}`)
+      + deniedKV(E)
+      + (ls.length ? `<table class="tbl" style="margin-top:10px"><thead><tr><th class="r">${t("Port")}</th><th>${t("Process")}</th><th>${t("Address")}</th><th class="r">${t("Access")}</th></tr></thead><tbody>${ls.map((x) => `<tr><td class="r m"><b>${x.port}</b><span class="z">/${esc(x.proto)}</span></td><td class="m nw">${esc(x.process || "?")}</td><td class="m ell">${esc(x.addr || "*")}</td><td class="r nw">${x.local_only ? `<span class="z">${t("local")}</span>` : x.public ? stl("wn", t("outside")) : `<span class="note">${t("internal")}</span>`}</td></tr>`).join("")}</tbody></table>` : "")
+      + `<pre class="term" id="fwraw" hidden></pre>`;
+  }
+  let hl = "";
+  if (H) {
+    const tm = timeState(H), inodes = (H.inodes || []).filter((i) => i.use >= 50);
+    hl = (H.disks || []).map((d, i) => kv(i ? "" : t("Disks"), `${meter(d.use)} <code class="z">${esc(d.mount)}</code>`)).join("")
+      + inodes.map((d, i) => kv(i ? "" : "inodes", `${meter(d.use)} <code class="z">${esc(d.mount)}</code>`)).join("")
+      + kv(t("Memory"), H.mem ? t("{avail} / {total} MB free", { avail: fmtN(H.mem.available_mb), total: fmtN(H.mem.total_mb) }) : "")
+      + kv("load", H.load ? `<code>${H.load.load1} / ${H.load.load15}</code> <span class="z">· 1/15 min · ${H.load.cpus} CPU</span>` : "")
+      + (H.failed_units?.length ? kv(t("Failed units"), `<code class="wn">${esc(H.failed_units.join(", "))}</code>`) : "")
+      + (H.readonly_mounts?.length ? kv(t("Read-only"), `<code class="bad">${esc(H.readonly_mounts.join(", "))}</code>`) : "")
+      + (H.journal?.errors_7d ? kv(t("Journal errors"), `${fmtN(H.journal.errors_7d)} <span class="z">· 7 d</span>`) : "")
+      + kv(t("Time"), `${stl(tm[0], tm[1])}${H.time ? ` <span class="z">· ${esc([H.time.service, H.time.timezone].filter(Boolean).join(" · "))}</span>` : ""}`)
+      + Object.values(H.dmesg?.classes || {}).map((c, i) => kv(i ? "" : t("Kernel"), `<span class="wn">${esc(catMsg(c.key, c.title))}</span> <span class="z">· ${c.count}</span>`)).join("")
+      + deniedKV(H)
+      + ((H.dmesg?.tail || []).length ? `<pre class="term">${esc(H.dmesg.tail.slice(-20).join("\n"))}</pre>` : "");
+  }
+  const oth = other.length ? `<table class="tbl"><tbody>${other.map((o) => `<tr><td style="width:36px">${o.priority ? `<span class="pb ${o.priority}">${o.priority}</span>` : ""}</td><td class="ell" title="${esc(L(o))}">${esc(L(o))}</td><td class="m ell note" title="${esc(o.target)}">${esc(o.target)}</td></tr>`).join("")}</tbody></table>` : "";
+  const exc = ex.length ? `<table class="tbl"><tbody>${ex.map((x) => `<tr><td class="m">${esc(x.pkg)}</td><td class="m note">${esc(x.id)}</td><td class="r m nw ${x.exception?.expired ? "bad" : ""}">${esc(x.exception?.review_by)}</td></tr>`).join("")}</tbody></table>` : "";
+  return head + sec(t("Status"), status) + sec(t("ToDo"), todo) + sec(t("Packages"), pks) + sec(t("SSH and logins"), ssh) + sec(t("Network"), net)
+    + sec(t("Health"), hl) + sec(t("Other findings"), oth) + sec(t("Exceptions"), exc)
+    + `<div class="dfoot"><button class="btn primary" data-todohost="${esc(n)}">${t("Open in ToDo")}</button>${S.view !== "hosts" ? `<button class="btn" data-hostsview="${esc(n)}">${t("All hosts")}</button>` : ""}</div>`;
+}
+const hostLinks = (hs) => `<div class="hosts" style="display:flex;flex-wrap:wrap;gap:6px">${[...new Set(hs)].map((h) => `<button class="hc" data-vhost="${esc(h)}">${esc(h)}</button>`).join("")}</div>`;
+function keyDetail(k) {
+  return dhead(`<span>${t("SSH key")}</span>`, `<div class="bigmono" style="word-break:break-all">${esc(k.type)} ${esc(k.fp.slice(7, 15))}</div>`, `<div class="vers">${esc(k.comment) || t("no comment")}</div>`)
+    + sec(t("Key"), kv(t("Fingerprint"), `<code>${esc(k.fp)}</code>`) + kv(t("Options"), k.options ? `<code>${esc(k.options)}</code>` : ""))
+    + sec(t("Where"), `<table class="tbl"><tbody>${k.where.map((w) => { const [u, h] = w.split("@"); return `<tr class="link" data-vhost="${esc(h)}"><td class="m nw" style="width:30%">${esc(u)}</td><td class="h">${esc(h)}</td></tr>`; }).join("")}</tbody></table>`);
+}
+function ipDetail(x) {
+  return dhead(`<span>${t("Password guessing")}</span>`, `<div class="bigmono">${esc(x.ip)}</div>`, `<div class="vers"><span class="ipi" data-ip="${esc(x.ip)}" style="margin:0"></span></div>`,
+    `<div class="kpis2"><div><b>${fmtN(x.n)}</b>${t("attempts")}</div><div><b>${x.hosts.length}</b>${t("hosts")}</div><div><b>${esc(ago(x.last))}</b>${t("last")}</div></div>`)
+    + sec(t("When"), kv(t("First"), `<code>${esc(tsShort(x.first))}</code>`) + kv(t("Last"), `<code>${esc(tsShort(x.last))}</code>`))
+    + sec(t("Logins tried"), x.users.length ? `<table class="tbl"><tbody>${x.users.slice(0, 30).map(([u, n]) => `<tr><td class="m">${esc(u)}</td><td class="r m">${fmtN(n)}</td></tr>`).join("")}</tbody></table>` : "")
+    + sec(t("Hosts"), hostLinks(x.hosts));
+}
+function excDetail(x) {
+  const e = x.exception || {};
+  return dhead(e.fix_available ? stl("bad", t("fix in the repositories: back in the plan")) : e.expired ? stl("bad", t("expired: back in the plan")) : stl("ok", t("accepted")),
+    `<div class="bigmono">${esc(x.pkg)}</div>`, `<div class="vers">${esc(x.id)}</div>`)
+    + sec(t("Exception"), kv(t("Host"), `<button class="lnk" data-vhost="${esc(x.host)}" style="font-family:var(--mono);color:var(--host)">${esc(x.host)}</button>`) + kv(t("Until"), `<code class="${e.expired ? "bad" : ""}">${esc(e.review_by)}</code>`) + kv(t("Who"), esc(e.owner)) + kv(t("Reason"), esc(e.reason)));
+}
+function runDetail(x) {
+  const c = x.plan_counts, job = x.kind === "job";
+  return dhead(runState(x), `<div class="bigmono">${esc(job ? tsShort(x.started) : runLabel(x.run_id))}</div>`, `<div class="vers">${esc(runScope(x))}</div>`,
+    c ? `<div class="kpis2">${["P1", "P2", "P3", "P4"].map((p) => `<div><b class="${c[p] ? "c" + p : "z"}">${fmtN(c[p])}</b>${p}</div>`).join("")}<div><b>${fmtN(c.cves)}</b>CVE</div></div>` : "")
+    + sec(t("Run"), kv(t("Started"), `<code>${esc(tsShort(x.started))}</code>`) + kv(t("Finished"), x.finished ? `<code>${esc(tsShort(x.finished))}</code> <span class="z">· ${esc(took(x.started, x.finished))}</span>` : "")
+      + kv(t("Hosts"), x.hosts_total ? `${x.hosts_total - (x.hosts_failed || 0)} / ${x.hosts_total}${x.hosts_failed ? ` <span class="bad">· ${t("{n} unreachable", { n: x.hosts_failed })}</span>` : ""}` : "")
+      + (job && x.code ? kv(t("Exit code"), `<code class="bad">${x.code}</code>`) : ""))
+    + (job ? sec(t("Output"), `<pre class="term">${(x.dropped ? `… ${x.dropped}\n` : "") + esc((x.output || []).join("\n")) || "&nbsp;"}</pre>`)
+      : sec(t("Log"), `<pre class="term" id="runlog">${x.state === "running" ? t("The scan is running.") : `<i class="spin"></i>`}</pre>`))
+    + (!job && x.state === "done" && x.run_id !== S.run ? `<div class="dfoot"><button class="btn primary" data-showrun="${esc(x.run_id)}">${t("Show this run's data")}</button></div>` : "");
+}
+async function loadLog(run) {
+  let d; try { d = await api("/api/log?" + qs({ org: S.org, env: S.env, run })); } catch (e) { d = { lines: [], error: e.message }; }
+  const el = $("#runlog"); if (!el || VS.item?.run_id !== run) return;
+  el.textContent = d.lines.length ? d.lines.join("\n") : d.error || t("No log.");
+  el.scrollTop = el.scrollHeight;
+}
+const ipCache = {};
+async function enrichIps(root) {
+  const els = [...(root?.querySelectorAll(".ipi[data-ip]") || [])];
+  const need = [...new Set(els.map((e) => e.dataset.ip))].filter((ip) => !(ip in ipCache));
+  for (let i = 0; i < need.length; i += 400) { try { Object.assign(ipCache, await api("/api/ipinfo?" + qs({ ips: need.slice(i, i + 400).join(",") }))); } catch { need.slice(i, i + 400).forEach((ip) => { ipCache[ip] = null; }); } }
+  els.forEach((el) => {
+    const x = ipCache[el.dataset.ip]; if (!x) return;
+    el.textContent = x.ours ? t("ours") + " · " + x.ours.split("/").pop() : x.scope ? t(x.scope === "private" ? "private address" : "special address") : [x.cc, x.org].filter(Boolean).join(" · ");
+    el.title = [x.country, x.city, x.asn ? "AS" + x.asn : "", x.org, x.ours].filter(Boolean).join(" · ");
+  });
+}
+
+/* ---- addresses: /hosts, /changes, … with ?org=&env= (and run=, host=) ---- */
+function syncURL(push) {
+  if (S.view === "setup") return;
+  const keep = new URLSearchParams(location.search).get("lang");
+  const host = !isData(S.view) ? "" : VS.item?.kind === "host" ? VS.item.name : VS.want || "";
+  const tab = isData(S.view) ? VS.tab[S.view] : "";
+  const u = (S.view === "todo" ? "/" : "/" + S.view) + "?" + qs({ org: S.org, env: S.env, run: S.run !== "current" ? S.run : "", tab, host, lang: keep || "" });
+  const cur = location.pathname + location.search;
+  if (u.replace(/\?$/, "") !== cur) history[push ? "pushState" : "replaceState"](null, "", u.replace(/\?$/, ""));
+}
+function readURL() {
+  const p = new URLSearchParams(location.search), v = location.pathname.replace(/^\/+|\/+$/g, "");
+  if (isData(v)) S.view = v; else if (!location.pathname.startsWith("/setup")) S.view = "todo";
+  if (p.get("org")) S.org = p.get("org");
+  if (p.get("env")) S.env = p.get("env");
+  if (p.get("run")) S.run = p.get("run");
+  if (isData(S.view) && p.get("tab")) VS.tab[S.view] = p.get("tab");
+  VS.want = isData(S.view) ? p.get("host") || "" : "";
+}
+function go(view, push = true) {
+  if (view !== S.view) { VS.q = ""; VS.flt.clear(); VS.all = false; VS.sel = ""; VS.item = null; VS.stack = []; VS.want = ""; }
+  S.view = view; syncURL(push); render();
+  $("#side")?.classList.remove("open");
+}
+function vopenRow(i) {
+  const V = VIEWS[S.view], x = VLIST[i]; if (!x) return;
+  VS.sel = V.key(x); markSel(); vshow(V.open(x));
+}
+document.addEventListener("click", (e) => {
+  if (!isData(S.view)) return;
+  const el = e.target.closest("[data-vrow], [data-vtab], [data-vflt], [data-vsort], [data-vall], [data-vreset], [data-vhost], [data-vback], [data-fwrules], [data-showrun], [data-todohost], [data-hostsview]");
+  if (!el) return;
+  const d = el.dataset, V = VIEWS[S.view];
+  if (d.vrow) vopenRow(+d.vrow);
+  else if (d.vtab) { VS.tab[S.view] = d.vtab; VS.all = false; document.querySelectorAll("[data-vtab]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.vtab === d.vtab)); drawData(RD.data, true); syncURL(); }
+  else if (d.vflt) { VS.flt.has(d.vflt) ? VS.flt.delete(d.vflt) : VS.flt.add(d.vflt); el.setAttribute("aria-pressed", VS.flt.has(d.vflt)); drawData(RD.data, true); }
+  else if (d.vsort) { const k = vkey(), i = +d.vsort, c = V.cols(VS.tab[S.view] || V.tabs?.[0][0])[i], cur = VS.sort[k]; VS.sort[k] = { i, d: cur?.i === i ? -cur.d : c.d0 || 1 }; drawData(RD.data, true); }
+  else if ("vall" in d) { VS.all = true; drawData(RD.data, true); }
+  else if ("vreset" in d) { VS.q = ""; VS.flt.clear(); render(); }
+  else if (d.vhost) vshow({ kind: "host", name: d.vhost }, true);
+  else if ("vback" in d) { const p = VS.stack.pop(); if (p) vshow(p, "back"); }
+  else if (d.fwrules) {
+    api("/api/hostfile?" + qs({ org: S.org, env: S.env, run: S.run, host: d.fwrules, name: "exposure" })).then((x) => {
+      const pre = $("#fwraw"); if (!pre) return;
+      pre.hidden = false; pre.textContent = Object.entries(x.firewall_raw || {}).filter(([, v]) => v).map(([k, v]) => `## ${k}\n${v}`).join("\n\n") || t("No rules.");
+      pre.scrollIntoView({ block: "nearest" });
+    }).catch((er) => toast(er.message));
+  }
+  else if (d.showrun) { S.run = d.showrun; S.cur = null; RD.key = ""; VS.item = null; render(); syncURL(); }
+  else if (d.todohost) { S.by = "host"; store.set("by", "host"); S.q = d.todohost; S.open.clear(); S.cur = null; go("todo"); }
+  else if (d.hostsview) { const n = d.hostsview; go("hosts"); VS.sel = n; VS.item = { kind: "host", name: n }; }
+});
+document.addEventListener("input", (e) => {
+  if (e.target.id !== "vq") return;
+  VS.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(() => drawData(RD.data, true), 150);
+});
+function vkeys(e) {
+  if (e.key === "/") { e.preventDefault(); $("#vq")?.focus(); return; }
+  if (e.key === "Escape") { $("#detail")?.classList.remove("open"); return; }
+  const V = VIEWS[S.view], i = VLIST.findIndex((x) => V.key(x) === VS.sel);
+  const step = e.key === "j" || e.key === "ArrowDown" ? 1 : e.key === "k" || e.key === "ArrowUp" ? -1 : 0;
+  if (!step) return;
+  e.preventDefault();
+  const n = Math.max(0, Math.min(VLIST.length - 1, i + step));
+  vopenRow(n); document.querySelector(`.vrow[data-vrow="${n}"]`)?.scrollIntoView({ block: "nearest" });
+}
+addEventListener("popstate", () => { if (location.pathname.startsWith("/setup")) return; readURL(); VS.item = null; render(); });
 
 /* ---------- views ---------- */
 function noRuns() {
@@ -1376,8 +1987,11 @@ function render() {
   const setup = S.view === "setup" || !S.orgs.length;
   $(".app").classList.toggle("setupmode", setup);
   if (setup) { S.view = "setup"; $("#view").innerHTML = setupView(); const ta = $("#pastebox"); if (ta && ta.value) preview(); return; }
+  const sk = [S.org, S.env, S.run].join("|");
+  if (render.scope !== sk) { render.scope = sk; VS.item = null; VS.sel = ""; VS.stack = []; }
+  if (isData(S.view)) { $("#view").innerHTML = `<div id="banner"></div>` + dataShell(); banner(); loadData().then(renderSide); syncURL(); return; }
   $("#view").innerHTML = `<div id="banner"></div>` + todoShell();
-  banner(); loadTree();
+  banner(); loadTree(); syncURL();
 }
 function toast(msg) { const el = $("#toast"); el.textContent = msg; el.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 2600); }
 async function copy(text, what) { try { await navigator.clipboard.writeText(text); toast(what || t("Copied")); } catch { toast(t("Copy failed: select and copy by hand")); } }
@@ -1387,13 +2001,14 @@ let PI = 0;
 function palItems(q) {
   q = q.trim().toLowerCase();
   const it = [];
-  const walk = (ns, depth) => ns.forEach((n) => { if (n.kind !== "section") it.push({ g: depth ? t("Inside") : t("Fixes"), label: `${n.priority} · ${n.label}${n.fixed ? " → " + n.fixed : ""}`, hint: n.hosts ? t("{n} hosts", { n: n.hosts }) : "", go: () => { S.view = "todo"; show(n.id); } }); if (depth < 2) walk(n.kids || [], depth + 1); });
+  const walk = (ns, depth) => ns.forEach((n) => { if (n.kind !== "section") it.push({ g: depth ? t("Inside") : t("Fixes"), label: `${n.priority} · ${n.label}${n.fixed ? " → " + n.fixed : ""}`, hint: n.hosts ? t("{n} hosts", { n: n.hosts }) : "", go: () => { if (S.view !== "todo") { S.cur = n.id; go("todo"); } else show(n.id); } }); if (depth < 2) walk(n.kids || [], depth + 1); });
   walk(S.tree?.nodes || [], 0);
-  NAV.filter((n) => n !== "-").forEach((n) => it.push({ g: t("Go to"), label: t(n[1]), hint: "", go: () => { if (n[0] === "todo") { S.view = "todo"; render(); } else location.href = "/classic#" + qs({ org: S.org, env: S.env }); } }));
+  NAV.filter((n) => n !== "-").forEach((n) => it.push({ g: t("Go to"), label: t(n[1]), hint: n[0] === "todo" ? "/" : "/" + n[0], go: () => go(n[0]) }));
+  (S.envd?.hosts || []).forEach((h) => it.push({ g: t("Hosts"), label: h.name, hint: h.group, go: () => { go("hosts"); VS.sel = h.name; VS.item = { kind: "host", name: h.name }; } }));
   [["fix", "Group by fix"], ["cve", "Group by CVE"], ["host", "Group by host"]].forEach(([k, l]) => it.push({ g: t("Commands"), label: t(l), hint: "", go: () => { S.by = k; store.set("by", k); S.open.clear(); S.cur = null; render(); } }));
   if (S.scans && S.env) it.push({ g: t("Commands"), label: t("Scan {env}", { env: S.env }), hint: "", go: () => startScan(S.org, S.env) });
   if (S.scans) it.push({ g: t("Commands"), label: t("Add servers…"), hint: "", go: () => { S.setup = null; S.view = "setup"; render(); } });
-  return (q ? it.filter((x) => x.label.toLowerCase().includes(q)) : it.filter((x) => x.g !== t("Inside"))).slice(0, 50);
+  return (q ? it.filter((x) => x.label.toLowerCase().includes(q)) : it.filter((x) => x.g !== t("Inside") && x.g !== t("Hosts"))).slice(0, 50);
 }
 function palRender() {
   const xs = palItems($("#palq").value); PI = Math.min(PI, Math.max(0, xs.length - 1)); let g = "";
@@ -1408,7 +2023,7 @@ document.addEventListener("click", async (e) => {
   const el = e.target.closest(".hc, button, a, .node, tr.link, [data-goto], [data-copy-text], input"); if (!el) return;
   const d = el.dataset;
   if (d.themeSet) { S.theme = d.themeSet; store.set("theme", S.theme); applyTheme(); renderSide(); return; }
-  if (d.view) { if (d.view === "todo") { e.preventDefault(); S.view = "todo"; render(); } return; }
+  if (d.view) { if (!e.metaKey && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); go(d.view); } return; }
   if (d.tw) { e.stopPropagation(); S.open.has(d.tw) ? S.open.delete(d.tw) : S.open.add(d.tw); const sc = $("#scroll").scrollTop; drawTree(); $("#scroll").scrollTop = sc; return; }
   if (d.sel) { e.stopPropagation(); S.sel.has(d.sel) ? S.sel.delete(d.sel) : S.sel.add(d.sel); drawSelbar(); return; }
   if (el.classList.contains("node") || el.classList.contains("hc")) { if (d.n) show(d.n); return; }
@@ -1485,6 +2100,7 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (e.target.matches("input, select, textarea")) { if (e.key === "Escape") e.target.blur(); return; }
+  if (isData(S.view)) { vkeys(e); return; }
   if (S.view !== "todo") return;
   const i = FLAT.findIndex((n) => n.id === S.cur), n = FLAT[i];
   const go = (m) => { if (!m) return; show(m.id); document.querySelector(`.node[data-n="${CSS.escape(m.id)}"]`)?.scrollIntoView({ block: "nearest" }); };
@@ -1505,16 +2121,18 @@ async function loadOrgs() {
   if (!envOf()) S.env = orgOf()?.envs[0]?.env || "";
 }
 async function loadEnv() {
-  S.runs = [];
+  S.runs = []; S.envd = null;
   if (!S.org || !S.env) return;
-  try { S.runs = (await api("/api/env?" + qs({ org: S.org, env: S.env }))).runs || []; } catch {}
+  try { S.envd = await api("/api/env?" + qs({ org: S.org, env: S.env })); S.runs = S.envd.runs || []; } catch {}
 }
 (async () => {
   document.documentElement.lang = LANG;
   try { S.scans = (await api("/api/session")).scans; } catch {}
   api("/api/db").then((d) => { S.db = d; renderSide(); if (d.updating) { S.dlStart = new Date().toISOString(); pollDB(); } }).catch(() => {});
+  readURL();
   await loadOrgs();
   await loadEnv();
+  if (S.run !== "current" && !S.runs.some((r) => r.run_id === S.run)) S.run = "current";
   if (!S.orgs.length || location.pathname.startsWith("/setup")) S.view = "setup";
   render();
   pollJobs();
