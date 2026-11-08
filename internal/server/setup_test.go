@@ -76,12 +76,47 @@ func TestSetup(t *testing.T) {
 	if r := do(h, "POST", "/api/setup/check", map[string]string{"org": "neworg", "env": "production"}, s.postHdr()); r.code != 400 {
 		t.Fatal(r.code)
 	}
+	r = do(h, "POST", "/api/setup/parse", map[string]string{"text": "admin@192.0.2.40\nssh -p 2222 root@192.0.2.41\nbad host name x"}, s.postHdr())
+	var parsed struct {
+		Hosts  []onboard.Host
+		Errors []string
+	}
+	if r.code != 200 || json.Unmarshal([]byte(r.body), &parsed) != nil || len(parsed.Hosts) != 2 || len(parsed.Errors) != 1 ||
+		parsed.Hosts[1].Address != "192.0.2.41:2222" {
+		t.Fatal(r.code, r.body)
+	}
+	r = do(h, "POST", "/api/setup/add", map[string]any{"org": "neworg", "hosts": "admin@192.0.2.60"}, s.postHdr())
+	if r.code != 200 || !strings.Contains(r.body, `"added":["192-0-2-60"]`) {
+		t.Fatal(r.code, r.body)
+	}
+	if r := do(h, "POST", "/api/setup/add", map[string]any{"org": "neworg", "hosts": "admin@192.0.2.60"}, s.postHdr()); r.code != 400 {
+		t.Fatal("added twice:", r.code)
+	}
+	if r := do(h, "POST", "/api/setup/add", map[string]any{"org": "nope", "hosts": "192.0.2.1"}, s.postHdr()); r.code != 404 {
+		t.Fatal(r.code)
+	}
+	newConn = func(*config.Org, config.Paths) (onboard.Runner, error) { return fakeRunner{}, nil }
+	r = do(h, "POST", "/api/setup/check", map[string]any{"org": "neworg", "env": "production", "hosts": []string{"192-0-2-60"}}, s.postHdr())
+	if r.code != 200 || strings.Count(r.body, `"host"`) != 1 {
+		t.Fatal("only the new host is checked:", r.body)
+	}
+	oldDiscover := discover
+	t.Cleanup(func() { discover = oldDiscover })
+	discover = func() onboard.Found {
+		return onboard.Found{User: "me", Hosts: []onboard.SSHHost{{Alias: "nas", HostName: "192.0.2.40"}}}
+	}
+	if r := do(h, "GET", "/api/setup/discover", nil, nil); r.code != 200 || !strings.Contains(r.body, `"alias":"nas"`) {
+		t.Fatal(r.code, r.body)
+	}
 	// read-only dashboards neither write org files nor connect
 	ro, hro := newTest(t, Options{Paths: p})
 	for _, path := range []string{"/api/setup", "/api/setup/check"} {
 		if r := do(hro, "POST", path, map[string]any{}, ro.postHdr()); r.code != 403 {
 			t.Fatal(path, r.code)
 		}
+	}
+	if r := do(hro, "GET", "/api/setup/discover", nil, nil); r.code != 403 {
+		t.Fatal("discover on a read-only dashboard:", r.code)
 	}
 	_ = io.Discard
 }

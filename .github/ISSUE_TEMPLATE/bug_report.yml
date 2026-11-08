@@ -71,3 +71,5 @@ body:
       options:
         - label: I removed real host names, addresses, organization names and keys from everything above.
           required: true
+        - label: I saw this myself on a real kanareika build; nothing above is unverified tool output.
+          required: true

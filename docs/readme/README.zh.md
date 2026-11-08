@@ -20,20 +20,88 @@
 
 <sub>演示数据，均为虚构。</sub>
 
+### 安装
+
+Linux、macOS：自动选择适合本机的版本，校验校验和，并安装到 `/usr/local/bin`（或 `~/.local/bin`）：
+
 ```bash
-brew install mikekosulin/tap/kanareika   # macOS、Linux；或从 Release 下载二进制文件（含 Windows）
-kanareika init                   # 在当前目录创建 orgs/、secrets/、reports/（或 --home DIR）
-kanareika org new myorg          # 主机、跳板机和授权：orgs/myorg.yml
-kanareika validate myorg
-kanareika db update              # 漏洞库（离线环境：db export / db import）
-kanareika scan myorg
-kanareika                        # 终端界面
-kanareika web                    # Web 界面，http://127.0.0.1:8088
+curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
 ```
+
+Homebrew（macOS、Linux）：
+
+```bash
+brew install mikekosulin/tap/kanareika
+```
+
+Windows（PowerShell）：
+
+```powershell
+Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.zip -OutFile kanareika.zip; Expand-Archive kanareika.zip -DestinationPath kanareika
+```
+
+然后在 `kanareika` 文件夹中运行 `kanareika.exe`。ARM 设备请改用 `kanareika-windows-arm64.zip`。
+
+### 启动
+
+在终端中：
+
+```bash
+kanareika
+```
+
+或在浏览器中，地址为 http://127.0.0.1:8088（仅监听 localhost）：
+
+```bash
+kanareika web
+```
+
+首次启动时会引导你添加服务器（SSH 用户和密钥、主机、扫描授权）并运行第一次扫描；漏洞库会自动下载。
+
+### 用于脚本和 cron
+
+创建组织，配置保存在 `orgs/<ORG_ID>.yml`：
+
+```bash
+kanareika org new <ORG_ID>
+```
+
+扫描该组织；扫描前会先检查配置文件并下载漏洞库：
+
+```bash
+kanareika scan <ORG_ID>
+```
+
+在其他端口运行 Web 界面（`--port 0` 自动选择空闲端口）：
+
+```bash
+kanareika web --port <PORT>
+```
+
+将终端界面连接到远程 Web：
+
+```bash
+kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>
+```
+
+离线环境：先在能联网的机器上导出漏洞库，
+
+```bash
+kanareika db export <BUNDLE.tar.gz>
+```
+
+再在离线机器上导入并离线扫描：
+
+```bash
+kanareika db import <BUNDLE.tar.gz>
+kanareika scan <ORG_ID> --offline
+```
+
+其他所有命令：`kanareika --help`。
 
 **四种使用方式，同一份数据和规则：**
 
-- **TUI**（主要）— `kanareika`：`?` 查看按键，`o` 设置面板，`L` 切换语言。也可连接远程 Web： `kanareika tui --url http://host:8088 --token …`。
+- **TUI**（主要）— `kanareika`：`?` 查看按键，`o` 设置面板，`L` 切换语言。也可连接远程 Web： `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`。
 - **Web** — `kanareika web`：概览、趋势、主机详情；可直接在页面上发起扫描。
 - **命令** — 用于脚本和 cron：`kanareika --help`。
 - **MCP** — `kanareika mcp`：供 AI 智能体（Claude Code 等）使用的只读工具。

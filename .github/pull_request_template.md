@@ -8,6 +8,7 @@
 
 ## Checklist
 
+- [ ] I understand every change in this PR, can explain it, and tested it locally ([AI policy](https://github.com/mikekosulin/kanareika/blob/main/AI_POLICY.md))
 - [ ] `make check` passes (gofmt, vet, tests, lint)
 - [ ] New interface strings are translated in every `assets/locales/*.json` (the tests list what is missing)
 - [ ] Test data is fake: placeholders and documentation addresses only (the test-data guard passes)

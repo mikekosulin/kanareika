@@ -67,7 +67,7 @@ func TestPageShape(t *testing.T) {
 		t.Fatalf("the page starts with %q", page[:min(len(page), 40)])
 	}
 	open, end := strings.Index(page, "<script>"), strings.LastIndex(page, "</script>")
-	for _, def := range []string{"const t = (s) => ", "const tf = (s, v) => ", "function L(", "const LANG_NAMES = ", "const LANGS = "} {
+	for _, def := range []string{"const t = (s, args) => ", "const LANG_NAMES = ", "const LANG = ", "const UI = "} {
 		i := strings.Index(page, def)
 		if i < open || i > end || strings.Count(page, def) != 1 {
 			t.Errorf("%q: not once inside the script", def)

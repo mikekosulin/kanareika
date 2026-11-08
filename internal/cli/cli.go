@@ -164,7 +164,7 @@ func (a *app) load(ids []string, stderr io.Writer) ([]*config.Org, map[string]*c
 			}
 			sort.Strings(known)
 			if len(known) == 0 {
-				known = []string{"none: `kanareika org new <id>` creates one"}
+				known = []string{"none: `kanareika org new <ORG_ID>` creates one"}
 			}
 			return nil, nil, fail(1, "unknown org '%s' (known: %s)", id, strings.Join(known, ", "))
 		}

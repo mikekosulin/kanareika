@@ -75,7 +75,7 @@ leave this machine (and are git-ignored in the kanareika repository).`,
 			if p.Home != a.paths.Home {
 				home = " --home " + p.Home
 			}
-			fmt.Fprintf(out, "  kanareika%s org new <id>     # an org file to describe hosts, access and consent\n", home)
+			fmt.Fprintf(out, "  kanareika%s org new <ORG_ID> # an org file to describe hosts, access and consent\n", home)
 			fmt.Fprintf(out, "  kanareika%s db update        # vulnerability DBs and feeds\n", home)
 			return nil
 		},
@@ -93,8 +93,8 @@ func (a *app) orgCmd() *cobra.Command {
 
 func (a *app) orgNewCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "new <id>",
-		Short: "create orgs/<id>.yml from the template, and secrets/<id>/",
+		Use:   "new <ORG_ID>",
+		Short: "create orgs/<ORG_ID>.yml from the template, and secrets/<ORG_ID>/",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id := args[0]

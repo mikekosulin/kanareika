@@ -134,6 +134,27 @@ func fake(t *testing.T, script string) {
 	t.Setenv("KANAREIKA_TRIVY", p)
 }
 
+// TestNoTelemetry: every trivy process runs with telemetry and the version check off, whatever the subcommand.
+func TestNoTelemetry(t *testing.T) {
+	env := filepath.Join(t.TempDir(), "env")
+	fake(t, `env > `+env+`; while [ $# -gt 0 ]; do [ "$1" = --output ] && out=$2; shift; done; echo '{}' > "$out"`)
+	t.Setenv("TRIVY_DISABLE_TELEMETRY", "false") // a user's setting does not turn it back on
+	if _, err := Run(context.Background(), []string{"k8s", "x"}, filepath.Join(t.TempDir(), "o.json"), time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(env)
+	must(t, err)
+	got := map[string]string{}
+	for _, l := range strings.Split(string(b), "\n") {
+		if k, v, ok := strings.Cut(l, "="); ok {
+			got[k] = v // the last one wins, as in a process environment
+		}
+	}
+	if got["TRIVY_DISABLE_TELEMETRY"] != "true" || got["TRIVY_SKIP_VERSION_CHECK"] != "true" {
+		t.Fatalf("telemetry %q, version check %q", got["TRIVY_DISABLE_TELEMETRY"], got["TRIVY_SKIP_VERSION_CHECK"])
+	}
+}
+
 func TestRun(t *testing.T) {
 	ctx := context.Background()
 	// writes its arguments as the report: shows the command line and the gzip step
