@@ -663,16 +663,17 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
 .fields input:not([type=checkbox]), .fields select { height: 32px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--raised); color: var(--ink); font: 13px var(--font); }
 .fields input:focus, .fields select:focus { outline: none; border-color: color-mix(in oklab, var(--accent) 55%, transparent); }
 
-.ed { display: grid; grid-template-columns: 38px minmax(0, 1fr) minmax(0, 1.1fr); border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg); overflow: hidden; }
+.ed { display: grid; grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1.15fr); border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg); overflow: hidden; }
 .ed:focus-within { border-color: color-mix(in oklab, var(--accent) 50%, transparent); }
-.ed .eh { font: 600 10.5px/16px var(--font); text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); padding: 9px 14px 2px; }
-.ed .eh:first-child { padding: 0; border-right: 1px solid var(--line); }
-.ed .eh:last-child, .ed .dx { border-left: 1px dashed var(--line); }
-.ed .ln { font: 13px/24px var(--mono); color: var(--ink-3); opacity: .55; text-align: right; padding: 6px 10px 10px 0; border-right: 1px solid var(--line); user-select: none; }
-.ed textarea { font: 13px/24px var(--mono); color: var(--ink); background: none; border: 0; outline: none; resize: none; padding: 6px 14px 10px; white-space: pre; overflow-x: auto; overflow-y: hidden; min-height: 0; }
-.ed textarea::placeholder { color: var(--ink-3); opacity: .6; }
-.ed .dx { font: 13px/24px var(--mono); padding: 6px 14px 10px; white-space: nowrap; overflow: hidden; color: var(--ink-3); }
+.ed .ln { font: 13px/24px var(--mono); color: var(--ink-3); opacity: .5; text-align: right; padding: 9px 10px 9px 0; user-select: none; }
+.ed textarea { font: 13px/24px var(--mono); color: var(--ink); background: none; border: 0; outline: none; resize: none; padding: 9px 12px 9px 4px; white-space: pre; overflow-x: auto; overflow-y: hidden; min-height: 0; }
+.ed textarea::placeholder { color: var(--ink-3); opacity: .55; }
+.ed .dx { font: 13px/24px var(--mono); padding: 9px 14px; white-space: nowrap; overflow: hidden; color: var(--ink-3); background: color-mix(in oklab, var(--solid) 60%, transparent); border-left: 1px solid var(--line); }
 .ed .dx div { overflow: hidden; text-overflow: ellipsis; }
+.ed .arr { color: var(--ink-3); opacity: .7; }
+.ed.blank { grid-template-columns: 34px minmax(0, 1fr); }
+.ed.blank .dx, .ed.blank .ln { display: none; }
+.ed.blank textarea { padding-left: 14px; grid-column: 1 / -1; }
 .ok { color: var(--ok); } .bad { color: var(--err); } .wn { color: var(--p2); } .mut { color: var(--ink-3); }
 .ed .h, .groups .h { color: var(--host); }
 .lnk { background: none; border: 0; padding: 0; font: inherit; font-size: 13px; color: var(--ink-2); cursor: pointer; text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
@@ -714,8 +715,8 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
   .facts { display: none; } .sprefs { margin: 0 0 0 auto; }
   .win { margin: 8px 0 0; border-right: 1px solid var(--line-2); border-radius: 12px 12px 0 0; }
   .wbody { padding: 14px 16px 20px; } .wtop { padding: 14px 16px 0; flex-wrap: wrap; gap: 8px; } .dlline { margin-left: 0; }
-  .ed { grid-template-columns: 30px minmax(0, 1fr); } .ed .eh:last-child { display: none; }
-  .ed .dx { grid-column: 1 / -1; border-left: 0; border-top: 1px dashed var(--line); white-space: normal; }
+  .ed { grid-template-columns: 30px minmax(0, 1fr); }
+  .ed .dx { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); white-space: normal; }
   .fields { grid-template-columns: minmax(0, 1fr); }
   .sbar > span:nth-child(3), .sbar > span.r { display: none; }
 }
@@ -1167,17 +1168,20 @@ function serversForm(s) {
   </form>`;
 }
 // editor: line numbers | the text | what each line becomes, on the same row
+// empty: one plain field with examples; once there is text, what each line becomes appears beside it
 function editor(text) {
-  const n = Math.max(4, text.split("\n").length + 1);
-  return `<div class="ed"><div class="eh"></div><div class="eh">${t("you wrote")}</div><div class="eh">${t("will connect to")}</div>
+  const n = edRows(text);
+  return `<div class="ed ${text.trim() ? "" : "blank"}" id="ed">
     <div class="ln" id="edln">${Array.from({ length: n }, (_, i) => i + 1).join("<br>")}</div>
-    <textarea name="hosts" id="pastebox" spellcheck="false" wrap="off" rows="${n}" placeholder="admin@192.0.2.10" aria-label="${t("Servers")}">${esc(text)}</textarea>
+    <textarea name="hosts" id="pastebox" spellcheck="false" wrap="off" rows="${n}" placeholder="admin@192.0.2.10&#10;ssh -p 2222 deploy@203.0.113.7&#10;nas" aria-label="${t("Servers")}">${esc(text)}</textarea>
     <div class="dx" id="preview" aria-live="polite"></div></div>`;
 }
+function edRows(text) { return Math.max(3, text.split("\n").length + (text.endsWith("\n") ? 0 : 1)); }
 let previewTimer;
 function grow(ta) {
-  const n = Math.max(4, ta.value.split("\n").length + 1);
+  const n = edRows(ta.value);
   ta.rows = n; const ln = $("#edln"); if (ln) ln.innerHTML = Array.from({ length: n }, (_, i) => i + 1).join("<br>");
+  $("#ed")?.classList.toggle("blank", !ta.value.trim());
 }
 async function preview() {
   const ta = $("#pastebox"), out = $("#preview"); if (!ta || !out) return;
@@ -1189,11 +1193,11 @@ async function preview() {
   S.setup.parsed = r;
   const d = FOUND.v || {}, defUser = $("[name=user]")?.value || S.setup.form.user || d.user || "root";
   const rows = [];
-  r.hosts.forEach((h) => { if (h.line) rows[h.line] = `<div><span class="ok">✓</span> <span class="h">${esc((h.user || defUser) + "@" + h.address)}</span>${h.jump ? `<span class="mut"> via ${esc(h.jump)}</span>` : ""}${h.from ? `<span class="mut"> ${t("from ssh config")}</span>` : ""}</div>`; });
+  r.hosts.forEach((h) => { if (h.line) rows[h.line] = `<div><span class="arr">→</span> <span class="h">${esc((h.user || defUser) + "@" + h.address)}</span>${h.jump ? `<span class="mut"> via ${esc(h.jump)}</span>` : ""}${h.from ? `<span class="mut"> ${t("from ssh config")}</span>` : ""}</div>`; });
   const loose = [];
   r.errors.forEach((x) => {
     const m = x.match(/^line (\d+): (?:"[^"]*"(?::\s*|\s+))?(.*)$/);
-    const msg = `<div><span class="wn">✗ ${esc(m ? m[2] : x)}</span><span class="mut"> · ${t("skipped")}</span></div>`;
+    const msg = `<div><span class="arr">→</span> <span class="wn">${esc(m ? m[2] : x)}</span><span class="mut"> · ${t("skipped")}</span></div>`;
     if (m && !rows[+m[1]]) rows[+m[1]] = msg; else loose.push(msg);
   });
   const n = text.split("\n").length;
