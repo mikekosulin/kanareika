@@ -110,13 +110,19 @@ type harness struct {
 
 func newHarness(t *testing.T, o Options, scans bool) *harness {
 	t.Helper()
+	return newHarnessAt(t, fixture(t), o, scans)
+}
+
+// newHarnessAt: the harness over the working directory p.
+func newHarnessAt(t *testing.T, p config.Paths, o Options, scans bool) *harness {
+	t.Helper()
 	cache := t.TempDir() // never the user's DBs: a current one here, or none for tests that want none
 	t.Setenv("TRIVY_CACHE_DIR", cache)
 	if os.Getenv("KN_TEST_NO_DB") == "" {
 		must(t, writeDBMeta(cache))
 	}
 	sc := &scanner{release: make(chan struct{})}
-	opts := server.Options{Paths: fixture(t), Log: log.New(io.Discard, "", 0),
+	opts := server.Options{Paths: p, Log: log.New(io.Discard, "", 0),
 		Prompt: func(_ *config.Org, env string, _ *report.View, ids []string, lang string) string {
 			return "TASK " + env + " " + lang + " " + strings.Join(ids, ",")
 		}}
@@ -145,6 +151,10 @@ func newHarness(t *testing.T, o Options, scans bool) *harness {
 	h := &harness{t: t, m: New(o), clip: clip, scan: sc}
 	h.m.Update(tea.WindowSizeMsg{Width: 160, Height: 40})
 	h.run(h.m.Init())
+	if h.m.orgs.Orgs != nil && o.Org != "" {
+		h.m.setView(vActions) // most tests are about ToDo; TestServers starts where the TUI does
+		h.run(h.m.sync())
+	}
 	return h
 }
 
@@ -181,6 +191,16 @@ func (h *harness) key(keys ...string) {
 			msg = tea.KeyMsg{Type: tea.KeyUp}
 		case "tab":
 			msg = tea.KeyMsg{Type: tea.KeyTab}
+		case "shift+tab":
+			msg = tea.KeyMsg{Type: tea.KeyShiftTab}
+		case "home":
+			msg = tea.KeyMsg{Type: tea.KeyHome}
+		case "left":
+			msg = tea.KeyMsg{Type: tea.KeyLeft}
+		case "right":
+			msg = tea.KeyMsg{Type: tea.KeyRight}
+		case "ctrl+s":
+			msg = tea.KeyMsg{Type: tea.KeyCtrlS}
 		case "backspace":
 			msg = tea.KeyMsg{Type: tea.KeyBackspace}
 		case "pgdown":
@@ -255,40 +275,115 @@ func (h *harness) waitJob(state string) {
 
 func TestBrowse(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.has("ToDo(acme/production)[13]", "Org:", "acme", "production", "Current state", "KEV RCE Update OS packages (2)",
-		"<s> scan", "acme   production   todo")
+	h.has("ToDo(acme/production)[30] P1 6 • P2 12 • P3 12 • P4 4", "openssl 3.0.1 → 3.0.10", "group by  server  fix  CVE  g",
+		"space select", "? all keys", " acme  production ", "4 hosts", "DB ok", "12:00 UTC")
+	h.hasNot("P4 os")
 	h.key("p") // P4 too
-	if n := len(h.m.actions()); n <= 13 {
-		t.Fatal("P4 not shown:", n)
-	}
+	h.has("P4 os")
 	h.key("p", "enter")
-	h.has("openssl", "->", "hosts: web-01")
-	h.key("esc", "3")
-	h.has("Hosts(acme/production)[5]", "CentOS Stream 9", "external:203.0.113.10")
-	h.key("4")
+	h.has("Details(openssl 3.0.1 → 3.0.10)", "WHY P1", "in CISA KEV: exploited in the wild", "due 2026-11-08 · in 1 d",
+		"CVE-2026-0002    high   91% KEV openssl issue", "web    1 CentOS Stream 9  ● ready 1 internet-facing", "$ dnf update openssl",
+		"node: pkg:os:openssl:3.0.1:3.0.10", "esc back")
+	h.key("esc", "1")
+	h.has("Servers(acme/production)", "web-01")
+	h.key("3")
 	h.has("Packages(acme/production)", "nginx", "1.25.5")
-	h.key("0")
+	h.key("9")
 	h.has("Runs(acme/production)[5]", "2026-11-02 11:00", "partial")
 	// open an older run, then back to the current state
 	h.key("G", "enter")
-	h.has("ToDo(acme/production@2026-11-01 10:00)")
-	h.key("0", "c")
+	h.has("ToDo(acme/production@2026-11-01 10:00)", "run 2026-11-01 10:00")
+	h.key("9", "c")
 	h.has("ToDo(acme/production)[")
-	h.key("1")
-	h.has("Organizations[2]", "staging", "no runs")
-	// another env: no runs yet, with the hint
+	// the environments: another one, no runs yet, with the hints
+	h.key("E")
+	h.has("Environments", "production  4 hosts", "staging     1 host", "no runs")
 	h.key("down", "enter")
-	h.has("acme   staging   todo", "kanareika scan acme --env staging", "or press <s>")
-	h.key("tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab") // around all views and one more
-	h.has("acme   staging   hosts")
+	h.has(" acme  staging ", "kanareika scan acme --env staging", "or press <s>", "<enter> checks SSH access", "enter check access, first scan")
+	h.key("tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab") // around all views and one more
+	h.has(" 3 Packages ", " acme  staging ")
 	h.key("?")
-	h.has("Hotkeys", "OSC 52")
+	h.has("Hotkeys", "OSC 52", "list_fixes · get_fix")
 	h.key("x")
-	h.has("acme   staging   hosts")
+	h.has("Packages(acme/staging)")
 }
 
-func TestFilterSelectCopy(t *testing.T) {
+// TestTree: open and close, the cursor to the parent, grouping, a node's selection covering what is under it.
+func TestTree(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
+	h.key("/", "a", "p", "i", "enter") // the api image
+	h.has("</api>", "docker api:1.2@sha256:abcd  rebuild: lib1")
+	h.key("l")
+	h.has("▾ P2 docker", "├ COMPONENTS", "lib1", "RUNS ON")
+	h.key("l") // open: l goes in
+	if n := h.m.curNode(); n == nil || n.Kind != "section" {
+		t.Fatal("l on an open node: its first kid", n)
+	}
+	h.key("down", "space") // a component, selected; its image is not wholly
+	h.has("◐ ▾ P2 docker")
+	h.key("h") // to the parent
+	if n := h.m.curNode(); n == nil || n.Kind != "image" {
+		t.Fatal("h: the parent", n)
+	}
+	img := h.m.curNode()
+	h.key("space", "up") // the image and everything under it
+	if !h.m.sel[img.Kids[1].ID] {
+		t.Fatal("kids not selected")
+	}
+	h.has("● ▾ P2 docker", "1 selected")
+	h.key("y")
+	text := clipText(t, h)
+	if !strings.HasPrefix(text, "TASK production en ") {
+		t.Fatal(text)
+	}
+	h.key("h") // close
+	h.has("● ▸ P2 docker")
+	h.hasNot("COMPONENTS")
+	h.key("space")
+	if len(h.m.sel) != 0 {
+		t.Fatal(h.m.sel)
+	}
+	// group by CVE, then host, then fix again
+	h.key("esc", "g")
+	h.has("ToDo(acme/production)[", "CVE-2026-0002", "group by  server  fix  CVE")
+	if h.m.by[vActions] != "cve" || h.m.tree.By != "cve" {
+		t.Fatal(h.m.by)
+	}
+	h.key("g")
+	h.has("web-01", "CentOS Stream 9")
+	if h.m.tree.By != "host" {
+		t.Fatal(h.m.tree.By)
+	}
+	h.key("l", "down")
+	h.key("g")
+	if h.m.tree.By != "fix" {
+		t.Fatal(h.m.tree.By)
+	}
+	// the cursor stays on its node when the tree is rebuilt
+	h.key("down", "down")
+	id := h.m.curNode().ID
+	h.key("r")
+	if h.m.curNode().ID != id {
+		t.Fatal("cursor moved on refresh")
+	}
+}
+
+// TestFilters: the filter menu (f) and the text filter (/) go to the server; the title says which are on.
+func TestFilters(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
+	h.key("f")
+	h.has("Filters", "[ ] in CISA KEV", "[ ] fixed by a backport too")
+	h.key("space") // KEV
+	h.has("[x] in CISA KEV")
+	h.key("esc")
+	h.has("ToDo(acme/production)[3]", " in CISA KEV ")
+	if !strings.Contains(h.m.treeKey, "f=kev") {
+		t.Fatal(h.m.treeKey)
+	}
+	h.key("f", "j", "j", "j", "j", "j", "j", "x", "f") // overdue too: none
+	h.has("ToDo(acme/production)[0]", "nothing here")
+	h.key("f", "k", "x", "j", "j", "j", "j", "j", "j", "x", "q")
+	h.has("ToDo(acme/production)[30]")
 	h.key("/", "k", "e", "r", "n", "e", "l")
 	h.has("</kernel_>", "ToDo(acme/production)[2]")
 	h.key("backspace", "enter")
@@ -296,40 +391,77 @@ func TestFilterSelectCopy(t *testing.T) {
 	if h.m.typing {
 		t.Fatal("still typing")
 	}
-	h.key("space") // selects the first and moves on
-	if len(h.m.sel) != 1 {
-		t.Fatal(h.m.sel)
-	}
-	h.key("y")
-	out := h.clip.String()
-	if !strings.HasPrefix(out, "\x1b]52;c;") || !strings.HasSuffix(out, "\a") {
-		t.Fatalf("no OSC 52: %q", out)
-	}
-	text, err := base64.StdEncoding.DecodeString(strings.TrimSuffix(strings.TrimPrefix(out, "\x1b]52;c;"), "\a"))
-	must(t, err)
-	if !strings.HasPrefix(string(text), "TASK production en ") || strings.Count(string(text), ",") != 0 {
-		t.Fatal(string(text))
-	}
-	h.has("Task copied to the clipboard (1)")
-	h.key("esc", "a") // all of the unfiltered list
-	if len(h.m.sel) != 13 {
-		t.Fatal(len(h.m.sel))
-	}
-	h.key("a")
-	if len(h.m.sel) != 0 {
-		t.Fatal("a again clears")
-	}
-	h.clip.Reset()
-	h.key("y") // nothing selected: the action under the cursor
-	if h.clip.Len() == 0 {
-		t.Fatal("cursor action not copied")
-	}
 	h.key("/", "z", "z", "z", "esc")
 	if h.m.filter != "" {
 		t.Fatal("esc while typing clears")
 	}
 	h.key("/", "z", "z", "z", "enter")
 	h.has("nothing here")
+}
+
+func clipText(t *testing.T, h *harness) string {
+	t.Helper()
+	out := h.clip.String()
+	if !strings.HasPrefix(out, "\x1b]52;c;") || !strings.HasSuffix(out, "\a") {
+		t.Fatalf("no OSC 52: %q", out)
+	}
+	text, err := base64.StdEncoding.DecodeString(strings.TrimSuffix(strings.TrimPrefix(out, "\x1b]52;c;"), "\a"))
+	must(t, err)
+	h.clip.Reset()
+	return string(text)
+}
+
+func TestFilterSelectCopy(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
+	h.key("space") // selects the first and moves on
+	if len(h.m.picked()) != 1 {
+		t.Fatal(h.m.sel)
+	}
+	h.key("y")
+	if text := clipText(t, h); !strings.HasPrefix(text, "TASK production en ") || strings.Count(text, ",") != 0 {
+		t.Fatal(text)
+	}
+	h.has("Task copied to the clipboard (1)")
+	h.key("a") // all of the list
+	if n := len(h.m.picked()); n != 30 {
+		t.Fatal(n)
+	}
+	h.has("30 selected")
+	h.key("a")
+	if len(h.m.sel) != 0 {
+		t.Fatal("a again clears")
+	}
+	h.key("y") // nothing selected: the node under the cursor
+	if clipText(t, h) == "" {
+		t.Fatal("cursor node not copied")
+	}
+	// the context of a node for an agent's chat
+	h.key("home", "Y")
+	ctx := clipText(t, h)
+	for _, want := range []string{"kanareika finding: acme/production (run current)", "node: pkg:os:openssl:3.0.1:3.0.10",
+		"what: openssl 3.0.1 → 3.0.10", "facts: P1, 1 host, 1 CVE, EPSS 91%, in CISA KEV, RCE without login",
+		"why: in CISA KEV: exploited in the wild;", "due: due 2026-11-08 · in 1 d", "cve: CVE-2026-0002 HIGH EPSS 91% KEV RCE — openssl issue",
+		"where: web (1 host, CentOS Stream 9): web-01", "apply on CentOS Stream 9 (1 host): dnf update openssl", "action ids: ",
+		`get_fix org=acme env=production by=fix id="pkg:os:openssl:3.0.1:3.0.10"`} {
+		if !strings.Contains(ctx, want) {
+			t.Fatalf("%q not in the context:\n%s", want, ctx)
+		}
+	}
+	h.has("Context copied to the clipboard")
+	// the command of the details
+	h.key("c")
+	if clipText(t, h) != "dnf update openssl" {
+		t.Fatal("command")
+	}
+	h.has("Command copied to the clipboard")
+	h.key("[", "]")
+	h.key("/", "M", "i", "g", "r", "a", "t", "e", "enter", "c")
+	h.has("No command to copy for this node")
+	h.m.clip = nil
+	h.key("y")
+	h.has("This terminal session can't copy")
+	h.key("Y")
+	h.has("This terminal session can't copy")
 }
 
 func TestScanFromTUI(t *testing.T) {
@@ -367,7 +499,13 @@ func TestScanFromTUI(t *testing.T) {
 
 func TestReadOnlyAndLanguages(t *testing.T) {
 	h := newHarness(t, Options{Lang: "ru"}, false)
-	h.has("Организации[2]", "Орг.:")
+	h.key("O")
+	h.has("Организации", "acme")
+	h.key("esc")
+	h.key("N") // no setup on a read-only dashboard
+	if h.m.setup != nil {
+		t.Fatal("setup on a read-only dashboard")
+	}
 	h.key("s")
 	h.has("Отсюда сканы не запускаются")
 	h.key("S")
@@ -516,9 +654,10 @@ func TestLiveScan(t *testing.T) {
 	h.has("running: 1", "web-01 os_packages")
 	h.m.jobs.Jobs[0].State = "failed"
 	h.has("finished with errors")
-	h.m.rund.Meta.FeedsUpdated = nil
-	h.m.rund.Meta.TrivyVersion = "0.75.0"
-	h.has("0.75.0 · KEV/EPSS not loaded")
+	h.m.db.FeedsOutdated = false
+	h.hasNot("KEV/EPSS old")
+	h.m.db.FeedsOutdated = true
+	h.has("KEV/EPSS old")
 	h.m.orgs.Errors = []string{"bad"}
 	h.m.err = ""
 	h.has("Config errors: 1")

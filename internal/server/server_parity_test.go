@@ -282,10 +282,11 @@ func sinceGo(got []byte) []byte {
 			}
 		}
 	}
-	if hs, ok := m["hosts"].([]any); ok { // /api/env: the login user, added for the setup's access check
+	if hs, ok := m["hosts"].([]any); ok { // /api/env: the login user and port, added for the setup's access check
 		for _, h := range hs {
 			if h, ok := h.(map[string]any); ok {
 				delete(h, "user")
+				delete(h, "port")
 			}
 		}
 	}

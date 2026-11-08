@@ -76,8 +76,8 @@ func TestSettingsEdges(t *testing.T) {
 		t.Fatal("no config dir, yet", p)
 	}
 	var s Settings
-	s.toggle(vHosts, "OS")
-	s.toggle(vHosts, "OS")
+	s.toggle(vPackages, "where")
+	s.toggle(vPackages, "where")
 	if s.Hidden == nil || len(s.Hidden) != 0 {
 		t.Fatalf("a column back on leaves no empty entry: %v", s.Hidden)
 	}
@@ -146,13 +146,18 @@ func TestMessages(t *testing.T) {
 
 func TestKeysMore(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.key("h")
-	if h.m.view != vOrgs {
-		t.Fatal("h: the previous view", h.m.view)
+	h.key("shift+tab")
+	if h.m.view != vServers {
+		t.Fatal("shift+tab: the previous view", h.m.view)
 	}
-	h.key("enter") // the env already open: just its ToDo
+	h.key("shift+tab")
+	h.key("h", "l") // other views: h and l go through them
+	if h.m.view != vScans {
+		t.Fatal("h, l", h.m.view)
+	}
+	h.key("S", "2")
 	if h.m.view != vActions || h.m.rund == nil {
-		t.Fatal("enter on the open env")
+		t.Fatal("1: ToDo")
 	}
 	h.m.runKey = "stale"
 	h.key("r")
@@ -160,7 +165,7 @@ func TestKeysMore(t *testing.T) {
 		t.Fatal("r reloads the run")
 	}
 	h.key("G", "k")
-	if h.m.cur[vActions] != 11 {
+	if h.m.cur[vActions] != 28 {
 		t.Fatal(h.m.cur[vActions])
 	}
 	h.key("G", "up", "pgup")
@@ -182,12 +187,12 @@ func TestKeysMore(t *testing.T) {
 	h.key("y")
 	h.has("This terminal session can't copy")
 	// P4 from Packages
-	h.key("4", "p")
+	h.key("3", "p")
 	if !h.m.set.ShowP4 {
 		t.Fatal("p in Packages")
 	}
 	// a host card from Health
-	h.key("8", "enter")
+	h.key("7", "enter")
 	h.has("Host(")
 	// the rows of every view a cursor moves in
 	for _, v := range viewHotkeys {
@@ -211,10 +216,10 @@ func TestNoRunData(t *testing.T) {
 			t.Fatal(v)
 		}
 	}
-	h.key("4")
+	h.key("3")
 	h.has("Packages(acme/production)[0]")
 	h.m.org = ""
-	h.key("0")
+	h.key("9")
 	h.has("no organizations")
 }
 
@@ -276,7 +281,7 @@ func TestPanelsScroll(t *testing.T) {
 	for range 12 {
 		h.key("down")
 	}
-	h.has("Panels(Hosts)", "chart")
+	h.has("Panels(Packages)", "due by")
 	h.hasNot("Layout")
 }
 
@@ -293,41 +298,13 @@ func TestDefaultEnv(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(120, 30)
 	solo(h, "solo")
-	h.key("1")
-	h.has("solo", "all", "7", "running", "Example Ltd", "solo   all   organizations", "Env:      all")
-	h.key("2")
-	h.has("kanareika scan solo", "or press <s>")
+	h.key("E")
+	h.has("Environments", "all", "P1 7", "running")
+	h.key("esc", "O")
+	h.has("Organizations", "solo", "Example Ltd", "1 environments", "+ New organization")
+	h.key("esc")
+	h.has("kanareika scan solo", "or press <s>", " solo  all ")
 	h.hasNot("--env")
-	h.set(Settings{Header: headerCompact})
-	h.has(" Kanareika │ solo/all")
-}
-
-func (h *harness) set(s Settings) { h.m.set = s }
-
-func TestHeaders(t *testing.T) {
-	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.size(70, 30)
-	h.set(Settings{Header: headerFull})
-	h.has("Org:", "P1")
-	// compact, with the DB being updated
-	h.set(Settings{Header: headerCompact})
-	h.m.db.Updating = true
-	h.has("DB updating…")
-	h.m.db.Updating = false
-	// compact, with nothing but where: the help key does not fit
-	h.size(40, 20)
-	solo(h, "an-organization-with-a-long-identifier")
-	if first := strings.Split(h.screen(), "\n")[0]; !strings.Contains(first, "an-organization-with-a-long-identifier") || strings.Contains(first, "help") {
-		t.Fatalf("%q", first)
-	}
-	// no DB answer yet
-	h.size(120, 30)
-	h.set(Settings{Header: headerFull})
-	h.m.db = nil
-	h.has("DB:       -")
-	// the clock without a zone: UTC
-	h.m.t.zone = nil
-	h.has("12:00 UTC")
 }
 
 func TestNarrowCursor(t *testing.T) {
@@ -339,7 +316,7 @@ func TestNarrowCursor(t *testing.T) {
 		t.Fatal("the cursor's row not scrolled into view")
 	}
 	h.key("/", "o", "p", "e", "n", "s", "s", "l")
-	h.has("</openssl~")
+	h.has("</opens")
 	// columns that can't be dropped are all kept, however narrow
 	keep, _ := h.m.layout(vActions, []col{{title: "a", width: 30}, {title: "b", width: 30}}, nil, 2)
 	if len(keep) != 2 {
@@ -353,14 +330,7 @@ func TestNarrowCursor(t *testing.T) {
 func TestOddData(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(160, 50)
-	if hostsCell([]string{"web-01", "web-02", "db-01"}) != "web-01, web-02 +1" || stack(map[string]int{}, 0, 10) != "" {
-		t.Fatal("cells")
-	}
-	// hosts with the same counts: by name
 	h.m.rund.Hosts = map[string]map[string]int{"web-02": {"P1": 1}, "web-01": {"P1": 1}}
-	if l := h.m.hostList(); l[0].name != "web-01" || l[1].name != "web-02" {
-		t.Fatal(l)
-	}
 	// a host card without facts
 	if l := h.m.hostCard("web-02", 100); !strings.Contains(ansi.Strip(l[0]), "web-02  ?") {
 		t.Fatal(l[0])
@@ -368,19 +338,19 @@ func TestOddData(t *testing.T) {
 	// the open run highlighted, a run still running
 	h.m.envd.Runs = append(h.m.envd.Runs, runInfo{RunID: "2026-11-07_110000", State: "running"})
 	h.m.run = "2026-11-07_110000"
-	h.key("0")
+	h.key("9")
 	h.has("running", "2026-11-07 11:00")
 	h.m.run = "current"
 	// new changes with KEV and RCE; nothing resolved
 	h.m.rund.New = &diffSet{Total: 3, Rows: []diffRow{{Host: "web-01", Pkg: "openssl", Priority: "P1", KEV: true, RCE: 1, Count: 3}}}
 	h.m.rund.Resolved = nil
-	h.key("5")
-	h.has("Changes(acme/production)[1]", "+ P1 web-01", "KEV RCE openssl")
+	h.key("4")
+	h.has("Changes(acme/production)[1]", "+ P1  web-01", "KEV RCE openssl")
 	// logins: none accepted; attackers sorted by attempts, users by tries then name
 	h.m.rund.Access = map[string]map[string]any{"web-01": {"logins": map[string]any{"attackers": []any{
 		map[string]any{"ip": "203.0.113.7", "n": 5.0, "users": []any{[]any{"root", 2.0}, []any{"admin", 2.0}}},
 		map[string]any{"ip": "203.0.113.9", "n": 50.0, "users": []any{}}}}}}
-	h.key("6")
+	h.key("5")
 	h.has("No login data", "admin,root")
 	if s := h.screen(); strings.Index(s, "203.0.113.9") > strings.Index(s, "203.0.113.7") {
 		t.Fatal("most attempts first")
@@ -411,7 +381,7 @@ func maps(ui map[string]map[string]string, lang string) map[string]map[string]st
 
 func TestRunInfoMore(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.key("0")
+	h.key("9")
 	h.m.runInfo = &runInfoView{id: "2026-11-02_110000"}
 	h.has("loading")
 	h.m.runInfo.meta = &runMeta{ModuleErrors: map[string][]string{"web-01": {"os_packages: trivy failed"}}}
@@ -422,4 +392,39 @@ func TestRunInfoMore(t *testing.T) {
 	if !slices.Contains(h.m.languages(), "en") {
 		t.Fatal("languages")
 	}
+}
+
+// TestStatusBar: where, the data's age, the DB; what is selected and the time at the right.
+func TestStatusBar(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
+	h.size(100, 30)
+	h.has(" acme  production  4 hosts · DB ok")
+	h.m.db.Updating = true
+	h.has("DB updating…")
+	h.m.db.Updating = false
+	h.m.db.DBs = nil
+	h.m.db.DBs = append(h.m.db.DBs, struct {
+		Name     string `json:"name"`
+		Updated  string `json:"updated"`
+		Next     string `json:"next_update"`
+		Outdated bool   `json:"outdated"`
+	}{Name: "db"})
+	h.has("no DB U")
+	h.m.db.DBs[0].Updated, h.m.db.DBs[0].Outdated = "2026-11-01T00:00:00Z", true
+	h.has("newer DB out U")
+	// a finished run's age (the API's isoformat)
+	h.m.orgs.Orgs[0].Envs[0].Last.Finished = "2026-11-07T08:00:00.000000+00:00"
+	h.has("4 hosts · data 4h")
+	// narrow: where stays
+	h.size(40, 20)
+	solo(h, "an-organization-with-a-long-identifier")
+	if last := strings.Split(h.screen(), "\n")[19]; !strings.Contains(last, "an-organization-with-a-") {
+		t.Fatalf("%q", last)
+	}
+	// no DB answer yet; the clock without a zone: UTC
+	h.size(120, 30)
+	h.m.db = nil
+	h.hasNot("DB ")
+	h.m.t.zone = nil
+	h.has("12:00 UTC")
 }
