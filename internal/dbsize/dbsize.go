@@ -1,12 +1,11 @@
-// Package dbsize says what a DB update would download and how big it is: the vulnerability DBs (trivy-db,
-// java-db), CISA KEV and EPSS, and the DB-IP Lite IP databases. The web page and the TUI show it (GET
+// Package dbsize says what a DB update would download and how big it is: the vulnerability DB (trivy-db; the Java
+// DB only when a scan meets .jar files), CISA KEV and EPSS, and the DB-IP Lite IP databases. The web page and the TUI show it (GET
 // /api/db/size) and the CLI asks with it before downloading: on a phone's mobile data a gigabyte matters.
 package dbsize
 
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -22,17 +21,6 @@ type Report struct {
 	Sizes map[string]int64 `json:"sizes"`
 	Need  []string         `json:"need"`
 	Total int64            `json:"total"`
-}
-
-// Parts: what is downloaded, as the interfaces list it: a label, what it is for, the keys of Report.Sizes.
-var Parts = []struct {
-	Key, Label, What string
-	Keys             []string
-}{
-	{"db", "Linux packages", "OS and library CVEs (trivy-db)", []string{"db"}},
-	{"java-db", "Java libraries", "jar files in images and on servers", []string{"java-db"}},
-	{"ip", "IP locations", "DB-IP Lite, used offline", []string{"dbip-city", "dbip-asn"}},
-	{"feeds", "Exploit data", "CISA KEV and EPSS", []string{"kev", "epss"}},
 }
 
 var (
@@ -114,24 +102,4 @@ func Bytes(n int64) string {
 		return fmt.Sprintf("%d KB", max(1, (n+500)/1e3))
 	}
 	return "?"
-}
-
-// Print lists what is needed with sizes, as the setup's downloads card does.
-func (r Report) Print(w io.Writer) {
-	for _, p := range Parts {
-		var n int64
-		any := false
-		for _, k := range p.Keys {
-			for _, x := range r.Need {
-				if x == k {
-					n += r.Sizes[k]
-					any = true
-				}
-			}
-		}
-		if any {
-			fmt.Fprintf(w, "  %-16s %-38s %8s\n", p.Label, p.What, Bytes(n))
-		}
-	}
-	fmt.Fprintf(w, "  %-55s %8s\n", "total", Bytes(r.Total))
 }

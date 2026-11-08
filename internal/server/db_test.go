@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -176,7 +177,7 @@ func TestDBSize(t *testing.T) {
 	if calls != 1 {
 		t.Errorf("looked up %d times, want 1 (cached)", calls)
 	}
-	if d.Total != 1106 || len(d.Need) != 6 {
+	if d.Total != 106 || len(d.Need) != 5 || slices.Contains(d.Need, "java-db") { // the Java DB comes on demand
 		t.Errorf("total %d need %v", d.Total, d.Need)
 	}
 	_, ro := newTest(t, Options{})

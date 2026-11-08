@@ -39,7 +39,7 @@ func onTTY(t *testing.T, answer string) *bytes.Buffer {
 	return out
 }
 
-// TestDownloadQuestion: db update on a terminal says what it downloads and how much, and asks; --yes, KANAREIKA_YES
+// TestDownloadQuestion: db update on a terminal says how much it downloads, and asks; --yes, KANAREIKA_YES
 // and no terminal don't ask.
 func TestDownloadQuestion(t *testing.T) {
 	sandbox(t)
@@ -48,13 +48,7 @@ func TestDownloadQuestion(t *testing.T) {
 	if code, _, errs := cli(t, "db", "update"); code != 1 || !strings.Contains(errs, "nothing downloaded") {
 		t.Fatal(code, errs)
 	}
-	for _, want := range []string{"Vulnerability databases to download:", "Linux packages", "OS and library CVEs (trivy-db)", "800 MB",
-		"Java libraries", "400 MB", "IP locations", "38 MB", "Exploit data", "3 MB", "1.2 GB", "Download 1.2 GB? [Y/n] "} {
-		if !strings.Contains(tty.String(), want) {
-			t.Fatalf("%q not asked:\n%s", want, tty)
-		}
-	}
-	if !strings.HasSuffix(tty.String(), "Download 1.2 GB? [Y/n] ") {
+	if tty.String() != "Download the vulnerability list (841 MB)? [Y/n] " { // the Java DB: only when a scan meets .jar files
 		t.Fatalf("%q", tty)
 	}
 	// Enter: yes
@@ -64,7 +58,7 @@ func TestDownloadQuestion(t *testing.T) {
 	}
 	// the vulnerability DBs are there now: only the rest is asked about
 	tty = onTTY(t, "y\n")
-	if code, _, _ := cli(t, "db", "update"); code != 0 || !strings.Contains(tty.String(), "Download 41 MB?") || strings.Contains(tty.String(), "Linux") {
+	if code, _, _ := cli(t, "db", "update"); code != 0 || tty.String() != "Download the vulnerability list (41 MB)? [Y/n] " {
 		t.Fatal(code, tty)
 	}
 	// not asked: --yes, KANAREIKA_YES, no terminal, no /dev/tty

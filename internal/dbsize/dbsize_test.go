@@ -1,12 +1,10 @@
 package dbsize
 
 import (
-	"bytes"
 	"context"
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -27,15 +25,9 @@ func TestCheck(t *testing.T) {
 	}
 	now := time.Now()
 	r := Check(context.Background(), priority.Policy{}, now, true)
-	if !slices.Equal(r.Need, []string{"kev", "epss", "dbip-city", "dbip-asn", "db", "java-db"}) || r.Total != 1241e6 {
+	// the Java DB is fetched on demand: never needed up front
+	if !slices.Equal(r.Need, []string{"kev", "epss", "dbip-city", "dbip-asn", "db"}) || r.Total != 841e6 {
 		t.Fatal(r)
-	}
-	var b bytes.Buffer
-	r.Print(&b)
-	for _, want := range []string{"Linux packages", "800 MB", "Exploit data", "3 MB", "total", "1.2 GB"} {
-		if !strings.Contains(b.String(), want) {
-			t.Fatalf("%q not in\n%s", want, b.String())
-		}
 	}
 	// fresh feeds and IP DBs: not needed any more
 	for f, body := range map[string]string{"dbip-city.mmdb": "", "dbip-asn.mmdb": "", "kev.json": `["CVE-2021-44228"]`,
@@ -47,7 +39,7 @@ func TestCheck(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(feeds, "updated"), []byte(now.UTC().Format("2006-01-02T15:04:05.000000-07:00")+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if r := Check(context.Background(), priority.Policy{}, now, true); !slices.Equal(r.Need, []string{"db", "java-db"}) || calls != 1 {
+	if r := Check(context.Background(), priority.Policy{}, now, true); !slices.Equal(r.Need, []string{"db"}) || calls != 1 {
 		t.Fatal(r, calls)
 	}
 	for n, want := range map[int64]string{0: "?", 400: "1 KB", 12e3: "12 KB", 85e6: "85 MB", 1.24e9: "1.2 GB"} {

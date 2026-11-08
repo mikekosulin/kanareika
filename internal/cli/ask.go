@@ -21,8 +21,8 @@ var (
 	openTTY    = func() (io.ReadWriteCloser, error) { return os.OpenFile("/dev/tty", os.O_RDWR, 0) }
 )
 
-// confirmDownload: whether to download the DBs, asked on the terminal with what and how much (dbsize, as the
-// setup's downloads card shows it) — on mobile data a gigabyte matters. Yes without asking with --yes,
+// confirmDownload: whether to download the DBs, asked on the terminal with how much (dbsize, as the setup says
+// it) — on mobile data that matters. Yes without asking with --yes,
 // KANAREIKA_YES=1, without a terminal, or when nothing is needed.
 func (a *app) confirmDownload(ctx context.Context, yes bool) bool {
 	if yes || os.Getenv("KANAREIKA_YES") != "" || !stdinIsTTY() {
@@ -41,9 +41,7 @@ func (a *app) confirmDownload(ctx context.Context, yes bool) bool {
 	if len(r.Need) == 0 {
 		return true
 	}
-	fmt.Fprintln(tty, "Vulnerability databases to download:")
-	r.Print(tty)
-	fmt.Fprintf(tty, "Download %s? [Y/n] ", dbsize.Bytes(r.Total))
+	fmt.Fprintf(tty, "Download the vulnerability list (%s)? [Y/n] ", dbsize.Bytes(r.Total))
 	line, _ := bufio.NewReader(tty).ReadString('\n')
 	switch strings.ToLower(strings.TrimSpace(line)) {
 	case "", "y", "yes":

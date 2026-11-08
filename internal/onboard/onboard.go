@@ -202,6 +202,10 @@ func ParseHosts(text string) ([]Host, []string) {
 				continue
 			}
 		}
+		if badIPv4(hostOnly(h.Address)) {
+			errs = append(errs, fmt.Sprintf("line %d: %q is not an IP address (each part 0-255)", i+1, hostOnly(h.Address)))
+			continue
+		}
 		if seen[h.Name] {
 			errs = append(errs, fmt.Sprintf("line %d: host %q twice", i+1, h.Name))
 			continue
@@ -653,4 +657,13 @@ func Check(ctx context.Context, o *config.Org, env string, conn Runner, only ...
 	wg.Wait()
 	slices.SortStableFunc(out, func(a, b Result) int { return strings.Compare(a.Host, b.Host) })
 	return out
+}
+
+// badIPv4: looks like an IPv4 address (digits and dots only) but is not one: 10.0.0.300, 10.0.0, 1.2.3.4.5. Such a
+// "name" would only fail later as a DNS lookup.
+func badIPv4(host string) bool {
+	if host == "" || strings.Trim(host, "0123456789.") != "" || !strings.Contains(host, ".") {
+		return false
+	}
+	return net.ParseIP(host) == nil
 }
