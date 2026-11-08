@@ -22,17 +22,31 @@ Run `kanareika web` for the same data in a browser, with the trend of the last 3
 
 ### Install
 
-Linux, macOS: picks the build for this machine, checks its checksum and installs it into `/usr/local/bin` (or `~/.local/bin`):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
-```
-
-Homebrew (macOS, Linux):
+Homebrew (macOS, Linux); the formula pins the version and its checksum:
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
+
+Or with the install script — read it, then run it:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh
+less install.sh
+sh install.sh
+```
+
+It picks the build for this machine, checks its checksum (and the build attestation, when the GitHub CLI is installed) and asks before installing into `/usr/local/bin` or `~/.local/bin`; `KANAREIKA_YES=1` skips the question.
+
+Or by hand (Linux, macOS): download `kanareika-<OS>-<ARCH>.tar.xz` and `SHA256SUMS` from the [latest release](https://github.com/mikekosulin/kanareika/releases/latest), then:
+
+```bash
+sha256sum -c --ignore-missing SHA256SUMS
+gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
+tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+```
+
+`<OS>` is `linux` or `darwin`, `<ARCH>` is `amd64` or `arm64`. On macOS, use `shasum -a 256 -c` instead of `sha256sum -c`. The attestation check needs the GitHub CLI and is optional; `tar` leaves `kanareika` in the current directory.
 
 Windows (PowerShell):
 
@@ -101,9 +115,9 @@ Everything else: `kanareika --help`.
 
 **Four ways in, same data and rules:**
 
-- **TUI**, the main one — `kanareika`: `?` for keys, `o` for panels, `L` for language. Attaches to a remote web too: `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`.
+- **TUI**, the main one — `kanareika`: `?` for keys, `o` for panels, `L` for language. Attaches to a remote web too.
 - **Web** — `kanareika web`: dashboards, trends, host details; scans start from the page.
-- **Commands** — for scripts and cron: `kanareika --help`.
+- **Commands** — for scripts and cron.
 - **MCP** — `kanareika mcp`: read-only tools for AI agents (Claude Code and others).
 
 **What it checks:**

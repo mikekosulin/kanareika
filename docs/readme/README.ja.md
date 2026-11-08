@@ -22,17 +22,31 @@
 
 ### インストール
 
-Linux、macOS: このマシンに合ったビルドを選び、チェックサムを検証して `/usr/local/bin` (または `~/.local/bin`) にインストールします:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
-```
-
-Homebrew (macOS、Linux):
+Homebrew (macOS、Linux)。formula がバージョンとチェックサムを固定しています:
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
+
+またはインストールスクリプトで。まず内容を読んでから実行します:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh
+less install.sh
+sh install.sh
+```
+
+このマシンに合ったビルドを選び、チェックサム (GitHub CLI があればビルドの attestation も) を検証し、`/usr/local/bin` または `~/.local/bin` にインストールする前に確認します。`KANAREIKA_YES=1` で確認を省略できます。
+
+または手動で (Linux、macOS): [最新リリース](https://github.com/mikekosulin/kanareika/releases/latest)から `kanareika-<OS>-<ARCH>.tar.xz` と `SHA256SUMS` をダウンロードし、次を実行します:
+
+```bash
+sha256sum -c --ignore-missing SHA256SUMS
+gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
+tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+```
+
+`<OS>` は `linux` か `darwin`、`<ARCH>` は `amd64` か `arm64` です。macOS では `sha256sum -c` の代わりに `shasum -a 256 -c` を使います。attestation の検証には GitHub CLI が必要で、省略できます。`tar` は `kanareika` を現在のディレクトリに展開します。
 
 Windows (PowerShell):
 
@@ -101,9 +115,9 @@ kanareika scan <ORG_ID> --offline
 
 **4 つの入口、同じデータと同じルール:**
 
-- **TUI** (メイン) — `kanareika`: `?` でキー一覧、`o` でパネル、`L` で言語切り替え。リモートの Web にも接続できます: `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`。
+- **TUI** (メイン) — `kanareika`: `?` でキー一覧、`o` でパネル、`L` で言語切り替え。リモートの Web にも接続できます。
 - **Web** — `kanareika web`: ダッシュボード、推移、ホストの詳細。スキャンはページから開始できます。
-- **コマンド** — スクリプトや cron 向け: `kanareika --help`。
+- **コマンド** — スクリプトや cron 向け。
 - **MCP** — `kanareika mcp`: AI エージェント (Claude Code など) 向けの読み取り専用ツール。
 
 **チェック内容:**

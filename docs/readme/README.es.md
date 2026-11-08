@@ -22,17 +22,31 @@ Ejecute `kanareika web` para ver los mismos datos en el navegador, con la tenden
 
 ### Instalación
 
-Linux, macOS: elige la versión para esta máquina, verifica su suma de comprobación y la instala en `/usr/local/bin` (o `~/.local/bin`):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
-```
-
-Homebrew (macOS, Linux):
+Homebrew (macOS, Linux); la fórmula fija la versión y su suma de comprobación:
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
+
+O con el script de instalación: léalo y luego ejecútelo:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh
+less install.sh
+sh install.sh
+```
+
+Elige la versión para esta máquina, verifica su suma de comprobación (y la atestación de la compilación, si GitHub CLI está instalado) y pregunta antes de instalar en `/usr/local/bin` o `~/.local/bin`; `KANAREIKA_YES=1` omite la pregunta.
+
+O a mano (Linux, macOS): descargue `kanareika-<OS>-<ARCH>.tar.xz` y `SHA256SUMS` de la [última release](https://github.com/mikekosulin/kanareika/releases/latest) y luego:
+
+```bash
+sha256sum -c --ignore-missing SHA256SUMS
+gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
+tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+```
+
+`<OS>` es `linux` o `darwin`; `<ARCH>`, `amd64` o `arm64`. En macOS, use `shasum -a 256 -c` en lugar de `sha256sum -c`. La comprobación de la atestación requiere GitHub CLI y es opcional; `tar` deja `kanareika` en el directorio actual.
 
 Windows (PowerShell):
 
@@ -101,9 +115,9 @@ Todo lo demás: `kanareika --help`.
 
 **Cuatro formas de acceso, mismos datos y reglas:**
 
-- **TUI**, la principal: `kanareika`: `?` para las teclas, `o` para los paneles, `L` para el idioma. También se conecta a una web remota: `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`.
+- **TUI**, la principal: `kanareika`: `?` para las teclas, `o` para los paneles, `L` para el idioma. También se conecta a una web remota.
 - **Web**: `kanareika web`; paneles, tendencias, fichas de host; los escaneos se lanzan desde la página.
-- **Comandos**: para scripts y cron, `kanareika --help`.
+- **Comandos**: para scripts y cron.
 - **MCP**: `kanareika mcp`; herramientas de solo lectura para agentes de IA (Claude Code y otros).
 
 **Qué comprueba:**

@@ -22,17 +22,31 @@ Execute `kanareika web` para ver os mesmos dados no navegador, com a tendência 
 
 ### Instalação
 
-Linux, macOS: escolhe a versão para esta máquina, confere a soma de verificação e a instala em `/usr/local/bin` (ou `~/.local/bin`):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
-```
-
-Homebrew (macOS, Linux):
+Homebrew (macOS, Linux); a fórmula fixa a versão e a soma de verificação:
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
+
+Ou com o script de instalação — leia-o e depois execute-o:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh
+less install.sh
+sh install.sh
+```
+
+Ele escolhe a versão para esta máquina, confere a soma de verificação (e a atestação do build, se o GitHub CLI estiver instalado) e pergunta antes de instalar em `/usr/local/bin` ou `~/.local/bin`; `KANAREIKA_YES=1` pula a pergunta.
+
+Ou manualmente (Linux, macOS): baixe `kanareika-<OS>-<ARCH>.tar.xz` e `SHA256SUMS` da [última release](https://github.com/mikekosulin/kanareika/releases/latest) e depois:
+
+```bash
+sha256sum -c --ignore-missing SHA256SUMS
+gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
+tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+```
+
+`<OS>` é `linux` ou `darwin`; `<ARCH>`, `amd64` ou `arm64`. No macOS, use `shasum -a 256 -c` em vez de `sha256sum -c`. A verificação da atestação requer o GitHub CLI e é opcional; o `tar` deixa `kanareika` no diretório atual.
 
 Windows (PowerShell):
 
@@ -101,9 +115,9 @@ Todo o resto: `kanareika --help`.
 
 **Quatro formas de acesso, os mesmos dados e regras:**
 
-- **TUI**, a principal — `kanareika`: `?` para os atalhos, `o` para os painéis, `L` para o idioma. Também se conecta a uma interface web remota: `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`.
+- **TUI**, a principal — `kanareika`: `?` para os atalhos, `o` para os painéis, `L` para o idioma. Também se conecta a uma interface web remota.
 - **Web** — `kanareika web`: dashboards, tendências, detalhes dos hosts; os scans são iniciados pela página.
-- **Comandos** — para scripts e cron: `kanareika --help`.
+- **Comandos** — para scripts e cron.
 - **MCP** — `kanareika mcp`: ferramentas somente leitura para agentes de IA (Claude Code e outros).
 
 **O que ele verifica:**

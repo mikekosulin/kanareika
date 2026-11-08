@@ -22,17 +22,31 @@
 
 ### 설치
 
-Linux, macOS: 이 머신에 맞는 빌드를 골라 체크섬을 검증하고 `/usr/local/bin`(또는 `~/.local/bin`)에 설치합니다:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
-```
-
-Homebrew (macOS, Linux):
+Homebrew (macOS, Linux). formula가 버전과 체크섬을 고정합니다:
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
+
+또는 설치 스크립트로. 먼저 읽어 본 다음 실행합니다:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh
+less install.sh
+sh install.sh
+```
+
+이 머신에 맞는 빌드를 골라 체크섬(GitHub CLI가 있으면 빌드 attestation도)을 검증하고, `/usr/local/bin` 또는 `~/.local/bin`에 설치하기 전에 묻습니다. `KANAREIKA_YES=1`이면 묻지 않습니다.
+
+또는 직접 (Linux, macOS): [최신 릴리스](https://github.com/mikekosulin/kanareika/releases/latest)에서 `kanareika-<OS>-<ARCH>.tar.xz`와 `SHA256SUMS`를 내려받은 뒤:
+
+```bash
+sha256sum -c --ignore-missing SHA256SUMS
+gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
+tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+```
+
+`<OS>`는 `linux` 또는 `darwin`, `<ARCH>`는 `amd64` 또는 `arm64`입니다. macOS에서는 `sha256sum -c` 대신 `shasum -a 256 -c`를 씁니다. attestation 검증에는 GitHub CLI가 필요하며 선택 사항입니다. `tar`는 `kanareika`를 현재 디렉터리에 풉니다.
 
 Windows (PowerShell):
 
@@ -101,9 +115,9 @@ kanareika scan <ORG_ID> --offline
 
 **네 가지 사용 방식, 같은 데이터와 규칙:**
 
-- **TUI**, 기본 인터페이스 — `kanareika`: `?` 키 목록, `o` 패널, `L` 언어. 원격 웹 서버에도 연결할 수 있습니다: `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`.
+- **TUI**, 기본 인터페이스 — `kanareika`: `?` 키 목록, `o` 패널, `L` 언어. 원격 웹 서버에도 연결할 수 있습니다.
 - **웹** — `kanareika web`: 대시보드, 추이, 호스트 상세; 스캔은 페이지에서 시작합니다.
-- **CLI 명령** — 스크립트와 cron용: `kanareika --help`.
+- **CLI 명령** — 스크립트와 cron용.
 - **MCP** — `kanareika mcp`: AI 에이전트(Claude Code 등)를 위한 읽기 전용 도구.
 
 **점검 항목:**

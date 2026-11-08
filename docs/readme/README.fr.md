@@ -22,17 +22,31 @@ Lancez `kanareika web` pour retrouver les mêmes données dans un navigateur, av
 
 ### Installation
 
-Linux, macOS : choisit la version pour cette machine, vérifie sa somme de contrôle et l'installe dans `/usr/local/bin` (ou `~/.local/bin`) :
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
-```
-
-Homebrew (macOS, Linux) :
+Homebrew (macOS, Linux) ; la formule fixe la version et sa somme de contrôle :
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
+
+Ou avec le script d'installation — lisez-le, puis lancez-le :
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh
+less install.sh
+sh install.sh
+```
+
+Il choisit la version pour cette machine, vérifie sa somme de contrôle (et l'attestation de build si la CLI GitHub est installée) et demande confirmation avant d'installer dans `/usr/local/bin` ou `~/.local/bin` ; `KANAREIKA_YES=1` saute la question.
+
+Ou à la main (Linux, macOS) : téléchargez `kanareika-<OS>-<ARCH>.tar.xz` et `SHA256SUMS` depuis la [dernière release](https://github.com/mikekosulin/kanareika/releases/latest), puis :
+
+```bash
+sha256sum -c --ignore-missing SHA256SUMS
+gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
+tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+```
+
+`<OS>` vaut `linux` ou `darwin`, `<ARCH>` vaut `amd64` ou `arm64`. Sur macOS, utilisez `shasum -a 256 -c` au lieu de `sha256sum -c`. La vérification de l'attestation nécessite la CLI GitHub et reste facultative ; `tar` dépose `kanareika` dans le répertoire courant.
 
 Windows (PowerShell) :
 
@@ -101,9 +115,9 @@ Tout le reste : `kanareika --help`.
 
 **Quatre points d'entrée, mêmes données et mêmes règles :**
 
-- **TUI**, l'interface principale — `kanareika` : `?` pour les raccourcis, `o` pour les panneaux, `L` pour la langue. Peut aussi se connecter à une instance web distante : `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`.
+- **TUI**, l'interface principale — `kanareika` : `?` pour les raccourcis, `o` pour les panneaux, `L` pour la langue. Peut aussi se connecter à une instance web distante.
 - **Web** — `kanareika web` : tableaux de bord, tendances, fiches des hôtes ; les scans se lancent depuis la page.
-- **Commandes** — pour les scripts et le cron : `kanareika --help`.
+- **Commandes** — pour les scripts et le cron.
 - **MCP** — `kanareika mcp` : outils en lecture seule pour les agents IA (Claude Code et autres).
 
 **Ce qu'il vérifie :**

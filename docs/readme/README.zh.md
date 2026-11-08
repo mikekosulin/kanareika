@@ -22,17 +22,31 @@
 
 ### 安装
 
-Linux、macOS：自动选择适合本机的版本，校验校验和，并安装到 `/usr/local/bin`（或 `~/.local/bin`）：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
-```
-
-Homebrew（macOS、Linux）：
+Homebrew（macOS、Linux）；formula 固定了版本及其校验和：
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
+
+或使用安装脚本——先阅读，再运行：
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh
+less install.sh
+sh install.sh
+```
+
+脚本会选择适合本机的版本，校验校验和（如已安装 GitHub CLI，还会验证构建证明），并在安装到 `/usr/local/bin` 或 `~/.local/bin` 前询问确认；设置 `KANAREIKA_YES=1` 可跳过询问。
+
+或手动安装（Linux、macOS）：从[最新 Release](https://github.com/mikekosulin/kanareika/releases/latest) 下载 `kanareika-<OS>-<ARCH>.tar.xz` 和 `SHA256SUMS`，然后：
+
+```bash
+sha256sum -c --ignore-missing SHA256SUMS
+gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
+tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+```
+
+`<OS>` 为 `linux` 或 `darwin`，`<ARCH>` 为 `amd64` 或 `arm64`。在 macOS 上用 `shasum -a 256 -c` 代替 `sha256sum -c`。构建证明的验证需要 GitHub CLI，可选；`tar` 会把 `kanareika` 解压到当前目录。
 
 Windows（PowerShell）：
 
@@ -101,9 +115,9 @@ kanareika scan <ORG_ID> --offline
 
 **四种使用方式，同一份数据和规则：**
 
-- **TUI**（主要）— `kanareika`：`?` 查看按键，`o` 设置面板，`L` 切换语言。也可连接远程 Web： `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`。
+- **TUI**（主要）— `kanareika`：`?` 查看按键，`o` 设置面板，`L` 切换语言。也可连接远程 Web。
 - **Web** — `kanareika web`：概览、趋势、主机详情；可直接在页面上发起扫描。
-- **命令** — 用于脚本和 cron：`kanareika --help`。
+- **命令** — 用于脚本和 cron。
 - **MCP** — `kanareika mcp`：供 AI 智能体（Claude Code 等）使用的只读工具。
 
 **检查内容：**
