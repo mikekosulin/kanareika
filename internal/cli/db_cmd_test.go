@@ -14,8 +14,12 @@ import (
 // fakeDownloads: db update without network; the "downloads" write what the real ones would.
 func fakeDownloads(t *testing.T, feedsErr, dbErr error) {
 	t.Helper()
-	oldF, oldP := updateFeeds, prepareDB
-	t.Cleanup(func() { updateFeeds, prepareDB = oldF, oldP })
+	oldF, oldP, oldJ := updateFeeds, prepareDB, fetchJavaDB
+	t.Cleanup(func() { updateFeeds, prepareDB, fetchJavaDB = oldF, oldP, oldJ })
+	fetchJavaDB = func(_ context.Context, logf func(string, ...any)) error {
+		logf("trivy %s: downloaded", "java-db")
+		return nil
+	}
 	updateFeeds = func(context.Context, *priority.Policy) (priority.Stats, error) {
 		if feedsErr != nil {
 			return priority.Stats{}, feedsErr
@@ -42,7 +46,8 @@ func TestDBLifecycle(t *testing.T) {
 	sandbox(t)
 	code, out, _ := cli(t, "db", "status")
 	if code != 0 || !strings.Contains(out, "trivy (embedded): none (KANAREIKA_TRIVY)") ||
-		!strings.Contains(out, "trivy db: not downloaded") || !strings.Contains(out, "feeds: not downloaded") {
+		!strings.Contains(out, "trivy db: not downloaded") || !strings.Contains(out, "feeds: not downloaded") ||
+		!strings.Contains(out, "trivy java-db: not needed yet") {
 		t.Fatalf("%d\n%s", code, out)
 	}
 	bundle := filepath.Join(t.TempDir(), "b.tar.gz")
@@ -56,6 +61,9 @@ func TestDBLifecycle(t *testing.T) {
 		!strings.Contains(out, "trivy db: 2026-11-05 19:01Z") || !strings.Contains(out, "trivy java-db: 2026-11-05 19:01Z") ||
 		!strings.Contains(errs, "trivy db: downloaded") {
 		t.Fatalf("%d\n%s\n%s", code, out, errs)
+	}
+	if code, _, errs := cli(t, "db", "update", "--java"); code != 0 || !strings.Contains(errs, "trivy java-db: downloaded") {
+		t.Fatal(code, errs)
 	}
 	if code, out, _ := cli(t, "db", "export", bundle); code != 0 || !strings.Contains(out, "[trivy-db trivy-java-db feeds]") {
 		t.Fatal(code, out)

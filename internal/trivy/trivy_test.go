@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -209,6 +210,9 @@ func TestPrepare(t *testing.T) {
 echo "$repo" >> "$CALLS"; case $repo in ghcr.io/*) echo "FATAL stream error" >&2; exit 1;; esac; exit 0`)
 	var logs []string
 	logf := func(f string, a ...any) { logs = append(logs, f) }
+	// a Java DB downloaded before is refreshed; a missing one waits for a scan that needs it (TestJavaDBOnDemand)
+	must(t, os.MkdirAll(filepath.Join(os.Getenv("TRIVY_CACHE_DIR"), "java-db"), 0o755))
+	must(t, os.WriteFile(filepath.Join(os.Getenv("TRIVY_CACHE_DIR"), "java-db", "metadata.json"), []byte(`{"DownloadedAt":"2026-11-02T00:00:00Z"}`), 0o644))
 
 	must(t, Prepare(ctx, logf))
 	got, _ := os.ReadFile(calls)
@@ -248,5 +252,58 @@ echo "$repo" >> "$CALLS"; case $repo in ghcr.io/*) echo "FATAL stream error" >&2
 	must(t, Prepare(ctx, logf))
 	if len(logs) != 8 || !strings.HasPrefix(logs[3], "WARNING") || !strings.HasPrefix(logs[7], "WARNING") {
 		t.Fatal(logs)
+	}
+}
+
+// TestJavaDBOnDemand: Prepare leaves the missing Java DB alone; the first run that meets .jar files downloads it
+// once and runs again; runs without jars never need it.
+func TestJavaDBOnDemand(t *testing.T) {
+	ctx := context.Background()
+	cache := t.TempDir()
+	t.Setenv("TRIVY_CACHE_DIR", cache)
+	t.Setenv("TRIVY_DB_REPOSITORY", "")
+	t.Setenv("TRIVY_JAVA_DB_REPOSITORY", "")
+	calls := filepath.Join(t.TempDir(), "calls")
+	t.Setenv("CALLS", calls)
+	prepared.Store(false)
+	t.Cleanup(func() { prepared.Store(false) })
+	// download flags write the DB's metadata; a scan of "jars" fails like trivy without the Java DB
+	fake(t, `echo "$@" >> "$CALLS"
+for a in "$@"; do case $a in
+  --download-db-only) mkdir -p "$TRIVY_CACHE_DIR/db"; echo '{"UpdatedAt":"2026-11-01T00:00:00Z"}' > "$TRIVY_CACHE_DIR/db/metadata.json"; exit 0;;
+  --download-java-db-only) mkdir -p "$TRIVY_CACHE_DIR/java-db"; echo '{"DownloadedAt":"2026-11-01T00:00:00Z"}' > "$TRIVY_CACHE_DIR/java-db/metadata.json"; exit 0;;
+esac; done
+while [ $# -gt 0 ]; do case $1 in --output) out=$2;; jars) jars=1;; esac; shift; done
+if [ -n "$jars" ] && [ ! -f "$TRIVY_CACHE_DIR/java-db/metadata.json" ]; then echo "FATAL Unable to initialize the Java DB: '--skip-java-db-update' cannot be specified on the first run" >&2; exit 1; fi
+echo '{}' > "$out"`)
+	var logs []string
+	must(t, Prepare(ctx, func(f string, a ...any) { logs = append(logs, fmt.Sprintf(f, a...)) }))
+	if b, _ := os.ReadFile(calls); strings.Contains(string(b), "java") {
+		t.Fatalf("Prepare downloaded the Java DB:\n%s", b)
+	}
+	for _, d := range DBStatus() {
+		if d.Outdated(time.Now()) && d.Name == "java-db" {
+			t.Fatal("a missing on-demand DB counts as outdated")
+		}
+	}
+	out := filepath.Join(t.TempDir(), "o.json")
+	_, err := Run(ctx, []string{"fs", "nojars"}, out, time.Minute)
+	must(t, err)
+	if b, _ := os.ReadFile(calls); strings.Contains(string(b), "java-db-only") {
+		t.Fatal("a run without jars downloaded the Java DB")
+	}
+	_, err = Run(ctx, []string{"fs", "jars"}, out, time.Minute)
+	must(t, err)
+	b, _ := os.ReadFile(calls)
+	if n := strings.Count(string(b), "--download-java-db-only"); n != 1 {
+		t.Fatalf("Java DB downloads: %d\n%s", n, b)
+	}
+	if !strings.Contains(strings.Join(logs, "\n"), "found .jar files") {
+		t.Fatal(logs)
+	}
+	_, err = Run(ctx, []string{"fs", "jars"}, out, time.Minute)
+	must(t, err)
+	if b, _ := os.ReadFile(calls); strings.Count(string(b), "--download-java-db-only") != 1 {
+		t.Fatal("downloaded again")
 	}
 }

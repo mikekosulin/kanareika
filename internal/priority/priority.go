@@ -835,3 +835,32 @@ func Apply(findings []finding.Finding, org *config.Org, env string, pol *Policy,
 	}
 	return findings, nil
 }
+
+// DownloadSize: bytes the next feed update would take — "kev", "epss", "dbip-city", "dbip-asn" — from HEAD requests
+// (nothing is downloaded). A feed whose size the server does not tell is missing. A gzip-served response
+// (Content-Encoding) counts its compressed size, which is what goes over the wire.
+func DownloadSize(ctx context.Context, pol Policy) map[string]int64 {
+	month := time.Now().Format("2006-01")
+	urls := map[string]string{"kev": pol.KEVURL, "epss": pol.EPSSURL,
+		"dbip-city": fmt.Sprintf(ipdbURL, "city", month), "dbip-asn": fmt.Sprintf(ipdbURL, "asn", month)}
+	out := map[string]int64{}
+	for k, u := range urls {
+		if u == "" {
+			continue
+		}
+		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		req, err := http.NewRequestWithContext(ctx, http.MethodHead, u, nil)
+		if err == nil {
+			req.Header.Set("User-Agent", UserAgent)
+			req.Header.Set("Accept-Encoding", "gzip")
+			if resp, err := http.DefaultClient.Do(req); err == nil {
+				resp.Body.Close()
+				if resp.StatusCode == http.StatusOK && resp.ContentLength > 0 {
+					out[k] = resp.ContentLength
+				}
+			}
+		}
+		cancel()
+	}
+	return out
+}

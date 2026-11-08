@@ -4,6 +4,8 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -65,6 +67,21 @@ func (u *dbUpdater) start() bool {
 	return true
 }
 
+// wait: blocks while an update runs (false when none was running); ctx ends the wait, not the update.
+func (u *dbUpdater) wait(ctx context.Context) bool {
+	u.mu.Lock()
+	running, done := u.running, u.done
+	u.mu.Unlock()
+	if !running {
+		return false
+	}
+	select {
+	case <-done:
+	case <-ctx.Done():
+	}
+	return true
+}
+
 // stop: cancels a running update and waits for it.
 func (u *dbUpdater) stop() {
 	u.mu.Lock()
@@ -122,4 +139,63 @@ func (s *Server) apiDBUpdate(w http.ResponseWriter, _ *http.Request) {
 	default:
 		sendJSON(w, http.StatusAccepted, map[string]any{"started": true})
 	}
+}
+
+// dbSizes: what a download would cost, looked up (manifests, HEAD requests: a few KB) for a page that asks before
+// downloading — on a phone's mobile data a gigabyte matters. Kept for sizeTTL.
+var (
+	dbSizesMu sync.Mutex
+	dbSizesAt time.Time
+	dbSizes   map[string]int64
+	sizeTTL   = time.Hour
+	// sizeLookup: tests replace it
+	sizeLookup = func(ctx context.Context, pol priority.Policy) map[string]int64 {
+		out := trivy.DownloadSize(ctx)
+		for k, v := range priority.DownloadSize(ctx, pol) {
+			out[k] = v
+		}
+		return out
+	}
+)
+
+// apiDBSize: bytes per download ("db", "java-db", "kev", "epss", "dbip-city", "dbip-asn"; a missing one: the
+// source did not say), which of them the next update needs (trivy DBs missing or outdated, KEV/EPSS older than a
+// scan accepts, IP DBs missing) and
+// the sum of those.
+func (s *Server) apiDBSize(w http.ResponseWriter, r *http.Request) {
+	if s.db == nil {
+		sendJSON(w, http.StatusForbidden, map[string]string{"error": "DB updates are off here (read-only)"})
+		return
+	}
+	dbSizesMu.Lock()
+	if dbSizes == nil || time.Since(dbSizesAt) > sizeTTL {
+		pol := priority.Policy{}
+		if p, err := priority.LoadPolicy(s.paths); err == nil {
+			pol = *p
+		}
+		dbSizes, dbSizesAt = sizeLookup(r.Context(), pol), time.Now()
+	}
+	sizes := dbSizes
+	dbSizesMu.Unlock()
+	now := time.Now()
+	var need []string
+	feeds, _ := priority.LoadFeeds()
+	if at, err := priority.FeedsTime(feeds.Updated); err != nil || now.Sub(at) > priority.FeedsMaxAge {
+		need = append(need, "kev", "epss")
+	}
+	for _, k := range []string{"city", "asn"} {
+		if _, err := os.Stat(filepath.Join(priority.FeedsDir(), "dbip-"+k+".mmdb")); err != nil {
+			need = append(need, "dbip-"+k)
+		}
+	}
+	for _, d := range trivy.DBStatus() {
+		if d.Outdated(now) {
+			need = append(need, d.Name)
+		}
+	}
+	var total int64
+	for _, k := range need {
+		total += sizes[k]
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"sizes": sizes, "need": need, "total": total})
 }

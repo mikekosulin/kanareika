@@ -1,0 +1,1230 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kanareika</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<style>
+:root {
+  --page: #f9f9f7; --surface: #fcfcfb; --surface-2: #f2f1ed; --surface-3: #e9e8e2;
+  --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --accent: #2a78d6; --good-text: #006300; --bad-text: #b42323;
+  --p1: #d03b3b; --p2: #ec835a; --p3: #fab219; --p4: #b9b8b0;
+  --ok: #0ca30c; --warn: #fab219; --bad: #d03b3b; --run: #2a78d6;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321; --surface-3: #2c2c2a;
+    --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --accent: #3987e5; --good-text: #0ca30c; --bad-text: #ef6b6b; --p4: #5e5d58; --run: #3987e5;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321; --surface-3: #2c2c2a;
+  --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --accent: #3987e5; --good-text: #0ca30c; --bad-text: #ef6b6b; --p4: #5e5d58; --run: #3987e5;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.mono, code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+button, select, input { font: inherit; color: inherit; }
+a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+.ic { width: 16px; height: 16px; flex: none; vertical-align: -3px; }
+.ic.sm { width: 14px; height: 14px; vertical-align: -2px; }
+.ic.lg { width: 18px; height: 18px; }
+.trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.muted { color: var(--muted); } .ink2 { color: var(--ink-2); } .nw { white-space: nowrap; }
+.zero { color: var(--muted); }
+
+header { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: center; gap: 7px; font-weight: 650; font-size: 15px; margin-right: 6px; }
+.brand img { width: 24px; height: 24px; flex: none; display: block; margin: -2px 0; }
+.ctl { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 0 6px 0 10px; height: 34px; color: var(--ink-2); }
+.ctl select { border: 0; background: transparent; height: 30px; padding: 0 4px; color: var(--ink); max-width: 240px; outline: none; cursor: pointer; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; height: 34px; }
+.seg button { border: 0; background: transparent; padding: 0 12px; cursor: pointer; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed=true] { background: var(--ink); color: var(--surface); }
+.seg .n { opacity: .6; font-size: 12px; }
+.spacer { flex: 1; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; font-size: 12px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; background: var(--axis); }
+.dot.live { background: var(--run); animation: pulse 1.4s infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+.iconbtn { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; height: 34px; min-width: 34px; padding: 0 8px;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--ink-2); }
+.iconbtn:hover { color: var(--ink); background: var(--surface-2); }
+.menu { position: fixed; z-index: 60; min-width: 160px; padding: 4px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.14); }
+.menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; border: 0; border-radius: 6px;
+  background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.menu button:hover, .menu button:focus-visible { background: var(--surface-2); outline: none; }
+.menu button .code { margin-left: auto; color: var(--muted); font-size: 12px; }
+.menu button[aria-checked="true"] { font-weight: 600; }
+.menu button[aria-checked="true"]::before { content: "✓"; width: 1em; }
+.menu button[aria-checked="false"]::before { content: ""; width: 1em; }
+.iconbtn.xs { height: 24px; min-width: 24px; padding: 0 6px; font-size: 12px; }
+
+main { padding: 22px 24px 48px; display: grid; gap: 20px; max-width: 1600px; margin: 0 auto; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; min-width: 0; }
+.card h2 { font-size: 14px; font-weight: 600; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+.card h2 .ic { color: var(--muted); }
+.card h2 .sub { font-weight: 400; color: var(--muted); }
+.empty { color: var(--muted); padding: 22px 0; text-align: center; }
+.row2 { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 20px; }
+
+.kpis { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 14px; }
+.kpi { padding: 16px 18px; }
+.kpi .label { color: var(--ink-2); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.kpi .label .ic { color: var(--muted); }
+.kpi .value { font-size: 28px; font-weight: 650; line-height: 1.15; margin-top: 4px; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 8px; }
+.kpi .value small { font-size: 15px; color: var(--muted); font-weight: 500; }
+.kpi .foot { font-size: 12px; color: var(--muted); margin-top: 3px; display: flex; gap: 6px; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.delta { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); }
+.delta.up { color: var(--bad-text); } .delta.down { color: var(--good-text); }
+.swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+.caption { color: var(--muted); font-size: 12px; margin: -10px 4px 0; }
+
+@media (max-width: 1100px) { .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } .row2 { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { header { padding: 10px 16px; } main { padding: 12px 16px 32px; } .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ctl select { max-width: 150px; } }
+
+.legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--ink-2); font-size: 12px; align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend label { margin-left: auto; display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+#trend { width: 100%; height: 220px; display: block; margin-top: 8px; }
+#trend .col { cursor: pointer; }
+.tooltip { position: fixed; pointer-events: none; z-index: 50; background: var(--ink); color: var(--surface); border-radius: 6px;
+  padding: 7px 9px; font-size: 12px; line-height: 1.5; box-shadow: 0 4px 14px rgba(0,0,0,.18); display: none; white-space: nowrap; }
+.tooltip .t { font-weight: 600; margin-bottom: 2px; }
+.tooltip .r { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; padding: 8px 12px; border-bottom: 1px solid var(--grid);
+  white-space: nowrap; position: sticky; top: 0; background: var(--surface); z-index: 1; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.click { cursor: pointer; } tr.click:hover td { background: var(--surface-2); }
+.scroll { max-height: 440px; overflow: auto; }
+.xscroll { overflow-x: auto; }
+.cell { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cell.w2 { max-width: 220px; } .cell.w1 { max-width: 140px; }
+
+.st { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.st.ok .ic { color: var(--ok); } .st.warn .ic { color: var(--warn); } .st.bad .ic { color: var(--bad); }
+.st.run .ic { color: var(--run); animation: spin 1.2s linear infinite; } .st.none .ic { color: var(--axis); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.prio { display: inline-block; min-width: 26px; text-align: center; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 650; color: #fff; }
+.prio.P1 { background: var(--p1); } .prio.P2 { background: var(--p2); } .prio.P3 { background: var(--p3); color: #0b0b0b; } .prio.P4 { background: var(--p4); color: var(--ink); }
+.tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 5px; background: var(--surface-2); color: var(--ink-2); font-size: 12px; white-space: nowrap; line-height: 20px; vertical-align: middle; }
+td .tag + .tag { margin-left: 4px; }  /* inside flex containers the gap does this */
+.tag.kev { background: var(--p1); color: #fff; font-weight: 600; }
+.tag.bad { background: var(--p1); color: #fff; }
+.overdue { color: var(--bad-text); font-weight: 600; }
+
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--grid); margin: -4px 0 12px; overflow-x: auto; scrollbar-width: none; }
+.tabs button { border: 0; background: none; padding: 11px 14px; cursor: pointer; color: var(--ink-2); border-bottom: 2px solid transparent;
+  margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tabs button .ic { color: var(--muted); }
+.tabs button[aria-selected=true] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+.tabs button[aria-selected=true] .ic { color: var(--ink); }
+.tabs .n { color: var(--muted); font-weight: 400; font-size: 12px; }
+.tabsbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0 12px; border-bottom: 1px solid var(--grid);
+  position: sticky; top: var(--hdr, 57px); z-index: 6; background: var(--surface); margin: -18px -20px 0; padding: 8px 20px 0; border-radius: 12px 12px 0 0; }
+.stickybar { position: sticky; top: calc(var(--hdr, 53px) + var(--tabsh, 44px)); z-index: 5; background: var(--surface);
+  margin: 0 -20px 6px; padding: 14px 20px 4px; border-bottom: 1px solid var(--grid); }
+.stickybar .filters { margin-bottom: 8px; }
+.flow th { top: calc(var(--hdr, 53px) + var(--tabsh, 44px) + var(--filth, 0px)); }
+#tabbody { padding-top: 16px; }
+#tabbody > .stickybar:first-child { margin-top: -16px; }
+/* the tabs take what they need; when the filters do not fit next to them they go to a line below (never hide a tab) */
+.tabsbar .tabs { border-bottom: 0; margin: 0; flex: 1 1 auto; min-width: 0; }
+.hostpick { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px; height: 32px; padding: 0 4px 0 9px; border: 1px solid var(--border);
+  border-radius: 99px; color: var(--ink-2); flex: none; }
+.hostpick.on { border-color: var(--ink-2); background: var(--surface-3); color: var(--ink); }
+.hostpick select { border: 0; background: transparent; outline: none; cursor: pointer; max-width: 170px; }
+button.hostpick { padding: 0 11px 0 9px; font: inherit; cursor: pointer; background: transparent; color: var(--ink-2); }
+button.hostpick.on { background: var(--surface-3); color: var(--ink); }
+.hostpick .n { color: var(--muted); font-size: 12px; }
+.pickers { display: flex; gap: 8px; flex: none; }
+.tag.rce { background: #7a1f1f; color: #fff; font-weight: 600; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.chip { border: 1px solid var(--border); background: var(--surface); border-radius: 99px; height: 32px; padding: 0 12px; cursor: pointer;
+  display: inline-flex; gap: 6px; align-items: center; color: var(--ink-2); white-space: nowrap; }
+.chip .ic { color: var(--muted); }
+.chip[aria-pressed=true] { background: var(--surface-3); border-color: var(--ink-2); color: var(--ink); }
+.chip .n { color: var(--muted); font-size: 12px; }
+.filters select, .filters input[type=search] { background: var(--surface); border: 1px solid var(--border); border-radius: 99px; height: 32px; padding: 0 12px; }
+.filters input[type=search] { min-width: 200px; }
+.filters .count { color: var(--muted); font-size: 12px; margin-left: 4px; }
+.cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 900px) { .cols2 { grid-template-columns: 1fr; } }
+.subh { font-size: 14px; font-weight: 600; margin: 26px 0 12px; display: flex; gap: 8px; align-items: center; }
+.subh .ic { color: var(--muted); } .subh .sub { font-weight: 400; color: var(--muted); }
+.note { display: flex; gap: 8px; align-items: flex-start; color: var(--ink-2); font-size: 13px; margin: 0 0 16px; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; }
+.note .ic { color: var(--muted); margin-top: 1px; }
+
+.act { display: grid; grid-template-columns: 22px 38px minmax(0, 1fr) auto; gap: 14px; padding: 16px 6px; border-bottom: 1px solid var(--grid); align-items: start; }
+.act:last-child { border-bottom: 0; }
+.act.sel { background: var(--surface-2); }
+.act input, .selbar input { width: 15px; height: 15px; margin: 3px 0 0; accent-color: var(--ink); cursor: pointer; }
+.selbar { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; min-height: 32px; color: var(--ink-2); font-size: 13px; }
+.selbar input { margin: 0; }
+.btn { border: 1px solid var(--ink); background: var(--ink); color: var(--surface); border-radius: 99px; height: 32px; padding: 0 14px;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.btn:disabled { opacity: .35; cursor: default; }
+.btn .ic { color: inherit; }
+.linkbtn { border: 0; background: none; color: var(--ink-2); cursor: pointer; padding: 0 4px; text-decoration: underline; text-underline-offset: 2px; }
+.act .t { display: flex; align-items: center; gap: 8px; font-weight: 600; min-width: 0; }
+.act .t .ic { color: var(--muted); }
+.act .d { color: var(--ink-2); font-size: 13px; margin-top: 4px; }
+.act .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+.act .side { text-align: right; font-size: 12px; color: var(--muted); white-space: nowrap; display: grid; gap: 2px; }
+.act .side b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.cmd { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; max-width: 100%; min-width: 0; }
+.cmd code { background: var(--surface-2); padding: 2px 6px; border-radius: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 460px; }
+
+.live { border-color: var(--run); }
+.bar { height: 6px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin: 8px 0 12px; }
+.bar div { height: 100%; background: var(--run); border-radius: 99px; transition: width .4s; }
+.hostgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.hostcard { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.hostcard .h { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
+.hostcard .m { color: var(--ink-2); font-size: 12px; margin-top: 2px; }
+.hostcard .l { color: var(--muted); font-size: 11.5px; margin-top: 3px; }
+pre.log { margin: 10px 0 0; max-height: 260px; overflow: auto; background: var(--surface-2); border-radius: 8px; padding: 10px; white-space: pre-wrap; word-break: break-all; }
+.errors { background: var(--surface); border: 1px solid var(--bad); border-radius: 10px; padding: 10px 14px; }
+.ip { display: inline-grid; line-height: 1.3; }
+.ip .ipi { font-family: system-ui, sans-serif; font-size: 11px; color: var(--muted); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ip .ipi.ours { color: var(--good-text); }
+.more { margin-top: 8px; }
+/* skeletons: shapes of the real content while data loads */
+.sk { display: block; border-radius: 6px; background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%; animation: sk 1.4s ease infinite; }
+@keyframes sk { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+.sk-row { display: flex; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--grid); }
+.pkgs { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 4px; }
+.pkgs .tag { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.pkgtable { margin: 8px 0 2px; border: 1px solid var(--grid); border-radius: 8px; overflow: hidden; }
+.pkgtable td, .pkgtable th { padding: 6px 10px; font-size: 12px; }
+.pkgtable th { position: static; }
+dialog.scan { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--ink); padding: 18px 20px; width: min(560px, calc(100vw - 32px)); }
+dialog.scan::backdrop { background: rgba(0,0,0,.35); }
+dialog.scan h2 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+dialog.scan fieldset { border: 1px solid var(--grid); border-radius: 8px; margin: 0 0 12px; padding: 8px 12px; }
+dialog.scan legend { color: var(--muted); font-size: 12px; padding: 0 4px; }
+dialog.scan .opts { display: flex; flex-wrap: wrap; gap: 6px 14px; max-height: 150px; overflow: auto; }
+dialog.scan label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+dialog.scan .acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+dialog.scan .err { color: var(--bad-text); font-size: 13px; min-height: 1em; }
+.jobs .job { border-top: 1px solid var(--grid); padding: 10px 0; }
+.jobs .job:first-of-type { border-top: 0; padding-top: 0; }
+.jobs .job .h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.jobs .job .h .grow { flex: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><img src="/logo.png" alt="">Kanareika</div>
+  <label class="ctl" data-t-title="Organization"><span data-icon="server-stack"></span><select id="org"></select></label>
+  <div class="seg" id="envs" role="group"></div>
+  <label class="ctl" data-t-title="Which data to show"><span data-icon="clock"></span><select id="run"></select></label>
+  <button class="iconbtn" id="scanbtn" hidden data-t-title="Start a scan of this environment"><span data-icon="arrow-path"></span><span data-t="Scan"></span></button>
+  <div class="spacer"></div>
+  <span class="pill" id="livepill"><span class="dot"></span><span>—</span></span>
+  <button class="iconbtn" id="lang" data-t-title="Language" style="font-weight:600;font-size:12px"></button>
+  <button class="iconbtn" id="tz" data-t-title="Times in the browser's time zone or in UTC" style="font-weight:600;font-size:12px"></button>
+  <button class="iconbtn" id="theme" data-t-title="Theme"></button>
+  <a class="iconbtn" id="gh-star" href="https://github.com/mikekosulin/kanareika" target="_blank" rel="noopener noreferrer"
+    data-t-title="Like it? Star it on GitHub" style="text-decoration:none;font-size:15px">★</a>
+  <a class="iconbtn" id="gh-issue" href="https://github.com/mikekosulin/kanareika/issues/new/choose" target="_blank" rel="noopener noreferrer"
+    data-t-title="Something wrong? Report an issue on GitHub (no real data, please)"><span data-icon="exclamation-triangle"></span></a>
+</header>
+
+<main>
+  <div id="cfgerrors"></div>
+  <section class="card live" id="livecard" hidden></section>
+  <section class="card jobs" id="jobscard" hidden></section>
+  <section class="kpis" id="kpis"></section>
+  <div class="caption" id="kpicaption"></div>
+  <section class="row2">
+    <div class="card">
+      <h2><span data-icon="chart-bar"></span><span data-t="Trend"></span> <span class="sub" data-t="packages to update · full runs"></span></h2>
+      <div class="legend" id="trendlegend"></div>
+      <svg id="trend" role="img"></svg>
+    </div>
+    <div class="card">
+      <h2><span data-icon="server-stack"></span><span data-t="Hosts"></span> <span class="sub" id="hostsub"></span></h2>
+      <div class="xscroll"><table id="hosts"></table></div>
+      <div id="hostsmore"></div>
+    </div>
+  </section>
+  <section class="card">
+    <div class="tabsbar"><div class="tabs" id="tabs" role="tablist"></div>
+      <div class="pickers"><button class="hostpick" id="extpick" type="button"></button>
+      <label class="hostpick" id="hostpick" data-t-title="Host filter — kept when switching tabs"></label></div></div>
+    <div id="tabbody"></div>
+  </section>
+  <footer class="muted" style="font-size:11px;text-align:center;padding:4px 0 0">
+    <span data-t="IP data:"></span> <a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a> (CC BY 4.0) · <span data-t="vulnerabilities"></span>: Trivy, CISA KEV, FIRST EPSS · <span data-t="icons"></span>: Heroicons (MIT)
+  </footer>
+</main>
+<div class="tooltip" id="tip"></div>
+<dialog class="scan" id="scandlg">
+  <form method="dialog" id="scanform">
+    <h2><span data-icon="arrow-path"></span><span data-t="Scan"></span> <span class="muted" id="scanwhat"></span></h2>
+    <fieldset><legend data-t="Hosts (none selected: all)"></legend><div class="opts" id="scanhosts"></div></fieldset>
+    <fieldset><legend data-t="Modules (none selected: all enabled)"></legend><div class="opts" id="scanmods"></div></fieldset>
+    <fieldset><legend data-t="Options"></legend><div class="opts">
+      <label><input type="checkbox" name="dry_run"><span data-t="dry run: show the plan, connect nowhere"></span></label>
+      <label><input type="checkbox" name="ignore_window"><span data-t="ignore the consent time window"></span></label>
+      <label><input type="checkbox" name="offline"><span data-t="offline: don't download vulnerability DBs"></span></label>
+    </div></fieldset>
+    <div class="err" id="scanerr"></div>
+    <div class="acts"><button class="iconbtn" value="cancel" formnovalidate data-t="Cancel"></button><button class="btn" id="scango" value="go" data-t="Start"></button></div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+/* i18n. UI strings: English in the code, translations keyed by the English text (gettext style), from locales/<lang>.json.
+   Finding/action texts come from the server catalog (/api/i18n) by message key, see L(). */
+const UI = /*I18N_UI*/{};  // locales/<lang>.json "ui", inlined by the server
+const LANG_NAMES = /*I18N_NAMES*/{};  // each language in its own name: locales/<lang>.json "name", inlined by the server
+/* English first, then by their own names (Latin, Cyrillic, 中文, 日本語, 한국어), as Langs() in Go */
+const LANGS = ["en", ...Object.keys(UI).filter((l) => l !== "en").sort((a, b) => ((LANG_NAMES[a] || a) < (LANG_NAMES[b] || b) ? -1 : 1))];
+let LANG = (() => {
+  let l = new URLSearchParams(location.search).get("lang") || "";  // ?lang=ja: a link in a language
+  try { l = l || localStorage.getItem("kn.lang") || ""; } catch {}
+  if (!l) l = (navigator.language || "en").slice(0, 2).toLowerCase();  // the browser's language when not chosen
+  return LANGS.includes(l) ? l : "en";
+})();
+let CATALOG = {};
+const t = (s) => (UI[LANG] && UI[LANG][s]) || s;
+/* tf: a whole sentence translated, its {name}s filled; the sentence is the key, so each language orders its words */
+const tf = (s, v) => t(s).replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
+function L(o, field = "title") {
+  const key = field === "title" ? o.msg : o[field + "_msg"];
+  const m = key && CATALOG[key];
+  if (!m || LANG === "en") return o[field] || "";
+  const a = { ...((field === "title" ? o.args : o[field + "_args"]) || {}) };
+  for (const k of Object.keys(a)) if (k.endsWith("_key") && CATALOG[a[k]]) a[k.slice(0, -4)] = CATALOG[a[k]][LANG] || CATALOG[a[k]].en;
+  return (m[LANG] || m.en).replace(/\{(\w+)\}/g, (_, k) => (a[k] ?? `{${k}}`));
+}
+/* Heroicons v2.1.5 (MIT, https://heroicons.com): outline 24 for navigation, solid 20 for status */
+const ICONS = {"archive-box":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z\"/>"},"arrow-path":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99\"/>"},"arrows-right-left":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5\"/>"},"chart-bar":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z\"/>"},"check":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m4.5 12.75 6 6 9-13.5\"/>"},"clipboard-document":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5A3.375 3.375 0 0 0 6.375 7.5H5.25m11.9-3.664A2.251 2.251 0 0 0 15 2.25h-1.5a2.251 2.251 0 0 0-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6V4.5c0-.231.035-.454.1-.664M6.75 7.5H4.875c-.621 0-1.125.504-1.125 1.125v12c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V16.5a9 9 0 0 0-9-9Z\"/>"},"clock":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z\"/>"},"code-bracket":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5\"/>"},"cog-6-tooth":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z\"/> <path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z\"/>"},"cpu-chip":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25Zm.75-12h9v9h-9v-9Z\"/>"},"cube":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9\"/>"},"document-text":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z\"/>"},"exclamation-triangle":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z\"/>"},"funnel":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z\"/>"},"globe-alt":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418\"/>"},"heart":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z\"/>"},"key":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z\"/>"},"magnifying-glass":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z\"/>"},"moon":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z\"/>"},"no-symbol":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636\"/>"},"server-stack":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z\"/>"},"shield-check":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z\"/>"},"signal":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z\"/>"},"sun":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z\"/>"},"trash":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0\"/>"},"wrench-screwdriver":{"body":"<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z\"/>"},"arrow-path-s":{"body":"<path fill-rule=\"evenodd\" d=\"M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z\" clip-rule=\"evenodd\"/>","solid":true},"check-circle":{"body":"<path fill-rule=\"evenodd\" d=\"M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z\" clip-rule=\"evenodd\"/>","solid":true},"clock-s":{"body":"<path fill-rule=\"evenodd\" d=\"M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5Z\" clip-rule=\"evenodd\"/>","solid":true},"exclamation-triangle-s":{"body":"<path fill-rule=\"evenodd\" d=\"M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z\" clip-rule=\"evenodd\"/>","solid":true},"fire":{"body":"<path fill-rule=\"evenodd\" d=\"M13.5 4.938a7 7 0 1 1-9.006 1.737c.202-.257.59-.218.793.039.278.352.594.672.943.954.332.269.786-.049.773-.476a5.977 5.977 0 0 1 .572-2.759 6.026 6.026 0 0 1 2.486-2.665c.247-.14.55-.016.677.238A6.967 6.967 0 0 0 13.5 4.938ZM14 12a4 4 0 0 1-4 4c-1.913 0-3.52-1.398-3.91-3.182-.093-.429.44-.643.814-.413a4.043 4.043 0 0 0 1.601.564c.303.038.531-.24.51-.544a5.975 5.975 0 0 1 1.315-4.192.447.447 0 0 1 .431-.16A4.001 4.001 0 0 1 14 12Z\" clip-rule=\"evenodd\"/>","solid":true},"minus-circle":{"body":"<path fill-rule=\"evenodd\" d=\"M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM6.75 9.25a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5h-6.5Z\" clip-rule=\"evenodd\"/>","solid":true},"shield-exclamation":{"body":"<path fill-rule=\"evenodd\" d=\"M10.339 2.237a.531.531 0 0 0-.678 0 11.947 11.947 0 0 1-7.078 2.75.5.5 0 0 0-.479.425A12.11 12.11 0 0 0 2 7c0 5.163 3.26 9.564 7.834 11.257a.48.48 0 0 0 .332 0C14.74 16.564 18 12.163 18 7c0-.538-.035-1.069-.104-1.589a.5.5 0 0 0-.48-.425 11.947 11.947 0 0 1-7.077-2.75ZM10 6a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 6Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z\" clip-rule=\"evenodd\"/>","solid":true},"x-circle":{"body":"<path fill-rule=\"evenodd\" d=\"M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z\" clip-rule=\"evenodd\"/>","solid":true},"st-check-circle":{"body":"<path fill-rule=\"evenodd\" d=\"M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z\" clip-rule=\"evenodd\"/>","solid":true},"st-exclamation-triangle":{"body":"<path fill-rule=\"evenodd\" d=\"M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z\" clip-rule=\"evenodd\"/>","solid":true},"st-x-circle":{"body":"<path fill-rule=\"evenodd\" d=\"M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z\" clip-rule=\"evenodd\"/>","solid":true},"st-minus-circle":{"body":"<path fill-rule=\"evenodd\" d=\"M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM6.75 9.25a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5h-6.5Z\" clip-rule=\"evenodd\"/>","solid":true},"st-arrow-path":{"body":"<path fill-rule=\"evenodd\" d=\"M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z\" clip-rule=\"evenodd\"/>","solid":true}};
+const icon = (name, cls = "") => {
+  const i = ICONS[name];
+  if (!i) return "";
+  return i.solid
+    ? `<svg class="ic ${cls}" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">${i.body}</svg>`
+    : `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${i.body}</svg>`;
+};
+document.querySelectorAll("[data-icon]").forEach((el) => { el.outerHTML = icon(el.dataset.icon); });
+
+const $ = (s) => document.querySelector(s);
+const cat = (key, fallback) => (CATALOG[key] && (CATALOG[key][LANG] || CATALOG[key].en)) || fallback || key;
+function applyStatic() {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
+  document.querySelectorAll("[data-t-title]").forEach((el) => { el.title = t(el.dataset.tTitle); });
+  const lb = document.querySelector("#lang"); if (lb) lb.textContent = LANG.toUpperCase();
+  const tb = document.querySelector("#tz"); if (tb) tb.textContent = zoneName();
+}
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const PRIOS = ["P1", "P2", "P3", "P4"];
+const PNAME = { P1: "P1 · " + t("urgent"), P2: "P2", P3: "P3", P4: "P4 · " + t("background") };
+const loc = () => ({ ru: "ru-RU", zh: "zh-CN" })[LANG] || "en-GB";
+const fmt = (n) => (n ?? 0).toLocaleString(loc());
+const fmtc = (n) => (n ?? 0) >= 10000 ? new Intl.NumberFormat(loc(), { notation: "compact", maximumFractionDigits: 0 }).format(n) : fmt(n);
+const store = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+const partial = (r) => !!(r?.selection && (r.selection.hosts?.length || r.selection.groups?.length || r.selection.modules?.length));
+
+const S = { orgs: [], org: null, env: null, envData: null, run: null, runData: null, tab: store.get("kn.tab", "actions"),
+            showP4: store.get("kn.p4", "0") === "1", limit: 300,
+            filt: { prios: new Set(["P1", "P2", "P3"]), host: "", ext: false, q: "", fixable: true, cats: new Set(), pubOnly: false },
+            sel: new Set(), open: new Set(), hostsAll: false,
+            trendP: new Set((store.get("kn.trendp", "P1,P2") || "P1,P2").split(",").filter((p) => /^P[1-4]$/.test(p))) };
+
+async function api(path) {
+  const r = await fetch(path, { cache: "no-store" });
+  if (!r.ok) throw new Error(`${r.status} ${path}`);
+  return r.json();
+}
+const CSRF = /*CSRF*/"";  // filled in by the server: state-changing requests carry it
+async function post(path, body) {
+  const r = await fetch(path, { method: "POST", cache: "no-store", headers: { "Content-Type": "application/json", "X-Kanareika-CSRF": CSRF }, body: JSON.stringify(body || {}) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || `${r.status} ${path}`);
+  return d;
+}
+function ago(iso) {
+  if (!iso) return "—";
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (Number.isNaN(s)) return "—";
+  if (s < 60) return t("just now");
+  if (s < 3600) return `${tf("{n} min ago", { n: Math.round(s / 60) })}`;
+  if (s < 86400) return `${tf("{n} h ago", { n: Math.round(s / 3600) })}`;
+  return `${tf("{n} d ago", { n: Math.round(s / 86400) })}`;
+}
+function dur(a, b) {
+  if (!a || !b) return "";
+  const s = Math.max(0, (new Date(b) - new Date(a)) / 1000);
+  return s < 60 ? `${Math.round(s)} ${t("s")}` : s < 3600 ? `${Math.round(s / 60)} ${t("min")}` : `${(s / 3600).toFixed(1)} ${t("h")}`;
+}
+/* 2026-11-01_204722 -> 01.11 20:47 */
+/* 2026-11-01_204722 -> 2026-11-01 20:47 */
+/* times: in the browser's time zone or in UTC (the tz button; remembered per browser) */
+let UTC = (() => { try { return localStorage.getItem("kn.tz") === "utc"; } catch { return false; } })();
+const tzOpt = () => (UTC ? { timeZone: "UTC" } : {});
+const zoneName = () => UTC ? "UTC"
+  : (new Intl.DateTimeFormat(loc(), { timeZoneName: "short" }).formatToParts(new Date()).find((x) => x.type === "timeZoneName") || {}).value || "";
+function clock(d) {  // YYYY-MM-DD HH:MM in the zone shown
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { ...tzOpt(), year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`;
+}
+// a run id is its start in UTC: 2026-11-01_204722
+const runShort = (id) => {
+  if (id === "current") return t("current");
+  const m = /^(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2})(\d{2})/.exec(id || "");
+  return m ? clock(new Date(Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]))) : (id || "");
+};
+const st = (kind, label, title = "") => {
+  const ic = "st-" + { ok: "check-circle", warn: "exclamation-triangle", bad: "x-circle", run: "arrow-path", none: "minus-circle" }[kind];
+  return `<span class="st ${kind}" ${title ? `title="${esc(title)}"` : ""}>${icon(ic)}${label ? esc(label) : ""}</span>`;
+};
+const prioCell = (p) => p ? `<span class="prio ${p}">${p}</span>` : `<span class="muted">—</span>`;
+const dueCell = (d, p) => {
+  if (!d) return `<span class="muted">—</span>`;
+  const od = new Date(d) < new Date() && p !== "P4";
+  return `<span class="${od ? "overdue" : p === "P4" ? "muted" : ""}" title="${od ? t("overdue") : t("due by SLA")}">${esc(d)}</span>`;
+};
+const imgName = (tg) => tg.slice(6).split("@")[0].split("/").pop();
+const where = (tg) => {
+  if (!tg) return "";
+  if (tg.startsWith("image:")) return `${icon("cube", "sm")} ${esc(imgName(tg))}`;
+  if (tg === "os") return t("OS");
+  if (tg.startsWith("os:")) return t("OS · old kernels");
+  return esc(tg);
+};
+const whereCell = (tg) => `<td><div class="cell w2 ink2" title="${esc(tg)}">${where(tg)}</div></td>`;
+const hostTags = (hs, max = 3) => hs.length > max
+  ? hs.slice(0, max - 1).map((h) => `<span class="tag">${esc(h)}</span>`).join("") + `<span class="tag" title="${esc(hs.slice(max - 1).join(", "))}">+${hs.length - max + 1}</span>`
+  : hs.map((h) => `<span class="tag">${esc(h)}</span>`).join("");
+
+/* ---------------- org / env / run ---------------- */
+function readHash() { const p = new URLSearchParams(location.hash.slice(1)); return { org: p.get("org"), env: p.get("env"), run: p.get("run") }; }
+function writeHash() {
+  const p = new URLSearchParams();
+  if (S.org) p.set("org", S.org);
+  if (S.env) p.set("env", S.env);
+  if (S.run && S.run !== "current") p.set("run", S.run);
+  history.replaceState(null, "", "#" + p.toString());
+  store.set("kn.org", S.org || ""); store.set("kn.env", S.env || "");
+}
+async function loadOrgs() {
+  const data = await api("/api/orgs");
+  S.orgs = data.orgs;
+  $("#cfgerrors").innerHTML = data.errors?.length
+    ? `<div class="errors"><b>${icon("exclamation-triangle")} ${t("Config errors")}</b> — ${t("scans are blocked")}:<ul>${data.errors.map((e) => `<li class="mono">${esc(e)}</li>`).join("")}</ul></div>` : "";
+  const sel = $("#org");
+  if (!S.orgs.length) { sel.innerHTML = `<option>${t("no organizations")}</option>`; return; }
+  sel.innerHTML = S.orgs.map((o) => {
+    const p1 = o.envs.reduce((a, e) => a + ((e.last?.plan_counts || {}).P1 || 0), 0);
+    const live = o.envs.some((e) => e.running);
+    return `<option value="${esc(o.id)}" title="${esc(o.name)}">${esc(o.id)}${live ? " ●" : ""}${p1 ? ` · P1 ${p1}` : ""}</option>`;
+  }).join("");
+  const h = readHash();
+  S.org = [S.org, h.org, store.get("kn.org")].find((x) => x && S.orgs.some((o) => o.id === x)) || S.orgs[0].id;
+  sel.value = S.org;
+  sel.parentElement.title = S.orgs.find((o) => o.id === S.org)?.name || "";
+  renderEnvs(h.env);
+}
+function renderEnvs(preferred) {
+  const o = S.orgs.find((x) => x.id === S.org);
+  const envs = o.envs.map((e) => e.env);
+  S.env = [S.env, preferred, store.get("kn.env")].find((x) => x && envs.includes(x)) || envs[0];
+  $("#envs").innerHTML = o.envs.map((e) => `<button data-env="${esc(e.env)}" aria-pressed="${e.env === S.env}" title="${e.hosts} ${t("hosts")}">
+    ${e.running ? `<span class="dot live"></span>` : ""}${esc(e.env === "default" ? t("all") : e.env)}<span class="n">${e.hosts}</span></button>`).join("");
+}
+async function loadEnv(keepRun) {
+  const d = await api(`/api/env?org=${encodeURIComponent(S.org)}&env=${encodeURIComponent(S.env)}`);
+  S.envData = d;
+  const done = d.runs.filter((r) => r.state === "done");
+  const want = keepRun ? (S.run || readHash().run) : readHash().run;
+  S.run = done.length ? (want && done.some((r) => r.run_id === want) ? want : "current") : null;
+  const scope = (r) => [r.selection?.hosts?.join(", "), r.selection?.groups?.join(", "), r.selection?.modules?.join("+")].filter(Boolean).join(" · ");
+  const opt = (r) => { const s = scope(r); return `<option value="${esc(r.run_id)}" title="${esc(s)}">${esc(runShort(r.run_id))}${r.partial ? " · " + esc(s.length > 26 ? s.slice(0, 25) + "…" : s) : ""}</option>`; };
+  const full = done.filter((r) => !r.partial).reverse(), part = done.filter((r) => r.partial).reverse();
+  $("#run").innerHTML = done.length
+    ? `<option value="current" title="${t("Latest data for every host and module, including partial rescans")}">${t("Current state")}</option>`
+      + (full.length ? `<optgroup label="${t("Full runs")}">${full.map(opt).join("")}</optgroup>` : "")
+      + (part.length ? `<optgroup label="${t("Partial")}">${part.map(opt).join("")}</optgroup>` : "")
+    : `<option value="">${t("no runs")}</option>`;
+  $("#run").value = S.run || "";
+  renderLive();
+  renderJobs();
+  renderTrend();
+  const stale = !S.runData || S.runData.meta.org !== S.org || S.runData.meta.env !== S.env
+    || (S.run === "current" ? S.runData.meta.run_id !== "current" || S.runData.meta.last_run !== done.at(-1)?.run_id : S.runData.meta.run_id !== S.run);
+  if (S.run && stale) await loadRun();
+  else if (!S.run) { S.runData = null; renderRun(); }
+  else renderKpis();
+  writeHash();
+}
+function renderSkeleton() {
+  const bar = (w, h = 12) => `<span class="sk" style="width:${w};height:${h}px"></span>`;
+  $("#kpis").innerHTML = Array.from({ length: 7 }, () => `<div class="card kpi">${bar("60%")}<div style="margin-top:12px">${bar("45%", 26)}</div></div>`).join("");
+  $("#kpicaption").innerHTML = `<span class="muted">${t("loading… the first load after a scan may take up to a minute")}</span>`;
+  $("#hosts").innerHTML = `<tbody>${Array.from({ length: 6 }, () => `<tr><td>${bar("16px", 16)}</td><td>${bar("110px")}</td><td>${bar("90px")}</td><td>${bar("20px")}</td><td>${bar("70px")}</td><td>${bar("24px")}</td><td>${bar("24px")}</td><td>${bar("28px")}</td><td>${bar("28px")}</td><td>${bar("110px")}</td></tr>`).join("")}</tbody>`;
+  $("#hostsmore").innerHTML = "";
+  $("#tabbody").innerHTML = `<div style="display:flex;gap:8px;margin-bottom:16px">${Array.from({ length: 5 }, () => bar("70px", 30)).join("")}</div>`
+    + Array.from({ length: 5 }, () => `<div class="sk-row">${bar("18px", 18)}${bar("30px", 18)}<div style="flex:1;display:grid;gap:8px">${bar("45%", 14)}${bar("70%", 10)}</div>${bar("70px")}</div>`).join("");
+}
+
+async function loadRun() {
+  if (!S.runData || S.runData.meta.org !== S.org || S.runData.meta.env !== S.env) renderSkeleton();
+  $("#livepill").innerHTML = `${st("run", "")}${t("loading")}`;
+  S.runData = await api(`/api/run?org=${encodeURIComponent(S.org)}&env=${encodeURIComponent(S.env)}&run=${encodeURIComponent(S.run)}`);
+  S.limit = 300;
+  renderRun();
+  renderLive();  // resets the "loading" pill
+}
+
+/* ---------------- live ---------------- */
+function renderLive() {
+  const live = S.envData?.live;
+  const card = $("#livecard"), pill = $("#livepill");
+  const anyLive = S.orgs.some((o) => o.envs.some((e) => e.running));
+  if (!live || !["running", "stale"].includes(live.state)) {
+    card.hidden = true;
+    pill.innerHTML = anyLive ? `<span class="dot live"></span>${t("scan in another environment")}` : `<span class="dot"></span>${t("no scans")}`;
+    pill.title = t("updated") + " " + new Date().toLocaleTimeString(loc(), tzOpt()) + " " + zoneName();
+    return;
+  }
+  const hosts = Object.entries(live.hosts);
+  const fin = hosts.filter(([, h]) => ["ok", "warn", "failed", "skipped"].includes(h.state)).length;
+  const stale = live.state === "stale";
+  pill.innerHTML = stale ? `<span class="dot" style="background:var(--warn)"></span>${t("scan not responding")}` : `<span class="dot live"></span>${t("scan")} · ${fin}/${hosts.length}`;
+  const order = { running: 0, pending: 1, failed: 2, warn: 3, ok: 4, skipped: 5 };
+  const S2 = { running: ["run", t("running")], pending: ["none", t("waiting")], ok: ["ok", t("done")], warn: ["warn", t("with errors")], failed: ["bad", t("unreachable")], skipped: ["none", t("skipped")] };
+  card.hidden = false;
+  card.innerHTML = `
+    <h2>${stale ? st("warn", t("Scan is not responding")) : st("run", t("Scan running"))}
+      <span class="sub">${t("started")} ${esc(ago(live.started))} · ${fin} ${t("of")} ${hosts.length}${stale ? " · " + t("no updates for over a minute") : ""}</span></h2>
+    <div class="bar"><div style="width:${hosts.length ? (fin / hosts.length) * 100 : 0}%"></div></div>
+    <div class="hostgrid">${hosts.sort((a, b) => (order[a[1].state] ?? 9) - (order[b[1].state] ?? 9) || a[0].localeCompare(b[0])).map(([name, h]) => `
+      <div class="hostcard">
+        <div class="h"><span class="trunc">${esc(name)}</span>${st(...(S2[h.state] || ["none", h.state]))}</div>
+        <div class="m">${h.module ? esc(h.module) : "&nbsp;"}${h.errors ? ` · <span class="overdue">${t("errors")}: ${h.errors}</span>` : ""}</div>
+        <div class="l mono trunc" title="${esc(h.last)}">${esc(h.last) || "&nbsp;"}</div>
+      </div>`).join("")}</div>
+    <pre class="log mono">${esc((live.log_tail || []).slice(-12).join("\n"))}</pre>`;
+}
+
+/* ---------------- scans started from the dashboard ---------------- */
+S.jobs = { enabled: false, list: [], open: null };
+const JST = { running: ["run", "running"], done: ["ok", "done"], failed: ["bad", "finished with errors"], cancelled: ["none", "cancelled"] };
+async function loadJobs() {
+  const d = await api("/api/jobs");
+  S.jobs.enabled = d.enabled; S.jobs.list = d.jobs || [];
+  $("#scanbtn").hidden = !d.enabled || !S.org;
+  renderJobs();
+  return S.jobs.list.some((j) => j.state === "running");
+}
+function renderJobs() {
+  const card = $("#jobscard");
+  const list = S.jobs.list.filter((j) => j.request.org === S.org && j.request.env === S.env).slice(0, 5);
+  if (!list.length) { card.hidden = true; return; }
+  if (!S.jobs.open || !list.some((j) => j.id === S.jobs.open)) S.jobs.open = list[0].id;
+  const scope = (r) => [r.hosts?.join(", "), r.groups?.join(", "), r.modules?.join("+"), r.dry_run ? t("dry run") : ""].filter(Boolean).join(" · ");
+  card.hidden = false;
+  card.innerHTML = `<h2>${icon("arrow-path")}${t("Scans started here")}</h2>` + list.map((j) => `
+    <div class="job">
+      <div class="h">${st(...[JST[j.state]?.[0] || "none", t(JST[j.state]?.[1] || j.state)])}
+        <span>${esc(ago(j.started))}${j.finished ? " · " + esc(dur(j.started, j.finished)) : ""}${j.state === "failed" ? ` · ${t("exit code")} ${j.code}` : ""}</span>
+        <span class="muted trunc">${esc(scope(j.request))}</span><span class="grow"></span>
+        ${j.state === "running" ? `<button class="iconbtn xs" data-jcancel="${esc(j.id)}">${t("Stop")}</button>` : ""}
+        <button class="linkbtn" data-jopen="${esc(j.id)}">${S.jobs.open === j.id ? t("hide") : t("output")}</button></div>
+      ${S.jobs.open === j.id ? `<pre class="log mono">${j.dropped ? `… ${j.dropped} ${t("lines")}\n` : ""}${esc(j.output.join("\n")) || "&nbsp;"}</pre>` : ""}
+    </div>`).join("");
+  card.querySelectorAll("[data-jopen]").forEach((b) => b.onclick = () => { S.jobs.open = S.jobs.open === b.dataset.jopen ? "-" : b.dataset.jopen; renderJobs(); });
+  card.querySelectorAll("[data-jcancel]").forEach((b) => b.onclick = async () => { b.disabled = true; try { await post(`/api/jobs/${encodeURIComponent(b.dataset.jcancel)}/cancel`); } catch {} pollJobs(); });
+  const pre = card.querySelector("pre"); if (pre) pre.scrollTop = pre.scrollHeight;
+}
+let jobTimer;
+async function pollJobs() {
+  clearTimeout(jobTimer);
+  let running = false;
+  try { running = await loadJobs(); } catch {}
+  if (running) jobTimer = setTimeout(pollJobs, 1500);
+  else if (S.jobs._was) tick();  // a scan just ended: show its results
+  S.jobs._was = running;
+}
+async function openScan() {
+  const dlg = $("#scandlg"), f = $("#scanform");
+  f.reset(); $("#scanerr").textContent = "";
+  $("#scanwhat").textContent = `${S.org}${S.env !== "default" ? " / " + S.env : ""}`;
+  const o = await api(`/api/scan-options?org=${encodeURIComponent(S.org)}&env=${encodeURIComponent(S.env)}`);
+  const box = (name, v) => `<label><input type="checkbox" name="${name}" value="${esc(v)}"><span class="mono">${esc(v)}</span></label>`;
+  $("#scanhosts").innerHTML = o.hosts.map((h) => box("host", h)).join("");
+  $("#scanmods").innerHTML = o.modules.map((m) => box("module", m)).join("");
+  dlg.showModal();
+}
+$("#scanbtn").onclick = () => openScan().catch((e) => alertErr(e));
+const alertErr = (e) => { $("#livepill").innerHTML = `<span class="dot" style="background:var(--bad)"></span>${esc(e.message)}`; };
+$("#scanform").onsubmit = async (ev) => {
+  if (ev.submitter?.value !== "go") return;
+  ev.preventDefault();
+  const f = $("#scanform"), all = (n) => [...f.querySelectorAll(`input[name=${n}]:checked`)].map((i) => i.value);
+  const req = { org: S.org, env: S.env, hosts: all("host"), modules: all("module"),
+    dry_run: f.dry_run.checked, ignore_window: f.ignore_window.checked, offline: f.offline.checked };
+  $("#scango").disabled = true;
+  try {
+    const j = await post("/api/scan", req);
+    S.jobs.open = j.id;
+    $("#scandlg").close();
+    pollJobs();
+  } catch (e) { $("#scanerr").textContent = e.message; }
+  finally { $("#scango").disabled = false; }
+};
+
+/* ---------------- KPIs ---------------- */
+function renderKpis() {
+  const el = $("#kpis"), cap = $("#kpicaption");
+  const rd = S.runData;
+  if (!rd) {
+    cap.textContent = "";
+    el.innerHTML = `<div class="card" style="grid-column:1/-1"><div class="empty">${t("No runs yet. Run")}: <code>kanareika scan ${esc(S.org)}${S.env !== "default" ? " --env " + esc(S.env) : ""}</code></div></div>`;
+    return;
+  }
+  const c = rd.plan_counts, m = rd.meta;
+  const prev = S.envData.runs.find((r) => r.run_id === rd.prev)?.plan_counts;
+  const tile = (p) => {
+    let delta = "";
+    if (prev) { const d = c[p] - prev[p]; delta = d === 0 ? `<span class="delta">0</span>` : `<span class="delta ${d > 0 ? "up" : "down"}">${d > 0 ? "+" : "−"}${fmt(Math.abs(d))}</span>`; }
+    return `<div class="card kpi"><div class="label"><span class="swatch" style="background:var(--${p.toLowerCase()})"></span>${PNAME[p]}</div>
+      <div class="value">${fmt(c[p])}${delta}</div></div>`;
+  };
+  const failed = Object.keys(m.hosts_failed).length, merr = Object.keys(m.module_errors || {}).length;
+  const expired = rd.exceptions.filter((f) => f.exception?.expired).length;
+  const overdue = rd.plan.filter((r) => r.due && new Date(r.due) < new Date() && r.priority !== "P4").length;
+  const sources = new Set(Object.values(m.sources || {}).flatMap((x) => Object.values(x))).size;
+  el.innerHTML = PRIOS.map(tile).join("") + `
+    <div class="card kpi"><div class="label">${icon("server-stack", "sm")}${t("Hosts")}</div>
+      <div class="value">${m.hosts_ok}<small>/ ${m.hosts_scanned.length}</small></div>
+      <div class="foot">${failed ? st("bad", `${failed} ${t("unreachable")}`) : merr ? st("warn", `${merr} ${t("with errors")}`) : st("ok", t("all good"))}</div></div>
+    <div class="card kpi"><div class="label">${icon("clock", "sm")}${t("Overdue")}</div>
+      <div class="value">${fmt(overdue)}</div>
+      <div class="foot" title="${t("packages P1–P3 past due by SLA")}">${expired ? `<span class="overdue">${t("expired exceptions")}: ${expired}</span>` : `${t("exceptions")}: ${rd.exceptions.length}`}</div></div>
+    <div class="card kpi"><div class="label">${icon("arrow-path", "sm")}${t("Updated")}</div>
+      <div class="value" style="font-size:18px;margin-top:8px">${esc(ago(m.finished))}</div>
+      <div class="foot" title="${fmt(c.cves)} CVE ${t("total")}${m.feeds_updated ? "" : " · KEV/EPSS " + t("not loaded") + " (kanareika db update)"}">${m.run_id === "current" ? (sources === 1 ? t("from the last run") : `${t("runs merged")}: ${sources}`) : esc(dur(m.started, m.finished))} · ${fmtc(c.cves)} CVE</div></div>`;
+  cap.textContent = partial(m) ? t("Partial run — no comparison") : rd.prev ? `${t("Packages to update")} · Δ ${t("vs full run")} ${runShort(rd.prev)}` : t("Packages to update");
+}
+
+/* ---------------- trend ---------------- */
+const tip = $("#tip");
+function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block"; moveTip(e); }
+function moveTip(e) {
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + w > innerWidth - 8) x = e.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+const hideTip = () => { tip.style.display = "none"; };
+function niceMax(v) { if (v <= 4) return 4; const p = 10 ** Math.floor(Math.log10(v)); const n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
+function renderTrend() {
+  const svg = $("#trend");
+  // which priorities to draw: P1+P2 by default, so the urgent part is not flattened by thousands of P3/P4
+  const keys = PRIOS.filter((p) => S.trendP.has(p));
+  $("#trendlegend").innerHTML = PRIOS.map((p) => `<button class="chip" data-tp="${p}" aria-pressed="${S.trendP.has(p)}"><span class="swatch" style="background:var(--${p.toLowerCase()})"></span>${p}</button>`).join("")
+    + `<span class="muted" style="margin-left:auto;font-size:12px">${t("one bar per day · latest full run")}</span>`;
+  $("#trendlegend").querySelectorAll("[data-tp]").forEach((b) => b.onclick = () => {
+    const p = b.dataset.tp; S.trendP.has(p) ? S.trendP.delete(p) : S.trendP.add(p);
+    if (!S.trendP.size) S.trendP.add(p);
+    store.set("kn.trendp", [...S.trendP].join(",")); renderTrend();
+  });
+  // one bar per day: the latest full run of that day (several runs a day are common while fixing)
+  const full = (S.envData?.runs || []).filter((r) => r.state === "done" && r.plan_counts && !r.partial);
+  const byDay = new Map();
+  for (const r of full) { const d = r.run_id.slice(0, 10); const e = byDay.get(d) || { runs: 0 }; byDay.set(d, { ...r, runs: e.runs + 1, day: d }); }
+  const bars = [...byDay.values()].slice(-30).map((r) => ({ ...r, label: r.day.slice(5), counts: r.plan_counts }));
+  // plus "now" — the merged current state, if it is newer than the last full run
+  const rd = S.runData;
+  if (rd && rd.meta.run_id === "current" && bars.length && rd.meta.last_run > (full.at(-1)?.run_id || "")) {
+    bars.push({ run_id: "current", label: t("now"), counts: rd.plan_counts, now: true, hosts_total: rd.meta.hosts_scanned.length, hosts_failed: Object.keys(rd.meta.hosts_failed).length });
+  }
+  const W = svg.clientWidth || 600, H = 220, R = 8, T = 10, B = 24;
+  if (!bars.length) { svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="var(--muted)" font-size="12">${t("no full runs")}</text>`; return; }
+  const max = niceMax(Math.max(1, ...bars.map((r) => keys.reduce((a, k) => a + (r.counts[k] || 0), 0))));
+  const L = 12 + fmt(max).length * 7;
+  const y = (v) => T + (H - T - B) * (1 - v / max);
+  const slot = (W - L - R) / Math.max(bars.length, 6), bw = Math.max(8, Math.min(40, slot * 0.6));
+  let out = "";
+  for (let i = 0; i <= 4; i++) {
+    const v = (max / 4) * i, yy = y(v);
+    out += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="${i === 0 ? "var(--axis)" : "var(--grid)"}"/>`
+      + `<text x="${L - 6}" y="${yy + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(v)}</text>`;
+  }
+  const every = Math.ceil(bars.length / Math.max(1, Math.floor((W - L - R) / 56)));
+  bars.forEach((r, i) => {
+    const cx = L + slot * i + slot / 2, x = cx - bw / 2;
+    const nz = keys.filter((k) => r.counts[k] > 0);
+    let acc = 0, segs = "";
+    keys.forEach((k) => {
+      const v = r.counts[k] || 0;
+      if (!v) return;
+      const y0 = y(acc), top = k === nz.at(-1);
+      const h = Math.max(1, y0 - y(acc + v) - (top ? 0 : 2)), yt = y0 - h;
+      segs += top && h > 4
+        ? `<path d="M${x},${y0} V${yt + 4} Q${x},${yt} ${x + 4},${yt} H${x + bw - 4} Q${x + bw},${yt} ${x + bw},${yt + 4} V${y0} Z" fill="var(--${k.toLowerCase()})"/>`
+        : `<rect x="${x}" y="${yt}" width="${bw}" height="${h}" fill="var(--${k.toLowerCase()})"/>`;
+      acc += v;
+    });
+    const total = keys.reduce((a, k) => a + (r.counts[k] || 0), 0);
+    const sel = r.run_id === S.run || (S.run !== "current" && r.day && S.run?.startsWith(r.day));
+    out += `<g class="col" data-i="${i}"><rect x="${L + slot * i}" y="${T}" width="${slot}" height="${H - T - B}" fill="${sel ? "var(--surface-2)" : "transparent"}"/>`
+      + `<g ${r.now ? 'opacity=".55"' : ""}>${segs}</g>`
+      + (total ? `<text x="${cx}" y="${y(total) - 5}" text-anchor="middle" font-size="11" fill="var(--ink-2)">${fmtc(total)}</text>` : "") + `</g>`;
+    // every n-th label and the last one; a regular one too close to the last gives way (they would overlap)
+    if (i === bars.length - 1 || (i % every === 0 && bars.length - 1 - i >= Math.max(2, every * 0.6)))
+      out += `<text x="${cx}" y="${H - 7}" text-anchor="middle" font-size="11" fill="${sel || r.now ? "var(--ink)" : "var(--muted)"}">${esc(r.label)}</text>`;
+  });
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = out;
+  svg.querySelectorAll(".col").forEach((g) => {
+    const r = bars[+g.dataset.i];
+    g.onmousemove = (e) => showTip(e, `<div class="t">${r.now ? t("now (current state)") : esc(r.day)}</div>`
+      + (r.now ? "" : `<div class="r"><span>${t("full runs that day")}</span><b>${r.runs}</b></div><div class="r"><span>${t("shown")}</span><b>${esc(runShort(r.run_id).slice(11))}</b></div>`)
+      + PRIOS.map((k) => `<div class="r"><span><span class="swatch" style="background:var(--${k.toLowerCase()})"></span> ${k}</span><b>${fmt(r.counts[k])}</b></div>`).join("")
+      + `<div class="r"><span>CVE</span><b>${fmtc(r.counts.cves)}</b></div><div class="r"><span>${t("hosts")}</span><b>${r.hosts_total - r.hosts_failed}/${r.hosts_total}</b></div>`);
+    g.onmouseleave = hideTip;
+    g.onclick = async () => { hideTip(); S.run = r.run_id; $("#run").value = S.run; await loadRun(); renderTrend(); writeHash(); };
+  });
+}
+
+/* ---------------- hosts ---------------- */
+function renderHosts() {
+  const rd = S.runData, cfg = S.envData?.hosts || [];
+  const counts = rd?.hosts || {};
+  const rows = cfg.map((h) => {
+    let s = ["none", t("not scanned")];
+    if (rd && rd.meta.hosts_scanned.includes(h.name)) {
+      if (rd.meta.hosts_failed[h.name]) s = ["bad", rd.meta.hosts_failed[h.name]];
+      else if (rd.meta.module_errors?.[h.name]) s = ["warn", rd.meta.module_errors[h.name].join("\n")];
+      else s = ["ok", t("ok")];
+    }
+    const src = rd?.meta?.sources?.[h.name];
+    const asOf = src ? Object.values(src).sort().at(-1) : rd?.meta?.run_id;
+    return { ...h, s, asOf, c: counts[h.name] || { P1: 0, P2: 0, P3: 0, P4: 0, cves: 0 }, os: rd?.facts?.[h.name]?.os || "" };
+  });
+  const rank = { bad: 0, warn: 1, ok: 2, none: 3 };
+  rows.sort((a, b) => rank[a.s[0]] - rank[b.s[0]] || b.c.P1 - a.c.P1 || b.c.P2 - a.c.P2 || a.name.localeCompare(b.name));
+  $("#hostsub").textContent = `${rows.length}`;
+  const n = (v, p) => v ? (p === "P1" || p === "P2" ? `<b>${fmt(v)}</b>` : fmt(v)) : `<span class="zero">0</span>`;
+  const shortOs = (o) => o.replace("CentOS Stream", "Stream").replace("CentOS Linux", "CentOS").replace(" (Core)", "").replace("GNU/Linux ", "");
+  const limit = 6, shown = S.hostsAll ? rows : rows.slice(0, limit);
+  $("#hosts").innerHTML = `<thead><tr><th></th><th>${t("host")}</th><th>${t("group")}</th><th class="num" title="exposure: 1 ${t("perimeter · 2 neighbours · 3 internal")}">exp</th><th>${t("OS")}</th>${PRIOS.map((p) => `<th class="num" title="${t("packages to update")}">${p}</th>`).join("")}<th class="num" title="${t("when the data was collected")}">${t("scanned")}</th></tr></thead><tbody>`
+    + shown.map((r) => `<tr class="click" data-host="${esc(r.name)}" ${r.name === S.filt.host ? 'style="background:var(--surface-2)"' : ""}>
+      <td>${st(r.s[0], "", r.s[1])}</td><td class="nw"><b>${esc(r.name)}</b></td><td><div class="cell w1 ink2" title="${esc(r.group)}">${esc(r.group)}</div></td>
+      <td class="num">${esc(r.exposure)}</td><td><div class="cell w1 ink2" title="${esc(r.os)}">${esc(shortOs(r.os))}</div></td>
+      ${PRIOS.map((p) => `<td class="num">${n(r.c[p], p)}</td>`).join("")}<td class="num muted nw">${r.asOf && r.asOf !== "current" ? esc(runShort(r.asOf)) : "—"}</td></tr>`).join("") + "</tbody>";
+  $("#hostsmore").innerHTML = rows.length > limit
+    ? `<button class="linkbtn" id="hoststoggle" style="margin-top:10px">${S.hostsAll ? t("collapse") : `${t("all hosts")} (${rows.length})`}</button>` : "";
+  if ($("#hoststoggle")) $("#hoststoggle").onclick = () => { S.hostsAll = !S.hostsAll; renderHosts(); };
+  $("#hosts").querySelectorAll("tr.click").forEach((tr) => tr.onclick = () => {
+    S.filt.host = S.filt.host === tr.dataset.host ? "" : tr.dataset.host; S.limit = 300; renderTabs(); renderHosts();
+    $("#tabs").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
+/* ---------------- IP info (offline DB-IP Lite + our hosts) ---------------- */
+const ipCache = {};
+const ipCell = (ip) => `<span class="ip" data-ip="${esc(ip)}"><span class="mono">${esc(ip)}</span><span class="ipi"></span></span>`;
+const flag = (cc) => cc && cc.length === 2 ? String.fromCodePoint(...[...cc.toUpperCase()].map((c) => 0x1f1a5 + c.charCodeAt(0))) : "";
+function fillIp(el) {
+  const x = ipCache[el.dataset.ip], box = el.querySelector(".ipi");
+  if (!x || !box) return;
+  if (x.ours) { box.textContent = t("ours") + " · " + x.ours.split("/").pop(); box.className = "ipi ours"; el.title = x.ours; return; }
+  if (x.scope) { box.textContent = t(x.scope === "private" ? "private address" : "special address"); return; }
+  box.textContent = [flag(x.cc) + " " + (x.cc || ""), x.org].filter((v) => v.trim()).join(" · ");
+  el.title = [x.country, x.city, x.asn ? "AS" + x.asn : "", x.org].filter(Boolean).join(" · ");
+}
+async function enrichIps(root) {
+  const els = [...root.querySelectorAll(".ip[data-ip]")];
+  const need = [...new Set(els.map((e) => e.dataset.ip))].filter((ip) => !(ip in ipCache));
+  for (let i = 0; i < need.length; i += 400) {
+    try { Object.assign(ipCache, await api(`/api/ipinfo?ips=${encodeURIComponent(need.slice(i, i + 400).join(","))}`)); } catch {}
+  }
+  els.forEach(fillIp);
+}
+
+/* ---------------- tabs ---------------- */
+const TABS = [
+  ["actions", t("ToDo"), "wrench-screwdriver"], ["plan", t("Packages"), "archive-box"], ["diff", t("Changes"), "arrows-right-left"],
+  ["access", t("Access"), "key"], ["exposure", t("Network"), "globe-alt"], ["health", t("Health"), "heart"],
+  ["exceptions", t("Exceptions"), "shield-check"], ["errors", t("Errors"), "exclamation-triangle"], ["log", t("Log"), "document-text"],
+];
+function renderTabs() {
+  store.set("kn.tab", S.tab);
+  const rd = S.runData;
+  const n = {
+    actions: (rd?.actions || []).filter((a) => a.priority && a.priority !== "P4").length,
+    plan: rd?.plan?.length, diff: rd?.new ? `+${rd.new.rows.length} −${rd.resolved.rows.length}` : "",
+    access: "", exposure: rd ? Object.values(rd.exposure || {}).reduce((k, e) => k + e.listen.filter((x) => x.public).length, 0) || "" : "",
+    health: rd ? (rd.other || []).filter((f) => f.kind === "health").length || "" : "",
+    exceptions: rd?.exceptions?.length || "", errors: rd ? (Object.keys(rd.meta.hosts_failed).length + Object.keys(rd.meta.module_errors || {}).length) || "" : "", log: "",
+  };
+  if (!TABS.some(([k]) => k === S.tab)) S.tab = "actions";
+  $("#tabs").innerHTML = TABS.map(([k, t, ic]) => `<button role="tab" data-tab="${k}" aria-selected="${S.tab === k}">${icon(ic)}${t}${n[k] !== "" && n[k] !== undefined ? `<span class="n">${esc(typeof n[k] === "number" ? fmtc(n[k]) : n[k])}</span>` : ""}</button>`).join("");
+  $("#tabs").querySelectorAll("button").forEach((b) => b.onclick = () => { S.tab = b.dataset.tab; renderTabs(); });
+  S.pub = publicHosts();
+  const hosts = (S.envData?.hosts || []).map((h) => h.name).filter((h) => !S.filt.ext || S.pub.has(h)).sort();
+  if (S.filt.host && !hosts.includes(S.filt.host)) S.filt.host = "";
+  const hp = $("#hostpick");
+  hp.className = "hostpick" + (S.filt.host ? " on" : "");
+  hp.innerHTML = `${icon("funnel", "sm")}<select id="ghost"><option value="">${t(S.filt.ext ? "all with a public IP" : "all hosts")}</option>${hosts.map((h) => `<option ${h === S.filt.host ? "selected" : ""}>${esc(h)}</option>`).join("")}</select>`;
+  $("#ghost").onchange = (e) => { S.filt.host = e.target.value; S.limit = 300; renderTabs(); };
+  const xp = $("#extpick");
+  xp.className = "hostpick" + (S.filt.ext ? " on" : "");
+  xp.setAttribute("aria-pressed", S.filt.ext);
+  xp.title = t("only hosts reachable from the internet: own public IP (in the config or on an interface)");
+  xp.innerHTML = `${icon("globe-alt", "sm")}${t("public IP")}<span class="n">${S.pub.size}</span>`;
+  xp.onclick = () => { S.filt.ext = !S.filt.ext; S.limit = 300; renderTabs(); };
+  const body = $("#tabbody");
+  if (!rd) { body.innerHTML = `<div class="empty">${t("No data.")}</div>`; return; }
+  ({ actions: tabActions, plan: tabPlan, diff: tabDiff, access: tabAccess, exposure: tabExposure, health: tabHealth,
+     exceptions: tabExceptions, errors: tabErrors, log: tabLog })[S.tab](body);
+  measureSticky();
+  enrichIps(body);
+}
+/* host filter: one host and/or only hosts with their own public IP (configured address or one found on an interface) */
+function publicHosts() {
+  const E = S.runData?.exposure || {};
+  return new Set((S.envData?.hosts || []).filter((h) => h.public || (E[h.name]?.public || []).length).map((h) => h.name));
+}
+const hostOk = (h) => (!S.filt.host || h === S.filt.host) && (!S.filt.ext || S.pub.has(h));
+const hostsOk = (hs) => hs.some(hostOk);
+const prioChips = (count) => PRIOS.map((p) => `<button class="chip" data-p="${p}" aria-pressed="${S.filt.prios.has(p)}"><span class="swatch" style="background:var(--${p.toLowerCase()})"></span>${p}<span class="n">${fmtc(count(p))}</span></button>`).join("");
+function wireFilters(body) {
+  body.querySelectorAll(".chip[data-p]").forEach((b) => b.onclick = () => { const f = S.filt.prios; f.has(b.dataset.p) ? f.delete(b.dataset.p) : f.add(b.dataset.p); renderTabs(); });
+}
+function deniedNote(map) {
+  const hs = Object.entries(map).filter(([, d]) => d.denied?.length).map(([h, d]) => `${h}: ${d.denied.map(cat).join(", ")}`);
+  return hs.length ? `<div class="note">${icon("shield-check")}<span>${t("Some data was not readable — needs")} root ${t("or")} <code>access.sudo: true</code>. <span class="muted">${esc(hs.join("; "))}</span></span></div>` : "";
+}
+const copyBtn = (text) => `<button class="iconbtn xs" data-copy="${esc(text)}" title="${t("Copy")}">${icon("clipboard-document", "sm")}</button>`;
+function wireCopy(body) {
+  body.querySelectorAll("[data-copy]").forEach((b) => b.onclick = async (e) => {
+    e.stopPropagation();
+    try { await navigator.clipboard.writeText(b.dataset.copy); b.innerHTML = icon("check", "sm"); setTimeout(() => (b.innerHTML = icon("clipboard-document", "sm")), 1200); } catch {}
+  });
+}
+
+/* action details: per-host parts are localized one by one (unique texts joined) */
+function detailText(a) {
+  if (!a.detail_parts?.length) return L(a, "detail");
+  const texts = [...new Set(a.detail_parts.map((p) => L(p, "text")).filter(Boolean))];
+  return texts.join("; ");
+}
+
+/* package preview: a few names, the full table on click */
+function fixCell(p) {
+  const fx = esc(p.fixed) || `<span class="muted">${t("no fix")}</span>`;
+  if (p.fix_state === "vendor") return `${fx} <span class="tag" title="${t("the advisory has a fix, the host repositories do not have it yet")}">${t("not in repos")}</span>`;
+  if (p.fix_state === "reboot") return `${esc(p.repo_version)} <span class="tag" title="${t("installed, takes effect after a reboot")}">${t("reboot")}</span>`;
+  if (p.fix_state === "available" && p.repo_version) return `<span title="${t("advisory")}: ${esc(p.fixed)}">${esc(p.repo_version)}</span>`;
+  return fx;
+}
+function pkgPreview(a) {
+  const ps = a.packages, open = S.open.has(a.id);
+  const head = ps.slice(0, 3).map((p) => `<span class="tag" title="${esc(p.installed)} → ${esc(p.fixed)}">${esc(p.pkg)}</span>`).join("");
+  return `<div class="pkgs">${head}${ps.length > 3 || !open ? `<button class="linkbtn" data-open="${esc(a.id)}">${open ? t("hide") : ps.length > 3 ? `+${ps.length - 3} · ${t("show all")}` : t("details")}</button>` : `<button class="linkbtn" data-open="${esc(a.id)}">${t("hide")}</button>`}</div>`
+    + (open ? `<div class="pkgtable"><table><thead><tr><th>prio</th><th>${t("package")}</th><th>${t("installed")}</th><th>${t("update to")}</th><th class="num">CVE</th><th></th></tr></thead><tbody>
+      ${ps.map((p) => `<tr><td>${prioCell(p.priority)}</td><td class="nw"><b>${esc(p.pkg)}</b></td><td class="mono">${esc(p.installed)}</td><td class="mono">${fixCell(p)}</td>
+        <td class="num">${fmtc(p.cves)}</td><td class="nw">${p.rce ? `<span class="tag rce">${icon("fire", "sm")}RCE</span>` : ""}${p.kev ? `<span class="tag kev">KEV</span>` : ""}</td></tr>`).join("")}
+      </tbody></table></div>` : "");
+}
+
+/* что делать */
+const CATS = { kernel: [t("kernel"), "cpu-chip"], eol: [t("end of life"), "no-symbol"], os: [t("OS packages"), "archive-box"], vendor: [t("no fix in repos"), "clock"], image: [t("images"), "cube"],
+               app: [t("dependencies"), "code-bracket"], config: [t("settings"), "cog-6-tooth"], exposure: [t("network"), "globe-alt"],
+               health: [t("health"), "heart"], cleanup: [t("cleanup"), "trash"] };
+function tabActions(body) {
+  const all = S.runData.actions || [], f = S.filt;
+  const vis = (a, ignoreCat) => f.prios.has(a.priority || "P4") && (ignoreCat || !f.cats.size || f.cats.has(a.cat)) && hostsOk(a.hosts) && (!f.rce || a.rce);
+  const rows = all.filter((a) => vis(a));
+  body.innerHTML = `<div class="stickybar">
+    <div class="filters">${prioChips((p) => all.filter((a) => (a.priority || "P4") === p && hostsOk(a.hosts)).length)}
+      <button class="chip" id="frce" aria-pressed="${!!f.rce}" title="${t("only what is exploitable remotely without auth and leads to code execution")}">${icon("fire", "sm")}pre-auth RCE<span class="n">${all.filter((a) => a.rce && f.prios.has(a.priority || "P4") && hostsOk(a.hosts) && (!f.cats.size || f.cats.has(a.cat))).length}</span></button></div>
+    <div class="filters">${Object.entries(CATS).filter(([c]) => all.some((a) => a.cat === c)).map(([c, [label, ic]]) =>
+      `<button class="chip" data-c="${c}" aria-pressed="${f.cats.has(c)}">${icon(ic, "sm")}${label}<span class="n">${all.filter((a) => a.cat === c && vis(a, true)).length}</span></button>`).join("")}</div>
+    <div class="selbar"><input type="checkbox" id="selall" title="${t("select all visible")}" ${rows.length && rows.every((a) => S.sel.has(a.id)) ? "checked" : ""}>
+      <span>${S.sel.size ? `${t("selected")} <b>${S.sel.size}</b>` : t("tick actions to build a task")}</span>
+      ${S.sel.size ? `<button class="linkbtn" id="selclear">${t("clear")}</button>` : ""}
+      <button class="btn" id="copyprompt" ${S.sel.size ? "" : "disabled"} title="${t("Copy a task for an AI agent or an engineer: hosts, access, step-by-step fixes with verification and rollback")}">${icon("clipboard-document", "sm")}${t("Copy prompt")}</button></div></div>
+    ${rows.length ? `<div class="flow">${rows.map((a) => {
+      const cic = (CATS[a.cat] || ["", "cog-6-tooth"])[1];
+      const sub = a.image || a.path || "";
+      return `<div class="act ${S.sel.has(a.id) ? "sel" : ""}">
+        <input type="checkbox" data-sel="${esc(a.id)}" ${S.sel.has(a.id) ? "checked" : ""} aria-label="${t("select")}">
+        <div>${prioCell(a.priority)}</div>
+        <div style="min-width:0">
+          <div class="t">${icon(cic)}<span class="trunc" title="${esc(L(a) + (sub ? " — " + sub : ""))}">${esc(L(a))}</span>${a.rce ? `<span class="tag rce" title="${tf("{n} CVE: remote code execution with no account and no user interaction", { n: a.rce })}">${icon("fire", "sm")}RCE</span>` : ""}${a.kev ? `<span class="tag kev" title="${t("has CVEs from the CISA KEV catalog: exploited in the wild")}">KEV</span>` : ""}</div>
+          ${a.packages?.length ? pkgPreview(a) : a.detail ? (() => { const d = detailText(a); return `<div class="d trunc" title="${esc(d)}">${esc(d)}</div>`; })() : ""}
+          <div class="meta">${hostTags(a.hosts, 4)}${a.hint ? `<span class="cmd"><code title="${esc(L(a, "hint"))}">${esc(L(a, "hint"))}</code>${copyBtn(L(a, "hint"))}</span>` : ""}</div>
+        </div>
+        <div class="side"><span>${dueCell(a.due, a.priority)}</span>${a.cves ? `<span><b>${fmtc(a.cves)}</b> CVE</span>` : ""}</div>
+      </div>`; }).join("")}</div>` : `<div class="empty">${icon("check-circle", "lg")} ${t("Nothing matches the filters")}</div>`}`;
+  wireFilters(body); wireCopy(body);
+  $("#frce").onclick = () => { f.rce = !f.rce; renderTabs(); };
+  body.querySelectorAll("[data-open]").forEach((b) => b.onclick = () => { const id = b.dataset.open; S.open.has(id) ? S.open.delete(id) : S.open.add(id); renderTabs(); });
+  body.querySelectorAll("[data-sel]").forEach((cb) => cb.onchange = () => { cb.checked ? S.sel.add(cb.dataset.sel) : S.sel.delete(cb.dataset.sel); renderTabs(); });
+  $("#selall").onchange = (e) => { rows.forEach((a) => e.target.checked ? S.sel.add(a.id) : S.sel.delete(a.id)); renderTabs(); };
+  if ($("#selclear")) $("#selclear").onclick = () => { S.sel.clear(); renderTabs(); };
+  $("#copyprompt").onclick = async (e) => {
+    const b = e.currentTarget;
+    const d = await api(`/api/prompt?org=${encodeURIComponent(S.org)}&env=${encodeURIComponent(S.env)}&run=${encodeURIComponent(S.run)}&lang=${LANG}&ids=${encodeURIComponent([...S.sel].join(","))}`);
+    try { await navigator.clipboard.writeText(d.text); b.innerHTML = `${icon("check", "sm")}${t("Copied")}`; }
+    catch { const w = window.open("", "_blank"); if (w) { w.document.body.innerText = d.text; } }
+    setTimeout(() => (b.innerHTML = `${icon("clipboard-document", "sm")}${t("Copy prompt")}`), 1500);
+  };
+  body.querySelectorAll(".chip[data-c]").forEach((b) => b.onclick = () => { f.cats.has(b.dataset.c) ? f.cats.delete(b.dataset.c) : f.cats.add(b.dataset.c); renderTabs(); });
+}
+
+/* пакеты */
+function tabPlan(body) {
+  const all = S.runData.plan || [], f = S.filt, q = f.q.trim().toLowerCase();
+  const base = (r) => hostOk(r.host) && (!f.fixable || r.fixed) && (!f.rce || r.preauth_rce);
+  const rows = all.filter((r) => base(r) && f.prios.has(r.priority || "P4") && (!q || `${r.pkg} ${r.target} ${r.cve_top.join(" ")}`.toLowerCase().includes(q)));
+  body.innerHTML = `<div class="stickybar">
+    <div class="filters">${prioChips((p) => all.filter((r) => base(r) && (r.priority || "P4") === p).length)}
+      <input type="search" id="fq" placeholder="${t("package, image")}, CVE" value="${esc(f.q)}">
+      <button class="chip" id="ffix" aria-pressed="${f.fixable}" title="${t("hide packages without a fixed version")}">${icon("check", "sm")}${t("has fix")}</button>
+      <button class="chip" id="frce" aria-pressed="${!!f.rce}" title="${t("has CVEs with remote code execution, no account and no user interaction")}">${icon("fire", "sm")}pre-auth RCE</button>
+      <span class="count">${fmt(rows.length)}</span></div></div>
+    ${rows.length ? `<div class="flow"><table>
+      <thead><tr><th>prio</th><th>${t("due")}</th><th>${t("host")}</th><th>${t("package")}</th><th>${t("where")}</th><th>${t("installed")}</th><th>${t("update to")}</th><th class="num">CVE</th></tr></thead><tbody>
+      ${rows.slice(0, S.limit).map((r) => `<tr>
+        <td>${prioCell(r.priority)}</td><td class="nw">${dueCell(r.due, r.priority)}</td><td class="nw">${esc(r.host)}</td>
+        <td class="nw"><b>${esc(r.pkg)}</b> ${r.preauth_rce ? `<span class="tag rce" title="${r.preauth_rce} CVE: pre-auth RCE">${icon("fire", "sm")}RCE</span>` : ""}${r.kev ? `<span class="tag kev">KEV</span>` : ""}${r.inactive ? `<span class="tag" title="${t("kernel is installed but not booted")}">${t("not booted")}</span>` : ""}</td>
+        ${whereCell(r.target)}
+        <td><div class="cell w2 mono" title="${esc(r.installed)}">${esc(r.installed)}</div></td>
+        <td><div class="cell w2 mono" title="${esc(r.fixed || t("no fix"))}${r.unfixed ? ` · ${r.unfixed} CVE ${t("without a fix")}` : ""}">${fixCell(r)}</div></td>
+        <td class="num" title="${esc(r.cve_top.join("\n") + (r.cves > r.cve_top.length ? "\n…" : ""))}">${fmtc(r.cves)}</td></tr>`).join("")}
+      </tbody></table></div>
+      ${rows.length > S.limit ? `<button class="iconbtn more" id="more">${tf("show {n} more", { n: fmt(Math.min(500, rows.length - S.limit)) })}</button>` : ""}`
+    : `<div class="empty">${t("Nothing matches the filters")}</div>`}`;
+  wireFilters(body);
+  $("#ffix").onclick = () => { f.fixable = !f.fixable; renderTabs(); };
+  $("#frce").onclick = () => { f.rce = !f.rce; renderTabs(); };
+  const fq = $("#fq");
+  fq.oninput = (e) => { f.q = e.target.value; clearTimeout(fq._t); fq._t = setTimeout(() => { renderTabs(); const x = $("#fq"); x.focus(); x.setSelectionRange(x.value.length, x.value.length); }, 250); };
+  if ($("#more")) $("#more").onclick = () => { S.limit += 500; renderTabs(); };
+}
+
+/* изменения */
+function diffTable(rows, empty) {
+  rows = rows.filter((g) => hostOk(g.host));
+  if (!rows.length) return `<div class="empty">${empty}</div>`;
+  return `<div class="scroll"><table><thead><tr><th>prio</th><th>${t("host")}</th><th>${t("package / check")}</th><th>${t("where")}</th><th class="num">CVE</th></tr></thead><tbody>
+    ${rows.slice(0, 1000).map((g) => `<tr><td>${prioCell(g.priority)}</td><td class="nw">${esc(g.host)}</td>
+      <td><div class="cell" title="${esc(g.ids.join(", "))}"><b>${esc(g.pkg)}</b> ${g.rce ? `<span class="tag rce">${icon("fire", "sm")}RCE</span>` : ""}${g.kev ? `<span class="tag kev">KEV</span>` : ""}</div></td>
+      ${whereCell(g.target)}<td class="num">${fmtc(g.count)}</td></tr>`).join("")}
+    </tbody></table></div>${rows.length > 1000 ? `<div class="muted more">${tf("first 1000 of {n}", { n: fmt(rows.length) })}</div>` : ""}`;
+}
+function tabDiff(body) {
+  const rd = S.runData;
+  if (!rd.new) { body.innerHTML = `<div class="empty">${partial(rd.meta) ? t("A partial run is not compared with full runs.") : t("No previous full run.")}</div>`; return; }
+  body.innerHTML = `<div class="note">${icon("arrows-right-left")}<span>${rd.meta.run_id === "current" ? tf("What changed since the full run {run}.", { run: esc(runShort(rd.prev)) }) : tf("Compared with the full run {run}.", { run: esc(runShort(rd.prev)) })} ${t("Only hosts scanned in both.")}</span></div>
+    <div class="cols2"><div><div class="subh">${t("New")} <span class="sub">${fmt(rd.new.rows.length)} · ${fmtc(rd.new.total)} CVE</span></div>${diffTable(rd.new.rows, t("Nothing new"))}</div>
+    <div><div class="subh">${t("Resolved")} <span class="sub">${fmt(rd.resolved.rows.length)} · ${fmtc(rd.resolved.total)} CVE</span></div>${diffTable(rd.resolved.rows, t("Nothing resolved"))}</div></div>`;
+}
+
+/* доступ */
+function tabAccess(body) {
+  const A = S.runData.access || {}, hosts = Object.keys(A).sort().filter(hostOk);
+  if (!hosts.length) { body.innerHTML = `<div class="empty">${tf("Module {module} has not run yet.", { module: "access" })}</div>`; return; }
+  const logins = hosts.flatMap((h) => A[h].logins.accepted.map((x) => ({ host: h, ...x }))).sort((a, b) => (b.last || "").localeCompare(a.last || ""));
+  // attackers across the selected hosts: merge per IP, keep first/last seen and the logins they tried
+  const byIp = {}, daily = {};
+  let lastAttack = null;
+  hosts.forEach((h) => {
+    const L = A[h].logins;
+    if (L.failed_last && (!lastAttack || L.failed_last > lastAttack)) lastAttack = L.failed_last;
+    Object.entries(L.failed_daily || {}).forEach(([d, n]) => { daily[d] = (daily[d] || 0) + n; });
+    (L.attackers || L.failed_top_ips.map(([ip, n]) => ({ ip, n, users: [] }))).forEach((x) => {
+      const t = (byIp[x.ip] ||= { ip: x.ip, n: 0, first: x.first, last: x.last, users: {}, hosts: new Set() });
+      t.n += x.n; t.hosts.add(h);
+      if (x.first && (!t.first || x.first < t.first)) t.first = x.first;
+      if (x.last && (!t.last || x.last > t.last)) t.last = x.last;
+      (x.users || []).forEach(([u, n]) => { t.users[u] = (t.users[u] || 0) + n; });
+    });
+  });
+  const attackers = Object.values(byIp).map((t) => ({ ...t, users: Object.entries(t.users).sort((a, b) => b[1] - a[1]) })).sort((a, b) => b.n - a.n);
+  const keys = {};
+  hosts.forEach((h) => A[h].keys.forEach((k) => { (keys[k.fp] ||= { ...k, where: [] }).where.push(`${k.user}@${h}`); }));
+  const keyRows = Object.values(keys).sort((a, b) => b.where.length - a.where.length);
+  const pw = (a) => a.password_auth === null ? `<span class="muted" title="${esc(a.sshd_source)}">?</span>`
+    : !a.password_auth ? st("ok", t("off"))
+    : a.users_with_password?.length ? st("bad", t("on"), t("password set for") + ": " + a.users_with_password.join(", ")) : st("warn", t("on"), t("no account has a password"));
+  const ts = (v) => (v || "").replace("T", " ").slice(0, 16);
+  const root = (v) => ({ "without-password": t("key only"), "prohibit-password": t("key only"), "forced-commands-only": t("commands"), no: t("no"), yes: t("yes") }[v] || v || "—");
+  body.innerHTML = deniedNote(A) + `
+    <div class="xscroll"><table><thead><tr><th>${t("host")}</th><th title="PasswordAuthentication (sshd -T)">${t("password")}</th><th title="PermitRootLogin">root</th><th>${t("with password")}</th><th class="num">${t("keys")}</th><th class="num">${t("logins")}</th><th class="num" title="${t("unique source addresses of successful logins")}">${t("from")}</th><th class="num">${t("failed")}</th><th class="num" title="${t("unique addresses of failed attempts")}">${t("attackers")}</th><th>${t("last attack")}</th></tr></thead><tbody>
+    ${hosts.map((h) => { const a = A[h], L = a.logins; return `<tr><td class="nw"><b>${esc(h)}</b></td><td>${pw(a)}</td>
+      <td>${a.sshd.permitrootlogin === "yes" ? st("bad", t("yes")) : esc(root(a.sshd.permitrootlogin))}</td>
+      <td>${a.users_with_password === null ? `<span class="muted">?</span>` : a.users_with_password.length ? `<div class="cell w1" title="${esc(a.users_with_password.join(", "))}">${esc(a.users_with_password.join(", "))}</div>` : `<span class="zero">—</span>`}</td>
+      <td class="num" title="root: ${a.keys.filter((k) => k.user === "root").length}">${a.keys.length}</td>
+      <td class="num">${fmtc(L.accepted.reduce((n, x) => n + x.count, 0))}</td><td class="num">${new Set(L.accepted.map((x) => x.ip)).size}</td>
+      <td class="num">${fmtc(L.failed_total)}</td><td class="num">${fmt(L.failed_ips)}</td>
+      <td class="nw" title="${esc((L.failed_last || "").replace("T", " ").slice(0, 16))}">${L.failed_last ? esc(ago(L.failed_last)) : `<span class="zero">—</span>`}</td></tr>`; }).join("")}
+    </tbody></table></div>
+    <div class="subh">${icon("key")}${t("Successful logins")} <span class="sub">~30 ${t("days")}</span></div>
+    ${logins.length ? `<div class="scroll" style="max-height:330px"><table><thead><tr><th>${t("host")}</th><th>${t("who")}</th><th>${t("from")}</th><th>${t("how")}</th><th class="num">${t("times")}</th><th>${t("last")}</th></tr></thead><tbody>
+      ${logins.slice(0, 400).map((x) => `<tr><td class="nw">${esc(x.host)}</td><td><b>${esc(x.user)}</b></td><td>${ipCell(x.ip)}</td>
+        <td>${x.method === "publickey" ? `<span class="ink2">${t("key")}</span>` : st("warn", t("password"))}</td><td class="num">${fmt(x.count)}</td>
+        <td class="nw" title="${t("first")}: ${esc(ts(x.first))}">${esc(ts(x.last))}</td></tr>`).join("")}
+    </tbody></table></div>` : `<div class="empty">${t("No login data")}</div>`}
+    <div class="cols2">
+      <div><div class="subh">${icon("key")}${t("Keys")} <span class="sub">${tf("{n} unique", { n: keyRows.length })}</span></div>
+        ${keyRows.length ? `<div class="scroll" style="max-height:340px"><table><thead><tr><th>${t("key")}</th><th>${t("whose")}</th><th>${t("where")}</th></tr></thead><tbody>
+        ${keyRows.map((k) => `<tr><td class="mono nw" title="${esc(k.fp)}${k.options ? "\n" + esc(k.options) : ""}">${esc(k.type.replace("ssh-", "").replace("ecdsa-sha2-", ""))} ${esc(k.fp.slice(7, 15))}</td>
+          <td><div class="cell w2" title="${esc(k.comment)}">${esc(k.comment) || `<span class="muted">${t("no comment")}</span>`}</div></td>
+          <td>${hostTags(k.where, 3)}</td></tr>`).join("")}
+        </tbody></table></div>` : `<div class="empty">${t("No keys or no access")}</div>`}</div>
+      <div><div class="subh">${icon("clock")}${t("Daily activity")} <span class="sub">${t("failed attempts")}, ~30 ${t("days")}</span></div>
+        <svg id="faildaily" style="width:100%;height:150px;display:block"></svg></div>
+    </div>
+    <div class="subh">${icon("exclamation-triangle")}${t("Password guessing")} <span class="sub">${t("who, how many, when · last attack")} ${esc(ago(lastAttack))}</span></div>
+    ${attackers.length ? `<div class="scroll" style="max-height:420px"><table><thead><tr><th>${t("address")}</th><th class="num">${t("attempts")}</th><th>${t("first")}</th><th>${t("last")}</th><th>${t("logins tried")}</th><th>${t("hosts")}</th></tr></thead><tbody>
+      ${attackers.slice(0, 100).map((x) => `<tr><td>${ipCell(x.ip)}</td><td class="num">${fmt(x.n)}</td>
+        <td class="nw muted">${esc(ts(x.first))}</td><td class="nw" title="${esc(ts(x.last))}">${esc(ago(x.last))}</td>
+        <td><div class="cell w2" title="${esc(x.users.map(([u, n]) => `${u}: ${n}`).join("\n"))}">${x.users.slice(0, 4).map(([u]) => `<span class="tag">${esc(u)}</span>`).join(" ")}</div></td>
+        <td>${hostTags([...x.hosts], 2)}</td></tr>`).join("")}
+    </tbody></table></div>` : `<div class="empty">${t("No attempts")}</div>`}`;
+  drawDaily($("#faildaily"), daily);
+}
+
+function drawDaily(svg, daily) {
+  const days = [];
+  const end = new Date(); end.setHours(0, 0, 0, 0);
+  for (let i = 29; i >= 0; i--) { const d = new Date(end - i * 864e5); days.push(d.toISOString().slice(0, 10)); }
+  const vals = days.map((d) => daily[d] || 0);
+  const W = svg.clientWidth || 400, H = 150, T = 8, B = 20, R = 4;
+  const max = niceMax(Math.max(1, ...vals)), L = 12 + fmt(max).length * 7;
+  const y = (v) => T + (H - T - B) * (1 - v / max), slot = (W - L - R) / days.length, bw = Math.max(3, slot - 2);
+  let out = "";
+  [0, max / 2, max].forEach((v, i) => { out += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${i ? "var(--grid)" : "var(--axis)"}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmtc(v)}</text>`; });
+  vals.forEach((v, i) => {
+    const x = L + slot * i + (slot - bw) / 2, h = v ? Math.max(2, y(0) - y(v)) : 0;
+    out += `<g class="col" data-i="${i}"><rect x="${L + slot * i}" y="${T}" width="${slot}" height="${H - T - B}" fill="transparent"/>`
+      + (h ? `<path d="M${x},${y(0)} V${y(0) - h + Math.min(2, h)} Q${x},${y(0) - h} ${x + Math.min(2, bw / 2)},${y(0) - h} H${x + bw - Math.min(2, bw / 2)} Q${x + bw},${y(0) - h} ${x + bw},${y(0) - h + Math.min(2, h)} V${y(0)} Z" fill="var(--p2)"/>` : "") + `</g>`;
+    if (i === days.length - 1 || (i % 7 === 0 && days.length - 1 - i >= 4)) out += `<text x="${L + slot * i + slot / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--muted)">${days[i].slice(5)}</text>`;
+  });
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = out;
+  svg.querySelectorAll(".col").forEach((g) => {
+    const i = +g.dataset.i;
+    g.onmousemove = (e) => showTip(e, `<div class="t">${days[i]}</div><div class="r"><span>${t("failed attempts")}</span><b>${fmt(vals[i])}</b></div>`);
+    g.onmouseleave = hideTip;
+  });
+}
+
+/* сеть */
+function fwCell(fw) {
+  if (!fw || !fw.readable) return `<span class="muted">${t("no access")}</span>`;
+  const parts = [fw.firewalld === "running" && "firewalld", fw.ufw_active && "ufw", fw.iptables_input_policy && `INPUT ${fw.iptables_input_policy}`, fw.docker_rules && "docker"].filter(Boolean);
+  return fw.has_input_filtering ? st("ok", parts[0] || t("filtering"), parts.join(" · ")) : st("bad", t("no filtering"), parts.join(" · "));
+}
+function tabExposure(body) {
+  const f = S.filt, E = S.runData.exposure || {}, hosts = Object.keys(E).sort().filter(hostOk);
+  if (!hosts.length) { body.innerHTML = `<div class="empty">${tf("Module {module} has not run yet.", { module: "exposure" })}</div>`; return; }
+  const all = hosts.flatMap((h) => E[h].listen.map((x) => ({ host: h, ...x })));
+  const rows = all.filter((x) => hostOk(x.host) && (!f.pubOnly || x.public));
+  body.innerHTML = deniedNote(E) + `
+    <div class="xscroll"><table><thead><tr><th>${t("host")}</th><th>${t("public IP")}</th><th>${t("open to the outside")}</th><th>firewall</th><th></th></tr></thead><tbody>
+    ${hosts.map((h) => { const e = E[h]; const ports = [...new Set(e.listen.filter((x) => x.public).map((x) => x.port))].sort((a, b) => a - b);
+      return `<tr><td class="nw"><b>${esc(h)}</b></td>
+        <td>${e.public.length ? e.public.map((ip) => e.unlisted_public.includes(ip) ? `<span class="tag bad" title="${t("not in the organization config")}">${esc(ip)}</span>` : `<span class="tag">${esc(ip)}</span>`).join(" ") : `<span class="muted" title="${t("no public addresses on the interfaces")}">NAT</span>`}</td>
+        <td><div class="cell mono" title="${esc(ports.join(", "))}">${ports.length ? esc(ports.join(" ")) : `<span class="zero">—</span>`}</div></td>
+        <td>${fwCell(e.firewall)}</td>
+        <td>${e.firewall?.readable ? `<button class="iconbtn xs" data-fw="${esc(h)}" title="${t("show rules")}">${icon("document-text", "sm")}</button>` : ""}</td></tr>`; }).join("")}
+    </tbody></table></div>
+    <pre class="log mono" id="fwraw" hidden></pre>
+    <div class="subh">${icon("signal")}${t("Listening ports")}</div>
+    <div class="filters"><button class="chip" id="fpub" aria-pressed="${f.pubOnly}">${icon("globe-alt", "sm")}${t("outside only")}</button><span class="count">${rows.length}</span></div>
+    <div class="scroll" style="max-height:420px"><table><thead><tr><th>${t("host")}</th><th class="num">${t("port")}</th><th>proto</th><th>${t("address")}</th><th>${t("process")}</th><th>${t("access")}</th></tr></thead><tbody>
+    ${rows.map((x) => `<tr><td class="nw">${esc(x.host)}</td><td class="num"><b>${x.port}</b></td><td class="muted">${esc(x.proto)}</td>
+      <td>${x.addr && !["0.0.0.0", "*", "::"].includes(x.addr) ? ipCell(x.addr) : `<span class="mono">${esc(x.addr || "*")}</span>`}</td>
+      <td>${esc(x.process) || `<span class="muted">?</span>`}</td>
+      <td>${x.local_only ? `<span class="muted">${t("local")}</span>` : x.public ? st("warn", t("outside")) : `<span class="ink2">${t("internal")}</span>`}</td></tr>`).join("")}
+    </tbody></table></div>`;
+  wireFilters(body);
+  $("#fpub").onclick = () => { f.pubOnly = !f.pubOnly; renderTabs(); };
+  body.querySelectorAll("[data-fw]").forEach((b) => b.onclick = async () => {
+    const d = await api(`/api/hostfile?org=${encodeURIComponent(S.org)}&env=${encodeURIComponent(S.env)}&run=${encodeURIComponent(S.run)}&host=${encodeURIComponent(b.dataset.fw)}&name=exposure`);
+    const pre = $("#fwraw");
+    pre.hidden = false;
+    pre.textContent = `# ${b.dataset.fw}\n` + Object.entries(d.firewall_raw || {}).filter(([, v]) => v).map(([k, v]) => `## ${k}\n${v}`).join("\n\n");
+    pre.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  });
+}
+
+/* здоровье */
+function timeCell(x) {
+  const tm = x.time;
+  if (!tm) return x.ntp_synced === "yes" ? st("ok", "") : x.ntp_synced === "no" ? st("warn", t("no")) : `<span class="muted">?</span>`;
+  const off = tm.offset_s, offTxt = off == null ? "" : Math.abs(off) < 1 ? `${Math.round(off * 1000)} ${t("ms")}` : `${off.toFixed(1)} ${t("s")}`;
+  const tip = [`${t("synchronization")}: ${tm.synced ?? "?"}`, `${t("service")}: ${tm.service || "?"}${tm.service_active ? " (" + t("active)") : ""}`, tm.source && `${t("source")}: ${tm.source}`,
+    tm.stratum && `stratum ${tm.stratum}`, offTxt && `${t("offset")}: ${offTxt}`, tm.skew_s != null && `${t("skew vs scanner")}: ${tm.skew_s.toFixed(1)} ${t("s")}`].filter(Boolean).join("\n");
+  const bad = tm.synced === "no" || (tm.skew_s != null && Math.abs(tm.skew_s) > 30);
+  const warn = !bad && ((off != null && Math.abs(off) > 1) || (tm.skew_s != null && Math.abs(tm.skew_s) > 2) || !tm.service_active);
+  return st(bad ? "bad" : warn ? "warn" : "ok", offTxt || (tm.synced === "yes" ? "" : tm.synced || ""), tip);
+}
+function tabHealth(body) {
+  const H = S.runData.health || {}, allHosts = Object.keys(H).sort(), hosts = allHosts.filter(hostOk);
+  if (!hosts.length) { body.innerHTML = `<div class="empty">${tf("Module {module} has not run yet.", { module: "health" })}</div>`; return; }
+  const pct = (v) => v >= 95 ? `<b class="overdue">${v}%</b>` : v >= 85 ? `<b>${v}%</b>` : `${v}%`;
+  const maxOf = (rows) => rows?.length ? rows.reduce((a, b) => (b.use > a.use ? b : a)) : null;
+  const tzs = allHosts.map((h) => H[h].time?.timezone).filter(Boolean);
+  const tzMain = tzs.sort((a, b) => tzs.filter((v) => v === b).length - tzs.filter((v) => v === a).length)[0];
+  body.innerHTML = deniedNote(H) + `
+    <div class="xscroll"><table><thead><tr><th>${t("host")}</th><th>${t("disk")}</th><th>inode</th><th>${t("memory")}</th><th>load</th><th>${t("units")}</th><th>${t("kernel")} (dmesg)</th><th class="num" title="${t("journal errors in 7 days")}">journal</th><th>${t("time zone")}</th><th>${t("time")}</th></tr></thead><tbody>
+    ${hosts.map((h) => { const x = H[h], d = maxOf(x.disks), i = maxOf(x.inodes), cls = Object.values(x.dmesg?.classes || {}), tz = x.time?.timezone;
+      return `<tr><td class="nw"><b>${esc(h)}</b></td>
+        <td class="nw" title="${esc((x.disks || []).map((r) => `${r.mount} ${r.use}%`).join("\n"))}">${d ? `${pct(d.use)} <span class="muted">${esc(d.mount)}</span>` : "—"}</td>
+        <td>${i ? pct(i.use) : "—"}</td>
+        <td class="nw" title="${x.mem ? `${tf("{avail} of {total} MB free", { avail: fmt(x.mem.available_mb), total: fmt(x.mem.total_mb) })}` : ""}">${x.mem ? `${tf("{pct}% free", { pct: Math.round(100 * x.mem.available_mb / x.mem.total_mb) })}` : "—"}</td>
+        <td class="nw">${x.load ? `${x.load.load15}<span class="muted">/${x.load.cpus}</span>` : "—"}</td>
+        <td>${x.failed_units?.length ? st("warn", String(x.failed_units.length), x.failed_units.join("\n")) : `<span class="zero">—</span>`}</td>
+        <td>${x.denied?.includes("denied.dmesg") ? `<span class="muted">${t("no access")}</span>` : cls.length ? cls.map((c) => `<span class="tag" title="${esc(c.last)}">${esc(cat(c.key, c.title).split(" (")[0])} ${c.count}</span>`).join(" ") : st("ok", "")}</td>
+        <td class="num">${x.denied?.includes("denied.journal") ? `<span class="muted">?</span>` : fmtc(x.journal?.errors_7d)}</td>
+        <td class="nw">${tz ? (tz !== tzMain ? st("warn", tz, `${t("differs from most hosts")} (${tzMain})`) : `<span class="ink2">${esc(tz)}</span>`) : `<span class="muted">?</span>`}</td>
+        <td class="nw">${timeCell(x)}</td></tr>`; }).join("")}
+    </tbody></table></div>
+    ${hosts.filter((h) => Object.keys(H[h].dmesg?.classes || {}).length).map((h) => `
+      <div class="subh">${icon("cpu-chip")}${esc(h)} <span class="sub">${t("latest kernel messages")}</span></div>
+      <pre class="log mono" style="max-height:200px">${esc((H[h].dmesg.tail || []).slice(-20).join("\n"))}</pre>`).join("")}`;
+}
+
+function tabExceptions(body) {
+  const hf = (x) => hostOk(x.host);
+  const ex = S.runData.exceptions.filter(hf), bp = (S.runData.backported || []).filter(hf);
+  const exStatus = (e) => e.fix_available ? st("bad", "", t("fix in the repositories — back in the plan")) : e.expired ? st("bad", "", t("expired — back in the plan")) : st("ok", "", t("accepted"));
+  body.innerHTML = (ex.length ? `<div class="scroll"><table><thead><tr><th></th><th>${t("host")}</th><th>id</th><th>${t("package")}</th><th>${t("until")}</th><th>${t("who")}</th><th>${t("reason")}</th></tr></thead><tbody>
+    ${ex.map((f) => `<tr><td>${exStatus(f.exception)}</td><td class="nw">${esc(f.host)}</td><td class="mono">${esc(f.id)}</td>
+      <td>${esc(f.pkg)}</td><td class="nw">${esc(f.exception.review_by)}</td><td>${esc(f.exception.owner)}</td><td><div class="cell" title="${esc(f.exception.reason)}">${esc(f.exception.reason)}</div></td></tr>`).join("")}</tbody></table></div>`
+    : `<div class="empty">${tf("No exceptions. Accepted risks live in {section} of the organization file.", { section: "<code>exceptions</code>" })}</div>`)
+    + (bp.length ? `<div class="subh" style="margin-top:24px">${icon("shield-check")}${t("Already fixed in the installed build")} <span class="sub">${fmtc(bp.reduce((n, r) => n + r.cves, 0))} CVE</span></div>
+      <div class="note">${icon("check")}<span>${t("Matched by version, but the package changelog lists these CVEs as fixed (backport). They are not in the plan or the counts.")}</span></div>
+      <div class="scroll"><table><thead><tr><th>${t("host")}</th><th>${t("package")}</th><th>${t("installed")}</th><th class="num">CVE</th><th></th></tr></thead><tbody>
+      ${bp.map((r) => `<tr><td class="nw">${esc(r.host)}</td><td class="nw"><b>${esc(r.pkg)}</b></td><td class="mono">${esc(r.installed)}</td><td class="num">${fmtc(r.cves)}</td>
+        <td><div class="cell mono" title="${esc(r.ids.join(" "))}">${esc(r.ids.join(" "))}${r.cves > r.ids.length ? " …" : ""}</div></td></tr>`).join("")}</tbody></table></div>` : "");
+}
+function tabErrors(body) {
+  const m = S.runData.meta;
+  const rows = [...Object.entries(m.hosts_failed).map(([h, e]) => [h, "bad", e]), ...Object.entries(m.module_errors || {}).flatMap(([h, es]) => es.map((e) => [h, "warn", e]))]
+    .filter(([h]) => hostOk(h));
+  body.innerHTML = rows.length ? `<table><thead><tr><th></th><th>${t("host")}</th><th>${t("error")}</th></tr></thead><tbody>
+    ${rows.map(([h, k, e]) => `<tr><td>${st(k, "", k === "bad" ? t("host unreachable") : t("module error"))}</td><td class="nw"><b>${esc(h)}</b></td><td class="mono" style="overflow-wrap:anywhere">${esc(e)}</td></tr>`).join("")}</tbody></table>`
+    : `<div class="empty">${icon("check-circle", "lg")} ${t("No errors")}</div>`;
+}
+async function tabLog(body) {
+  if (S.run === "current") { body.innerHTML = `<div class="empty">${t("Logs belong to individual runs — pick a run above.")}</div>`; return; }
+  body.innerHTML = `<div class="empty">${t("loading…")}</div>`;
+  const d = await api(`/api/log?org=${encodeURIComponent(S.org)}&env=${encodeURIComponent(S.env)}&run=${encodeURIComponent(S.run)}`);
+  body.innerHTML = d.lines.length ? `<pre class="log mono" style="max-height:600px">${esc(d.lines.join("\n"))}</pre>` : `<div class="empty">${t("No log.")}</div>`;
+}
+
+function measureSticky() {
+  const root = document.documentElement.style;
+  root.setProperty("--hdr", document.querySelector("header").offsetHeight + "px");
+  root.setProperty("--tabsh", document.querySelector(".tabsbar").offsetHeight + "px");
+  const sb = document.querySelector("#tabbody > .stickybar");
+  root.setProperty("--filth", (sb ? sb.offsetHeight : 0) + "px");
+}
+addEventListener("resize", measureSticky);
+function renderRun() { renderKpis(); renderHosts(); renderTabs(); renderTrend(); }
+
+/* ---------------- wiring ---------------- */
+$("#org").onchange = async (e) => { S.org = e.target.value; S.env = null; S.run = null; S.runData = null; S.filt.host = ""; S.sel.clear(); renderEnvs(); await loadEnv(); };
+$("#envs").onclick = async (e) => {
+  const b = e.target.closest("button[data-env]"); if (!b) return;
+  S.env = b.dataset.env; S.run = null; S.runData = null; S.filt.host = ""; S.sel.clear();
+  $("#envs").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+  await loadEnv();
+};
+$("#run").onchange = async (e) => { S.run = e.target.value; await loadRun(); renderTrend(); writeHash(); };
+const curTheme = () => document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+const themeIcon = () => { $("#theme").innerHTML = icon(curTheme() === "dark" ? "sun" : "moon"); };
+$("#theme").onclick = () => { document.documentElement.dataset.theme = curTheme() === "dark" ? "light" : "dark"; store.set("kn.theme", document.documentElement.dataset.theme); themeIcon(); };
+{ const t = store.get("kn.theme", ""); if (t) document.documentElement.dataset.theme = t; themeIcon(); }
+addEventListener("resize", () => { clearTimeout(window._rt); window._rt = setTimeout(renderTrend, 150); });
+
+$("#tz").onclick = () => {
+  UTC = !UTC;
+  try { localStorage.setItem("kn.tz", UTC ? "utc" : "local"); } catch {}
+  location.reload();  // run names in selects and tables are built from it
+};
+/* language: a menu of the languages under the button, each in its own name */
+function closeMenu() { document.querySelector(".menu")?.remove(); }
+$("#lang").onclick = (ev) => {
+  ev.stopPropagation();
+  if (document.querySelector(".menu")) return closeMenu();
+  const r = $("#lang").getBoundingClientRect();
+  const m = document.createElement("div");
+  m.className = "menu"; m.setAttribute("role", "menu");
+  m.innerHTML = LANGS.map((l) => `<button role="menuitemradio" aria-checked="${l === LANG}" data-lang="${l}">` +
+    `<span>${esc(LANG_NAMES[l] || l)}</span><span class="code">${l.toUpperCase()}</span></button>`).join("");
+  document.body.append(m);
+  m.style.top = `${r.bottom + 6}px`;
+  m.style.left = `${Math.max(8, Math.min(r.right - m.offsetWidth, innerWidth - m.offsetWidth - 8))}px`;
+  m.onclick = (e) => {
+    const b = e.target.closest("button[data-lang]");
+    if (!b) return;
+    closeMenu();
+    if (b.dataset.lang === LANG) return;
+    LANG = b.dataset.lang;
+    try { localStorage.setItem("kn.lang", LANG); } catch {}
+    location.reload();  // labels in constants (tabs, priorities, categories) are built once at load
+  };
+  m.querySelector('[aria-checked="true"]')?.focus();
+};
+document.addEventListener("click", (e) => { if (!e.target.closest(".menu")) closeMenu(); });
+document.addEventListener("keydown", (e) => {
+  const m = document.querySelector(".menu");
+  if (!m) return;
+  if (e.key === "Escape") { closeMenu(); $("#lang").focus(); }
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    const items = [...m.querySelectorAll("button")], i = items.indexOf(document.activeElement);
+    items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus();
+    e.preventDefault();
+  }
+});
+applyStatic();
+
+renderSkeleton();
+let timer;
+async function tick() {
+  clearTimeout(timer);
+  try { await loadOrgs(); renderEnvs(); await loadEnv(true); if (await loadJobs()) pollJobs(); }
+  catch { $("#livepill").innerHTML = `<span class="dot" style="background:var(--bad)"></span>${t("offline")}`; }
+  timer = setTimeout(tick, S.envData?.live?.state === "running" ? 3000 : 15000);
+}
+api("/api/i18n").then((d) => { CATALOG = d.messages || {}; if (S.runData) renderRun(); }).catch(() => {}).finally(tick);
+</script>
+</body>
+</html>
