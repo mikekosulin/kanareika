@@ -7,10 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/mikekosulin/kanareika/internal/config"
+	"github.com/mikekosulin/kanareika/internal/dbget"
 	"github.com/mikekosulin/kanareika/internal/priority"
 	"github.com/mikekosulin/kanareika/internal/prompt"
 	"github.com/mikekosulin/kanareika/internal/server"
@@ -168,14 +170,32 @@ func TestMigrateReportsSteps(t *testing.T) {
 
 func TestDBUpdateNoIPDB(t *testing.T) {
 	sandbox(t)
-	old := updateFeeds
-	t.Cleanup(func() { updateFeeds = old })
-	updateFeeds = func(context.Context, *priority.Policy) (priority.Stats, error) {
-		return priority.Stats{KEV: 1, EPSS: 2}, nil
+	old := downloadJobs
+	t.Cleanup(func() { downloadJobs = old })
+	var asked []string
+	downloadJobs = func(_ *priority.Policy, names []string) []dbget.Job {
+		asked = names
+		var jobs []dbget.Job
+		for _, n := range names {
+			jobs = append(jobs, dbget.Job{Name: n, Label: dbget.Labels[n], Optional: strings.HasPrefix(n, "dbip-"),
+				Run: func(context.Context, *dbget.Progress) error {
+					switch n {
+					case "kev":
+						write(t, filepath.Join(priority.FeedsDir(), "kev.json"), `["CVE-1"]`)
+					case "epss":
+						write(t, filepath.Join(priority.FeedsDir(), "epss.json"), `{"CVE-1": 0.1, "CVE-2": 0.2}`)
+					default:
+						return errors.New("down")
+					}
+					return nil
+				}})
+		}
+		return jobs
 	}
-	code, out, _ := cli(t, "db", "update", "--skip-trivy")
-	if code != 0 || !strings.HasPrefix(out, "KEV: 1 CVEs, EPSS: 2 scores, IP DB (DB-IP Lite): city none, asn none -> ") {
-		t.Fatal(code, out)
+	code, out, errs := cli(t, "db", "update", "--skip-trivy")
+	if code != 0 || !strings.HasPrefix(out, "KEV: 1 CVEs, EPSS: 2 scores, IP DB (DB-IP Lite): city none, asn none -> ") ||
+		slices.Contains(asked, "db") || !strings.Contains(errs, "IP networks (DB-IP ASN): failed: down") {
+		t.Fatal(code, out, errs, asked)
 	}
 }
 
@@ -188,7 +208,7 @@ func TestUpdateDBFunc(t *testing.T) {
 	if err := a.updateDBFunc(context.Background(), &out); err != nil {
 		t.Fatal(err)
 	}
-	if s := out.String(); !strings.Contains(s, "KEV: 3 CVEs") || !strings.Contains(s, "trivy db: downloaded") ||
+	if s := out.String(); !strings.Contains(s, "KEV: 3 CVEs") || !strings.Contains(s, "Vulnerability DB (trivy-db): done") ||
 		!strings.Contains(s, "trivy db: 2026-11-05 19:01Z") {
 		t.Fatal(s)
 	}

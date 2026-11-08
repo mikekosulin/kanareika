@@ -74,13 +74,26 @@ type dbKind struct {
 	repos    []string // default: GitHub Container Registry (published there by Aqua), then its mirrors
 	// lazy: downloaded only when a scan needs it (java-db, ~1 GB: only for .jar files); refreshed once present
 	lazy bool
+	// as trivy keeps it (pkg/db, pkg/javadb): the DB file, the schema of the tag, the layer's media type, and how
+	// long a download counts as fresh after DownloadedAt once NextUpdate has passed
+	file      string
+	schema    int
+	mediaType string
+	window    time.Duration
 }
 
 var dbKinds = []dbKind{
-	{"db", "--download-db-only", "--db-repository", "TRIVY_DB_REPOSITORY", "KANAREIKA_TRIVY_DB_REPOS",
-		[]string{"ghcr.io/aquasecurity/trivy-db:2", "mirror.gcr.io/aquasec/trivy-db:2", "public.ecr.aws/aquasecurity/trivy-db:2"}, false},
-	{"java-db", "--download-java-db-only", "--java-db-repository", "TRIVY_JAVA_DB_REPOSITORY", "KANAREIKA_TRIVY_JAVA_DB_REPOS",
-		[]string{"ghcr.io/aquasecurity/trivy-java-db:1", "mirror.gcr.io/aquasec/trivy-java-db:1", "public.ecr.aws/aquasecurity/trivy-java-db:1"}, true},
+	{name: "db", flag: "--download-db-only", repoFlag: "--db-repository", trivyEnv: "TRIVY_DB_REPOSITORY",
+		ourEnv: "KANAREIKA_TRIVY_DB_REPOS",
+		repos: []string{"ghcr.io/aquasecurity/trivy-db:2", "mirror.gcr.io/aquasec/trivy-db:2",
+			"public.ecr.aws/aquasecurity/trivy-db:2"},
+		file: "trivy.db", schema: 2, mediaType: "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip", window: time.Hour},
+	{name: "java-db", flag: "--download-java-db-only", repoFlag: "--java-db-repository", trivyEnv: "TRIVY_JAVA_DB_REPOSITORY",
+		ourEnv: "KANAREIKA_TRIVY_JAVA_DB_REPOS",
+		repos: []string{"ghcr.io/aquasecurity/trivy-java-db:1", "mirror.gcr.io/aquasec/trivy-java-db:1",
+			"public.ecr.aws/aquasecurity/trivy-java-db:1"},
+		lazy: true, file: "trivy-java.db", schema: 1, mediaType: "application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip",
+		window: 24 * time.Hour},
 }
 
 // dbTimeout: per download attempt. Passed to trivy as well: its own default (5m) is too short for a slow link.
@@ -198,7 +211,7 @@ func Prepare(ctx context.Context, logf func(string, ...any)) error {
 		if k.lazy && k.cachedAt().IsZero() {
 			continue // downloaded by the first run that needs it (Run)
 		}
-		err := k.download(ctx, logf)
+		err := k.fetch(ctx, nil, logf)
 		if err == nil {
 			continue
 		}
@@ -581,7 +594,7 @@ var (
 func DownloadOnDemand(ctx context.Context, logf func(string, ...any)) error {
 	for _, k := range dbKinds {
 		if k.lazy {
-			if err := k.download(ctx, logf); err != nil {
+			if err := k.fetch(ctx, nil, logf); err != nil {
 				return err
 			}
 		}
@@ -605,7 +618,7 @@ func fetchLazy(ctx context.Context) bool {
 		if logf != nil {
 			logf("trivy %s: found .jar files, downloading the Java DB once (about 1 GB)", k.name)
 		}
-		if err := k.download(ctx, logf); err != nil {
+		if err := k.fetch(ctx, nil, logf); err != nil {
 			if logf != nil {
 				logf("WARNING: trivy %s: %v", k.name, err)
 			}
