@@ -376,7 +376,7 @@ func TestReadOnlyAndLanguages(t *testing.T) {
 	h.has("Язык", "English", "✓ Русский", "中文")
 	h.key("down", "enter")
 	h.has("扫描[0]", "此处无法启动扫描")
-	// the menu lists every language, English first: from 中文 (the last) up to it
+	// the menu lists every language, English first: from 中文, all the way up to it
 	langs := i18n.Langs()
 	steps := func(dir string, n int) []string { return slices.Repeat([]string{dir}, n) }
 	h.key(append(append([]string{"L"}, steps("up", len(langs)-1)...), "space")...)

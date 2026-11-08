@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/mikekosulin/kanareika/internal/i18n"
 )
 
 // root: the repository, from this package's directory.
@@ -43,14 +45,9 @@ func localeNames(t *testing.T) (langs []string, names map[string]string) {
 		langs = append(langs, lang)
 		names[lang] = l.Name
 	}
-	// as i18n.Langs and the menus: English first, then the others by code
-	first := func(l string) string {
-		if l == "en" {
-			return ""
-		}
-		return l
-	}
-	slices.SortFunc(langs, func(a, b string) int { return cmp.Compare(first(a), first(b)) })
+	// in the order of the interfaces' language menus (English first, then by their own names)
+	order := i18n.Langs()
+	slices.SortFunc(langs, func(a, b string) int { return cmp.Compare(slices.Index(order, a), slices.Index(order, b)) })
 	return langs, names
 }
 

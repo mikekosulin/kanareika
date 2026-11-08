@@ -48,7 +48,8 @@ func load() {
 	}
 }
 
-// Langs: the default first, then the rest sorted.
+// Langs: the default first, then the rest by their own names, as language switchers usually list them: Latin
+// script, then Cyrillic, then Chinese, Japanese, Korean (Español, Français, …, Русский, 中文, 日本語, 한국어).
 func Langs() []string {
 	once.Do(load)
 	var out []string
@@ -57,7 +58,12 @@ func Langs() []string {
 			out = append(out, l)
 		}
 	}
-	sort.Strings(out)
+	sort.Slice(out, func(i, j int) bool {
+		if a, b := Name(out[i]), Name(out[j]); a != b {
+			return a < b
+		}
+		return out[i] < out[j]
+	})
 	return append([]string{Default}, out...)
 }
 

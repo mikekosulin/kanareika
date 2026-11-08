@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -547,13 +548,20 @@ func (m *Model) setView(v view) {
 
 // languages: English first, then the others by code.
 func (m *Model) languages() []string {
-	langs := []string{"en"}
+	// in the order of i18n.Langs (English, then by their own names); any this build has no file for, last
+	langs, order := []string{"en"}, i18n.Langs()
 	for l := range m.t.ui {
 		if l != "en" {
 			langs = append(langs, l)
 		}
 	}
-	sort.Strings(langs[1:])
+	rank := func(l string) int {
+		if i := slices.Index(order, l); i >= 0 {
+			return i
+		}
+		return len(order)
+	}
+	slices.SortFunc(langs[1:], func(a, b string) int { return cmp.Or(cmp.Compare(rank(a), rank(b)), cmp.Compare(a, b)) })
 	return langs
 }
 
