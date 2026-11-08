@@ -10,19 +10,14 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
-	"errors"
 	"flag"
-	"fmt"
 	"html/template"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
-	"strings"
-	"time"
+
+	"github.com/mikekosulin/kanareika/tools/internal/chrome"
 )
 
 // sources: the pages to fill in and the style they share. Read from files, not embedded: what goes into a binary
@@ -44,21 +39,12 @@ func load(dir string) (sources, error) {
 	return s, nil
 }
 
-// seams for tests: main's fatal exit, Chrome itself, and where Chrome is looked for
+// seams for tests: main's fatal exit, where Chrome is, and Chrome itself
 var (
-	fatal     = log.Fatal
-	runChrome = func(ctx context.Context, bin string, args ...string) error {
-		out, err := exec.CommandContext(ctx, bin, args...).CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("%s: %w: %s", bin, err, bytes.TrimSpace(out))
-		}
-		return nil
-	}
-	lookPath = exec.LookPath
-	goos     = runtime.GOOS
-	absPath  = filepath.Abs
-	macApps  = []string{"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-		"/Applications/Chromium.app/Contents/MacOS/Chromium"}
+	fatal      = log.Fatal
+	findChrome = chrome.Find
+	fileURL    = chrome.FileURL
+	shot       = chrome.Shot
 )
 
 // row: one line of the ToDo list in the picture.
@@ -125,14 +111,14 @@ func main() {
 	out := flag.String("out", "docs/brand", "directory to write the pictures to")
 	logo := flag.String("logo", "assets/web/logo.png", "the canary")
 	pages := flag.String("pages", "tools/brand", "where og.html, banner.html and style.css are")
-	chrome := flag.String("chrome", "", "Chrome or Chromium to render with (default: found on its own; none: pages only)")
+	bin := flag.String("chrome", "", "Chrome or Chromium to render with (default: found on its own; none: pages only)")
 	flag.Parse()
-	if err := run(*out, *logo, *pages, *chrome); err != nil {
+	if err := run(*out, *logo, *pages, *bin); err != nil {
 		fatal(err)
 	}
 }
 
-func run(out, logoPath, pagesDir, chrome string) error {
+func run(out, logoPath, pagesDir, bin string) error {
 	src, err := load(pagesDir)
 	if err != nil {
 		return err
@@ -148,22 +134,22 @@ func run(out, logoPath, pagesDir, chrome string) error {
 	if err := os.MkdirAll(out, 0o755); err != nil {
 		return err
 	}
-	if chrome == "" {
-		chrome = findChrome()
+	if bin == "" {
+		bin = findChrome()
 	}
 	for _, p := range pics {
 		page := filepath.Join(out, p.name+".html")
 		if err := os.WriteFile(page, p.html, 0o644); err != nil {
 			return err
 		}
-		if chrome == "" {
+		if bin == "" {
 			continue
 		}
-		if err := render(chrome, page, filepath.Join(out, p.name+".png"), p.w, p.h); err != nil {
+		if err := render(bin, page, filepath.Join(out, p.name+".png"), p.w, p.h); err != nil {
 			return err
 		}
 	}
-	if chrome == "" {
+	if bin == "" {
 		log.Printf("no Chrome found (-chrome): wrote the pages to %s, not the pictures", out)
 	}
 	return nil
@@ -208,51 +194,11 @@ func pictures(logo string, src sources) ([]picture, error) {
 	return pics, nil
 }
 
-// findChrome: Chrome or Chromium on this machine, "" if there is none.
-func findChrome() string {
-	if goos == "darwin" {
-		for _, p := range macApps {
-			if _, err := os.Stat(p); err == nil {
-				return p
-			}
-		}
-	}
-	for _, n := range []string{"google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "chrome"} {
-		if p, err := lookPath(n); err == nil {
-			return p
-		}
-	}
-	return ""
-}
-
-// render: one page to PNG at 2x; transparent where the page is (the banner's rounded corners).
-func render(chrome, page, png string, w, h int) error {
-	abs, err := absPath(page)
+// render: one page to PNG at 2x.
+func render(bin, page, png string, w, h int) error {
+	url, err := fileURL(page)
 	if err != nil {
 		return err
 	}
-	shot, err := absPath(png)
-	if err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	if err := runChrome(ctx, chrome, "--headless=new", "--disable-gpu", "--hide-scrollbars",
-		"--force-device-scale-factor=2", "--default-background-color=00000000",
-		fmt.Sprintf("--window-size=%d,%d", w, h), "--screenshot="+shot, fileURL(abs)); err != nil {
-		return err
-	}
-	if _, err := os.Stat(shot); err != nil {
-		return errors.New("chrome wrote no picture: " + shot)
-	}
-	return nil
-}
-
-// fileURL: file:///home/x/og.html, file:///C:/x/og.html on Windows.
-func fileURL(abs string) string {
-	p := filepath.ToSlash(abs)
-	if !strings.HasPrefix(p, "/") {
-		p = "/" + p
-	}
-	return "file://" + p
+	return shot(bin, url, png, w, h)
 }
