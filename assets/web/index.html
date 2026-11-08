@@ -591,6 +591,47 @@ main { background: var(--bg); }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
 .st .spin { margin-right: 4px; }
+/* onboarding: stepper, two columns, downloads card */
+.onbwrap { max-width: 1080px; margin: 28px auto; padding: 0 24px 48px; }
+.onbwrap .onb, .onbwrap .onb.wide { max-width: none; margin: 0; padding: 0; }
+.onbwrap .onb h2:first-child { margin-top: 0; }
+.onbcols { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
+.stepper { list-style: none; margin: 0 0 30px; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); max-width: 720px; }
+.stepper li { position: relative; display: grid; justify-items: start; gap: 2px; padding-right: 16px; }
+.stepper li + li::before { content: ""; position: absolute; top: 15px; left: calc(-100% + 46px); width: calc(100% - 54px); height: 2px; border-radius: 2px; background: var(--line-2); }
+.stepper li.done + li::before { background: linear-gradient(90deg, var(--ok), color-mix(in oklab, var(--ok) 40%, var(--line-2))); }
+.stepper li.on::before { background: linear-gradient(90deg, var(--ok), var(--accent)) !important; }
+.stepper .dotn { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font: 600 13px var(--mono); color: var(--ink-3);
+  border: 1.5px solid var(--line-2); background: var(--solid); margin-bottom: 8px; transition: box-shadow .2s var(--ease), background .2s var(--ease); }
+.stepper .dotn svg { width: 15px; height: 15px; }
+.stepper li.on .dotn { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 5px color-mix(in oklab, var(--accent) 22%, transparent); }
+.stepper li.done .dotn { background: color-mix(in oklab, var(--ok) 14%, var(--solid)); border-color: var(--ok); color: var(--ok); }
+.stepper b { font-size: 13.5px; font-weight: 600; color: var(--ink-3); }
+.stepper li.on b, .stepper li.done b { color: var(--ink); }
+.stepper small { font-size: 12px; color: var(--ink-3); }
+.dlcard { position: sticky; top: 20px; border: 1px solid var(--line-2); border-radius: var(--r-panel); background: var(--solid); padding: 16px; display: grid; gap: 12px; box-shadow: var(--shadow); }
+.dlcard header { display: flex; align-items: center; gap: 8px; }
+.dlcard header svg { width: 18px; height: 18px; color: var(--accent-line); }
+.dlcard header b { font-size: 14px; flex: 1; }
+.dlcard .total { font: 600 13px var(--mono); padding: 2px 8px; border-radius: var(--r-pill); background: color-mix(in oklab, var(--accent) 16%, transparent); color: var(--ink); }
+.dlcard .okb { display: inline-flex; gap: 5px; align-items: center; color: var(--ok); font-size: 13px; font-weight: 600; } .dlcard .okb svg { width: 14px; height: 14px; }
+.dlcard p.note { margin: 0; font-size: 12.5px; line-height: 1.45; }
+.dllist { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.dllist li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.dllist b { display: block; font-size: 13px; font-weight: 500; } .dllist small { display: block; font-size: 11.5px; color: var(--ink-3); }
+.dllist code { font: 500 12.5px var(--mono); color: var(--ink-2); white-space: nowrap; }
+.dlcard .warnline { display: flex; gap: 7px; align-items: flex-start; } .dlcard .warnline svg { flex: none; width: 14px; height: 14px; margin-top: 2px; color: var(--p2); }
+.dlcard .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 0; }
+.dlcard .bar { height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.dlcard .bar i { display: block; height: 100%; width: 35%; border-radius: 4px; background: var(--accent); animation: dlbar 1.4s var(--ease) infinite; }
+@keyframes dlbar { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+@media (prefers-reduced-motion: reduce) { .dlcard .bar i { animation: none; width: 100%; opacity: .5; } }
+.dlnow { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.dllast { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dlcard.ok { border-color: color-mix(in oklab, var(--ok) 40%, var(--line-2)); }
+.dlcard.bad { border-color: color-mix(in oklab, var(--err) 45%, var(--line-2)); }
+@media (max-width: 1100px) { .onbcols { grid-template-columns: 1fr; } .dlcard { position: static; order: -1; } }
+@media (max-width: 640px) { .stepper small { display: none; } .stepper li + li::before { left: calc(-100% + 42px); width: calc(100% - 50px); } .onbwrap { padding: 0 16px 40px; } }
 
 /* end-extra-css */
 </style>
@@ -922,11 +963,73 @@ const FOUND = { v: null };
 async function discover() { if (!FOUND.v) { try { FOUND.v = await api("/api/setup/discover"); } catch { FOUND.v = { user: "", keys: [], agent_keys: 0, hosts: [] }; } } return FOUND.v; }
 function freeId(base) { let id = base, i = 2; while (S.orgs.some((o) => o.id === id)) id = base + "-" + i++; return id; }
 function stepsHead(s) {
-  const steps = [t("Your servers"), t("Access check"), t("First scan")];
-  return `<div class="steps2">${steps.map((x, i) => `<span class="${i + 1 === s.step ? "on" : i + 1 < s.step ? "done" : ""}">${i + 1 < s.step ? icon("check") : i + 1}</span><b>${x}</b>`).join("")}</div>`;
+  const cur = Math.max(1, s.step);
+  const steps = [["Servers", "what to audit"], ["Access", "an SSH login to each"], ["First scan", "read-only, a few minutes"]];
+  return `<ol class="stepper" aria-label="${t("Setup steps")}">${steps.map(([l, sub], i) => {
+    const n = i + 1, st = n < cur ? "done" : n === cur ? "on" : "";
+    return `<li class="${st}" ${n === cur ? 'aria-current="step"' : ""}><span class="dotn">${n < cur ? icon("check") : n}</span><b>${t(l)}</b><small>${t(sub)}</small></li>`;
+  }).join("")}</ol>`;
+}
+/* ---------- vulnerability DB downloads: asked, never started on their own (mobile data) ---------- */
+const DL = [["db", "Linux packages", "OS and library CVEs (trivy-db)"], ["java-db", "Java libraries", "jar files in images and on servers"],
+  ["ip", "IP locations", "DB-IP Lite, used offline"], ["feeds", "Exploit data", "CISA KEV and EPSS"]];
+const DLKEYS = { db: ["db"], "java-db": ["java-db"], ip: ["dbip-city", "dbip-asn"], feeds: ["kev", "epss"] };
+function bytes(n) { return n >= 1e9 ? (n / 1e9).toFixed(1) + " GB" : n >= 1e6 ? Math.round(n / 1e6) + " MB" : n > 0 ? Math.max(1, Math.round(n / 1e3)) + " KB" : "?"; }
+function dlTotal() { const z = S.dbsize; return z ? z.total : 0; }
+function dlNeeded() { const z = S.dbsize; return !!z && z.need.length > 0; }
+function dbCard() {
+  const z = S.dbsize, db = S.db || {}, s = S.setup || {};
+  if (!z) return `<aside class="dlcard"><div class="sk" style="height:132px"></div></aside>`;
+  const head = (right) => `<header>${icon("box")}<b>${t("Vulnerability databases")}</b>${right}</header>`;
+  if (db.updating) {
+    const secs = Math.round((Date.now() - Date.parse(S.dlStart || new Date())) / 1000);
+    const last = (db.output || []).filter(Boolean).slice(-1)[0] || t("starting…");
+    return `<aside class="dlcard busy">${head(`<span class="total">${bytes(z.total)}</span>`)}
+      <div class="bar"><i></i></div>
+      <div class="dlnow"><i class="spin"></i><span>${t("Downloading… {s} s", { s: secs })}</span></div>
+      <div class="note mono dllast" title="${esc(last)}">${esc(last)}</div>
+      <p class="note">${t("Go on with the setup: the first scan waits for the download.")}</p></aside>`;
+  }
+  if (db.error && s.dlAsked) return `<aside class="dlcard bad">${head("")}<div class="skipped">${icon("alert")}<div><b>${t("The download failed")}</b><div class="note">${esc(db.error)}</div></div></div>
+      <div class="actions"><button class="btn" data-dl-start>${t("Try again")}</button></div></aside>`;
+  if (!z.need.length) return `<aside class="dlcard ok">${head(`<span class="okb">${icon("check")}${t("up to date")}</span>`)}<p class="note">${t("Everything a scan needs is downloaded.")}</p></aside>`;
+  const rows = DL.map(([k, l, sub]) => {
+    const keys = DLKEYS[k].filter((x) => z.need.includes(x));
+    if (!keys.length) return "";
+    const n = keys.reduce((a, x) => a + (z.sizes[x] || 0), 0);
+    return `<li><span><b>${t(l)}</b><small>${t(sub)}</small></span><code>${bytes(n)}</code></li>`;
+  }).join("");
+  if (s.dlLater) return `<aside class="dlcard later">${head(`<span class="total">${bytes(z.total)}</span>`)}
+      <p class="note">${t("Not downloaded yet: the first scan downloads them before it starts.")}</p>
+      <div class="actions"><button class="btn small" data-dl-start>${t("Download now")}</button></div></aside>`;
+  return `<aside class="dlcard">${head(`<span class="total">${bytes(z.total)}</span>`)}
+    <p class="note">${t("Needed for the first scan. You can download them now, while you set up.")}</p>
+    <ul class="dllist">${rows}</ul>
+    <p class="note warnline">${icon("alert")}${t("On mobile data or a metered link? Choose later; nothing is downloaded without asking.")}</p>
+    <div class="actions"><button class="btn primary" data-dl-start>${t("Download now ({size})", { size: bytes(z.total) })}</button><button class="btn ghost" data-dl-later>${t("Later")}</button></div></aside>`;
+}
+let dbTick;
+async function pollDB() {
+  try { S.db = await api("/api/db"); } catch {}
+  if (S.db?.updating) { clearTimeout(dbTick); dbTick = setTimeout(pollDB, 1000); }
+  else if (S.dbsize && S.dbWas) { S.dbWas = false; try { S.dbsize = await api("/api/db/size"); } catch {} }
+  if (S.db?.updating) S.dbWas = true;
+  renderSide();
+  if (S.view === "setup") refreshDLCard();
+}
+let dbSizeReq;
+function refreshDLCard() { document.querySelectorAll(".dlcard").forEach((c) => { c.outerHTML = dbCard(); }); }
+function loadDBSize() {
+  if (S.dbsize || !S.scans) return;
+  dbSizeReq ||= api("/api/db/size").catch(() => ({ sizes: {}, need: [], total: 0 })).then((z) => { S.dbsize = z; dbSizeReq = null; requestAnimationFrame(refreshDLCard); });
 }
 function setupView() {
   const s = S.setup ||= { step: 0, path: "" };
+  if (!S.scans) return setupMain(s);
+  loadDBSize();
+  return `<div class="onbwrap ${s.step === 0 || s.path === "fleet" && s.step === 1 ? "roomy" : ""}">${stepsHead(s)}<div class="onbcols"><div class="onbmain">${setupMain(s)}</div>${dbCard()}</div></div>`;
+}
+function setupMain(s) {
   if (!S.scans) return `<div class="onb"><h2>${t("Read-only dashboard")}</h2><p>${t("Organizations are added where kanareika web runs on localhost (or with a token). On that machine: kanareika org new <ORG_ID>.")}</p></div>`;
   if (s.step === 0) {
     const cur = orgOf(), mine = S.orgs.find((o) => o.id === "servers");
@@ -945,7 +1048,7 @@ function setupView() {
   if (s.step === 1) return fleetForm(s);
   if (s.step === 2) return checkView(s);
   const job = S.jobs.find((j) => j.id === s.job);
-  return `<div class="onb">${stepsHead(s)}<h2>${t("First scan")}</h2><p>${t("Databases download first, then every server is read. This takes a few minutes; you can leave the page.")}</p>
+  return `<div class="onb"><h2>${t("First scan")}</h2><p>${t("Databases download first, then every server is read. This takes a few minutes; you can leave the page.")}</p>
     <div class="jobout">${job ? `<div class="meta"><span class="st ${job.state === "running" ? "reboot" : job.code ? "bad" : "available"}">${t(job.state)}</span></div><pre>${esc((job.output || []).slice(-14).join("\n"))}</pre>` : `<div class="sk" style="height:120px"></div>`}</div>
     ${job && job.state !== "running" ? `<div class="actions"><button class="btn primary" data-setup-done>${t("See the results")}</button></div>` : ""}</div>`;
 }
@@ -992,7 +1095,7 @@ function fewForm(s) {
   const d = FOUND.v || { hosts: [], keys: [], agent_keys: 0, user: "" };
   const keyOpts = [["", d.agent_keys ? t("the ssh-agent ({n} keys)", { n: d.agent_keys }) : t("the ssh-agent")], ...d.keys.map((k) => [k, k])];
   const target = s.path === "add" ? orgOf() : S.orgs.find((o) => o.id === "servers");
-  return `<div class="onb">${stepsHead(s)}<h2>${target ? t("Add to {org}", { org: esc(target.name || target.id) }) : t("Which servers?")}</h2>
+  return `<div class="onb"><h2>${target ? t("Add to {org}", { org: esc(target.name || target.id) }) : t("Which servers?")}</h2>
     <form id="fewform" class="form" autocomplete="off">
       ${pasteBox(f.hosts, 3)}
       <details class="wide"><summary>${t("Login details")}</summary>
@@ -1018,7 +1121,7 @@ async function submitFew(form) {
 function fleetForm(s) {
   const f = (s.form ||= { name: "", id: "", hosts: "", user: "", key: "", env: "production", jump: "", front: "", sudo: false, consent: "", confirmed: false });
   const d = FOUND.v || { hosts: [], keys: [], user: "" };
-  return `<div class="onb wide">${stepsHead(s)}<h2>${t("Your fleet")}</h2>
+  return `<div class="onb wide"><h2>${t("Your fleet")}</h2>
     <form id="fleetform" class="form" autocomplete="off">
       <label><span>${t("Organization")}</span><input name="name" value="${esc(f.name)}" required placeholder="${t("ACME Corp")}"></label>
       <label><span>${t("Short id")}<small>${t("for files and commands")}</small></span><input name="id" value="${esc(f.id)}" required pattern="[a-z0-9][a-z0-9_-]*" placeholder="acme"></label>
@@ -1046,7 +1149,7 @@ async function submitFleet(form) {
 function clientForm(s) {
   const f = (s.form ||= { name: "", hosts: "", user: "", key: "", sudo: false, consent: "", confirmed: false });
   const d = FOUND.v || { hosts: [], keys: [], agent_keys: 0, user: "" };
-  return `<div class="onb">${stepsHead(s)}<h2>${t("A client's servers")}</h2>
+  return `<div class="onb"><h2>${t("A client's servers")}</h2>
     <form id="clientform" class="form" autocomplete="off">
       <label class="wide"><span>${t("Client")}</span><input name="name" value="${esc(f.name)}" required placeholder="${t("ACME Corp")}"></label>
       ${pasteBox(f.hosts, 4)}
@@ -1111,13 +1214,14 @@ function checkView(s) {
     ? `${Object.entries(byHint).map(([hint, names]) => `<div class="failgroup"><b>${names.length} × ${esc(hint)}</b><div class="note">${esc(names.slice(0, 20).join(", "))}${names.length > 20 ? " …" : ""}</div></div>`).join("")}`
     : `<table class="tbl checks"><tbody>${hosts.map(row).join("")}</tbody></table>`;
   const skipped = (s.skipped || []).length ? `<div class="skipped">${icon("alert")}<div><b>${t("{n} lines skipped when saving", { n: s.skipped.length })}</b>${s.skipped.map((x) => `<div class="note">${esc(x)}</div>`).join("")}</div></div>` : "";
-  return `<div class="onb">${stepsHead(s)}<h2>${t("Access check")}</h2>
+  return `<div class="onb"><h2>${t("Access check")}</h2>
     <p>${t("Kanareika logs in to each server and runs uname -sr. Nothing is changed.")}</p>${skipped}
     <div class="checksum"><span><b style="color:var(--ok)">${ok.length}</b> ${t("answered")}</span><span><b style="color:var(--err)">${bad.length}</b> ${t("failed")}</span>${waiting ? `<span><i class="spin"></i><b>${waiting}</b> ${t("still checking")}</span>` : ""}</div>
     ${body}
     ${s.file ? `<p class="note">${t("The settings are in {path}: edit it to fix addresses, add jump hosts or more servers.", { path: esc(s.file) })}</p>` : ""}
     <div class="actions"><button class="btn" data-setup-recheck ${waiting ? "disabled" : ""}>${bad.length ? t("Check the failed again") : t("Check again")}</button>
-      <button class="btn primary" data-setup-scan ${ok.length ? "" : "disabled"}>${bad.length || waiting ? t("Scan the {n} that answered", { n: ok.length }) : t("Start the first scan")}</button></div></div>`;
+      <button class="btn primary" data-setup-scan ${ok.length ? "" : "disabled"}>${bad.length || waiting ? t("Scan the {n} that answered", { n: ok.length }) : t("Start the first scan")}</button>
+      ${dlNeeded() && !S.db?.updating ? `<span class="note">${t("downloads {size} first", { size: bytes(dlTotal()) })}</span>` : ""}</div></div>`;
 }
 let checkTick;
 async function checkAccess(onlyFailed) {
@@ -1250,6 +1354,12 @@ document.addEventListener("click", async (e) => {
     preview(); return;
   }
   if ("importSsh" in d) { const dd = await discover(); const ta = $("#fleetform textarea[name=hosts]"); ta.value = (ta.value.trim() ? ta.value.trim() + "\n" : "") + dd.hosts.map((h) => `${h.alias.toLowerCase().replace(/[^a-z0-9_-]+/g, "-")} ${(h.hostname || h.alias)}${h.port ? ":" + h.port : ""}`).join("\n"); return; }
+  if ("dlStart" in d) {
+    S.setup ||= { step: 0, path: "" }; S.setup.dlAsked = true; S.setup.dlLater = false;
+    try { await post("/api/db/update", {}); } catch (er) { if (!/already running/.test(er.message)) { toast(er.message); return; } }
+    S.dlStart = new Date().toISOString(); pollDB(); return;
+  }
+  if ("dlLater" in d) { S.setup.dlLater = true; refreshDLCard(); return; }
   if ("setupRecheck" in d) { const s = S.setup; checkAccess(Object.values(s.res || {}).some((r) => !r.ok)); return; }
   if ("setupScan" in d) {
     const s = S.setup; await loadOrgs(); S.org = s.org; S.env = s.env; store.set("org", S.org); store.set("env", S.env);
@@ -1315,7 +1425,7 @@ async function loadEnv() {
 (async () => {
   document.documentElement.lang = LANG;
   try { S.scans = (await api("/api/session")).scans; } catch {}
-  api("/api/db").then((d) => { S.db = d; renderSide(); }).catch(() => {});
+  api("/api/db").then((d) => { S.db = d; renderSide(); if (d.updating) { S.dlStart = new Date().toISOString(); pollDB(); } }).catch(() => {});
   await loadOrgs();
   await loadEnv();
   if (!S.orgs.length) S.view = "setup";

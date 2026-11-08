@@ -3,9 +3,9 @@ package trivy
 import (
 	"compress/gzip"
 	"context"
-	"fmt"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
