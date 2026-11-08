@@ -20,6 +20,7 @@ type dbAnswer struct {
 		Next     string `json:"next_update"`
 		Outdated bool   `json:"outdated"`
 	} `json:"dbs"`
+	Trivy        string   `json:"trivy"`
 	FeedsUpdated string   `json:"feeds_updated"`
 	Enabled      bool     `json:"enabled"`
 	Updating     bool     `json:"updating"`
@@ -125,4 +126,15 @@ func TestDBStatusAndUpdate(t *testing.T) {
 		t.Fatalf("%d", r.code)
 	}
 	(&dbUpdater{}).stop() // nothing running: nothing to wait for
+}
+
+// TestDBTrivyVersion: /api/db names the trivy built into the server, so an interface attached to it shows that one.
+func TestDBTrivyVersion(t *testing.T) {
+	old := embeddedTrivy
+	t.Cleanup(func() { embeddedTrivy = old })
+	embeddedTrivy = func() string { return "0.76.2" }
+	s, _ := newTest(t, Options{})
+	if d := dbOf(t, s); d.Trivy != "0.76.2" {
+		t.Fatalf("trivy %q", d.Trivy)
+	}
 }

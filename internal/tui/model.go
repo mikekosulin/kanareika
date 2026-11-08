@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -394,13 +395,18 @@ func (m *Model) selectEnv(org, env string) tea.Cmd {
 	return m.fetchEnv()
 }
 
-// latin: keys typed with another keyboard layout, as the same keys on a QWERTY one (й -> q, о -> j): the
-// hotkeys work whatever layout is on. Text (the filter) is never mapped.
+// latin: keys typed with another keyboard layout, as the same keys on a QWERTY one (й -> q, ㅂ -> q, é -> 2):
+// the hotkeys work whatever layout is on. Russian ЙЦУКЕН, Korean 2-set (shifted letters give the same jamo as
+// unshifted ones but the five doubled consonants and two vowels), and the French AZERTY digit row, which types
+// & é " ' ( - è _ ç à without Shift. Text (the filter) is never mapped.
 var latin = func() map[rune]rune {
 	m := map[rune]rune{}
 	for _, p := range [][2]string{
 		{"йцукенгшщзхъфывапролджэячсмитьбю.ё", "qwertyuiop[]asdfghjkl;'zxcvbnm,./`"},
 		{"ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,Ё", "QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?~"},
+		{"ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔㅁㄴㅇㄹㅎㅗㅓㅏㅣㅋㅌㅊㅍㅠㅜㅡ", "qwertyuiopasdfghjklzxcvbnm"},
+		{"ㅃㅉㄸㄲㅆㅒㅖ", "QWERTOP"},
+		{"&é\"'(-è_çà", "1234567890"},
 	} {
 		from, to := []rune(p[0]), []rune(p[1])
 		for i := range from {
@@ -542,18 +548,22 @@ func (m *Model) setView(v view) {
 
 // languages: English first, then the others by code.
 func (m *Model) languages() []string {
-	langs := []string{"en"}
+	// in the order of i18n.Langs (English, then by their own names); any this build has no file for, last
+	langs, order := []string{"en"}, i18n.Langs()
 	for l := range m.t.ui {
 		if l != "en" {
 			langs = append(langs, l)
 		}
 	}
-	sort.Strings(langs[1:])
+	rank := func(l string) int {
+		if i := slices.Index(order, l); i >= 0 {
+			return i
+		}
+		return len(order)
+	}
+	slices.SortFunc(langs[1:], func(a, b string) int { return cmp.Or(cmp.Compare(rank(a), rank(b)), cmp.Compare(a, b)) })
 	return langs
 }
-
-// langNames: each language in its own name, as the language list shows it.
-var langNames = map[string]string{"en": "English", "ru": "Русский", "zh": "中文"}
 
 func (m *Model) langKey(s string) {
 	langs := m.languages()
@@ -827,7 +837,7 @@ func (m *Model) applyZone() {
 func (m *Model) toggleZone() {
 	m.set.UTC = !m.set.UTC
 	m.applyZone()
-	m.say(m.t.T("times in") + " " + m.t.zoneName(m.now()))
+	m.say(m.t.F("times in {zone}", "zone", m.t.zoneName(m.now())))
 	m.saveSettings()
 }
 

@@ -5,10 +5,11 @@
 package i18n
 
 import (
+	"cmp"
 	"encoding/json"
 	"io/fs"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 
@@ -19,6 +20,7 @@ import (
 const Default = "en"
 
 type locale struct {
+	Name     string            `json:"name"` // the language in its own name: Русский, 中文
 	Messages map[string]string `json:"messages"`
 	UI       map[string]string `json:"ui"`
 }
@@ -46,7 +48,8 @@ func load() {
 	}
 }
 
-// Langs: the default first, then the rest sorted.
+// Langs: the default first, then the rest by their own names, as language switchers usually list them: Latin
+// script, then Cyrillic, then Chinese, Japanese, Korean (Español, Français, …, Русский, 中文, 日本語, 한국어).
 func Langs() []string {
 	once.Do(load)
 	var out []string
@@ -55,16 +58,31 @@ func Langs() []string {
 			out = append(out, l)
 		}
 	}
-	sort.Strings(out)
+	slices.SortFunc(out, func(a, b string) int { return cmp.Or(cmp.Compare(Name(a), Name(b)), cmp.Compare(a, b)) })
 	return append([]string{Default}, out...)
 }
 
-// Catalog: key -> {lang: text}, the shape the dashboard uses (/api/i18n).
+// Name: the language in its own name (as menus list it); the code when its file has none.
+func Name(lang string) string {
+	once.Do(load)
+	if n := data[lang].Name; n != "" {
+		return n
+	}
+	return lang
+}
+
+// serverOnly: message prefixes only the server renders (the agent task, the fix plan): not sent to the page.
+var serverOnly = []string{"prompt.", "plan."}
+
+// Catalog: key -> {lang: text}, the shape the dashboard uses (/api/i18n); without the server-only texts.
 func Catalog() map[string]map[string]string {
 	once.Do(load)
 	out := map[string]map[string]string{}
 	for lang, l := range data {
 		for k, v := range l.Messages {
+			if slices.ContainsFunc(serverOnly, func(p string) bool { return strings.HasPrefix(k, p) }) {
+				continue
+			}
 			if out[k] == nil {
 				out[k] = map[string]string{}
 			}

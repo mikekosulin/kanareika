@@ -98,9 +98,14 @@ func walked(t *testing.T) []string {
 }
 
 // dataFile: content that ends up as data (fixtures, the embedded assets, docs and examples), where every address
-// and e-mail must be a fake one. Source code may name real public things (8.8.8.8 as "the Internet").
+// and e-mail must be a fake one. Source code may name real public things (8.8.8.8 as "the Internet"). Images are
+// pixels, not text: an address pattern in compressed bytes means nothing (the README's are drawn from the demo
+// data by tools/brand and tools/screenshots); the real names of orgs/ are still looked for in them.
 func dataFile(rel string) bool {
 	s := filepath.ToSlash(rel)
+	if slices.Contains([]string{".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico"}, strings.ToLower(filepath.Ext(s))) {
+		return false
+	}
 	return strings.Contains(s, "testdata/") || strings.HasPrefix(s, "assets/") || strings.HasPrefix(s, "docs/") ||
 		strings.HasPrefix(s, "orgs/_") || strings.HasSuffix(s, ".md")
 }
@@ -394,7 +399,8 @@ func TestGuardCatches(t *testing.T) {
 		t.Fatal("empty")
 	}
 	for f, want := range map[string]bool{"internal/x/testdata/a.json": true, "assets/locales/ru.json": true,
-		"docs/org-file.md": true, "orgs/_example.yml": true, "README.md": true, "internal/x/x.go": false} {
+		"docs/org-file.md": true, "orgs/_example.yml": true, "README.md": true, "internal/x/x.go": false,
+		"docs/brand/banner-en.png": false, "assets/web/logo.PNG": false} {
 		if dataFile(f) != want {
 			t.Errorf("%s: %v", f, !want)
 		}

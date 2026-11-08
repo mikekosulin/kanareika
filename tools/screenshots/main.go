@@ -1,8 +1,13 @@
-// Command screenshots renders one frame of the TUI, in color, for the README's screenshots:
+// Command screenshots draws the README's screenshots, the TUI and the web page in every language, over demo data:
+//
+//	go run ./tools/demo -out /tmp/kanareika-demo
+//	go run ./tools/screenshots -home /tmp/kanareika-demo -org acme -env production -out docs/screenshots
+//
+// Without -out it prints one colored frame of the TUI instead (-lang, -size, -keys pick which):
 //
 //	go run ./tools/screenshots -home <dir> -lang ru -size 140x40 -keys 3,enter > frame.ans
 //
-// The frame is the interface over the working directory at -home (use demo data only: screenshots are published).
+// Use demo data only: screenshots are published.
 package main
 
 import (
@@ -37,8 +42,16 @@ func main() {
 	size := flag.String("size", "140x40", "terminal size, WxH")
 	keys := flag.String("keys", "", "keys to press first, comma separated (enter, down, esc, or a letter)")
 	at := flag.String("now", "", "the time it is, RFC 3339 (default: now)")
+	out := flag.String("out", "", "write tui-<lang>.png and web-<lang>.png for every language here (the TUI at -size after -keys)")
+	bin := flag.String("chrome", "", "Chrome or Chromium for -out (default: found on its own)")
 	flag.Parse()
-	if err := run(os.Stdout, *home, *lang, *org, *env, *size, *keys, *at); err != nil {
+	var err error
+	if *out != "" {
+		err = shots(*out, *home, *bin, *org, *env, *size, *keys, *at)
+	} else {
+		err = run(os.Stdout, *home, *lang, *org, *env, *size, *keys, *at)
+	}
+	if err != nil {
 		fatal(err)
 	}
 }

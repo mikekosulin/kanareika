@@ -19,6 +19,13 @@ What to expect:
 - an assessment and a fix plan within 14 days;
 - a fixed release and a GitHub Security Advisory crediting you (unless you prefer otherwise).
 
+## Published vulnerabilities
+
+Kanareika's vulnerabilities are published only as
+[GitHub Security Advisories of this repository](https://github.com/mikekosulin/kanareika/security/advisories), with
+the CVE id when one is assigned. Pages elsewhere that name Kanareika next to a CVE without such an advisory are not
+ours: some sites generate them from public repositories. If one worries you, ask in a private report.
+
 ## Scope
 
 In scope — anything where Kanareika itself weakens the hosts it audits or the machine it runs on, for example:

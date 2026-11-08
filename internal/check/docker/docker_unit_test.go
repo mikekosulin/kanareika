@@ -145,8 +145,8 @@ func TestRunInventoryErrors(t *testing.T) {
 		want   string
 	}{
 		{"which", "command -v docker", answer{err: boom}, "", "boom"},
-		{"version-not-object", "docker version", answer{out: "[]"}, "", "нет доступа к docker (privilege=none): docker version: not a JSON object"},
-		{"version-op", "", answer{}, "docker-version", `нет доступа к docker (privilege=none): unknown privileged op "docker-version"`},
+		{"version-not-object", "docker version", answer{out: "[]"}, "", "no access to docker (privilege=none): docker version: not a JSON object"},
+		{"version-op", "", answer{}, "docker-version", `no access to docker (privilege=none): unknown privileged op "docker-version"`},
 		{"ps-json", "docker ps -a", answer{out: "{broken\n"}, "", ""},
 		{"running", "docker ps -q", answer{err: boom}, "", "boom"},
 		{"images", "docker image ls", answer{err: boom}, "", "boom"},

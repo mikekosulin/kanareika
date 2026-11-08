@@ -5,24 +5,19 @@
 //
 // Each picture is an HTML page (og.html, banner.html, style.css next to this file, read from -pages: edit them),
 // rendered to PNG at 2x by headless Chrome (-chrome, or found on its own). Without Chrome only the pages are
-// written. The data on them is invented like the demo's: hosts from tools/demo, CVE ids that do not exist.
+// written. The data on them is invented like the demo's: hosts from tools/demo, CVE ids of the year 0000 (never assigned).
 package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
-	"errors"
 	"flag"
-	"fmt"
 	"html/template"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
-	"strings"
-	"time"
+
+	"github.com/mikekosulin/kanareika/tools/internal/chrome"
 )
 
 // sources: the pages to fill in and the style they share. Read from files, not embedded: what goes into a binary
@@ -44,21 +39,12 @@ func load(dir string) (sources, error) {
 	return s, nil
 }
 
-// seams for tests: main's fatal exit, Chrome itself, and where Chrome is looked for
+// seams for tests: main's fatal exit, where Chrome is, and Chrome itself
 var (
-	fatal     = log.Fatal
-	runChrome = func(ctx context.Context, bin string, args ...string) error {
-		out, err := exec.CommandContext(ctx, bin, args...).CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("%s: %w: %s", bin, err, bytes.TrimSpace(out))
-		}
-		return nil
-	}
-	lookPath = exec.LookPath
-	goos     = runtime.GOOS
-	absPath  = filepath.Abs
-	macApps  = []string{"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-		"/Applications/Chromium.app/Contents/MacOS/Chromium"}
+	fatal      = log.Fatal
+	findChrome = chrome.Find
+	fileURL    = chrome.FileURL
+	shot       = chrome.Shot
 )
 
 // row: one line of the ToDo list in the picture.
@@ -79,22 +65,22 @@ var langs = []lang{
 		Sub: "agentless · read-only · TUI + web · MCP", DB: "db ok", Keys: "↑↓ move · space select · f fix plan · / search",
 		Tabs: []string{"ToDo", "Hosts", "Packages", "Access", "Network", "Health"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-2026-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-2026-90042"},
+			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
+			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
 			{2, "web-01", "sshd: password login enabled", "access"},
 			{2, "web-02", ":6379 reachable from anywhere", "network"},
 			{3, "db-01", "kernel 5.14.0-427 · reboot pending", "reboot"},
 			{3, "web-02", "NTP drift 4.2 s", "health"},
 			{3, "stage-web-01", "firewall · default policy ACCEPT", "network"},
 			{4, "web-02", "libxml2 · no fix in repo yet", "vendor"},
-			{4, "db-01", "curl · low, EPSS 0.02%", "CVE-2026-90210"},
+			{4, "db-01", "curl · low, EPSS 0.02%", "CVE-0000-90210"},
 		}},
 	{Code: "ru", Tag: "Аудит безопасности серверов по SSH.", Accent: "Начните с главного.",
 		Sub:  "без агента · только чтение · TUI + веб · MCP",
 		Tabs: []string{"Что делать", "Хосты", "Пакеты", "Доступ", "Сеть", "Здоровье"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-2026-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-2026-90042"},
+			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
+			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
 			{2, "web-01", "sshd: вход по паролю включён", "доступ"},
 			{2, "web-02", ":6379 доступен отовсюду", "сеть"},
 			{3, "db-01", "ядро 5.14.0-427 · ждёт перезагрузки", "перезагрузка"},
@@ -103,11 +89,61 @@ var langs = []lang{
 		Sub:  "无代理 · 只读 · TUI + Web · MCP",
 		Tabs: []string{"待办", "主机", "软件包", "访问", "网络", "健康"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-2026-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-2026-90042"},
+			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
+			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
 			{2, "web-01", "sshd：已启用密码登录", "访问"},
 			{2, "web-02", ":6379 对外开放", "网络"},
 			{3, "db-01", "内核 5.14.0-427 · 等待重启", "重启"},
+		}},
+	{Code: "es", Tag: "Auditoría de seguridad de servidores por SSH.", Accent: "Empiece por lo importante.",
+		Sub:  "sin agente · solo lectura · TUI + web · MCP",
+		Tabs: []string{"Por hacer", "Hosts", "Paquetes", "Acceso", "Red", "Salud"},
+		Rows: []row{
+			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
+			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
+			{2, "web-01", "sshd: acceso con contraseña activado", "acceso"},
+			{2, "web-02", ":6379 abierto a todo el mundo", "red"},
+			{3, "db-01", "kernel 5.14.0-427 · pendiente de reinicio", "reinicio"},
+		}},
+	{Code: "fr", Tag: "Audit de sécurité des serveurs via SSH.", Accent: "Commencez par l'essentiel.",
+		Sub:  "sans agent · lecture seule · TUI + web · MCP",
+		Tabs: []string{"À faire", "Hôtes", "Paquets", "Accès", "Réseau", "Santé"},
+		Rows: []row{
+			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
+			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
+			{2, "web-01", "sshd : connexion par mot de passe activée", "accès"},
+			{2, "web-02", ":6379 accessible de partout", "réseau"},
+			{3, "db-01", "noyau 5.14.0-427 · redémarrage en attente", "redémarrage"}, //nolint:misspell // French
+		}},
+	{Code: "pt", Tag: "Auditoria de segurança de servidores via SSH.", Accent: "Comece pelo que importa.",
+		Sub:  "sem agente · somente leitura · TUI + web · MCP",
+		Tabs: []string{"A fazer", "Hosts", "Pacotes", "Acesso", "Rede", "Saúde"},
+		Rows: []row{
+			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
+			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
+			{2, "web-01", "sshd: login por senha ativado", "acesso"},
+			{2, "web-02", ":6379 aberto para todos", "rede"},
+			{3, "db-01", "kernel 5.14.0-427 · reinicialização pendente", "reiniciar"},
+		}},
+	{Code: "ja", Tag: "SSH によるサーバーのセキュリティ監査。", Accent: "まずは重要なものから。",
+		Sub:  "エージェント不要 · 読み取り専用 · TUI + Web · MCP",
+		Tabs: []string{"やること", "ホスト", "パッケージ", "アクセス", "ネット", "ヘルス"},
+		Rows: []row{
+			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
+			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
+			{2, "web-01", "sshd: パスワードログイン有効", "アクセス"},
+			{2, "web-02", ":6379 がどこからでも到達可能", "ネットワーク"},
+			{3, "db-01", "カーネル 5.14.0-427 · 再起動待ち", "再起動"},
+		}},
+	{Code: "ko", Tag: "SSH를 통한 서버 보안 감사.", Accent: "중요한 것부터 시작하세요.",
+		Sub:  "에이전트 불필요 · 읽기 전용 · TUI + 웹 · MCP",
+		Tabs: []string{"할 일", "호스트", "패키지", "접근", "네트워크", "상태"},
+		Rows: []row{
+			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
+			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
+			{2, "web-01", "sshd: 비밀번호 로그인 켜짐", "접근"},
+			{2, "web-02", ":6379 어디서나 접근 가능", "네트워크"},
+			{3, "db-01", "커널 5.14.0-427 · 재부팅 대기", "재부팅"},
 		}},
 }
 
@@ -125,14 +161,14 @@ func main() {
 	out := flag.String("out", "docs/brand", "directory to write the pictures to")
 	logo := flag.String("logo", "assets/web/logo.png", "the canary")
 	pages := flag.String("pages", "tools/brand", "where og.html, banner.html and style.css are")
-	chrome := flag.String("chrome", "", "Chrome or Chromium to render with (default: found on its own; none: pages only)")
+	bin := flag.String("chrome", "", "Chrome or Chromium to render with (default: found on its own; none: pages only)")
 	flag.Parse()
-	if err := run(*out, *logo, *pages, *chrome); err != nil {
+	if err := run(*out, *logo, *pages, *bin); err != nil {
 		fatal(err)
 	}
 }
 
-func run(out, logoPath, pagesDir, chrome string) error {
+func run(out, logoPath, pagesDir, bin string) error {
 	src, err := load(pagesDir)
 	if err != nil {
 		return err
@@ -148,22 +184,22 @@ func run(out, logoPath, pagesDir, chrome string) error {
 	if err := os.MkdirAll(out, 0o755); err != nil {
 		return err
 	}
-	if chrome == "" {
-		chrome = findChrome()
+	if bin == "" {
+		bin = findChrome()
 	}
 	for _, p := range pics {
 		page := filepath.Join(out, p.name+".html")
 		if err := os.WriteFile(page, p.html, 0o644); err != nil {
 			return err
 		}
-		if chrome == "" {
+		if bin == "" {
 			continue
 		}
-		if err := render(chrome, page, filepath.Join(out, p.name+".png"), p.w, p.h); err != nil {
+		if err := render(bin, page, filepath.Join(out, p.name+".png"), p.w, p.h); err != nil {
 			return err
 		}
 	}
-	if chrome == "" {
+	if bin == "" {
 		log.Printf("no Chrome found (-chrome): wrote the pages to %s, not the pictures", out)
 	}
 	return nil
@@ -208,51 +244,11 @@ func pictures(logo string, src sources) ([]picture, error) {
 	return pics, nil
 }
 
-// findChrome: Chrome or Chromium on this machine, "" if there is none.
-func findChrome() string {
-	if goos == "darwin" {
-		for _, p := range macApps {
-			if _, err := os.Stat(p); err == nil {
-				return p
-			}
-		}
-	}
-	for _, n := range []string{"google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "chrome"} {
-		if p, err := lookPath(n); err == nil {
-			return p
-		}
-	}
-	return ""
-}
-
-// render: one page to PNG at 2x; transparent where the page is (the banner's rounded corners).
-func render(chrome, page, png string, w, h int) error {
-	abs, err := absPath(page)
+// render: one page to PNG at 2x.
+func render(bin, page, png string, w, h int) error {
+	url, err := fileURL(page)
 	if err != nil {
 		return err
 	}
-	shot, err := absPath(png)
-	if err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	if err := runChrome(ctx, chrome, "--headless=new", "--disable-gpu", "--hide-scrollbars",
-		"--force-device-scale-factor=2", "--default-background-color=00000000",
-		fmt.Sprintf("--window-size=%d,%d", w, h), "--screenshot="+shot, fileURL(abs)); err != nil {
-		return err
-	}
-	if _, err := os.Stat(shot); err != nil {
-		return errors.New("chrome wrote no picture: " + shot)
-	}
-	return nil
-}
-
-// fileURL: file:///home/x/og.html, file:///C:/x/og.html on Windows.
-func fileURL(abs string) string {
-	p := filepath.ToSlash(abs)
-	if !strings.HasPrefix(p, "/") {
-		p = "/" + p
-	}
-	return "file://" + p
+	return shot(bin, url, png, w, h)
 }

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -10,6 +11,15 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/muesli/termenv"
 )
+
+// TestHostCardOtherInLanguage: the other findings of a host card are in the interface's language, as in ToDo.
+func TestHostCardOtherInLanguage(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production", Lang: "ru"}, true)
+	h.size(110, 70)
+	h.key("3", "enter")
+	h.has("Подбор паролей SSH:")
+	h.hasNot("SSH password guessing")
+}
 
 // TestHostCard: Enter on a host opens all a run knows about it; it scrolls, and Esc goes back to the list.
 func TestHostCard(t *testing.T) {
@@ -73,7 +83,8 @@ func TestHostCardSections(t *testing.T) {
 	}
 }
 
-// TestOtherLayout: hotkeys work on a Cyrillic layout (the same physical keys); the filter keeps the letters typed.
+// TestOtherLayout: hotkeys work on Russian, Korean and French layouts (the same physical keys); the filter keeps
+// the letters typed.
 func TestOtherLayout(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.key("3") // Hosts
@@ -100,6 +111,24 @@ func TestOtherLayout(t *testing.T) {
 	runes("щ")
 	h.has("Panels(Hosts)")
 	h.key("esc")
+	// Korean 2-set: ㅓ is j, ㅃ (shift+q) is Q; French AZERTY: é is 2 (ToDo), à is 0 (Runs)
+	h.key("3")
+	before := h.m.cur[vHosts]
+	runes("ㅓ")
+	if h.m.cur[vHosts] != before+1 {
+		t.Fatal("ㅓ is not j")
+	}
+	if latin['ㅃ'] != 'Q' || latin['ㅖ'] != 'P' {
+		t.Fatal("shifted jamo")
+	}
+	runes("é")
+	if h.m.view != vActions {
+		t.Fatalf("é is not 2: view %d", h.m.view)
+	}
+	runes("à")
+	if h.m.view != vRuns {
+		t.Fatalf("à is not 0: view %d", h.m.view)
+	}
 	_, cmd := h.m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("й")}) // q
 	if _, ok := cmd().(tea.QuitMsg); !ok {
 		t.Fatal("й is not q")
@@ -161,6 +190,23 @@ func TestDBStatus(t *testing.T) {
 	h2 := newHarness(t, Options{Org: "acme", Env: "production"}, false)
 	h2.key("U")
 	h2.has("DB updates are off here (read-only)")
+	// the header: the server's built-in trivy, the run's own when it differs; a DB with a known next build is
+	// up to date until then; a clock behind the build time shows no negative age
+	built := h.m.now().Add(3 * time.Hour).UTC().Format(time.RFC3339) // ahead of the clock
+	var d dbResp
+	if err := json.Unmarshal([]byte(`{"trivy": "0.76.2", "enabled": true, "dbs": [{"name": "db", "updated": "`+built+`"}]}`), &d); err != nil {
+		t.Fatal(err)
+	}
+	h.m.db = &d
+	h.m.rund.Meta.TrivyVersion = "0.75.0"
+	h.has("0.76.2 · run: 0.75.0")
+	h.m.rund.Meta.TrivyVersion = "0.76.2"
+	h.has("0.76.2 built in")
+	h.has("DB:       0m")
+	h.hasNot("up to date") // no next build known: no claim
+	h.m.db.DBs[0].Next = "2099-01-01T00:00:00Z"
+	h.has("DB:       0m · up to date")
+
 	if agoShort(5*time.Minute) != "5m" || agoShort(3*time.Hour) != "3h" || agoShort(72*time.Hour) != "3d" {
 		t.Fatal("agoShort")
 	}

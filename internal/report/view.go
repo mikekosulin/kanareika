@@ -117,6 +117,10 @@ func slim(f *finding.Finding) map[string]any {
 	str("fixed", f.Fixed)
 	str("severity", f.Severity)
 	str("title", f.Title)
+	str("msg", f.Msg) // the title's message key and arguments: the interfaces render it in their language
+	if len(f.Args) > 0 {
+		m["args"] = f.Args
+	}
 	str("url", f.URL)
 	str("target", f.Target)
 	str("priority", f.PriorityOr())

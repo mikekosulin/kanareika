@@ -13,12 +13,14 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/mikekosulin/kanareika/internal/config"
@@ -374,13 +376,16 @@ func TestReadOnlyAndLanguages(t *testing.T) {
 	h.has("Язык", "English", "✓ Русский", "中文")
 	h.key("down", "enter")
 	h.has("扫描[0]", "此处无法启动扫描")
-	h.key("L", "up", "up", "up", "space")
+	// the menu lists every language, English first: from 中文, all the way up to it
+	langs := i18n.Langs()
+	steps := func(dir string, n int) []string { return slices.Repeat([]string{dir}, n) }
+	h.key(append(append([]string{"L"}, steps("up", len(langs)-1)...), "space")...)
 	h.has("Scans[0]")
 	h.key("L", "j", "esc") // closed without a choice
 	h.has("Scans[0]")
 	h.key("L", "k", "L")
 	h.has("Scans[0]")
-	h.key("L", "down", "enter")
+	h.key(append(append([]string{"L"}, steps("down", slices.Index(langs, "ru"))...), "enter")...)
 	h.has("Сканы[0]")
 	if New(Options{Lang: "xx"}).t.lang != "en" {
 		t.Fatal("unknown language")
@@ -521,4 +526,19 @@ func TestLiveScan(t *testing.T) {
 	h.m.org, h.m.orgs.Orgs, h.m.rund = "", nil, nil
 	h.key("2")
 	h.has("no organizations", "kanareika org new <id>")
+}
+
+// TestFill: a sentence's {name}s filled in its own word order; a {name} without a value stays as written; with a
+// style, only the sentence's own words take it.
+func TestFill(t *testing.T) {
+	if got := fill("hace {n} min", nil, []string{"n", "5"}); got != "hace 5 min" {
+		t.Fatal(got)
+	}
+	if got := fill("{a} and {b}", nil, []string{"a", "x"}); got != "x and {b}" {
+		t.Fatal(got)
+	}
+	upper := lipgloss.NewStyle().Transform(strings.ToUpper) // visible without colors
+	if got := fill("press {key} now", &upper, []string{"key", "<s>"}); got != "PRESS <s> NOW" {
+		t.Fatalf("%q", got)
+	}
 }

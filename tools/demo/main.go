@@ -1,11 +1,12 @@
 // Command demo writes a working directory of made-up data for screenshots and trying the interfaces out:
 //
 //	go run ./tools/demo -out /tmp/kanareika-demo
-//	KANAREIKA_FEEDS_DIR=/tmp/kanareika-demo/feeds kanareika --home /tmp/kanareika-demo
+//	KANAREIKA_FEEDS_DIR=/tmp/kanareika-demo/feeds TRIVY_CACHE_DIR=/tmp/kanareika-demo/trivy kanareika --home /tmp/kanareika-demo
 //
 // One organization, a production and a staging environment, a month of daily full runs: vulnerabilities fixed
 // over time and new ones appearing, logins and password guessing, open ports, disks filling up. Everything is
-// invented: documentation addresses (RFC 5737), example.com, CVE ids that do not exist.
+// invented: documentation addresses (RFC 5737), example.com, CVE ids of the year 0000, which are never assigned
+// (the CVE program starts at 1999; ids of the current year are, as soon as their numbers come up).
 package main
 
 import (
@@ -50,7 +51,8 @@ func main() {
 	if err := generate(*out, last, *days); err != nil {
 		fatal(err)
 	}
-	fmt.Printf("demo data in %s\nKANAREIKA_FEEDS_DIR=%s kanareika --home %s\n", *out, filepath.Join(*out, "feeds"), *out)
+	fmt.Printf("demo data in %s\nKANAREIKA_FEEDS_DIR=%s TRIVY_CACHE_DIR=%s kanareika --home %s\n", *out,
+		filepath.Join(*out, "feeds"), filepath.Join(*out, "trivy"), *out)
 }
 
 type host struct {
@@ -94,7 +96,8 @@ func generate(out string, last time.Time, days int) error {
 		return fmt.Errorf("%s is not empty", out)
 	}
 	paths := config.PathsAt(out)
-	for _, d := range []string{paths.Orgs, paths.Secrets, paths.Reports, filepath.Join(out, "feeds")} {
+	for _, d := range []string{paths.Orgs, paths.Secrets, paths.Reports, filepath.Join(out, "feeds"),
+		filepath.Join(out, "trivy", "db"), filepath.Join(out, "trivy", "java-db")} {
 		if err := mkdirAll(d, 0o755); err != nil {
 			return err
 		}
@@ -136,6 +139,15 @@ func generate(out string, last time.Time, days int) error {
 	if err := writeFile(filepath.Join(out, "feeds", "updated"), []byte(feeds.Updated), 0o644); err != nil {
 		return err
 	}
+	// a trivy cache with only its metadata (TRIVY_CACHE_DIR=<out>/trivy): the interfaces show a DB built that
+	// morning and current until the evening, wherever the demo runs
+	for _, db := range []string{"db", "java-db"} {
+		meta := map[string]any{"Version": 2, "UpdatedAt": last.Add(6 * time.Hour), "NextUpdate": last.Add(18 * time.Hour),
+			"DownloadedAt": last.Add(7 * time.Hour)}
+		if err := writeJSON(filepath.Join(out, "trivy", db, "metadata.json"), meta); err != nil {
+			return err
+		}
+	}
 
 	for _, env := range []string{"production", "staging"} {
 		envDir := report.EnvDir(paths, "acme", env)
@@ -174,7 +186,7 @@ func makeVulns(r *rand.Rand, days int) []vuln {
 			installed := fmt.Sprintf("%d.%d.%d", 1+r.IntN(3), r.IntN(20), r.IntN(10))
 			for range k {
 				n++
-				v := vuln{host: h.name, pkg: p, id: fmt.Sprintf("CVE-2026-9%04d", n), sev: sevs[r.IntN(len(sevs))],
+				v := vuln{host: h.name, pkg: p, id: fmt.Sprintf("CVE-0000-9%04d", n), sev: sevs[r.IntN(len(sevs))],
 					installed: installed, fixedIn: installed + "-1", from: from, fixed: fixed, epss: r.Float64() * 0.2}
 				if r.IntN(12) == 0 {
 					v.kev, v.epss = true, 0.6+r.Float64()*0.39

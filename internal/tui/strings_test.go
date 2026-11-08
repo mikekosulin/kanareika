@@ -42,7 +42,7 @@ func uiStrings(t *testing.T) []string {
 		ast.Inspect(file, func(n ast.Node) bool {
 			switch x := n.(type) {
 			case *ast.CallExpr:
-				if sel, ok := x.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "T" && len(x.Args) == 1 {
+				if sel, ok := x.Fun.(*ast.SelectorExpr); ok && slices.Contains([]string{"T", "F", "FS"}, sel.Sel.Name) && len(x.Args) >= 1 {
 					add(x.Args[0])
 				}
 				// the host card's helpers translate their first argument

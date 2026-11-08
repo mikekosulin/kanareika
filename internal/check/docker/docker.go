@@ -157,7 +157,7 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 		}
 	}
 	if err != nil {
-		return nil, fmt.Errorf("нет доступа к docker (privilege=%s): %w", h.Privilege, err)
+		return nil, fmt.Errorf("no access to docker (privilege=%s): %w", h.Privilege, err)
 	}
 	raw, err = runOp(ctx, h, "docker-ps")
 	if err != nil {

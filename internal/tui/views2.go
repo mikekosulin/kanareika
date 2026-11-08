@@ -54,7 +54,7 @@ func (m *Model) noSection(module string) []string {
 	if m.rund == nil {
 		return m.noData()
 	}
-	return []string{"", " " + sMuted.Render(m.t.T("Module")+" "+module+" "+m.t.T("has not run yet."))}
+	return []string{"", " " + sMuted.Render(m.t.F("Module {module} has not run yet.", "module", module))}
 }
 
 // --- Changes --------------------------------------------------------------------------------------------------------
@@ -92,7 +92,7 @@ func (m *Model) changesView(list []change, w, h int) []string {
 	if m.rund.New == nil {
 		return []string{"", " " + sMuted.Render(m.t.T("No previous full run."))}
 	}
-	note := " " + sMuted.Render(m.t.T("Compared with the")+" "+m.t.T("full run")+" "+m.t.runShort(m.rund.Prev)+". "+m.t.T("Only hosts scanned in both.")) +
+	note := " " + sMuted.Render(m.t.F("Compared with the full run {run}.", "run", m.t.runShort(m.rund.Prev))+" "+m.t.T("Only hosts scanned in both.")) +
 		"  " + sErr.Render(fmt.Sprintf("+%d", len(m.rund.New.Rows))) + sMuted.Render(fmt.Sprintf(" (%d CVE)", m.rund.New.Total))
 	if m.rund.Resolved != nil {
 		note += "  " + sOK.Render(fmt.Sprintf("−%d", len(m.rund.Resolved.Rows))) + sMuted.Render(fmt.Sprintf(" (%d CVE)", m.rund.Resolved.Total))
@@ -427,7 +427,7 @@ func (m *Model) healthView(hosts []string, w, h int) []string {
 			inode = pct(num(d["use"]))
 		}
 		if mm := obj(x["mem"]); mm != nil && num(mm["total_mb"]) > 0 {
-			mem = sText.Render(fmt.Sprintf("%.0f%% %s", 100*num(mm["available_mb"])/num(mm["total_mb"]), m.t.T("free")))
+			mem = sText.Render(m.t.F("{pct}% free", "pct", fmt.Sprintf("%.0f", 100*num(mm["available_mb"])/num(mm["total_mb"]))))
 		}
 		if ld := obj(x["load"]); ld != nil {
 			load = sText.Render(str(ld["load15"])) + sMuted.Render("/"+str(ld["cpus"]))
@@ -506,7 +506,7 @@ func (m *Model) exceptionsView(list []map[string]any, w, h int) []string {
 	}
 	var out []string
 	if len(list) == 0 {
-		out = append(out, "", " "+sMuted.Render(m.t.T("No exceptions. Accepted risks live in")+" exceptions "+m.t.T("of the organization file.")))
+		out = append(out, "", " "+sMuted.Render(m.t.F("No exceptions. Accepted risks live in {section} of the organization file.", "section", "exceptions")))
 	} else {
 		rows := make([][]string, 0, len(list))
 		for _, f := range list {

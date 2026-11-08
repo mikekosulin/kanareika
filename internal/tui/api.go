@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -195,6 +196,7 @@ type dbResp struct {
 		Next     string `json:"next_update"`
 		Outdated bool   `json:"outdated"`
 	} `json:"dbs"`
+	Trivy        string   `json:"trivy"` // the server's built-in trivy
 	FeedsUpdated string   `json:"feeds_updated"`
 	Enabled      bool     `json:"enabled"`
 	Updating     bool     `json:"updating"`
@@ -225,6 +227,10 @@ func (t *tr) T(s string) string {
 	}
 	return s
 }
+
+// F translates a whole sentence and fills its {name}s (pairs: name, value). The sentence is the key, not its
+// pieces, so every language puts the words in its own order ("hace 5 min", "il y a 5 min").
+func (t *tr) F(s string, kv ...string) string { return fill(t.T(s), nil, kv) }
 
 var argRE = regexp.MustCompile(`\{(\w+)\}`)
 
@@ -289,11 +295,11 @@ func (t *tr) ago(iso string, now time.Time) string {
 	case s < time.Minute:
 		return t.T("just now")
 	case s < time.Hour:
-		return fmt.Sprintf("%d %s", int(s.Minutes()+.5), t.T("min ago"))
+		return t.F("{n} min ago", "n", strconv.Itoa(int(s.Minutes()+.5)))
 	case s < 24*time.Hour:
-		return fmt.Sprintf("%d %s", int(s.Hours()+.5), t.T("h ago"))
+		return t.F("{n} h ago", "n", strconv.Itoa(int(s.Hours()+.5)))
 	}
-	return fmt.Sprintf("%d %s", int(s.Hours()/24+.5), t.T("d ago"))
+	return t.F("{n} d ago", "n", strconv.Itoa(int(s.Hours()/24+.5)))
 }
 
 // runShort: a run id (its start in UTC, 2026-11-01_204722) as 2026-11-01 20:47 in the zone shown; "current"

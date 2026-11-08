@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	jsT     = regexp.MustCompile(`\bt\("((?:[^"\\]|\\.)*)"\)`)
+	jsT     = regexp.MustCompile(`\btf?\("((?:[^"\\]|\\.)*)"[),]`) // t("…") and tf("…", {…})
 	attrT   = regexp.MustCompile(`data-t(?:-title)?="([^"]+)"`)
 	notWord = regexp.MustCompile(`^([A-Z0-9/+-]{1,6}|[^A-Za-z]*|Trivy|Kanareika)$`)
 )
@@ -51,6 +51,26 @@ func TestEveryPageStringTranslated(t *testing.T) {
 		sort.Strings(missing)
 		if len(missing) > 0 {
 			t.Errorf("%s: %d untranslated:\n%s", lang, len(missing), strings.Join(missing, "\n"))
+		}
+	}
+}
+
+// TestPageShape: the page is HTML from its first byte, and the helpers every view calls are defined inside its
+// script (the tests do not run the page's JavaScript: a helper left outside it breaks the page silently).
+func TestPageShape(t *testing.T) {
+	b, err := fs.ReadFile(assets.Web(), "index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(b)
+	if !strings.HasPrefix(page, "<!doctype html>") {
+		t.Fatalf("the page starts with %q", page[:min(len(page), 40)])
+	}
+	open, end := strings.Index(page, "<script>"), strings.LastIndex(page, "</script>")
+	for _, def := range []string{"const t = (s) => ", "const tf = (s, v) => ", "function L(", "const LANG_NAMES = ", "const LANGS = "} {
+		i := strings.Index(page, def)
+		if i < open || i > end || strings.Count(page, def) != 1 {
+			t.Errorf("%q: not once inside the script", def)
 		}
 	}
 }

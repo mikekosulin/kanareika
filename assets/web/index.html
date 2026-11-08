@@ -299,15 +299,19 @@ dialog.scan .err { color: var(--bad-text); font-size: 13px; min-height: 1em; }
 /* i18n. UI strings: English in the code, translations keyed by the English text (gettext style), from locales/<lang>.json.
    Finding/action texts come from the server catalog (/api/i18n) by message key, see L(). */
 const UI = /*I18N_UI*/{};  // locales/<lang>.json "ui", inlined by the server
-const LANGS = ["en", ...Object.keys(UI).filter((l) => l !== "en").sort()];
+const LANG_NAMES = /*I18N_NAMES*/{};  // each language in its own name: locales/<lang>.json "name", inlined by the server
+/* English first, then by their own names (Latin, Cyrillic, 中文, 日本語, 한국어), as Langs() in Go */
+const LANGS = ["en", ...Object.keys(UI).filter((l) => l !== "en").sort((a, b) => ((LANG_NAMES[a] || a) < (LANG_NAMES[b] || b) ? -1 : 1))];
 let LANG = (() => {
-  let l = "";
-  try { l = localStorage.getItem("kn.lang") || ""; } catch {}
+  let l = new URLSearchParams(location.search).get("lang") || "";  // ?lang=ja: a link in a language
+  try { l = l || localStorage.getItem("kn.lang") || ""; } catch {}
   if (!l) l = (navigator.language || "en").slice(0, 2).toLowerCase();  // the browser's language when not chosen
   return LANGS.includes(l) ? l : "en";
 })();
 let CATALOG = {};
 const t = (s) => (UI[LANG] && UI[LANG][s]) || s;
+/* tf: a whole sentence translated, its {name}s filled; the sentence is the key, so each language orders its words */
+const tf = (s, v) => t(s).replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
 function L(o, field = "title") {
   const key = field === "title" ? o.msg : o[field + "_msg"];
   const m = key && CATALOG[key];
@@ -368,9 +372,9 @@ function ago(iso) {
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
   if (Number.isNaN(s)) return "—";
   if (s < 60) return t("just now");
-  if (s < 3600) return `${Math.round(s / 60)} ${t("min ago")}`;
-  if (s < 86400) return `${Math.round(s / 3600)} ${t("h ago")}`;
-  return `${Math.round(s / 86400)} ${t("d ago")}`;
+  if (s < 3600) return `${tf("{n} min ago", { n: Math.round(s / 60) })}`;
+  if (s < 86400) return `${tf("{n} h ago", { n: Math.round(s / 3600) })}`;
+  return `${tf("{n} d ago", { n: Math.round(s / 86400) })}`;
 }
 function dur(a, b) {
   if (!a || !b) return "";
@@ -403,7 +407,7 @@ const prioCell = (p) => p ? `<span class="prio ${p}">${p}</span>` : `<span class
 const dueCell = (d, p) => {
   if (!d) return `<span class="muted">—</span>`;
   const od = new Date(d) < new Date() && p !== "P4";
-  return `<span class="${od ? "overdue" : p === "P4" ? "muted" : ""}" title="${od ? t("overdue") : t("due by") + " SLA"}">${esc(d)}</span>`;
+  return `<span class="${od ? "overdue" : p === "P4" ? "muted" : ""}" title="${od ? t("overdue") : t("due by SLA")}">${esc(d)}</span>`;
 };
 const imgName = (tg) => tg.slice(6).split("@")[0].split("/").pop();
 const where = (tg) => {
@@ -622,7 +626,7 @@ function renderKpis() {
       <div class="foot">${failed ? st("bad", `${failed} ${t("unreachable")}`) : merr ? st("warn", `${merr} ${t("with errors")}`) : st("ok", t("all good"))}</div></div>
     <div class="card kpi"><div class="label">${icon("clock", "sm")}${t("Overdue")}</div>
       <div class="value">${fmt(overdue)}</div>
-      <div class="foot" title="${t("packages")} P1–P3 ${t("past due by")} SLA">${expired ? `<span class="overdue">${t("expired exceptions")}: ${expired}</span>` : `${t("exceptions")}: ${rd.exceptions.length}`}</div></div>
+      <div class="foot" title="${t("packages P1–P3 past due by SLA")}">${expired ? `<span class="overdue">${t("expired exceptions")}: ${expired}</span>` : `${t("exceptions")}: ${rd.exceptions.length}`}</div></div>
     <div class="card kpi"><div class="label">${icon("arrow-path", "sm")}${t("Updated")}</div>
       <div class="value" style="font-size:18px;margin-top:8px">${esc(ago(m.finished))}</div>
       <div class="foot" title="${fmt(c.cves)} CVE ${t("total")}${m.feeds_updated ? "" : " · KEV/EPSS " + t("not loaded") + " (kanareika db update)"}">${m.run_id === "current" ? (sources === 1 ? t("from the last run") : `${t("runs merged")}: ${sources}`) : esc(dur(m.started, m.finished))} · ${fmtc(c.cves)} CVE</div></div>`;
@@ -878,7 +882,7 @@ function tabActions(body) {
         <input type="checkbox" data-sel="${esc(a.id)}" ${S.sel.has(a.id) ? "checked" : ""} aria-label="${t("select")}">
         <div>${prioCell(a.priority)}</div>
         <div style="min-width:0">
-          <div class="t">${icon(cic)}<span class="trunc" title="${esc(L(a) + (sub ? " — " + sub : ""))}">${esc(L(a))}</span>${a.rce ? `<span class="tag rce" title="${a.rce} CVE: ${t("remote, no account and no user interaction, code execution")}">${icon("fire", "sm")}RCE</span>` : ""}${a.kev ? `<span class="tag kev" title="${t("has")} CVE ${t("from the catalog")} CISA KEV — ${t("exploited in the wild")}">KEV</span>` : ""}</div>
+          <div class="t">${icon(cic)}<span class="trunc" title="${esc(L(a) + (sub ? " — " + sub : ""))}">${esc(L(a))}</span>${a.rce ? `<span class="tag rce" title="${tf("{n} CVE: remote code execution with no account and no user interaction", { n: a.rce })}">${icon("fire", "sm")}RCE</span>` : ""}${a.kev ? `<span class="tag kev" title="${t("has CVEs from the CISA KEV catalog: exploited in the wild")}">KEV</span>` : ""}</div>
           ${a.packages?.length ? pkgPreview(a) : a.detail ? (() => { const d = detailText(a); return `<div class="d trunc" title="${esc(d)}">${esc(d)}</div>`; })() : ""}
           <div class="meta">${hostTags(a.hosts, 4)}${a.hint ? `<span class="cmd"><code title="${esc(L(a, "hint"))}">${esc(L(a, "hint"))}</code>${copyBtn(L(a, "hint"))}</span>` : ""}</div>
         </div>
@@ -909,7 +913,7 @@ function tabPlan(body) {
     <div class="filters">${prioChips((p) => all.filter((r) => base(r) && (r.priority || "P4") === p).length)}
       <input type="search" id="fq" placeholder="${t("package, image")}, CVE" value="${esc(f.q)}">
       <button class="chip" id="ffix" aria-pressed="${f.fixable}" title="${t("hide packages without a fixed version")}">${icon("check", "sm")}${t("has fix")}</button>
-      <button class="chip" id="frce" aria-pressed="${!!f.rce}" title="${t("has")} CVE: ${t("remote, no account and no user interaction, code execution")}">${icon("fire", "sm")}pre-auth RCE</button>
+      <button class="chip" id="frce" aria-pressed="${!!f.rce}" title="${t("has CVEs with remote code execution, no account and no user interaction")}">${icon("fire", "sm")}pre-auth RCE</button>
       <span class="count">${fmt(rows.length)}</span></div></div>
     ${rows.length ? `<div class="flow"><table>
       <thead><tr><th>prio</th><th>${t("due")}</th><th>${t("host")}</th><th>${t("package")}</th><th>${t("where")}</th><th>${t("installed")}</th><th>${t("update to")}</th><th class="num">CVE</th></tr></thead><tbody>
@@ -921,7 +925,7 @@ function tabPlan(body) {
         <td><div class="cell w2 mono" title="${esc(r.fixed || t("no fix"))}${r.unfixed ? ` · ${r.unfixed} CVE ${t("without a fix")}` : ""}">${fixCell(r)}</div></td>
         <td class="num" title="${esc(r.cve_top.join("\n") + (r.cves > r.cve_top.length ? "\n…" : ""))}">${fmtc(r.cves)}</td></tr>`).join("")}
       </tbody></table></div>
-      ${rows.length > S.limit ? `<button class="iconbtn more" id="more">${t("more")} ${fmt(Math.min(500, rows.length - S.limit))}</button>` : ""}`
+      ${rows.length > S.limit ? `<button class="iconbtn more" id="more">${tf("show {n} more", { n: fmt(Math.min(500, rows.length - S.limit)) })}</button>` : ""}`
     : `<div class="empty">${t("Nothing matches the filters")}</div>`}`;
   wireFilters(body);
   $("#ffix").onclick = () => { f.fixable = !f.fixable; renderTabs(); };
@@ -939,12 +943,12 @@ function diffTable(rows, empty) {
     ${rows.slice(0, 1000).map((g) => `<tr><td>${prioCell(g.priority)}</td><td class="nw">${esc(g.host)}</td>
       <td><div class="cell" title="${esc(g.ids.join(", "))}"><b>${esc(g.pkg)}</b> ${g.rce ? `<span class="tag rce">${icon("fire", "sm")}RCE</span>` : ""}${g.kev ? `<span class="tag kev">KEV</span>` : ""}</div></td>
       ${whereCell(g.target)}<td class="num">${fmtc(g.count)}</td></tr>`).join("")}
-    </tbody></table></div>${rows.length > 1000 ? `<div class="muted more">${t("first 1000 of")} ${fmt(rows.length)}</div>` : ""}`;
+    </tbody></table></div>${rows.length > 1000 ? `<div class="muted more">${tf("first 1000 of {n}", { n: fmt(rows.length) })}</div>` : ""}`;
 }
 function tabDiff(body) {
   const rd = S.runData;
   if (!rd.new) { body.innerHTML = `<div class="empty">${partial(rd.meta) ? t("A partial run is not compared with full runs.") : t("No previous full run.")}</div>`; return; }
-  body.innerHTML = `<div class="note">${icon("arrows-right-left")}<span>${rd.meta.run_id === "current" ? t("What changed since the") : t("Compared with the")} ${t("full run")} ${esc(runShort(rd.prev))}. ${t("Only hosts scanned in both.")}</span></div>
+  body.innerHTML = `<div class="note">${icon("arrows-right-left")}<span>${rd.meta.run_id === "current" ? tf("What changed since the full run {run}.", { run: esc(runShort(rd.prev)) }) : tf("Compared with the full run {run}.", { run: esc(runShort(rd.prev)) })} ${t("Only hosts scanned in both.")}</span></div>
     <div class="cols2"><div><div class="subh">${t("New")} <span class="sub">${fmt(rd.new.rows.length)} · ${fmtc(rd.new.total)} CVE</span></div>${diffTable(rd.new.rows, t("Nothing new"))}</div>
     <div><div class="subh">${t("Resolved")} <span class="sub">${fmt(rd.resolved.rows.length)} · ${fmtc(rd.resolved.total)} CVE</span></div>${diffTable(rd.resolved.rows, t("Nothing resolved"))}</div></div>`;
 }
@@ -952,7 +956,7 @@ function tabDiff(body) {
 /* доступ */
 function tabAccess(body) {
   const A = S.runData.access || {}, hosts = Object.keys(A).sort().filter(hostOk);
-  if (!hosts.length) { body.innerHTML = `<div class="empty">${t("Module")} access ${t("has not run yet.")}</div>`; return; }
+  if (!hosts.length) { body.innerHTML = `<div class="empty">${tf("Module {module} has not run yet.", { module: "access" })}</div>`; return; }
   const logins = hosts.flatMap((h) => A[h].logins.accepted.map((x) => ({ host: h, ...x }))).sort((a, b) => (b.last || "").localeCompare(a.last || ""));
   // attackers across the selected hosts: merge per IP, keep first/last seen and the logins they tried
   const byIp = {}, daily = {};
@@ -995,7 +999,7 @@ function tabAccess(body) {
         <td class="nw" title="${t("first")}: ${esc(ts(x.first))}">${esc(ts(x.last))}</td></tr>`).join("")}
     </tbody></table></div>` : `<div class="empty">${t("No login data")}</div>`}
     <div class="cols2">
-      <div><div class="subh">${icon("key")}${t("Keys")} <span class="sub">${keyRows.length} ${t("unique")}</span></div>
+      <div><div class="subh">${icon("key")}${t("Keys")} <span class="sub">${tf("{n} unique", { n: keyRows.length })}</span></div>
         ${keyRows.length ? `<div class="scroll" style="max-height:340px"><table><thead><tr><th>${t("key")}</th><th>${t("whose")}</th><th>${t("where")}</th></tr></thead><tbody>
         ${keyRows.map((k) => `<tr><td class="mono nw" title="${esc(k.fp)}${k.options ? "\n" + esc(k.options) : ""}">${esc(k.type.replace("ssh-", "").replace("ecdsa-sha2-", ""))} ${esc(k.fp.slice(7, 15))}</td>
           <td><div class="cell w2" title="${esc(k.comment)}">${esc(k.comment) || `<span class="muted">${t("no comment")}</span>`}</div></td>
@@ -1043,15 +1047,15 @@ function drawDaily(svg, daily) {
 function fwCell(fw) {
   if (!fw || !fw.readable) return `<span class="muted">${t("no access")}</span>`;
   const parts = [fw.firewalld === "running" && "firewalld", fw.ufw_active && "ufw", fw.iptables_input_policy && `INPUT ${fw.iptables_input_policy}`, fw.docker_rules && "docker"].filter(Boolean);
-  return fw.has_input_filtering ? st("ok", parts[0] || t("has"), parts.join(" · ")) : st("bad", t("no filtering"), parts.join(" · "));
+  return fw.has_input_filtering ? st("ok", parts[0] || t("filtering"), parts.join(" · ")) : st("bad", t("no filtering"), parts.join(" · "));
 }
 function tabExposure(body) {
   const f = S.filt, E = S.runData.exposure || {}, hosts = Object.keys(E).sort().filter(hostOk);
-  if (!hosts.length) { body.innerHTML = `<div class="empty">${t("Module")} exposure ${t("has not run yet.")}</div>`; return; }
+  if (!hosts.length) { body.innerHTML = `<div class="empty">${tf("Module {module} has not run yet.", { module: "exposure" })}</div>`; return; }
   const all = hosts.flatMap((h) => E[h].listen.map((x) => ({ host: h, ...x })));
   const rows = all.filter((x) => hostOk(x.host) && (!f.pubOnly || x.public));
   body.innerHTML = deniedNote(E) + `
-    <div class="xscroll"><table><thead><tr><th>${t("host")}</th><th>${t("public")} IP</th><th>${t("open to the outside")}</th><th>firewall</th><th></th></tr></thead><tbody>
+    <div class="xscroll"><table><thead><tr><th>${t("host")}</th><th>${t("public IP")}</th><th>${t("open to the outside")}</th><th>firewall</th><th></th></tr></thead><tbody>
     ${hosts.map((h) => { const e = E[h]; const ports = [...new Set(e.listen.filter((x) => x.public).map((x) => x.port))].sort((a, b) => a - b);
       return `<tr><td class="nw"><b>${esc(h)}</b></td>
         <td>${e.public.length ? e.public.map((ip) => e.unlisted_public.includes(ip) ? `<span class="tag bad" title="${t("not in the organization config")}">${esc(ip)}</span>` : `<span class="tag">${esc(ip)}</span>`).join(" ") : `<span class="muted" title="${t("no public addresses on the interfaces")}">NAT</span>`}</td>
@@ -1092,18 +1096,18 @@ function timeCell(x) {
 }
 function tabHealth(body) {
   const H = S.runData.health || {}, allHosts = Object.keys(H).sort(), hosts = allHosts.filter(hostOk);
-  if (!hosts.length) { body.innerHTML = `<div class="empty">${t("Module")} health ${t("has not run yet.")}</div>`; return; }
+  if (!hosts.length) { body.innerHTML = `<div class="empty">${tf("Module {module} has not run yet.", { module: "health" })}</div>`; return; }
   const pct = (v) => v >= 95 ? `<b class="overdue">${v}%</b>` : v >= 85 ? `<b>${v}%</b>` : `${v}%`;
   const maxOf = (rows) => rows?.length ? rows.reduce((a, b) => (b.use > a.use ? b : a)) : null;
   const tzs = allHosts.map((h) => H[h].time?.timezone).filter(Boolean);
   const tzMain = tzs.sort((a, b) => tzs.filter((v) => v === b).length - tzs.filter((v) => v === a).length)[0];
   body.innerHTML = deniedNote(H) + `
-    <div class="xscroll"><table><thead><tr><th>${t("host")}</th><th>${t("disk")}</th><th>inode</th><th>${t("memory")}</th><th>load</th><th>${t("units")}</th><th>${t("kernel")} (dmesg)</th><th class="num" title="${t("errors in")} journal ${t("in 7 days")}">journal</th><th>${t("time zone")}</th><th>${t("time")}</th></tr></thead><tbody>
+    <div class="xscroll"><table><thead><tr><th>${t("host")}</th><th>${t("disk")}</th><th>inode</th><th>${t("memory")}</th><th>load</th><th>${t("units")}</th><th>${t("kernel")} (dmesg)</th><th class="num" title="${t("journal errors in 7 days")}">journal</th><th>${t("time zone")}</th><th>${t("time")}</th></tr></thead><tbody>
     ${hosts.map((h) => { const x = H[h], d = maxOf(x.disks), i = maxOf(x.inodes), cls = Object.values(x.dmesg?.classes || {}), tz = x.time?.timezone;
       return `<tr><td class="nw"><b>${esc(h)}</b></td>
         <td class="nw" title="${esc((x.disks || []).map((r) => `${r.mount} ${r.use}%`).join("\n"))}">${d ? `${pct(d.use)} <span class="muted">${esc(d.mount)}</span>` : "—"}</td>
         <td>${i ? pct(i.use) : "—"}</td>
-        <td class="nw" title="${x.mem ? `${fmt(x.mem.available_mb)} ${t("of")} ${fmt(x.mem.total_mb)} ${t("MB free")}` : ""}">${x.mem ? `${Math.round(100 * x.mem.available_mb / x.mem.total_mb)}% ${t("free")}` : "—"}</td>
+        <td class="nw" title="${x.mem ? `${tf("{avail} of {total} MB free", { avail: fmt(x.mem.available_mb), total: fmt(x.mem.total_mb) })}` : ""}">${x.mem ? `${tf("{pct}% free", { pct: Math.round(100 * x.mem.available_mb / x.mem.total_mb) })}` : "—"}</td>
         <td class="nw">${x.load ? `${x.load.load15}<span class="muted">/${x.load.cpus}</span>` : "—"}</td>
         <td>${x.failed_units?.length ? st("warn", String(x.failed_units.length), x.failed_units.join("\n")) : `<span class="zero">—</span>`}</td>
         <td>${x.denied?.includes("denied.dmesg") ? `<span class="muted">${t("no access")}</span>` : cls.length ? cls.map((c) => `<span class="tag" title="${esc(c.last)}">${esc(cat(c.key, c.title).split(" (")[0])} ${c.count}</span>`).join(" ") : st("ok", "")}</td>
@@ -1123,7 +1127,7 @@ function tabExceptions(body) {
   body.innerHTML = (ex.length ? `<div class="scroll"><table><thead><tr><th></th><th>${t("host")}</th><th>id</th><th>${t("package")}</th><th>${t("until")}</th><th>${t("who")}</th><th>${t("reason")}</th></tr></thead><tbody>
     ${ex.map((f) => `<tr><td>${exStatus(f.exception)}</td><td class="nw">${esc(f.host)}</td><td class="mono">${esc(f.id)}</td>
       <td>${esc(f.pkg)}</td><td class="nw">${esc(f.exception.review_by)}</td><td>${esc(f.exception.owner)}</td><td><div class="cell" title="${esc(f.exception.reason)}">${esc(f.exception.reason)}</div></td></tr>`).join("")}</tbody></table></div>`
-    : `<div class="empty">${t("No exceptions. Accepted risks live in")} <code>exceptions</code> ${t("of the organization file.")}</div>`)
+    : `<div class="empty">${tf("No exceptions. Accepted risks live in {section} of the organization file.", { section: "<code>exceptions</code>" })}</div>`)
     + (bp.length ? `<div class="subh" style="margin-top:24px">${icon("shield-check")}${t("Already fixed in the installed build")} <span class="sub">${fmtc(bp.reduce((n, r) => n + r.cves, 0))} CVE</span></div>
       <div class="note">${icon("check")}<span>${t("Matched by version, but the package changelog lists these CVEs as fixed (backport). They are not in the plan or the counts.")}</span></div>
       <div class="scroll"><table><thead><tr><th>${t("host")}</th><th>${t("package")}</th><th>${t("installed")}</th><th class="num">CVE</th><th></th></tr></thead><tbody>
@@ -1176,7 +1180,6 @@ $("#tz").onclick = () => {
   location.reload();  // run names in selects and tables are built from it
 };
 /* language: a menu of the languages under the button, each in its own name */
-const LANG_NAMES = { en: "English", ru: "Русский", zh: "中文" };
 function closeMenu() { document.querySelector(".menu")?.remove(); }
 $("#lang").onclick = (ev) => {
   ev.stopPropagation();

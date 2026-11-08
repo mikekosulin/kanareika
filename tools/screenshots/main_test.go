@@ -104,4 +104,8 @@ func TestMainFunc(t *testing.T) {
 	if out, msg := main1("-home", t.TempDir(), "-size", "big"); out != "" || !strings.Contains(msg, `-size "big"`) {
 		t.Fatalf("%q %q", out, msg)
 	}
+	calls := fakeShots(t) // -out: the pictures, nothing printed
+	if out, msg := main1("-home", t.TempDir(), "-size", "60x10", "-out", t.TempDir()); out != "" || msg != "" || len(*calls) == 0 {
+		t.Fatalf("%q %q %d", out, msg, len(*calls))
+	}
 }

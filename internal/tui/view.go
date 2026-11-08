@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/mikekosulin/kanareika/assets"
+	"github.com/mikekosulin/kanareika/internal/i18n"
 )
 
 // Palette: the web page's priority colors on a dark terminal, k9s-like chrome.
@@ -475,12 +476,25 @@ func (m *Model) info() []string {
 	if st := m.scanState(); st != "" {
 		scan = st
 	}
-	trivy := sDim.Render("-")
-	if m.rund != nil && m.rund.Meta.TrivyVersion != "" {
-		trivy = sText.Render(m.rund.Meta.TrivyVersion)
-		if m.rund.Meta.FeedsUpdated == nil {
-			trivy += sMuted.Render(" · KEV/EPSS " + m.t.T("not loaded"))
+	// trivy: the one built into the server; the run's own when it was scanned with another (or the server's is unknown)
+	trivy, built, ran := sDim.Render("-"), "", ""
+	if m.db != nil {
+		built = m.db.Trivy
+	}
+	if m.rund != nil {
+		ran = m.rund.Meta.TrivyVersion
+	}
+	switch {
+	case built != "":
+		trivy = sText.Render(built) + sMuted.Render(" "+m.t.T("built in"))
+		if ran != "" && ran != built { // the column is narrow: the run's version instead of "built in"
+			trivy = sText.Render(built) + sMuted.Render(" · "+m.t.F("run: {version}", "version", ran))
 		}
+	case ran != "":
+		trivy = sText.Render(ran)
+	}
+	if ran != "" && m.rund.Meta.FeedsUpdated == nil {
+		trivy += sMuted.Render(" · KEV/EPSS " + m.t.T("not loaded"))
 	}
 
 	db := m.dbState()
@@ -506,7 +520,11 @@ func (m *Model) dbState() string {
 	}
 	for _, d := range m.db.DBs {
 		if at, err := time.Parse(time.RFC3339, d.Updated); err == nil && d.Name == "db" {
-			return sMuted.Render(agoShort(m.now().Sub(at)))
+			age := max(m.now().Sub(at), 0) // a clock behind the DB's build time: not a negative age
+			if d.Next == "" {
+				return sMuted.Render(agoShort(age))
+			}
+			return sMuted.Render(agoShort(age)+" · ") + sOK.Render(m.t.T("up to date")) // not outdated: checked above
 		}
 	}
 	return ""
@@ -751,7 +769,7 @@ func (m *Model) noData() []string {
 		}
 		l := []string{"", " " + sMuted.Render(m.t.T("No runs yet. Run")+": ") + sKey.Render(cmd)}
 		if m.scanOK {
-			l = append(l, " "+sMuted.Render(m.t.T("or press"))+" "+sKey.Render("<s>"))
+			l = append(l, " "+m.t.FS("or press {key}", sMuted, "key", sKey.Render("<s>")))
 		}
 		return l
 	}
@@ -958,8 +976,8 @@ func (m *Model) scansView(w, h int) []string {
 			sMuted.Render(strings.Join(scope, " "))})
 	}
 	if len(rows) == 0 {
-		return append(out, "", " "+sMuted.Render(m.t.T("Press"))+" "+sKey.Render("<s>")+" "+
-			sMuted.Render(m.t.T("to start a scan of"))+" "+sText.Render(m.org+"/"+m.env))
+		return append(out, "", " "+m.t.FS("Press {key} to start a scan of {target}", sMuted,
+			"key", sKey.Render("<s>"), "target", sText.Render(m.org+"/"+m.env)))
 	}
 	listH := min(len(rows)+1, max((h-len(out))/3, 3))
 	out = append(out, m.table(viewCols[vScans], rows, w, listH)...)
@@ -1304,10 +1322,7 @@ func (m *Model) langView() []string {
 		if l == m.t.lang {
 			mark = sOK.Render("✓ ")
 		}
-		name := langNames[l]
-		if name == "" {
-			name = l
-		}
+		name := i18n.Name(l)
 		line := "  " + mark + sText.Render(fit(name, 12, false)) + sMuted.Render(strings.ToUpper(l))
 		if i == m.langs.cur {
 			line = sSel.Render(ansi.Strip(fit(line, 30, false)))
@@ -1315,4 +1330,35 @@ func (m *Model) langView() []string {
 		out = append(out, line)
 	}
 	return append(out, "", "  "+sKey.Render("<enter>")+" "+sMuted.Render(m.t.T("choose"))+"  "+sKey.Render("<esc>")+" "+sMuted.Render(m.t.T("close")))
+}
+
+// FS: as F, with the sentence's own words in base and the values as given (already styled: a key, a name).
+func (t *tr) FS(s string, base lipgloss.Style, kv ...string) string { return fill(t.T(s), &base, kv) }
+
+// fill puts the values into a template's {name}s; the words around them in base when there is one. A {name}
+// without a value stays as written.
+func fill(tmpl string, base *lipgloss.Style, kv []string) string {
+	vals := map[string]string{}
+	for i := 0; i+1 < len(kv); i += 2 {
+		vals[kv[i]] = kv[i+1]
+	}
+	var b strings.Builder
+	words := func(s string) {
+		if s != "" && base != nil {
+			s = base.Render(s)
+		}
+		b.WriteString(s)
+	}
+	last := 0
+	for _, m := range argRE.FindAllStringSubmatchIndex(tmpl, -1) {
+		v, ok := vals[tmpl[m[2]:m[3]]]
+		if !ok {
+			continue
+		}
+		words(tmpl[last:m[0]])
+		b.WriteString(v)
+		last = m[1]
+	}
+	words(tmpl[last:])
+	return b.String()
 }
