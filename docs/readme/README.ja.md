@@ -20,20 +20,88 @@
 
 <sub>デモデータ (架空のもの)。</sub>
 
+### インストール
+
+Linux、macOS: このマシンに合ったビルドを選び、チェックサムを検証して `/usr/local/bin` (または `~/.local/bin`) にインストールします:
+
 ```bash
-brew install mikekosulin/tap/kanareika   # macOS、Linux。またはリリースのバイナリ (Windows 版もあり)
-kanareika init                   # ここに orgs/、secrets/、reports/ を作成 (または --home DIR)
-kanareika org new myorg          # ホスト、踏み台ホスト、同意: orgs/myorg.yml
-kanareika validate myorg
-kanareika db update              # 脆弱性 DB (閉域ネットワークでは db export / db import)
-kanareika scan myorg
-kanareika                        # ターミナル UI
-kanareika web                    # Web UI、http://127.0.0.1:8088
+curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
 ```
+
+Homebrew (macOS、Linux):
+
+```bash
+brew install mikekosulin/tap/kanareika
+```
+
+Windows (PowerShell):
+
+```powershell
+Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.zip -OutFile kanareika.zip; Expand-Archive kanareika.zip -DestinationPath kanareika
+```
+
+あとは `kanareika` フォルダーの `kanareika.exe` を実行します。ARM 版は `kanareika-windows-arm64.zip` です。
+
+### 起動
+
+ターミナルで:
+
+```bash
+kanareika
+```
+
+またはブラウザで。http://127.0.0.1:8088 (localhost のみで待ち受けます):
+
+```bash
+kanareika web
+```
+
+初回起動時は、サーバーの追加 (SSH ユーザーと鍵、ホスト、スキャンへの同意) を案内し、最初のスキャンを実行します。脆弱性 DB は自動でダウンロードされます。
+
+### スクリプトや cron 向け
+
+組織を作成します。設定は `orgs/<ORG_ID>.yml` に保存されます:
+
+```bash
+kanareika org new <ORG_ID>
+```
+
+スキャンします。事前にファイルの検証と DB のダウンロードが行われます:
+
+```bash
+kanareika scan <ORG_ID>
+```
+
+別のポートで Web UI を起動 (`--port 0` なら空いているポートを自動で使います):
+
+```bash
+kanareika web --port <PORT>
+```
+
+ターミナル UI をリモートの Web に接続:
+
+```bash
+kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>
+```
+
+閉域ネットワーク: インターネットに接続できるマシンで DB をエクスポートし、
+
+```bash
+kanareika db export <BUNDLE.tar.gz>
+```
+
+閉域側のマシンでインポートしてオフラインでスキャンします:
+
+```bash
+kanareika db import <BUNDLE.tar.gz>
+kanareika scan <ORG_ID> --offline
+```
+
+その他すべて: `kanareika --help`
 
 **4 つの入口、同じデータと同じルール:**
 
-- **TUI** (メイン) — `kanareika`: `?` でキー一覧、`o` でパネル、`L` で言語切り替え。リモートの Web にも接続できます: `kanareika tui --url http://host:8088 --token …`。
+- **TUI** (メイン) — `kanareika`: `?` でキー一覧、`o` でパネル、`L` で言語切り替え。リモートの Web にも接続できます: `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`。
 - **Web** — `kanareika web`: ダッシュボード、推移、ホストの詳細。スキャンはページから開始できます。
 - **コマンド** — スクリプトや cron 向け: `kanareika --help`。
 - **MCP** — `kanareika mcp`: AI エージェント (Claude Code など) 向けの読み取り専用ツール。

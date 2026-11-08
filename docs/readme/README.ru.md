@@ -22,20 +22,88 @@ Kanareika проверяет безопасность Linux-серверов п�
 
 <sub>На скриншотах вымышленные данные.</sub>
 
+### Установка
+
+Linux, macOS — скрипт выберет сборку под эту машину, сверит контрольную сумму и установит в `/usr/local/bin` (или `~/.local/bin`):
+
 ```bash
-brew install mikekosulin/tap/kanareika   # macOS и Linux; для Windows — бинарник со страницы релиза
-kanareika init                   # создаст orgs/, secrets/ и reports/ в текущей папке (или --home DIR)
-kanareika org new myorg          # хосты, бастионы и согласие на сканирование: orgs/myorg.yml
-kanareika validate myorg         # проверить настройки
-kanareika db update              # скачать базы уязвимостей (без интернета: db export / db import)
-kanareika scan myorg
-kanareika                        # терминальный интерфейс
-kanareika web                    # веб-интерфейс на http://127.0.0.1:8088
+curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
 ```
+
+Homebrew (macOS и Linux):
+
+```bash
+brew install mikekosulin/tap/kanareika
+```
+
+Windows (PowerShell):
+
+```powershell
+Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.zip -OutFile kanareika.zip; Expand-Archive kanareika.zip -DestinationPath kanareika
+```
+
+Затем запустите `kanareika.exe` из папки `kanareika`. Для ARM есть отдельный `kanareika-windows-arm64.zip`.
+
+### Запуск
+
+В терминале:
+
+```bash
+kanareika
+```
+
+или в браузере, на http://127.0.0.1:8088 (веб-интерфейс слушает только localhost):
+
+```bash
+kanareika web
+```
+
+При первом запуске Kanareika поможет добавить серверы (SSH-пользователь и ключ, хосты, согласие на сканирование) и запустит первое сканирование. Базы уязвимостей скачаются сами.
+
+### Для скриптов и cron
+
+Создать организацию — настройки окажутся в `orgs/<ORG_ID>.yml`:
+
+```bash
+kanareika org new <ORG_ID>
+```
+
+Просканировать её; перед этим проверяются настройки и скачиваются базы:
+
+```bash
+kanareika scan <ORG_ID>
+```
+
+Веб-интерфейс на другом порту (`--port 0` — любой свободный):
+
+```bash
+kanareika web --port <PORT>
+```
+
+Подключить терминальный интерфейс к удалённому веб-интерфейсу:
+
+```bash
+kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>
+```
+
+Без интернета: выгрузите базы на машине, где интернет есть,
+
+```bash
+kanareika db export <BUNDLE.tar.gz>
+```
+
+затем загрузите их на изолированной машине и сканируйте офлайн:
+
+```bash
+kanareika db import <BUNDLE.tar.gz>
+kanareika scan <ORG_ID> --offline
+```
+
+Всё остальное — `kanareika --help`.
 
 ### Как пользоваться
 
-- **Терминал** — `kanareika`, основной интерфейс. `?` — горячие клавиши, `o` — настройка панелей, `L` — язык. Можно подключиться к удалённому серверу: `kanareika tui --url http://host:8088 --token …`.
+- **Терминал** — `kanareika`, основной интерфейс. `?` — горячие клавиши, `o` — настройка панелей, `L` — язык. Можно подключиться к удалённому серверу: `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`.
 - **Браузер** — `kanareika web`: сводка, графики, карточки хостов, сканирование запускается прямо со страницы.
 - **Командная строка** — для скриптов и cron, список команд: `kanareika --help`.
 - **MCP** — `kanareika mcp`: инструменты только на чтение, чтобы с результатами могли работать ИИ-агенты (Claude Code и другие).

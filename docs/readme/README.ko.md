@@ -20,20 +20,88 @@
 
 <sub>데모 데이터(가상).</sub>
 
+### 설치
+
+Linux, macOS: 이 머신에 맞는 빌드를 골라 체크섬을 검증하고 `/usr/local/bin`(또는 `~/.local/bin`)에 설치합니다:
+
 ```bash
-brew install mikekosulin/tap/kanareika   # macOS, Linux; 또는 릴리스의 바이너리 (Windows 포함)
-kanareika init                   # 여기에 orgs/, secrets/, reports/ 생성 (또는 --home DIR)
-kanareika org new myorg          # 호스트, 점프 호스트, 동의: orgs/myorg.yml
-kanareika validate myorg
-kanareika db update              # 취약점 DB (폐쇄망: db export / db import)
-kanareika scan myorg
-kanareika                        # 터미널 인터페이스
-kanareika web                    # 웹 인터페이스, http://127.0.0.1:8088
+curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
 ```
+
+Homebrew (macOS, Linux):
+
+```bash
+brew install mikekosulin/tap/kanareika
+```
+
+Windows (PowerShell):
+
+```powershell
+Invoke-WebRequest https://github.com/mikekosulin/kanareika/releases/latest/download/kanareika-windows-amd64.zip -OutFile kanareika.zip; Expand-Archive kanareika.zip -DestinationPath kanareika
+```
+
+그런 다음 `kanareika` 폴더에서 `kanareika.exe`를 실행합니다. ARM용은 `kanareika-windows-arm64.zip`입니다.
+
+### 시작
+
+터미널에서:
+
+```bash
+kanareika
+```
+
+또는 브라우저에서. 주소는 http://127.0.0.1:8088이며 localhost에서만 수신합니다:
+
+```bash
+kanareika web
+```
+
+처음 실행하면 서버 추가(SSH 사용자와 키, 호스트, 스캔 동의)를 안내하고 첫 스캔을 실행합니다. 취약점 DB는 자동으로 내려받습니다.
+
+### 스크립트와 cron용
+
+조직을 만듭니다. 설정은 `orgs/<ORG_ID>.yml`에 저장됩니다:
+
+```bash
+kanareika org new <ORG_ID>
+```
+
+스캔합니다. 먼저 파일을 검증하고 DB를 내려받습니다:
+
+```bash
+kanareika scan <ORG_ID>
+```
+
+다른 포트로 웹 인터페이스 실행(`--port 0`이면 빈 포트를 자동으로 고릅니다):
+
+```bash
+kanareika web --port <PORT>
+```
+
+터미널 인터페이스를 원격 웹 서버에 연결:
+
+```bash
+kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>
+```
+
+폐쇄망: 인터넷이 되는 머신에서 DB를 내보내고,
+
+```bash
+kanareika db export <BUNDLE.tar.gz>
+```
+
+폐쇄망 머신에서 가져온 뒤 오프라인으로 스캔합니다:
+
+```bash
+kanareika db import <BUNDLE.tar.gz>
+kanareika scan <ORG_ID> --offline
+```
+
+그 밖의 모든 것: `kanareika --help`.
 
 **네 가지 사용 방식, 같은 데이터와 규칙:**
 
-- **TUI**, 기본 인터페이스 — `kanareika`: `?` 키 목록, `o` 패널, `L` 언어. 원격 웹 서버에도 연결할 수 있습니다: `kanareika tui --url http://host:8088 --token …`.
+- **TUI**, 기본 인터페이스 — `kanareika`: `?` 키 목록, `o` 패널, `L` 언어. 원격 웹 서버에도 연결할 수 있습니다: `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`.
 - **웹** — `kanareika web`: 대시보드, 추이, 호스트 상세; 스캔은 페이지에서 시작합니다.
 - **CLI 명령** — 스크립트와 cron용: `kanareika --help`.
 - **MCP** — `kanareika mcp`: AI 에이전트(Claude Code 등)를 위한 읽기 전용 도구.
