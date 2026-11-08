@@ -4,7 +4,11 @@
 
 [English](../../README.md) · [Español](README.es.md) · [Français](README.fr.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [中文](README.zh.md) · **日本語** · [한국어](README.ko.md)
 
-エージェント不要・読み取り専用で、SSH 経由でサーバーのセキュリティを監査します。最初にパッチすべきもの、ログインできる人、外部に公開されているもの、ホストの健全性がわかり、ロールバック可能な修正手順も得られます。バイナリ 1 つ、組織ごとに YAML 1 つ。データは手元のマシンから出ません。
+エージェント不要・読み取り専用で、SSH 経由で Linux サーバーのセキュリティを監査します。最初にパッチすべきものを順位付けし（KEV と EPSS を加味した CVE、SSH アクセス、公開ポート、ホストの健全性）、それぞれにロールバック可能な修正手順を示します。ターミナル UI、Web UI、AI エージェント向けの MCP サーバーのどれでも同じように使えます。Go のバイナリ 1 つ、組織ごとに YAML 1 つ、テレメトリなし。データは手元のマシンから出ません。
+
+- **自宅ラボ**: `~/.ssh/config` からホストを選ぶか、`user@host` を貼り付けます。
+- **フリーランス**: クライアントごとに組織を 1 つ。サーバーは後から追加できます。
+- **企業**: ホスト一覧、CSV、Ansible インベントリを貼り付けます。ログインの失敗は原因ごとにまとめられ、対処法が示されます。
 
 ### ターミナル UI
 
@@ -22,17 +26,31 @@
 
 ### インストール
 
-Linux、macOS: このマシンに合ったビルドを選び、チェックサムを検証して `/usr/local/bin` (または `~/.local/bin`) にインストールします:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
-```
-
-Homebrew (macOS、Linux):
+Homebrew (macOS、Linux)。formula がバージョンとチェックサムを固定しています:
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
+
+またはインストールスクリプトで。まず内容を読んでから実行します:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh
+less install.sh
+sh install.sh
+```
+
+このマシンに合ったビルドを選び、チェックサム (GitHub CLI があればビルドの attestation も) を検証し、`/usr/local/bin` または `~/.local/bin` にインストールする前に確認します。`KANAREIKA_YES=1` で確認を省略できます。
+
+または手動で (Linux、macOS): [最新リリース](https://github.com/mikekosulin/kanareika/releases/latest)から `kanareika-<OS>-<ARCH>.tar.xz` と `SHA256SUMS` をダウンロードし、次を実行します:
+
+```bash
+sha256sum -c --ignore-missing SHA256SUMS
+gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
+tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+```
+
+`<OS>` は `linux` か `darwin`、`<ARCH>` は `amd64` か `arm64` です。macOS では `sha256sum -c` の代わりに `shasum -a 256 -c` を使います。attestation の検証には GitHub CLI が必要で、省略できます。`tar` は `kanareika` を現在のディレクトリに展開します。
 
 Windows (PowerShell):
 
@@ -101,9 +119,9 @@ kanareika scan <ORG_ID> --offline
 
 **4 つの入口、同じデータと同じルール:**
 
-- **TUI** (メイン) — `kanareika`: `?` でキー一覧、`o` でパネル、`L` で言語切り替え。リモートの Web にも接続できます: `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`。
+- **TUI** — `kanareika`: `?` でキー一覧、`o` でパネル、`L` で言語切り替え。リモートの Web にも接続できます。
 - **Web** — `kanareika web`: ダッシュボード、推移、ホストの詳細。スキャンはページから開始できます。
-- **コマンド** — スクリプトや cron 向け: `kanareika --help`。
+- **コマンド** — スクリプトや cron 向け。
 - **MCP** — `kanareika mcp`: AI エージェント (Claude Code など) 向けの読み取り専用ツール。
 
 **チェック内容:**
@@ -113,6 +131,7 @@ kanareika scan <ORG_ID> --offline
 - **ヘルス** — カーネルエラー、ディスク、メモリ、時刻同期、保留中の再起動。
 - **修正** — 選んだアクションを、エンジニアや AI エージェント向けのそのまま使えるタスクにします: 適用、検証、ロールバック。
 - **安全な設計** — 読み取り専用、組織ごとに分離、変更されたホスト鍵は拒否、同意なしにはスキャンしない、Web UI は localhost のみ (またはトークン付き)。
+- **プライバシー** — テレメトリなし。あなたやサーバーに関する情報はどこにも送信されず、レポートは手元のマシンに残ります。ダウンロードするのは公開データだけです: 脆弱性 DB (ghcr.io、予備として mirror.gcr.io と public.ecr.aws)、CISA KEV (cisa.gov)、EPSS (FIRST、empiricalsecurity.com)、DB-IP Lite の IP データベース (db-ip.com)。IP の照会はこれを使ってオフラインで行います。組み込みの trivy のテレメトリも無効にしてあります。
 
 **免責事項:** Kanareika は見つけたものを報告しますが、すべてを見つけることは保証しません。優先度と修正手順は助言です。ホスト上で何かを実行する前に必ず確認してください。監査は許可されたサーバーに対してのみ行ってください。現状のまま、無保証で提供されます ([MIT](../../LICENSE))。
 
