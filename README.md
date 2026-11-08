@@ -51,6 +51,10 @@ kanareika web                    # web interface, http://127.0.0.1:8088
 - **Safe by design** — read-only, organizations isolated, changed host keys refused, no scan without consent, the web
   interface on localhost only (or with a token).
 
+**Disclaimer.** Kanareika reports what it finds; it does not promise to find everything. Priorities and fix steps are
+advice: review them before running anything on your hosts. Audit only servers you are allowed to. Provided as is,
+without warranty ([MIT](LICENSE)).
+
 Like it? [Star it](https://github.com/mikekosulin/kanareika) · Something wrong? [Open an issue](https://github.com/mikekosulin/kanareika/issues/new/choose)
 (no real hosts or addresses, please) · Vulnerability? [Report privately](SECURITY.md)
 
