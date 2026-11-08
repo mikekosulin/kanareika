@@ -63,4 +63,6 @@ The guard in `tools/anonymize` runs with `go test ./...`:
 - commits on `main` must be signed — GitHub signs the squash commit, so your branch commits need not be;
 - CI (`test`, `lint`) must pass and review threads must be resolved before merge.
 
+Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
+
 By contributing you agree that your contribution is licensed under the [MIT License](LICENSE).
