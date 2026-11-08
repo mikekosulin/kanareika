@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"io/fs"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -19,6 +20,7 @@ import (
 const Default = "en"
 
 type locale struct {
+	Name     string            `json:"name"` // the language in its own name: Русский, 中文
 	Messages map[string]string `json:"messages"`
 	UI       map[string]string `json:"ui"`
 }
@@ -59,12 +61,27 @@ func Langs() []string {
 	return append([]string{Default}, out...)
 }
 
-// Catalog: key -> {lang: text}, the shape the dashboard uses (/api/i18n).
+// Name: the language in its own name (as menus list it); the code when its file has none.
+func Name(lang string) string {
+	once.Do(load)
+	if n := data[lang].Name; n != "" {
+		return n
+	}
+	return lang
+}
+
+// serverOnly: message prefixes only the server renders (the agent task, the fix plan): not sent to the page.
+var serverOnly = []string{"prompt.", "plan."}
+
+// Catalog: key -> {lang: text}, the shape the dashboard uses (/api/i18n); without the server-only texts.
 func Catalog() map[string]map[string]string {
 	once.Do(load)
 	out := map[string]map[string]string{}
 	for lang, l := range data {
 		for k, v := range l.Messages {
+			if slices.ContainsFunc(serverOnly, func(p string) bool { return strings.HasPrefix(k, p) }) {
+				continue
+			}
 			if out[k] == nil {
 				out[k] = map[string]string{}
 			}

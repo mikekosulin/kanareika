@@ -318,36 +318,24 @@ func (p *Plan) addStep(a *report.Action, h string, r Recipe, route, lang string)
 	})
 }
 
-var md = map[string]map[string]string{
-	"en": {"title": "Fix steps", "connect": "Connect", "apply": "Apply (as root)", "verify": "Verify", "rollback": "Roll back",
-		"irrev": "IRREVERSIBLE", "manual": "Manual (no ready recipe)", "order": "Do one host first, verify, then the rest. Backups: {dir} on each host."},
-	"ru": {"title": "Шаги исправления", "connect": "Подключение", "apply": "Применить (под root)", "verify": "Проверить", "rollback": "Откатить",
-		"irrev": "НЕОБРАТИМО", "manual": "Вручную (готового рецепта нет)", "order": "Сначала один хост, проверка, потом остальные. Резервные копии: {dir} на каждом хосте."},
-	"zh": {"title": "修复步骤", "connect": "连接", "apply": "应用（以 root 身份）", "verify": "验证", "rollback": "回滚",
-		"irrev": "不可逆", "manual": "手动（无现成方案）", "order": "先处理一台主机并验证，再处理其余主机。备份：每台主机上的 {dir}。"},
-}
-
 // RenderMarkdown: the plan as a section of a task (prompt) or a ticket; "" for an empty plan.
 func RenderMarkdown(p *Plan, lang string) string {
-	T := md[lang]
-	if T == nil {
-		T = md[i18n.Default]
-	}
+	T := func(k string) string { return i18n.T("plan."+k, lang, nil) } // locales/<lang>.json "plan.*"
 	if len(p.Steps) == 0 && len(p.Manual) == 0 {
 		return ""
 	}
-	out := []string{"## " + T["title"], "", strings.ReplaceAll(T["order"], "{dir}", "/var/backups/kanareika/"+p.FixID+"/stepN")}
+	out := []string{"## " + T("title"), "", strings.ReplaceAll(T("order"), "{dir}", "/var/backups/kanareika/"+p.FixID+"/stepN")}
 	for _, s := range p.Steps {
 		head := fmt.Sprintf("### %d. [%s] %s — %s", s.Step, or(deref(s.Priority), "-"), s.Action, s.Host)
 		if !s.Reversible {
-			head += " (" + T["irrev"] + ")"
+			head += " (" + T("irrev") + ")"
 		}
-		out = append(out, "", head, "_"+s.Note+"_", "", T["connect"]+": `"+s.Connect+"` → `sudo -i`", "",
-			T["apply"]+":", "```bash", s.Apply, "```", T["verify"]+":", "```bash", s.Verify, "```",
-			T["rollback"]+":", "```bash", s.Rollback, "```")
+		out = append(out, "", head, "_"+s.Note+"_", "", T("connect")+": `"+s.Connect+"` → `sudo -i`", "",
+			T("apply")+":", "```bash", s.Apply, "```", T("verify")+":", "```bash", s.Verify, "```",
+			T("rollback")+":", "```bash", s.Rollback, "```")
 	}
 	if len(p.Manual) > 0 {
-		out = append(out, "", "### "+T["manual"])
+		out = append(out, "", "### "+T("manual"))
 		for _, m := range p.Manual {
 			out = append(out, "- "+m.Action+" — "+m.Host+": "+m.Why)
 		}

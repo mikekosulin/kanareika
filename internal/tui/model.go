@@ -552,9 +552,6 @@ func (m *Model) languages() []string {
 	return langs
 }
 
-// langNames: each language in its own name, as the language list shows it.
-var langNames = map[string]string{"en": "English", "ru": "Русский", "zh": "中文"}
-
 func (m *Model) langKey(s string) {
 	langs := m.languages()
 	switch s {

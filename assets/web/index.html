@@ -1176,7 +1176,7 @@ $("#tz").onclick = () => {
   location.reload();  // run names in selects and tables are built from it
 };
 /* language: a menu of the languages under the button, each in its own name */
-const LANG_NAMES = { en: "English", ru: "Русский", zh: "中文" };
+const LANG_NAMES = /*I18N_NAMES*/{};  // each language in its own name: locales/<lang>.json "name", inlined by the server
 function closeMenu() { document.querySelector(".menu")?.remove(); }
 $("#lang").onclick = (ev) => {
   ev.stopPropagation();

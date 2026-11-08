@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"maps"
 	"slices"
+	"strings"
 	"testing"
 	"testing/fstest"
 )
@@ -129,5 +130,33 @@ func TestRealLocalesLoad(t *testing.T) {
 	once.Do(load)
 	if !slices.Contains(Langs(), "ru") || len(Catalog()) == 0 || len(UI()) == 0 {
 		t.Fatalf("embedded locales: %v", Langs())
+	}
+}
+
+// TestNames: every language is named in its own words; an unknown code stays a code.
+func TestNames(t *testing.T) {
+	once.Do(load)
+	for _, l := range Langs() {
+		if Name(l) == l {
+			t.Errorf("%s: no \"name\" in its file", l)
+		}
+	}
+	if Name("ru") != "Русский" || Name("xx") != "xx" {
+		t.Fatal(Name("ru"), Name("xx"))
+	}
+}
+
+// TestServerOnly: the agent task and the fix plan are rendered on the server: in the locales, not in /api/i18n.
+func TestServerOnly(t *testing.T) {
+	once.Do(load)
+	for k := range Catalog() {
+		if strings.HasPrefix(k, "prompt.") || strings.HasPrefix(k, "plan.") {
+			t.Errorf("%s sent to the page", k)
+		}
+	}
+	for _, k := range []string{"prompt.boundary", "plan.title"} {
+		if T(k, "zh", nil) == k || T(k, "zh", nil) == T(k, Default, nil) {
+			t.Errorf("%s: %q", k, T(k, "zh", nil))
+		}
 	}
 }

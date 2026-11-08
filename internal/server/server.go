@@ -119,38 +119,47 @@ func page() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	ui, err := uiJSON()
+	ui, names, err := uiJSON()
 	if err != nil {
 		return nil, err
 	}
 	ui = strings.ReplaceAll(ui, "</", `<\/`)
-	return bytes.ReplaceAll(html, []byte("/*I18N_UI*/{}"), []byte(ui)), nil
+	names = strings.ReplaceAll(names, "</", `<\/`)
+	html = bytes.ReplaceAll(html, []byte("/*I18N_UI*/{}"), []byte(ui))
+	return bytes.ReplaceAll(html, []byte("/*I18N_NAMES*/{}"), []byte(names)), nil
 }
 
-// uiJSON: {lang: ui} for the locales that have UI strings, in file name order, keys as in the files.
-func uiJSON() (string, error) {
+// uiJSON: {lang: ui} for the locales that have UI strings, in file name order, keys as in the files; and
+// {lang: name}, each language in its own name (the "name" of its file).
+func uiJSON() (string, string, error) {
 	files, err := fs.Glob(localesFS(), "*.json")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	all := pyfmt.Obj{}
+	all, names := pyfmt.Obj{}, pyfmt.Obj{}
 	for _, f := range files { // Glob sorts
 		b, err := fs.ReadFile(localesFS(), f)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 		var l struct {
-			UI json.RawMessage `json:"ui"`
+			Name string          `json:"name"`
+			UI   json.RawMessage `json:"ui"`
 		}
 		if err := json.Unmarshal(b, &l); err != nil {
-			return "", fmt.Errorf("locales/%s: %w", f, err)
+			return "", "", fmt.Errorf("locales/%s: %w", f, err)
 		}
+		lang := strings.TrimSuffix(f, ".json")
 		if ui, _ := pyfmt.Loads(string(l.UI)); pyfmt.Truthy(ui) {
-			all = append(all, pyfmt.KV{K: strings.TrimSuffix(f, ".json"), V: ui})
+			all = append(all, pyfmt.KV{K: lang, V: ui})
+		}
+		if l.Name != "" {
+			names = append(names, pyfmt.KV{K: lang, V: l.Name})
 		}
 	}
 	b, err := pyfmt.DumpsLine(all, false)
-	return string(b), err
+	n, err2 := pyfmt.DumpsLine(names, false)
+	return string(b), string(n), errors.Join(err, err2)
 }
 
 // Handler: the routes. GET for the page and the read API; POST only to start and cancel scans; other methods

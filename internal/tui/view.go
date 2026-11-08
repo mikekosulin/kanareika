@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/mikekosulin/kanareika/assets"
+	"github.com/mikekosulin/kanareika/internal/i18n"
 )
 
 // Palette: the web page's priority colors on a dark terminal, k9s-like chrome.
@@ -1304,10 +1305,7 @@ func (m *Model) langView() []string {
 		if l == m.t.lang {
 			mark = sOK.Render("✓ ")
 		}
-		name := langNames[l]
-		if name == "" {
-			name = l
-		}
+		name := i18n.Name(l)
 		line := "  " + mark + sText.Render(fit(name, 12, false)) + sMuted.Render(strings.ToUpper(l))
 		if i == m.langs.cur {
 			line = sSel.Render(ansi.Strip(fit(line, 30, false)))
