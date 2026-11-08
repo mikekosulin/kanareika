@@ -798,6 +798,43 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
 .vt { padding-bottom: 96px; }
 .vt .empty { margin: 24px 16px; }
 @media (max-width: 860px) { .counts.vc { padding: 0; } .spkw { display: none; } }
+/* Servers: one row per server, its fixes under it (the tree's rows, its own columns) */
+.svh, .sv { display: grid; grid-template-columns: 22px 28px minmax(0, 1fr) 132px 56px 84px; align-items: center; column-gap: 10px; padding: 0 16px 0 10px; }
+.svh { position: sticky; top: 0; z-index: 3; height: 32px; font-size: 11.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; background: var(--bg); border-bottom: 1px solid var(--line); }
+.svh > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sv { min-height: 40px; border-bottom: 1px solid var(--line); cursor: pointer; position: relative; font-size: 13.5px; white-space: nowrap; }
+.sv.kid { min-height: 34px; font-size: 13px; background: color-mix(in srgb, var(--solid) 55%, transparent); }
+.sv:hover { background: var(--hover); }
+.sv[aria-selected="true"] { background: var(--sel); }
+.sv[aria-selected="true"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent-line); }
+.sv > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.svh .r, .sv .r { text-align: right; }
+.sv .r, .sv .pcs { font: 12.5px var(--mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.sv .nm { display: flex; align-items: baseline; gap: 10px; }
+.sv .nm > * { flex: none; }
+.sv .nm .os, .sv .nm .ttl, .sv .nm .from { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sv .nm .os { color: var(--ink-3); font-size: 12.5px; }
+.sv .nm code { font-size: 13px; } .sv .nm .pkg { color: var(--ink); font-weight: 500; } .sv .nm .from { color: var(--ink-3); } .sv .nm .to { color: var(--ok); } .sv .nm .arr { color: var(--ink-3); }
+.sv .nm .ttl { color: var(--ink-2); } .sv .nm .cveid { font-family: var(--mono); }
+.sv.clean .hostn, .sv.failed .hostn, .sv.not_scanned .hostn { color: var(--ink-2); }
+.sv .hostn { font-family: var(--mono); color: var(--host); }
+.inet { flex: none; align-self: center; font: 11px/16px var(--mono); color: var(--p2); border: 1px solid color-mix(in srgb, var(--p2) 40%, transparent); border-radius: 4px; padding: 0 5px; }
+.pcs i { font-style: normal; opacity: .5; margin: 0 4px; } .pcs b { font-weight: 600; }
+.mk { display: inline-flex; align-items: center; justify-content: center; flex: none; align-self: center; width: 28px; height: 18px; font: 600 13px/18px var(--mono); }
+.mk.ok { color: var(--ok); } .mk.bad { color: var(--err); } .mk.wn { color: var(--p2); } .mk.mut { color: var(--ink-3); }
+.late { color: var(--p1) !important; }
+@container list (max-width: 760px) { .svh, .sv { grid-template-columns: 22px 28px minmax(0, 1fr) auto 76px; } .c-fx { display: none; } }
+@container list (max-width: 520px) { .svh, .sv { grid-template-columns: 18px 28px minmax(0, 1fr) auto; padding: 0 12px 0 6px; } .c-sc { display: none; } .sv .nm .os, .sv .nm .from { display: none; } }
+@media (max-width: 860px) { .bar2.vbar { flex-wrap: wrap; overflow: visible; } .bar2.vbar .search { order: -1; flex: 1 1 100%; } .bar2.vbar .chips { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; } }
+/* the server card: a few facts, then short lists with fixed-size marks */
+.dmeta { color: var(--ink-3); font-size: 12.5px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dkv { margin-top: 12px; }
+.lis { display: grid; }
+.li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; column-gap: 10px; align-items: center; min-height: 32px; border-top: 1px solid var(--line); font-size: 13px; }
+.lis .li:first-child { border-top: 0; }
+.li > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.li > span:nth-child(3) { font: 12.5px var(--mono); color: var(--ink-3); white-space: nowrap; text-align: right; }
+.li code { font: 12.5px var(--mono); }
 </style>
 </head>
 <body>
@@ -881,7 +918,7 @@ async function post(path, data) {
 /* ---------- state ---------- */
 const S = {
   orgs: [], org: store.get("org", ""), env: store.get("env", ""), run: "current", runs: [],
-  view: "todo", by: store.get("by", "fix"), flt: new Set(), q: "", open: new Set(), cur: null, stack: [], sel: new Set(),
+  view: "servers", by: store.get("by", "fix"), flt: new Set(), q: "", open: new Set(), cur: null, stack: [], sel: new Set(),
   tree: null, theme: store.get("theme", "system"), scans: false, db: null, jobs: [], setup: null,
 };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -904,8 +941,9 @@ darkMQ.addEventListener("change", applyTheme);
 applyTheme();
 
 /* ---------- sidebar ---------- */
-const NAV = [["todo", "ToDo", "list"], ["hosts", "Hosts", "server"], ["changes", "Changes", "diff"], ["access", "Access", "key"],
+const NAV = [["servers", "Servers", "server"], ["todo", "ToDo", "list"], ["packages", "Packages", "box"], ["changes", "Changes", "diff"], ["access", "Access", "key"],
   ["network", "Network", "globe"], ["health", "Health", "heart"], ["exceptions", "Exceptions", "shield"], "-", ["runs", "Runs and log", "clock"]];
+const isTree = (v) => v === "servers" || v === "todo";
 const orgOf = () => S.orgs.find((o) => o.id === S.org);
 const envOf = () => orgOf()?.envs.find((e) => e.env === S.env);
 
@@ -913,14 +951,15 @@ function sel(id, label, opts, cur) {
   return `<label class="srow"><span class="sl">${label}</span><select id="${id}" aria-label="${label}">${opts.map(([v, txt]) =>
     `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(txt)}</option>`).join("")}</select>${icon("chev")}</label>`;
 }
-const viewHref = (v) => (v === "todo" ? "/" : "/" + v) + "?" + qs({ org: S.org, env: S.env });
+const viewHref = (v) => "/" + v + "?" + qs({ org: S.org, env: S.env });
 // the number beside a view: what needs a look there (from the run shown, once loaded)
 function navCount(v) {
   const rd = RD.key === [S.org, S.env, S.run].join("|") ? RD.data : null;
   if (v === "todo") return S.tree ? `<span class="n hot">${S.tree.fixes}</span>` : "";
-  if (v === "hosts") return envOf() ? `<span class="n">${envOf().hosts}</span>` : "";
+  if (v === "servers") return envOf() ? `<span class="n">${envOf().hosts}</span>` : "";
   if (!rd) return "";
-  const n = v === "changes" ? (rd.new ? `+${rd.new.rows.length} −${rd.resolved?.rows.length || 0}` : "")
+  const n = v === "packages" ? (rd.plan || []).filter((p) => p.priority && p.priority !== "P4").length || ""
+    : v === "changes" ? (rd.new ? `+${rd.new.rows.length} −${rd.resolved?.rows.length || 0}` : "")
     : v === "network" ? Object.values(rd.exposure || {}).filter((e) => e.listen.some((x) => x.public)).length || ""
     : v === "health" ? (rd.other || []).filter((f) => f.kind === "health").length || ""
     : v === "exceptions" ? (rd.exceptions || []).length || "" : "";
@@ -1021,7 +1060,7 @@ function todoShell() {
   return `<div class="work"><div class="listcol"><div class="work-top"><div class="hdr"><div><h1>${t("ToDo")}</h1><div class="sub" id="sub"></div></div>
       <div class="counts" id="counts"></div></div></div>
       <div class="bar2">
-        <div class="seg2" role="group" aria-label="${t("Group by")}"><span class="lbl">${t("Group by")}</span>${[["fix", "Fix"], ["cve", "CVE"], ["host", "Host"]].map(([k, l]) => `<button data-by="${k}" aria-pressed="${S.by === k}">${t(l)}</button>`).join("")}</div>
+        <div class="seg2" role="group" aria-label="${t("Group by")}"><span class="lbl">${t("group")}</span>${[["host", "server"], ["fix", "fix"], ["cve", "CVE"]].map(([k, l]) => `<button data-by="${k}" aria-pressed="${S.by === k}">${t(l)}</button>`).join("")}</div>
         <label class="search">${icon("search")}<span class="sr">${t("Filter")}</span><input id="q" placeholder="${t("Package, CVE, host or group")}" value="${esc(S.q)}"><kbd>/</kbd></label>
         <div class="chips">${FILTERS.map(([k, l]) => `<button class="chip" data-flt="${k}" aria-pressed="${S.flt.has(k)}">${t(l)}</button>`).join("")}</div>
       </div>
@@ -1055,8 +1094,8 @@ async function loadTree() {
     toast(e.message);
   }
   drawTree();
-  if (!S.cur && S.tree.nodes[0]) show(S.tree.nodes[0].id);
-  else if (S.cur) show(S.cur);
+  if (S.cur && find(S.cur)) show(S.cur, false, true);
+  else if (S.tree.nodes[0] && !matchMedia("(max-width: 1240px)").matches) show(S.tree.nodes[0].id, false, true);
 }
 
 /* ---------- details ---------- */
@@ -1106,11 +1145,14 @@ function cveFull(c) {
     <h4 style="margin-top:14px">${t("What an attacker needs")}</h4>${vector(c.vector)}${c.url ? `<div class="dlinks"><a href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">${t("Advisory")}</a></div>` : ""}`;
 }
 let DETAIL = null;
-async function show(id, push) {
+async function show(id, push, quiet) {
+  const node = S.view === "servers" ? SRV.byId[id] : find(id);
+  if (node?.kind === "host") return showServer(node, quiet);
+  S.cardHost = "";
   const prev = DETAIL?.node;
   if (push && prev) S.stack.push({ id: prev.id, label: prev.label }); else if (!push) S.stack = [];
   S.cur = id;
-  document.querySelectorAll(".node[data-n]").forEach((r) => r.setAttribute("aria-selected", r.dataset.n === id));
+  document.querySelectorAll(".node[data-n], .sv[data-n]").forEach((r) => r.setAttribute("aria-selected", r.dataset.n === id));
   document.querySelectorAll(".hc").forEach((r) => r.setAttribute("aria-pressed", r.dataset.n === id));
   try { DETAIL = await api("/api/node?" + qs({ ...scope(), by: S.by, f: [...S.flt].join(","), q: S.q, backported: S.backport ? 1 : "", id })); }
   catch (e) {
@@ -1120,7 +1162,7 @@ async function show(id, push) {
   }
   $("#detail").innerHTML = detailHTML(DETAIL);
   $("#detail").scrollTop = 0;
-  if (matchMedia("(max-width: 1240px)").matches) $("#detail").classList.add("open");
+  if (!quiet && matchMedia("(max-width: 1240px)").matches) $("#detail").classList.add("open");
 }
 function context(d) {
   const n = d.node;
@@ -1423,7 +1465,7 @@ async function pollJobs() {
   if (S.view === "setup") $("#view").innerHTML = setupView();
   banner();
   if (running) polling = setTimeout(pollJobs, 1500);
-  else if (S.wasRunning) { S.wasRunning = false; await loadOrgs(); await loadEnv(); RD.key = ""; if (S.view === "todo") loadTree(); else if (isData(S.view)) loadData(); }
+  else if (S.wasRunning) { S.wasRunning = false; await loadOrgs(); await loadEnv(); RD.key = ""; if (S.view === "todo") loadTree(); else if (S.view === "servers") loadServers(); else if (isData(S.view)) loadData(); }
   if (S.view === "runs" && $("#vtable")) drawData(RD.data, true);
   S.wasRunning ||= running;
 }
@@ -1436,7 +1478,7 @@ function banner() {
 /* ---------- data views: Hosts, Changes, Access, Network, Health, Exceptions, Runs and log. One run's data
    (/api/run), the environment (/api/env), a run's log (/api/log), firewall rules (/api/hostfile), address owners
    (/api/ipinfo). The same content as the TUI's views and its host card (and MCP get_host). ---------- */
-const DATA_VIEWS = ["hosts", "changes", "access", "network", "health", "exceptions", "runs"];
+const DATA_VIEWS = ["packages", "changes", "access", "network", "health", "exceptions", "runs"];
 const isData = (v) => DATA_VIEWS.includes(v);
 const RD = { key: "", data: null };
 const VS = { q: "", flt: new Set(), tab: {}, sort: {}, sel: "", all: false, stack: [], item: null };
@@ -1465,7 +1507,7 @@ const lastAttack = (lg) => [lg?.failed_last, ...(lg?.attackers || []).map((a) =>
 const deniedKey = (x) => (String(x).startsWith("denied.") ? x : "denied." + x);
 function hostState(rd, n) {
   const m = rd.meta;
-  if (!(m.hosts_scanned || []).includes(n)) return ["mut", t("not scanned")];
+  if (!(m.hosts_scanned || []).includes(n)) return rd.hosts?.[n] ? ["ok", t("answered")] : ["mut", t("not scanned")];
   if (m.hosts_failed?.[n]) return ["bad", m.hosts_failed[n]];
   if (m.module_errors?.[n]) return ["wn", m.module_errors[n].join("\n")];
   return ["ok", t("answered")];
@@ -1512,26 +1554,25 @@ async function loadRunData() {
 /* ---- the views: header line, sub-lists, filters, columns. Column: l label, w width, k level (1 always, 2 from 620px,
    3 from 900px of list), c class, v cell, s sort value (d0 -1: descending first) ---- */
 const VIEWS = {
-  hosts: {
-    title: "Hosts",
-    chips: [["front", "internet-facing"], ["p1", "with P1"], ["err", "with errors"]],
-    sub: (rd, xs) => t("{n} hosts · {ok} answered · {bad} unreachable", { n: xs.length, ok: rd.meta.hosts_ok ?? 0, bad: Object.keys(rd.meta.hosts_failed || {}).length }),
+  packages: {
+    title: "Packages",
+    chips: [["ready", "fix ready"], ["kev", "KEV"], ["rce", "pre-auth RCE"], ["p4", "+ P4"]],
+    sub: (rd, xs) => t("{n} to update on {h} servers · {c} CVE", { n: fmtN(xs.filter((p) => p.priority !== "P4").length), h: new Set(xs.map((p) => p.host)).size, c: fmtN(rd.plan_counts?.cves) }),
     right: (rd) => ["P1", "P2", "P3", "P4"].map((p) => `<span class="cnt"><i style="background:var(--${p.toLowerCase()})"></i><b>${fmtN(rd.plan_counts?.[p])}</b> ${p}</span>`).join(""),
-    items: (rd) => (S.envd?.hosts || []).map((h) => ({ ...h, kind: "host", os: rd.facts?.[h.name]?.os || "", c: rd.hosts?.[h.name] || {}, s: hostState(rd, h.name), last: lastScan(rd, h.name) })),
-    sort: (a, b) => ({ bad: 0, wn: 1, ok: 2, mut: 3 }[a.s[0]] - { bad: 0, wn: 1, ok: 2, mut: 3 }[b.s[0]] || (b.c.P1 || 0) - (a.c.P1 || 0) || (b.c.P2 || 0) - (a.c.P2 || 0) || a.name.localeCompare(b.name)),
-    flt: (x, f) => (!f.has("front") || x.exposure === 1 || x.public) && (!f.has("p1") || x.c.P1 > 0) && (!f.has("err") || x.s[0] === "bad" || x.s[0] === "wn"),
-    text: (x) => `${x.name} ${x.group} ${x.os} ${x.address}`,
+    items: (rd) => rd.plan || [],
+    flt: (x, f) => (f.has("p4") || x.priority !== "P4") && (!f.has("ready") || x.fix_state === "available") && (!f.has("kev") || x.kev) && (!f.has("rce") || x.preauth_rce),
+    text: (x) => `${x.host} ${x.pkg} ${x.target} ${(x.cve_top || []).join(" ")}`,
     cols: () => [
-      { l: "", w: "8px", v: (x) => `<span class="dot ${x.s[0]}" title="${esc(x.s[1])}"></span>` },
-      { l: t("Host"), w: "minmax(96px, 1fr)", v: (x) => hcell(x.name), s: (x) => x.name },
-      { l: t("Group"), w: "minmax(0, .55fr)", k: 3, c: "d", v: (x) => esc(x.group), s: (x) => x.group },
-      { l: "OS", w: "minmax(0, 1fr)", k: 2, c: "d", v: (x) => `<span title="${esc(x.os)}">${esc(x.os) || "—"}</span>`, s: (x) => x.os },
-      { l: t("Exposure"), w: "84px", k: 3, v: (x) => (x.exposure === 1 || x.public ? `<span class="wn">${t("internet")}</span>` : `<span class="d">${t(EXPO[x.exposure] || "internal")}</span>`), s: (x) => (x.public ? 0 : x.exposure) },
-      ...["P1", "P2", "P3", "P4"].map((p) => ({ l: p, w: "38px", c: "r", v: (x) => pcount(x.c[p], p), s: (x) => x.c[p] || 0, d0: -1 })),
-      { l: "CVE", w: "52px", k: 3, c: "r", v: (x) => (x.c.cves ? fmtN(x.c.cves) : `<span class="z">0</span>`), s: (x) => x.c.cves || 0, d0: -1 },
-      { l: t("Scanned"), w: "124px", k: 2, c: "m d", v: (x) => (x.last && x.last !== "current" ? `<span title="${esc(runLabel(x.last))}">${esc(runLabel(x.last))}</span>` : "—"), s: (x) => x.last || "" },
+      { l: t("Pri"), w: "30px", v: (x) => (x.priority ? `<span class="pb ${x.priority}">${x.priority}</span>` : ""), s: (x) => x.priority || "P9" },
+      { l: t("Server"), w: "minmax(84px, .7fr)", v: (x) => hcell(x.host), s: (x) => x.host },
+      { l: t("Package"), w: "minmax(0, 1fr)", v: (x) => `<span class="pk">${esc(x.pkg)}</span>${x.kev || x.preauth_rce ? `<span class="flags">${flags({ kev: x.kev, rce: x.preauth_rce })}</span>` : ""}`, s: (x) => x.pkg },
+      { l: t("Where"), w: "minmax(0, .6fr)", k: 3, c: "d", v: (x) => `<span title="${esc(x.target)}">${esc(whereTxt(x.target))}</span>`, s: (x) => x.target },
+      { l: t("Installed"), w: "minmax(0, .9fr)", k: 3, c: "m d", v: (x) => `<span title="${esc(x.installed)}">${esc(x.installed)}</span>` },
+      { l: t("Update to"), w: "minmax(0, .9fr)", k: 2, c: "m", v: (x) => fixTxt(x) },
+      { l: "CVE", w: "48px", k: 2, c: "r", v: (x) => fmtN(x.cves), s: (x) => x.cves, d0: -1 },
+      { l: t("Due"), w: "72px", c: "r", v: (x) => `<span class="${x.due && days(x.due) < 0 && x.priority !== "P4" ? "late" : "d"}" title="${esc(x.due)}">${esc(dueText(x.due))}</span>`, s: (x) => x.due || "9" },
     ],
-    key: (x) => x.name, open: (x) => ({ kind: "host", name: x.name }),
+    key: (x) => `${x.host}/${x.target}/${x.pkg}`, open: (x) => ({ kind: "host", name: x.host }),
   },
   changes: {
     title: "Changes",
@@ -1736,7 +1777,7 @@ function dataShell() {
   const V = VIEWS[S.view], tab = VS.tab[S.view] || V.tabs?.[0][0];
   return `<div class="work"><div class="listcol"><div class="work-top"><div class="hdr"><div style="min-width:0"><h1>${t(V.title)}</h1><div class="sub" id="vsub"></div></div>
       <div class="counts vc" id="vright"></div></div></div>
-      <div class="bar2">
+      <div class="bar2 vbar">
         ${V.tabs ? `<div class="seg2" role="group" aria-label="${t(V.title)}">${V.tabs.map(([k, l]) => `<button data-vtab="${k}" aria-pressed="${tab === k}">${t(l)}<small class="z" data-vtabn="${k}"></small></button>`).join("")}</div>` : ""}
         <label class="search">${icon("search")}<span class="sr">${t("Filter")}</span><input id="vq" placeholder="${t("Filter")}" value="${esc(VS.q)}" autocomplete="off"><kbd>/</kbd></label>
         ${V.chips ? `<div class="chips">${V.chips.map(([k, l]) => `<button class="chip" data-vflt="${k}" aria-pressed="${VS.flt.has(k)}">${t(l)}</button>`).join("")}</div>` : ""}
@@ -1767,6 +1808,7 @@ function drawData(rd, keepDetail) {
   const note = V.note ? V.note(rd) : ""; $("#vnote").hidden = !note; $("#vnote").innerHTML = note;
   (V.tabs || []).forEach(([k]) => { const el = document.querySelector(`[data-vtabn="${k}"]`); if (el) el.textContent = " " + fmtN(V.items(rd, k).length); });
   const empty = V.empty?.(rd, tab);
+  VLIST = [];
   $("#vtable").innerHTML = empty && !all.length ? `<div class="empty">${empty}</div>`
     : !xs.length ? `<div class="empty"><h3>${all.length ? t("Nothing matches") : t("No data")}</h3>${all.length ? `<button class="btn ghost" data-vreset>${t("Clear filters")}</button>` : ""}</div>`
     : vtable(V.cols(tab), xs, V.key);
@@ -1803,63 +1845,75 @@ function dhead(meta, title, sub, extra = "") {
 const kv = (k, v) => (v === "" || v == null ? "" : `<div class="kv"><span>${k}</span><span>${v}</span></div>`);
 const sec = (title, body) => (body ? `<div class="sec"><h4>${title}</h4>${body}</div>` : "");
 function deniedKV(x) { return x?.denied?.length ? kv(t("no access to"), `<span class="z">${esc(x.denied.map((d) => catMsg(deniedKey(d), d)).join(", "))}</span>`) : ""; }
+const runIso = (id) => (/^\d{4}-\d\d-\d\d_\d{6}$/.test(id || "") ? id.replace(/^(\d{4}-\d\d-\d\d)_(\d\d)(\d\d)(\d\d)$/, "$1T$2:$3:$4Z") : "");
 function hostDetail(rd, n) {
-  const eh = envHost(n), f = rd.facts?.[n] || {}, c = rd.hosts?.[n] || {}, s = hostState(rd, n), last = lastScan(rd, n);
-  const acts = (rd.actions || []).filter((a) => a.hosts.includes(n)), pk = (rd.plan || []).filter((p) => p.host === n);
+  const eh = envHost(n), f = rd.facts?.[n] || {}, c = rd.hosts?.[n] || {}, s = hostState(rd, n), last = runIso(lastScan(rd, n)) || rd.meta.finished;
+  const pk = (rd.plan || []).filter((p) => p.host === n).sort((a, b) => (a.priority || "P9").localeCompare(b.priority || "P9") || (a.due || "").localeCompare(b.due || ""));
   const A = rd.access?.[n], E = rd.exposure?.[n], H = rd.health?.[n];
-  const other = [...(rd.other || []), ...(rd.inventory || [])].filter((o) => o.host === n);
+  const other = (rd.other || []).filter((o) => o.host === n), mod = (m) => other.filter((o) => o.module === m);
+  const rest = [...other.filter((o) => !["access", "exposure", "health"].includes(o.module)), ...(rd.inventory || []).filter((o) => o.host === n && o.module !== "access")];
   const ex = (rd.exceptions || []).filter((x) => x.host === n);
-  const head = dhead(`<span class="dot ${s[0]}" style="display:inline-block"></span><span>${esc(s[0] === "bad" ? t("unreachable") : s[0] === "wn" ? t("with errors") : s[1])}</span>${eh.group ? `<span class="z">·</span><span>${esc(eh.group)}</span>` : ""}${eh.exposure === 1 || eh.public ? `<span class="z">·</span><span class="wn">${t("internet")}</span>` : ""}`,
-    `<div class="bigmono hn" title="${esc(n)}">${esc(n)}</div>`, `<div class="vers">${esc(f.os || "?")}${f.kernel?.length ? " · " + esc(f.kernel.join(", ")) : ""}</div>`,
-    `<div class="kpis2">${["P1", "P2", "P3", "P4"].map((p) => `<div><b class="${c[p] ? "c" + p : "z"}">${fmtN(c[p])}</b>${p}</div>`).join("")}<div><b>${fmtN(c.cves)}</b>CVE</div></div>`);
-  const status = kv(t("Address"), eh.address ? `<code>${esc((eh.user ? eh.user + "@" : "") + eh.address)}</code>${eh.jump ? ` <span class="z">via ${esc(eh.jump)}</span>` : ""}` : "")
-    + kv(t("Exposure"), eh.exposure ? t(EXPO[eh.exposure] || "internal") : "")
-    + kv(t("Scanned"), last && last !== "current" ? `<code>${esc(runLabel(last))}</code>` : "")
-    + (s[0] === "bad" || s[0] === "wn" ? kv(t("Error"), `<code class="${s[0]}">${esc(s[1])}</code>`) : "");
-  const todo = acts.length ? `<table class="tbl"><tbody>${acts.slice(0, 15).map((a) => `<tr><td style="width:36px"><span class="pb ${a.priority}">${a.priority}</span></td><td class="ell" title="${esc(L(a))}">${esc(L(a))}${a.kev || a.rce ? ` <span class="flags" style="display:inline-flex">${flags(a)}</span>` : ""}</td><td class="r nw note">${esc(dueText(a.due))}</td></tr>`).join("")}</tbody></table>${acts.length > 15 ? `<div class="dnote">${t("+{n} more", { n: acts.length - 15 })}</div>` : ""}` : "";
-  const pks = pk.length ? `<table class="tbl"><tbody>${pk.slice(0, 15).map((p) => `<tr><td style="width:36px"><span class="pb ${p.priority}">${p.priority}</span></td><td class="m nw pkc" title="${esc(p.pkg)}"><b style="font-weight:500">${esc(p.pkg)}</b>${p.kev ? ` <span class="fl kev">KEV</span>` : ""}</td><td class="m ell" title="${esc(p.installed)} → ${esc(p.fixed || "")}"><span class="z">${esc(p.installed)} →</span> ${fixTxt(p)}</td><td class="r m">${fmtN(p.cves)}</td></tr>`).join("")}</tbody></table>${pk.length > 15 ? `<div class="dnote">${t("+{n} more", { n: pk.length - 15 })}</div>` : ""}` : "";
-  let ssh = "";
+  const mk = (cls, ch) => `<span class="mk ${cls}">${ch}</span>`, MK = { ok: mk("ok", "✓"), wn: mk("wn", "!"), bad: mk("bad", "!"), mut: mk("mut", "–") };
+  const pb = (p) => (p ? `<span class="pb ${p}">${p}</span>` : MK.wn);
+  const li = (mark, text, right = "", title = "") => `<div class="li"${title ? ` title="${esc(title)}"` : ""}>${mark}<span>${text}</span><span>${right}</span></div>`;
+  const due = (d, p) => (d ? `<span class="${days(d) < 0 && p !== "P4" ? "late" : ""}">${esc(dueText(d))}</span>` : "");
+  const lis = (rows) => (rows.filter(Boolean).length ? `<div class="lis">${rows.filter(Boolean).join("")}</div>` : "");
+  const denied = (x) => (x?.denied?.length ? li(MK.mut, `<span class="z">${t("no access to {what}", { what: esc(x.denied.map((d) => catMsg(deniedKey(d), d)).join(", ")) })}</span>`) : "");
+  const pcs = ["P1", "P2", "P3", "P4"].filter((p) => c[p]).map((p) => `<span class="c${p}">${p} ${c[p]}</span>`).join(" <span class=\"z\">•</span> ");
+  const meta = [eh.address, f.os, eh.group && t("group {g}", { g: eh.group }), (eh.exposure === 1 || eh.public) && t("internet-facing")].filter(Boolean);
+  const reboot = pk.some((p) => p.fix_state === "reboot");
+  const facts = kv(t("To fix"), pcs || `<span class="ok">${t("nothing to fix")}</span>`)
+    + kv(t("Scanned"), s[0] === "mut" ? `<span class="z">${t("not scanned")}</span>` : `${esc(ago(last))}${eh.user ? ` <span class="z">· ${t("as {user}", { user: esc(eh.user) })}</span>` : ""}`)
+    + (s[0] === "bad" || s[0] === "wn" ? kv(s[0] === "bad" ? t("Not checked") : t("Errors"), `<span class="${s[0]}">${esc(s[1])}</span>`) : "")
+    + kv(t("Reboot"), reboot ? `<span class="wn">${t("pending")}</span>` : t("not pending"))
+    + (H?.uptime_s ? kv(t("Uptime"), t("{n} d", { n: Math.floor(H.uptime_s / 86400) })) : "")
+    + (f.kernel?.length ? kv(t("Kernel"), `<code>${esc(f.kernel.join(", "))}</code>`) : "");
+  const head = dhead("", `<div class="bigmono hn" title="${esc(n)}">${esc(n)}</div>`, `<div class="dmeta" title="${esc(meta.join(" · "))}">${esc(meta.join(" · "))}</div>`, `<div class="dkv">${facts}</div>`);
+  // fixes: packages first (most urgent), then the other things to change
+  const fixRows = [...pk.map((p) => li(pb(p.priority), `<code>${esc(p.pkg)}</code> <span class="z">→</span> ${p.fixed || p.repo_version ? `<code>${esc(p.repo_version || p.fixed)}</code>` : `<span class="z">${t("no fix yet")}</span>`}${p.kev ? ` <span class="fl kev">KEV</span>` : ""}`, due(p.due, p.priority), `${p.installed} → ${p.fixed || ""}`)),
+    ...rest.filter((o) => o.priority).map((o) => li(pb(o.priority), esc(L(o)), due(o.due, o.priority), o.target))];
+  const fixes = lis(fixRows.slice(0, 12)) + (fixRows.length > 12 ? `<div class="dnote">${t("+{n} more", { n: fixRows.length - 12 })}</div>` : "");
+  let access = "";
   if (A) {
-    const lg = A.logins || {}, pw = pwState(A), keys = A.keys || [], acc = lg.accepted || [];
-    ssh = kv(t("Port"), A.sshd?.port ? `<code>${esc(A.sshd.port)}</code>` : "") + kv(t("Password login"), stl(pw[0], pw[1], pw[2]))
-      + kv(t("Root login"), A.sshd?.permitrootlogin === "yes" ? stl("bad", t("yes")) : esc(rootTxt(A.sshd?.permitrootlogin)))
-      + (A.users_with_password?.length ? kv(t("With password"), `<code class="bad">${esc(A.users_with_password.join(", "))}</code>`) : "")
-      + kv(t("Authorized keys"), `${keys.length} <span class="z">· root ${keys.filter((k) => k.user === "root").length}</span>`)
-      + kv(t("Logins, 30 d"), `${fmtN(acc.reduce((m, x) => m + x.count, 0))} <span class="z">· ${t("from {n} addresses", { n: new Set(acc.map((x) => x.ip)).size })}</span>`)
-      + kv(t("Failed logins"), lg.failed_total ? `<span class="wn">${fmtN(lg.failed_total)}</span> <span class="z">· ${t("from {n} addresses", { n: fmtN(lg.failed_ips) })}${lastAttack(lg) ? " · " + esc(ago(lastAttack(lg))) : ""}</span>` : `<span class="z">0</span>`)
-      + deniedKV(A)
-      + (keys.length ? `<table class="tbl" style="margin-top:10px"><thead><tr><th>${t("User")}</th><th>${t("Key")}</th><th>${t("Comment")}</th></tr></thead><tbody>${keys.slice(0, 12).map((k) => `<tr><td class="m nw">${esc(k.user)}</td><td class="m nw" title="${esc(k.fp)}">${esc(k.type.replace("ssh-", ""))} ${esc(k.fp.slice(7, 15))}</td><td class="ell note" title="${esc(k.comment)}">${esc(k.comment) || "—"}</td></tr>`).join("")}</tbody></table>` : "")
-      + (acc.length ? `<table class="tbl" style="margin-top:10px"><thead><tr><th>${t("User")}</th><th>${t("From")}</th><th class="r">${t("Last")}</th></tr></thead><tbody>${acc.slice(0, 10).map((x) => `<tr><td class="m nw">${esc(x.user)}${x.method === "publickey" ? "" : ` <span class="wn">${t("password")}</span>`}</td><td class="ell">${ipcell(x.ip)}</td><td class="r m nw note">${esc(tsShort(x.last))}</td></tr>`).join("")}</tbody></table>` : "");
+    const lg = A.logins || {}, keys = A.keys || [], acc = lg.accepted || [], la = lastAttack(lg);
+    access = lis([...mod("access").map((o) => li(pb(o.priority), esc(L(o)), o.priority || "")),
+      A.password_auth == null ? li(MK.mut, t("password login: unknown")) : A.password_auth ? (mod("access").length ? "" : li(A.users_with_password?.length ? MK.bad : MK.wn, t("sshd: password login enabled"))) : li(MK.ok, t("password login off")),
+      A.sshd?.permitrootlogin === "yes" ? li(MK.bad, t("sshd: root login allowed")) : "",
+      A.users_with_password?.length ? li(MK.bad, t("password set for {users}", { users: `<code>${esc(A.users_with_password.join(", "))}</code>` })) : "",
+      li(MK.ok, t("keys: {n} · users: {u}", { n: keys.length, u: new Set(keys.map((k) => k.user)).size }) + (keys.some((k) => k.user === "root") ? ` <span class="z">· root</span>` : ""), "", keys.map((k) => `${k.user}: ${k.type} ${k.comment}`).join("\n")),
+      acc.length ? li(MK.mut, t("{n} logins from {m} addresses, 30 d", { n: fmtN(acc.reduce((m, x) => m + x.count, 0)), m: new Set(acc.map((x) => x.ip)).size }), "", acc.map((x) => `${x.user} ${x.ip} ${tsShort(x.last)}`).join("\n")) : "",
+      lg.failed_total ? li(MK.wn, t("{n} failed logins from {m} addresses", { n: fmtN(lg.failed_total), m: fmtN(lg.failed_ips) }), la ? esc(ago(la)) : "") : "",
+      denied(A)]);
   }
   let net = "";
   if (E) {
-    const fw = fwState(E.firewall), ls = [...(E.listen || [])].sort((a, b) => (b.public ? 1 : 0) - (a.public ? 1 : 0) || a.port - b.port);
-    net = kv(t("Public IP"), E.public?.length ? E.public.map((ip) => `<code class="${E.unlisted_public?.includes(ip) ? "bad" : ""}" title="${E.unlisted_public?.includes(ip) ? t("not in the organization config") : ""}">${esc(ip)}</code>`).join(" ") : `<span class="z">${t("none")}</span>`)
-      + kv(t("Firewall"), `${stl(fw[0], fw[1])}${fw[2] ? ` <span class="z">· ${esc(fw[2])}</span>` : ""}${E.firewall?.readable ? ` <button class="lnk" data-fwrules="${esc(n)}">${t("rules")}</button>` : ""}`)
-      + deniedKV(E)
-      + (ls.length ? `<table class="tbl" style="margin-top:10px"><thead><tr><th class="r">${t("Port")}</th><th>${t("Process")}</th><th>${t("Address")}</th><th class="r">${t("Access")}</th></tr></thead><tbody>${ls.map((x) => `<tr><td class="r m"><b>${x.port}</b><span class="z">/${esc(x.proto)}</span></td><td class="m nw">${esc(x.process || "?")}</td><td class="m ell">${esc(x.addr || "*")}</td><td class="r nw">${x.local_only ? `<span class="z">${t("local")}</span>` : x.public ? stl("wn", t("outside")) : `<span class="note">${t("internal")}</span>`}</td></tr>`).join("")}</tbody></table>` : "")
-      + `<pre class="term" id="fwraw" hidden></pre>`;
+    const fw = fwState(E.firewall), pub = [...new Set((E.listen || []).filter((y) => y.public).map((y) => y.port))].sort((a, b) => a - b);
+    const fwTxt = `${t("firewall")} ${esc(fw[1])}`;
+    net = lis([...mod("exposure").map((o) => li(pb(o.priority), esc(L(o)), due(o.due, o.priority), o.target)),
+      li(fw[0] === "bad" ? MK.bad : pub.length ? MK.ok : MK.ok, pub.length ? `<code>${pub.map((p) => ":" + p).join(" ")}</code> ${t("open")} · ${fwTxt}` : `${t("nothing open to the outside")} · ${fwTxt}`, E.firewall?.readable ? `<button class="lnk" data-fwrules="${esc(n)}">${t("rules")}</button>` : "", fw[2]),
+      E.public?.length ? li(E.unlisted_public?.length ? MK.bad : MK.mut, `${t("public IP")} <code>${esc(E.public.join(" "))}</code>`, "", E.unlisted_public?.length ? t("not in the organization config") : "") : "",
+      li(MK.mut, t("{n} listening inside", { n: (E.listen || []).filter((y) => !y.public).length }), "", (E.listen || []).filter((y) => !y.public).map((y) => `${y.port}/${y.proto} ${y.process || "?"} ${y.addr}`).join("\n")),
+      denied(E)]) + `<pre class="term" id="fwraw" hidden></pre>`;
   }
   let hl = "";
   if (H) {
-    const tm = timeState(H), inodes = (H.inodes || []).filter((i) => i.use >= 50);
-    hl = (H.disks || []).map((d, i) => kv(i ? "" : t("Disks"), `${meter(d.use)} <code class="z">${esc(d.mount)}</code>`)).join("")
-      + inodes.map((d, i) => kv(i ? "" : "inodes", `${meter(d.use)} <code class="z">${esc(d.mount)}</code>`)).join("")
-      + kv(t("Memory"), H.mem ? t("{avail} / {total} MB free", { avail: fmtN(H.mem.available_mb), total: fmtN(H.mem.total_mb) }) : "")
-      + kv("load", H.load ? `<code>${H.load.load1} / ${H.load.load15}</code> <span class="z">· 1/15 min · ${H.load.cpus} CPU</span>` : "")
-      + (H.failed_units?.length ? kv(t("Failed units"), `<code class="wn">${esc(H.failed_units.join(", "))}</code>`) : "")
-      + (H.readonly_mounts?.length ? kv(t("Read-only"), `<code class="bad">${esc(H.readonly_mounts.join(", "))}</code>`) : "")
-      + (H.journal?.errors_7d ? kv(t("Journal errors"), `${fmtN(H.journal.errors_7d)} <span class="z">· 7 d</span>`) : "")
-      + kv(t("Time"), `${stl(tm[0], tm[1])}${H.time ? ` <span class="z">· ${esc([H.time.service, H.time.timezone].filter(Boolean).join(" · "))}</span>` : ""}`)
-      + Object.values(H.dmesg?.classes || {}).map((c, i) => kv(i ? "" : t("Kernel"), `<span class="wn">${esc(catMsg(c.key, c.title))}</span> <span class="z">· ${c.count}</span>`)).join("")
-      + deniedKV(H)
-      + ((H.dmesg?.tail || []).length ? `<pre class="term">${esc(H.dmesg.tail.slice(-20).join("\n"))}</pre>` : "");
+    const d = maxUse(H.disks), tm = timeState(H), memFree = H.mem ? Math.round((100 * H.mem.available_mb) / H.mem.total_mb) : null;
+    const sum = [d && `${t("disk")} ${esc(d.mount)} ${d.use}%`, memFree != null && t("mem {n}% free", { n: memFree }), H.load && `load ${H.load.load15}/${H.load.cpus}`].filter(Boolean).join(" · ");
+    hl = lis([...mod("health").map((o) => li(pb(o.priority), esc(L(o)), due(o.due, o.priority), o.target)),
+      li(d && d.use >= 95 ? MK.bad : d && d.use >= 85 ? MK.wn : MK.ok, sum, "", (H.disks || []).map((r) => `${r.mount} ${r.use}%`).join("\n")),
+      ...(H.disks || []).filter((r) => r !== d && r.use >= 85).map((r) => li(MK.wn, `${t("disk")} ${esc(r.mount)} ${r.use}%`)),
+      ...(H.inodes || []).filter((r) => r.use >= 85).map((r) => li(MK.wn, `inodes ${esc(r.mount)} ${r.use}%`)),
+      H.failed_units?.length ? li(MK.wn, `${t("failed units")} <code>${esc(H.failed_units.join(", "))}</code>`) : "",
+      H.readonly_mounts?.length ? li(MK.bad, `${t("read-only")} <code>${esc(H.readonly_mounts.join(", "))}</code>`) : "",
+      li(MK[tm[0]] || MK.mut, `${t("time")} ${esc(tm[1])}${H.time ? ` <span class="z">· ${esc([H.time.service, H.time.timezone].filter(Boolean).join(" · "))}</span>` : ""}`, "", tm[2]),
+      ...Object.values(H.dmesg?.classes || {}).map((k) => li(MK.wn, `${t("kernel")}: ${esc(catMsg(k.key, k.title))}`, String(k.count), k.last)),
+      H.journal?.errors_7d ? li(MK.mut, t("{n} journal errors, 7 d", { n: fmtN(H.journal.errors_7d) })) : "",
+      denied(H)]) + ((H.dmesg?.tail || []).length ? `<pre class="term">${esc(H.dmesg.tail.slice(-20).join("\n"))}</pre>` : "");
   }
-  const oth = other.length ? `<table class="tbl"><tbody>${other.map((o) => `<tr><td style="width:36px">${o.priority ? `<span class="pb ${o.priority}">${o.priority}</span>` : ""}</td><td class="ell" title="${esc(L(o))}">${esc(L(o))}</td><td class="m ell note" title="${esc(o.target)}">${esc(o.target)}</td></tr>`).join("")}</tbody></table>` : "";
-  const exc = ex.length ? `<table class="tbl"><tbody>${ex.map((x) => `<tr><td class="m">${esc(x.pkg)}</td><td class="m note">${esc(x.id)}</td><td class="r m nw ${x.exception?.expired ? "bad" : ""}">${esc(x.exception?.review_by)}</td></tr>`).join("")}</tbody></table>` : "";
-  return head + sec(t("Status"), status) + sec(t("ToDo"), todo) + sec(t("Packages"), pks) + sec(t("SSH and logins"), ssh) + sec(t("Network"), net)
-    + sec(t("Health"), hl) + sec(t("Other findings"), oth) + sec(t("Exceptions"), exc)
-    + `<div class="dfoot"><button class="btn primary" data-todohost="${esc(n)}">${t("Open in ToDo")}</button>${S.view !== "hosts" ? `<button class="btn" data-hostsview="${esc(n)}">${t("All hosts")}</button>` : ""}</div>`;
+  const oth = lis(rest.filter((o) => !o.priority).map((o) => li(MK.mut, esc(L(o)), "", o.target)));
+  const exc = lis(ex.map((x) => li(x.exception?.expired || x.exception?.fix_available ? MK.bad : MK.ok, `<code>${esc(x.pkg)}</code> <span class="z">${esc(x.id)}</span>`, esc(x.exception?.review_by))));
+  return head + sec(t("Fixes"), fixes) + sec(t("Access"), access) + sec(t("Network"), net) + sec(t("Health"), hl) + sec(t("Other"), oth) + sec(t("Exceptions"), exc)
+    + `<div class="dfoot"><button class="btn primary" data-todohost="${esc(n)}">${t("Open in ToDo")}</button></div>`;
 }
 const hostLinks = (hs) => `<div class="hosts" style="display:flex;flex-wrap:wrap;gap:6px">${[...new Set(hs)].map((h) => `<button class="hc" data-vhost="${esc(h)}">${esc(h)}</button>`).join("")}</div>`;
 function keyDetail(k) {
@@ -1913,23 +1967,25 @@ async function enrichIps(root) {
 function syncURL(push) {
   if (S.view === "setup") return;
   const keep = new URLSearchParams(location.search).get("lang");
-  const host = !isData(S.view) ? "" : VS.item?.kind === "host" ? VS.item.name : VS.want || "";
+  const host = isData(S.view) ? (VS.item?.kind === "host" ? VS.item.name : VS.want || "") : S.view === "servers" ? S.cardHost || S.wantHost || "" : "";
   const tab = isData(S.view) ? VS.tab[S.view] : "";
-  const u = (S.view === "todo" ? "/" : "/" + S.view) + "?" + qs({ org: S.org, env: S.env, run: S.run !== "current" ? S.run : "", tab, host, lang: keep || "" });
+  const u = "/" + S.view + "?" + qs({ org: S.org, env: S.env, run: S.run !== "current" ? S.run : "", tab, host, lang: keep || "" });
   const cur = location.pathname + location.search;
   if (u.replace(/\?$/, "") !== cur) history[push ? "pushState" : "replaceState"](null, "", u.replace(/\?$/, ""));
 }
 function readURL() {
   const p = new URLSearchParams(location.search), v = location.pathname.replace(/^\/+|\/+$/g, "");
-  if (isData(v)) S.view = v; else if (!location.pathname.startsWith("/setup")) S.view = "todo";
+  if (isData(v) || isTree(v)) S.view = v; else if (!location.pathname.startsWith("/setup")) S.view = "servers";
   if (p.get("org")) S.org = p.get("org");
   if (p.get("env")) S.env = p.get("env");
   if (p.get("run")) S.run = p.get("run");
   if (isData(S.view) && p.get("tab")) VS.tab[S.view] = p.get("tab");
   VS.want = isData(S.view) ? p.get("host") || "" : "";
+  S.wantHost = S.view === "servers" ? p.get("host") || "" : "";
 }
-function go(view, push = true) {
-  if (view !== S.view) { VS.q = ""; VS.flt.clear(); VS.all = false; VS.sel = ""; VS.item = null; VS.stack = []; VS.want = ""; }
+function go(view, push = true, q) {
+  if (view !== S.view) { VS.q = ""; VS.flt.clear(); VS.all = false; VS.sel = ""; VS.item = null; VS.stack = []; VS.want = ""; S.cardHost = ""; if (isTree(view) && isTree(S.view)) { S.open.clear(); S.cur = null; S.q = ""; } }
+  if (q != null) S.q = q;
   S.view = view; syncURL(push); render();
   $("#side")?.classList.remove("open");
 }
@@ -1938,8 +1994,8 @@ function vopenRow(i) {
   VS.sel = V.key(x); markSel(); vshow(V.open(x));
 }
 document.addEventListener("click", (e) => {
-  if (!isData(S.view)) return;
-  const el = e.target.closest("[data-vrow], [data-vtab], [data-vflt], [data-vsort], [data-vall], [data-vreset], [data-vhost], [data-vback], [data-fwrules], [data-showrun], [data-todohost], [data-hostsview]");
+  if (!isData(S.view) && !isTree(S.view)) return;
+  const el = e.target.closest("[data-vrow], [data-vtab], [data-vflt], [data-vsort], [data-vall], [data-vreset], [data-vhost], [data-vback], [data-fwrules], [data-showrun], [data-todohost]");
   if (!el) return;
   const d = el.dataset, V = VIEWS[S.view];
   if (d.vrow) vopenRow(+d.vrow);
@@ -1948,7 +2004,7 @@ document.addEventListener("click", (e) => {
   else if (d.vsort) { const k = vkey(), i = +d.vsort, c = V.cols(VS.tab[S.view] || V.tabs?.[0][0])[i], cur = VS.sort[k]; VS.sort[k] = { i, d: cur?.i === i ? -cur.d : c.d0 || 1 }; drawData(RD.data, true); }
   else if ("vall" in d) { VS.all = true; drawData(RD.data, true); }
   else if ("vreset" in d) { VS.q = ""; VS.flt.clear(); render(); }
-  else if (d.vhost) vshow({ kind: "host", name: d.vhost }, true);
+  else if (d.vhost) { if (isData(S.view)) vshow({ kind: "host", name: d.vhost }, true); else openServer(d.vhost); }
   else if ("vback" in d) { const p = VS.stack.pop(); if (p) vshow(p, "back"); }
   else if (d.fwrules) {
     api("/api/hostfile?" + qs({ org: S.org, env: S.env, run: S.run, host: d.fwrules, name: "exposure" })).then((x) => {
@@ -1958,8 +2014,7 @@ document.addEventListener("click", (e) => {
     }).catch((er) => toast(er.message));
   }
   else if (d.showrun) { S.run = d.showrun; S.cur = null; RD.key = ""; VS.item = null; render(); syncURL(); }
-  else if (d.todohost) { S.by = "host"; store.set("by", "host"); S.q = d.todohost; S.open.clear(); S.cur = null; go("todo"); }
-  else if (d.hostsview) { const n = d.hostsview; go("hosts"); VS.sel = n; VS.item = { kind: "host", name: n }; }
+  else if (d.todohost) go("todo", true, d.todohost);
 });
 document.addEventListener("input", (e) => {
   if (e.target.id !== "vq") return;
@@ -1977,6 +2032,124 @@ function vkeys(e) {
 }
 addEventListener("popstate", () => { if (location.pathname.startsWith("/setup")) return; readURL(); VS.item = null; render(); });
 
+/* ---------- Servers: every server, the most urgent first, clean ones last; a server's fixes under it, their CVEs
+   under those; the server card beside. /api/tree?by=host&all=1 (every server with its state); until the server
+   answers with states, the run's own data fills them in ---------- */
+const SRV = { list: [], byId: {}, byName: {}, p4: false };
+const SFILT = [["front", "internet"], ["kev", "KEV"], ["overdue", "overdue"]];
+const redraw = () => (S.view === "servers" ? drawServers() : drawTree());
+function serversShell() {
+  return `<div class="work"><div class="listcol"><div class="work-top"><div class="hdr"><div style="min-width:0"><h1>${t("Servers")}</h1><div class="sub" id="sub"></div></div></div></div>
+      <div class="bar2 vbar">
+        <div class="seg2" role="group" aria-label="${t("Group by")}"><span class="lbl">${t("group")}</span>${[["host", "server"], ["fix", "fix"], ["cve", "CVE"]].map(([k, l]) => `<button data-by="${k}" aria-pressed="${k === "host"}">${t(l)}</button>`).join("")}</div>
+        <div class="chips">${SFILT.map(([k, l]) => `<button class="chip" data-flt="${k}" aria-pressed="${S.flt.has(k)}">${t(l)}</button>`).join("")}<button class="chip" data-sp4 aria-pressed="${SRV.p4}">+ P4</button></div>
+        <label class="search">${icon("search")}<span class="sr">${t("Filter")}</span><input id="q" placeholder="${t("Filter")}" value="${esc(S.q)}" autocomplete="off"><kbd>/</kbd></label>
+      </div>
+      <div class="scroll" id="scroll"><div class="svh"><span></span><span></span><span>${t("Server")}</span><span>${t("Priorities")}</span><span class="r c-fx">${t("Fixes")}</span><span class="r c-sc">${t("Scanned")}</span></div>
+        <div role="tree" id="tree"><div class="nodetail"><i class="spin"></i></div></div><div class="end"></div></div>
+    </div><aside class="detail" id="detail" aria-label="${t("Details")}"></aside></div>`;
+}
+async function loadServers() {
+  if (!S.org || !S.env) return;
+  let tr;
+  try { [tr] = await Promise.all([api("/api/tree?" + qs({ ...scope(), by: "host", all: 1, f: [...S.flt].join(","), q: S.q, backported: S.backport ? 1 : "" })), loadRunData()]); }
+  catch (e) {
+    if (S.view !== "servers") return;
+    if (e.status === 404) { $("#view").innerHTML = `<div id="banner"></div>` + noRuns(); banner(); return; }
+    toast(e.message); tr = { nodes: [], counts: {}, fixes: 0, cves: 0, hosts: 0 };
+  }
+  if (S.view !== "servers") return;
+  S.tree = tr;
+  SRV.list = serverList(tr);
+  drawServers();
+  renderSide();
+  const want = S.wantHost; S.wantHost = "";
+  const pick = (want && SRV.byName[want]) || (S.cur && SRV.byId[S.cur]);
+  if (pick) show(pick.id, false, !want);
+  else if (SRV.list[0] && !matchMedia("(max-width: 1240px)").matches) show(SRV.list[0].id, false, true);
+}
+function serverList(tr) {
+  const rd = RD.data, out = [], seen = new Set();
+  const walk = (ns) => ns.forEach((n) => (n.kind === "host" ? out.push(n) : walk(n.kids || [])));
+  walk(tr.nodes || []);
+  const native = out.some((n) => n.state);
+  const fill = (n) => {
+    if (!rd) return;
+    const s = hostState(rd, n.label);
+    n.state ||= { bad: "failed", wn: "partial", mut: "not_scanned" }[s[0]] || (n.priority ? "findings" : "clean");
+    if (s[0] === "bad" || s[0] === "wn") n.error ||= s[1];
+    n.counts ||= rd.hosts?.[n.label];
+    n.last_scan ||= runIso(lastScan(rd, n.label)) || rd.meta.finished;
+    n.os ||= rd.facts?.[n.label]?.os || "";
+  };
+  out.forEach((n) => { seen.add(n.label); fill(n); const e = envHost(n.label); n.public ??= e.public; n.exposure ??= e.exposure; });
+  if (!native && !S.flt.size && !S.q.trim()) {
+    (S.envd?.hosts || []).filter((h) => !seen.has(h.name)).forEach((h) => {
+      const n = { id: `g:${h.group}/h:${h.name}`, kind: "host", label: h.name, exposure: h.exposure, public: h.public, kids: [] };
+      fill(n); out.push(n);
+    });
+  }
+  const rank = (n) => (n.priority && n.state !== "failed" && n.state !== "not_scanned" ? 0 : n.state === "partial" ? 1 : n.state === "failed" ? 2 : n.state === "not_scanned" ? 3 : 4);
+  const pc = (n, p) => n.counts?.[p] || 0;
+  out.sort((a, b) => rank(a) - rank(b) || (a.priority || "P9").localeCompare(b.priority || "P9") || pc(b, "P1") - pc(a, "P1") || pc(b, "P2") - pc(a, "P2") || pc(b, "P3") - pc(a, "P3") || a.label.localeCompare(b.label));
+  SRV.byId = {}; SRV.byName = {};
+  const index = (ns) => ns.forEach((n) => { SRV.byId[n.id] = n; index(n.kids || []); });
+  index(out); out.forEach((n) => { SRV.byName[n.label] = n; });
+  return out;
+}
+const visKids = (n) => (n.kids || []).filter((k) => k.kind !== "section" && (SRV.p4 || k.priority !== "P4"));
+function srvMark(n) {
+  const m = { clean: ["ok", "✓", t("nothing to fix")], failed: ["bad", "✗", n.error || t("unreachable")], partial: ["wn", "!", n.error || t("partial data")], not_scanned: ["mut", "–", t("not scanned")] }[n.state];
+  if (n.state === "partial" && n.priority || !m) return n.priority ? `<span class="pb ${n.priority}">${n.priority}</span>` : "<span></span>";
+  return `<span class="mk ${m[0]}" title="${esc(m[2])}" aria-label="${esc(m[2])}">${m[1]}</span>`;
+}
+function srvRows(n, depth, out) {
+  FLAT.push(n);
+  const kids = visKids(n), open = S.open.has(n.id) && kids.length > 0, cls = depth ? "kid" : n.state || "";
+  const tw = kids.length ? `<button class="tw" data-tw="${esc(n.id)}" aria-expanded="${open}" aria-label="${open ? t("Collapse") : t("Expand")}">${icon("chev")}</button>` : "<span></span>";
+  let name, pri, fx = "", sc = "";
+  if (n.kind === "host") {
+    const c = n.counts || {}, failed = n.state === "failed" || n.state === "not_scanned";
+    name = `<span class="hostn" title="${esc(n.label)}">${esc(n.label)}</span><span class="os" title="${esc(failed ? n.error || "" : n.os || "")}">${esc(n.state === "failed" ? n.error || t("unreachable") : n.state === "not_scanned" ? t("not scanned") : n.os || "")}</span>${n.exposure === 1 || n.public ? `<span class="inet">${t("internet")}</span>` : ""}`;
+    pri = failed ? t("not checked") : n.state === "clean" ? t("nothing to fix") : ["P1", "P2", "P3", "P4"].map((p) => (c[p] ? `<b class="c${p}">${c[p]}</b>` : "0")).join("<i>•</i>");
+    fx = failed || n.state === "clean" ? "" : String(kids.length || "");
+    sc = failed ? "—" : n.last_scan ? esc(ago(n.last_scan)) : "";
+  } else {
+    name = `<span style="width:${(depth - 1) * 20}px"></span>${mainText(n)}`;
+    pri = [n.cves ? `${n.cves} CVE` : "", n.kev ? "KEV" : "", n.kind === "cve" && n.epss ? "EPSS " + pct(n.epss) : ""].filter(Boolean).join(" · ");
+    sc = n.due ? `<span class="${days(n.due) < 0 ? "late" : ""}" title="${esc(n.due)}">${esc(dueText(n.due))}</span>` : "";
+  }
+  out.push(`<div class="sv ${cls}" role="treeitem" aria-level="${depth + 1}" ${kids.length ? `aria-expanded="${open}"` : ""} aria-selected="${S.cur === n.id}" data-n="${esc(n.id)}">${tw}${n.kind === "host" ? srvMark(n) : n.priority ? `<span class="pb ${n.priority}">${n.priority}</span>` : "<span></span>"}<span class="nm">${name}</span><span class="pcs">${pri}</span><span class="r c-fx">${fx}</span><span class="r c-sc">${sc}</span></div>`);
+  if (open) kids.forEach((k) => srvRows(k, depth + 1, out));
+  return out;
+}
+function drawServers() {
+  if (!$("#tree") || S.view !== "servers") return;
+  FLAT = [];
+  const list = SRV.list, c = S.tree?.counts || {}, out = [];
+  list.forEach((n) => srvRows(n, 0, out));
+  $("#tree").innerHTML = out.length ? out.join("") : `<div class="empty"><h3>${S.flt.size || S.q ? t("Nothing matches") : t("No servers")}</h3>${S.flt.size || S.q ? `<button class="btn ghost" data-reset>${t("Clear filters")}</button>` : t("No server in this environment has been scanned.")}</div>`;
+  const ok = list.filter((n) => n.state === "clean").length, bad = list.filter((n) => n.state === "failed").length;
+  $("#sub").innerHTML = `<span class="mono">${list.length} · ${["P1", "P2", "P3", "P4"].map((p) => `<b class="c${p}">${p} ${c[p] || 0}</b>`).join(" <span class=z>•</span> ")} · <span class="ok">${ok} ✓</span>${bad ? ` · <b class="bad">${bad} ✗</b>` : ""}</span>`;
+}
+async function showServer(n, quiet) {
+  S.cur = n.id; S.stack = []; DETAIL = null; S.cardHost = n.label; VS.stack = []; VS.item = null;
+  document.querySelectorAll(".node[data-n], .sv[data-n]").forEach((r) => r.setAttribute("aria-selected", r.dataset.n === n.id));
+  let rd; try { rd = await loadRunData(); } catch (e) { $("#detail").innerHTML = `<div class="nodetail">${esc(e.message)}</div>`; return; }
+  if (S.cur !== n.id || !$("#detail")) return;
+  $("#detail").innerHTML = hostDetail(rd, n.label);
+  $("#detail").scrollTop = 0;
+  enrichIps($("#detail"));
+  syncURL();
+  if (!quiet && matchMedia("(max-width: 1240px)").matches) $("#detail").classList.add("open");
+}
+function openServer(name) {
+  if (S.view === "servers" && SRV.byName[name]) { show(SRV.byName[name].id); return; }
+  S.wantHost = name; S.q = ""; S.flt.clear();
+  if (S.view === "servers") render(); else go("servers");
+}
+document.addEventListener("click", (e) => { if (e.target.closest("[data-sp4]")) { SRV.p4 = !SRV.p4; e.target.closest("[data-sp4]").setAttribute("aria-pressed", SRV.p4); drawServers(); } });
+
 /* ---------- views ---------- */
 function noRuns() {
   return `<div class="onb"><h2>${t("No scans of {env} yet", { env: esc(S.env) })}</h2><p>${t("Kanareika connects to the servers over SSH, reads what is installed and how they are set up, and changes nothing.")}</p>
@@ -1990,6 +2163,8 @@ function render() {
   const sk = [S.org, S.env, S.run].join("|");
   if (render.scope !== sk) { render.scope = sk; VS.item = null; VS.sel = ""; VS.stack = []; }
   if (isData(S.view)) { $("#view").innerHTML = `<div id="banner"></div>` + dataShell(); banner(); loadData().then(renderSide); syncURL(); return; }
+  if (S.view === "servers") { S.by = "host"; $("#view").innerHTML = `<div id="banner"></div>` + serversShell(); banner(); loadServers(); syncURL(); return; }
+  if (S.by === "host") S.by = store.get("by", "fix") === "host" ? "fix" : store.get("by", "fix");
   $("#view").innerHTML = `<div id="banner"></div>` + todoShell();
   banner(); loadTree(); syncURL();
 }
@@ -2001,14 +2176,14 @@ let PI = 0;
 function palItems(q) {
   q = q.trim().toLowerCase();
   const it = [];
-  const walk = (ns, depth) => ns.forEach((n) => { if (n.kind !== "section") it.push({ g: depth ? t("Inside") : t("Fixes"), label: `${n.priority} · ${n.label}${n.fixed ? " → " + n.fixed : ""}`, hint: n.hosts ? t("{n} hosts", { n: n.hosts }) : "", go: () => { if (S.view !== "todo") { S.cur = n.id; go("todo"); } else show(n.id); } }); if (depth < 2) walk(n.kids || [], depth + 1); });
+  const walk = (ns, depth) => ns.forEach((n) => { if (n.kind !== "section") it.push({ g: depth ? t("Inside") : t("Fixes"), label: `${n.priority} · ${n.label}${n.fixed ? " → " + n.fixed : ""}`, hint: n.hosts ? t("{n} hosts", { n: n.hosts }) : "", go: () => { if (isTree(S.view)) show(n.id); else { go("servers"); S.cur = n.id; } } }); if (depth < 2) walk(n.kids || [], depth + 1); });
   walk(S.tree?.nodes || [], 0);
   NAV.filter((n) => n !== "-").forEach((n) => it.push({ g: t("Go to"), label: t(n[1]), hint: n[0] === "todo" ? "/" : "/" + n[0], go: () => go(n[0]) }));
-  (S.envd?.hosts || []).forEach((h) => it.push({ g: t("Hosts"), label: h.name, hint: h.group, go: () => { go("hosts"); VS.sel = h.name; VS.item = { kind: "host", name: h.name }; } }));
-  [["fix", "Group by fix"], ["cve", "Group by CVE"], ["host", "Group by host"]].forEach(([k, l]) => it.push({ g: t("Commands"), label: t(l), hint: "", go: () => { S.by = k; store.set("by", k); S.open.clear(); S.cur = null; render(); } }));
+  (S.envd?.hosts || []).forEach((h) => it.push({ g: t("Servers"), label: h.name, hint: h.group, go: () => openServer(h.name) }));
+  [["fix", "Group by fix"], ["cve", "Group by CVE"]].forEach(([k, l]) => it.push({ g: t("Commands"), label: t(l), hint: "/todo", go: () => { S.by = k; store.set("by", k); S.open.clear(); S.cur = null; S.view === "todo" ? render() : go("todo"); } }));
   if (S.scans && S.env) it.push({ g: t("Commands"), label: t("Scan {env}", { env: S.env }), hint: "", go: () => startScan(S.org, S.env) });
   if (S.scans) it.push({ g: t("Commands"), label: t("Add servers…"), hint: "", go: () => { S.setup = null; S.view = "setup"; render(); } });
-  return (q ? it.filter((x) => x.label.toLowerCase().includes(q)) : it.filter((x) => x.g !== t("Inside") && x.g !== t("Hosts"))).slice(0, 50);
+  return (q ? it.filter((x) => x.label.toLowerCase().includes(q)) : it.filter((x) => x.g !== t("Inside") && x.g !== t("Servers"))).slice(0, 50);
 }
 function palRender() {
   const xs = palItems($("#palq").value); PI = Math.min(PI, Math.max(0, xs.length - 1)); let g = "";
@@ -2020,17 +2195,17 @@ function palClose() { $("#pal").classList.remove("on"); }
 
 /* ---------- events ---------- */
 document.addEventListener("click", async (e) => {
-  const el = e.target.closest(".hc, button, a, .node, tr.link, [data-goto], [data-copy-text], input"); if (!el) return;
+  const el = e.target.closest(".hc, button, a, .node, .sv, tr.link, [data-goto], [data-copy-text], input"); if (!el) return;
   const d = el.dataset;
   if (d.themeSet) { S.theme = d.themeSet; store.set("theme", S.theme); applyTheme(); renderSide(); return; }
   if (d.view) { if (!e.metaKey && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); go(d.view); } return; }
-  if (d.tw) { e.stopPropagation(); S.open.has(d.tw) ? S.open.delete(d.tw) : S.open.add(d.tw); const sc = $("#scroll").scrollTop; drawTree(); $("#scroll").scrollTop = sc; return; }
+  if (d.tw) { e.stopPropagation(); S.open.has(d.tw) ? S.open.delete(d.tw) : S.open.add(d.tw); const sc = $("#scroll").scrollTop; redraw(); $("#scroll").scrollTop = sc; return; }
   if (d.sel) { e.stopPropagation(); S.sel.has(d.sel) ? S.sel.delete(d.sel) : S.sel.add(d.sel); drawSelbar(); return; }
-  if (el.classList.contains("node") || el.classList.contains("hc")) { if (d.n) show(d.n); return; }
+  if (el.classList.contains("node") || el.classList.contains("sv") || el.classList.contains("hc")) { if (d.n) show(d.n); return; }
   if (d.goto) { show(d.goto, true); return; }
   if ("back" in d) { const p = S.stack.pop(); if (p) { S.cur = p.id; DETAIL = await api("/api/node?" + qs({ ...scope(), by: S.by, f: [...S.flt].join(","), q: S.q, id: p.id })); $("#detail").innerHTML = detailHTML(DETAIL); } return; }
-  if (d.by) { S.by = d.by; store.set("by", d.by); S.open.clear(); S.cur = null; S.stack = []; render(); return; }
-  if (d.flt) { S.flt.has(d.flt) ? S.flt.delete(d.flt) : S.flt.add(d.flt); el.setAttribute("aria-pressed", S.flt.has(d.flt)); loadTree(); return; }
+  if (d.by) { if (d.by === "host") { go("servers"); return; } S.by = d.by; store.set("by", d.by); S.open.clear(); S.cur = null; S.stack = []; if (S.view !== "todo") go("todo"); else render(); return; }
+  if (d.flt) { S.flt.has(d.flt) ? S.flt.delete(d.flt) : S.flt.add(d.flt); el.setAttribute("aria-pressed", S.flt.has(d.flt)); S.view === "servers" ? loadServers() : loadTree(); return; }
   if ("bp" in d) { S.backport = !S.backport; loadTree(); return; }
   if ("expand" in d) { const all = (ns) => ns.forEach((n) => { if ((n.kids || []).length) { S.open.add(n.id); all(n.kids); } }); all(S.tree?.nodes || []); render(); return; }
   if ("collapse" in d) { S.open.clear(); render(); return; }
@@ -2044,7 +2219,7 @@ document.addEventListener("click", async (e) => {
   if (d.cancel) { try { await post(`/api/jobs/${d.cancel}/cancel`); } catch (er) { toast(er.message); } return; }
   if (el.id === "scanbtn" || "scanNow" in d) { await startScan(S.org, S.env); return; }
   if (el.id === "cmdk") { palOpen(); return; }
-  if ("setupCancel" in d) { S.setup = null; S.view = "todo"; history.replaceState(null, "", "/" + location.search); render(); return; }
+  if ("setupCancel" in d) { S.setup = null; S.view = "servers"; history.replaceState(null, "", "/" + location.search); render(); return; }
   if ("loginOpen" in d) { formData($("#setupform")); S.setup.loginOpen = true; render(); $("[name=user]")?.focus(); return; }
   if ("setupBack" in d) { S.setup.step = 1; render(); return; }
   if ("sshpick" in d) { await discover(); sshPicker(); return; }
@@ -2069,7 +2244,7 @@ document.addEventListener("click", async (e) => {
     try { const r = await post("/api/scan", { org: s.org, env: s.env, hosts: ok.length < all || s.only ? ok : undefined }); s.job = r.id; pollJobs(); } catch (er) { toast(er.message); return; }
     s.step = 3; render(); return;
   }
-  if ("setupDone" in d) { S.setup = null; S.view = "todo"; history.replaceState(null, "", "/" + location.search); await loadOrgs(); render(); return; }
+  if ("setupDone" in d) { S.setup = null; S.view = "servers"; history.replaceState(null, "", "/" + location.search); await loadOrgs(); render(); return; }
 });
 document.addEventListener("submit", (e) => {
   if (e.target.id === "setupform") { e.preventDefault(); submitServers(e.target); }
@@ -2089,7 +2264,7 @@ document.addEventListener("input", (e) => {
   if (e.target.id === "pickq") { const q = e.target.value.toLowerCase(); document.querySelectorAll("#picklist .pick").forEach((l) => (l.hidden = !l.dataset.alias.includes(q) && !l.textContent.toLowerCase().includes(q))); return; }
   if (e.target.id === "pastebox") grow(e.target);
   if (e.target.id === "pastebox" || e.target.name === "user") { clearTimeout(previewTimer); previewTimer = setTimeout(preview, 250); }
-  if (e.target.id === "q") { S.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(loadTree, 200); } else if (e.target.id === "palq") { PI = 0; palRender(); } });
+  if (e.target.id === "q") { S.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(S.view === "servers" ? loadServers : loadTree, 200); } else if (e.target.id === "palq") { PI = 0; palRender(); } });
 document.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); palOpen(); return; }
   if (e.target.id === "palq") {
@@ -2099,17 +2274,18 @@ document.addEventListener("keydown", (e) => {
     else if (e.key === "Escape") palClose();
     return;
   }
-  if (e.target.matches("input, select, textarea")) { if (e.key === "Escape") e.target.blur(); return; }
+  if (e.target.matches?.("input, select, textarea")) { if (e.key === "Escape") e.target.blur(); return; }
   if (isData(S.view)) { vkeys(e); return; }
-  if (S.view !== "todo") return;
+  if (!isTree(S.view)) return;
   const i = FLAT.findIndex((n) => n.id === S.cur), n = FLAT[i];
   const go = (m) => { if (!m) return; show(m.id); document.querySelector(`.node[data-n="${CSS.escape(m.id)}"]`)?.scrollIntoView({ block: "nearest" }); };
   if (e.key === "/") { e.preventDefault(); $("#q")?.focus(); }
   else if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); go(FLAT[i + 1]); }
   else if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); go(FLAT[i - 1]); }
-  else if ((e.key === "l" || e.key === "ArrowRight") && (n?.kids || []).length) { S.open.add(n.id); drawTree(); }
-  else if (e.key === "h" || e.key === "ArrowLeft") { if (n && S.open.has(n.id)) { S.open.delete(n.id); drawTree(); } }
-  else if ((e.key === "x" || e.key === " ") && n) { e.preventDefault(); S.sel.has(n.id) ? S.sel.delete(n.id) : S.sel.add(n.id); drawTree(); }
+  else if ((e.key === "l" || e.key === "ArrowRight") && (n?.kids || []).length) { S.open.add(n.id); redraw(); }
+  else if (e.key === "h" || e.key === "ArrowLeft") { if (n && S.open.has(n.id)) { S.open.delete(n.id); redraw(); } }
+  else if (e.key === "Enter" && n) { e.preventDefault(); show(n.id); }
+  else if ((e.key === "x" || e.key === " ") && n && S.view === "todo") { e.preventDefault(); S.sel.has(n.id) ? S.sel.delete(n.id) : S.sel.add(n.id); drawTree(); }
   else if (e.key === "Escape") { $("#detail")?.classList.remove("open"); palClose(); }
 });
 $("#pal").addEventListener("click", (e) => { const li = e.target.closest("li[data-pi]"); if (li) { palClose(); palRender.xs[+li.dataset.pi].go(); } else if (e.target.id === "pal") palClose(); });
