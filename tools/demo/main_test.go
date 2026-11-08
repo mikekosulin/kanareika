@@ -14,6 +14,7 @@ import (
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/priority"
 	"github.com/mikekosulin/kanareika/internal/report"
+	"github.com/mikekosulin/kanareika/internal/trivy"
 )
 
 // TestGenerate: a valid working directory: the org loads, every day has a full run with counts, current/ is
@@ -123,6 +124,7 @@ func TestGenerateErrors(t *testing.T) {
 		{"kev", func() { writeFile = failWrite("kev.json") }, "boom"},
 		{"epss", func() { writeFile = failWrite("epss.json") }, "boom"},
 		{"updated", func() { writeFile = failWrite("updated") }, "boom"},
+		{"trivy cache", func() { writeFile = failWrite("metadata.json") }, "boom"},
 		{"host file", func() { writeFile = failWrite("access.json") }, "boom"},
 		{"bad org", func() {
 			writeFile = func(p string, b []byte, m os.FileMode) error {
@@ -202,5 +204,25 @@ func TestMainFunc(t *testing.T) {
 	}
 	if _, msg := runMain(t, "-out", out, "-end", "2026-11-08"); !strings.Contains(msg, "is not empty") {
 		t.Fatalf("non-empty -out: %q", msg)
+	}
+}
+
+// TestTrivyCache: the demo's trivy cache reads as a DB built that morning and current until the evening.
+func TestTrivyCache(t *testing.T) {
+	t.Setenv("KANAREIKA_FEEDS_DIR", t.TempDir())
+	out := filepath.Join(t.TempDir(), "demo")
+	last := time.Date(2026, 11, 8, 0, 0, 0, 0, time.UTC)
+	if err := generate(out, last, 2); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TRIVY_CACHE_DIR", filepath.Join(out, "trivy"))
+	dbs := trivy.DBStatus()
+	if len(dbs) != 2 {
+		t.Fatal(dbs)
+	}
+	for _, d := range dbs {
+		if !d.Updated.Equal(last.Add(6*time.Hour)) || d.Outdated(last.Add(12*time.Hour)) || !d.Outdated(last.Add(19*time.Hour)) {
+			t.Errorf("%s: updated %v, next %v", d.Name, d.Updated, d.Next)
+		}
 	}
 }
