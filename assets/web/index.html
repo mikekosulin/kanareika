@@ -1,5 +1,3 @@
-st("ok", parts[0] || t("filtering"), /* tf: a whole sentence translated, its {name}s filled; the sentence is the key, so each language orders its words */
-const tf = (s, v) => t(s).replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
 <!doctype html>
 <html lang="ru">
 <head>
@@ -305,13 +303,15 @@ const LANG_NAMES = /*I18N_NAMES*/{};  // each language in its own name: locales/
 /* English first, then by their own names (Latin, Cyrillic, 中文, 日本語, 한국어), as Langs() in Go */
 const LANGS = ["en", ...Object.keys(UI).filter((l) => l !== "en").sort((a, b) => ((LANG_NAMES[a] || a) < (LANG_NAMES[b] || b) ? -1 : 1))];
 let LANG = (() => {
-  let l = "";
-  try { l = localStorage.getItem("kn.lang") || ""; } catch {}
+  let l = new URLSearchParams(location.search).get("lang") || "";  // ?lang=ja: a link in a language
+  try { l = l || localStorage.getItem("kn.lang") || ""; } catch {}
   if (!l) l = (navigator.language || "en").slice(0, 2).toLowerCase();  // the browser's language when not chosen
   return LANGS.includes(l) ? l : "en";
 })();
 let CATALOG = {};
 const t = (s) => (UI[LANG] && UI[LANG][s]) || s;
+/* tf: a whole sentence translated, its {name}s filled; the sentence is the key, so each language orders its words */
+const tf = (s, v) => t(s).replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
 function L(o, field = "title") {
   const key = field === "title" ? o.msg : o[field + "_msg"];
   const m = key && CATALOG[key];
