@@ -311,6 +311,44 @@ func writeFile(path string, data []byte) error {
 
 // UpdateFeeds downloads the CISA KEV catalog, EPSS scores and the DB-IP Lite databases into FeedsDir.
 func UpdateFeeds(ctx context.Context, pol *Policy) (Stats, error) {
+	st, err := updateScores(ctx, pol)
+	if err != nil {
+		return st, err
+	}
+	ip := UpdateIPDB(ctx)
+	st.IPDBCity, st.IPDBASN = ip["city"], ip["asn"]
+	return st, stamp()
+}
+
+// FeedsMaxAge: KEV and EPSS are published daily; a scan refreshes them when older than this.
+const FeedsMaxAge = 24 * time.Hour
+
+// RefreshScores: KEV and EPSS (not the IP databases: they are large and change monthly) when they are missing or
+// older than maxAge. Returns whether it downloaded; on an error the feeds on disk stay as they were.
+func RefreshScores(ctx context.Context, pol *Policy, maxAge time.Duration) (bool, error) {
+	if f, err := LoadFeeds(); err == nil && f.Updated != "" {
+		if at, err := FeedsTime(f.Updated); err == nil && time.Since(at) < maxAge {
+			return false, nil
+		}
+	}
+	if _, err := updateScores(ctx, pol); err != nil {
+		return false, err
+	}
+	return true, stamp()
+}
+
+// FeedsTime: the "updated" stamp as a time.
+func FeedsTime(s string) (time.Time, error) {
+	return time.Parse("2006-01-02T15:04:05.000000-07:00", strings.TrimSpace(s))
+}
+
+func stamp() error {
+	updated := time.Now().UTC().Format("2006-01-02T15:04:05.000000-07:00")
+	return writeFile(filepath.Join(FeedsDir(), "updated"), []byte(updated))
+}
+
+// updateScores: KEV (ids and CISA's due dates) and EPSS into FeedsDir.
+func updateScores(ctx context.Context, pol *Policy) (Stats, error) {
 	var st Stats
 	dir := FeedsDir()
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -341,10 +379,7 @@ func UpdateFeeds(ctx context.Context, pol *Policy) (Stats, error) {
 		return st, err
 	}
 	st.EPSS = len(epss)
-	ip := UpdateIPDB(ctx)
-	st.IPDBCity, st.IPDBASN = ip["city"], ip["asn"]
-	updated := time.Now().UTC().Format("2006-01-02T15:04:05.000000-07:00")
-	return st, writeFile(filepath.Join(dir, "updated"), []byte(updated))
+	return st, nil
 }
 
 // fetchKEV: the catalog's CVE ids, and CISA's due date of each (the earliest when listed twice).

@@ -32,6 +32,13 @@ func Web() fs.FS { sub, _ := fs.Sub(web, "web"); return sub }
 // OrgTemplateID: the placeholder OrgTemplate uses for the org id.
 const OrgTemplateID = "__ORG_ID__"
 
+// OrgTemplateSigned, OrgTemplateUntil: the template's consent dates; `org new` replaces them with today and a year
+// from today.
+const (
+	OrgTemplateSigned = "2026-01-01"
+	OrgTemplateUntil  = "2027-01-01"
+)
+
 // OrgTemplate: a commented org file with OrgTemplateID where the org id goes (kanareika org new).
 func OrgTemplate() []byte { return append([]byte(nil), orgTemplate...) }
 

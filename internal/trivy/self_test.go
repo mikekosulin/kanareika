@@ -3,6 +3,7 @@ package trivy
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -117,8 +118,23 @@ func TestOfflineAndStatus(t *testing.T) {
 	must(t, os.MkdirAll(filepath.Join(cache, "java-db"), 0o755))
 	must(t, os.WriteFile(filepath.Join(cache, "java-db", "metadata.json"), []byte(`{"DownloadedAt":"2026-11-02T00:00:00Z"}`), 0o644))
 	var logs []string
-	must(t, PrepareOffline(func(f string, a ...any) { logs = append(logs, f) }))
-	if !prepared.Load() || len(logs) != 2 {
+	must(t, PrepareOffline(func(f string, a ...any) { logs = append(logs, fmt.Sprintf(f, a...)) }))
+	used, warned := 0, 0
+	for _, l := range logs {
+		if strings.Contains(l, "offline, using the copy") {
+			used++
+		}
+		if strings.HasPrefix(l, "WARNING: vulnerabilities published since") {
+			warned++
+		}
+	}
+	old := 0 // the fixture's dates are fixed, the clock is not: count the DBs past OfflineMaxAge
+	for _, at := range []string{"2026-11-01T19:08:08Z", "2026-11-02T00:00:00Z"} {
+		if tm, _ := time.Parse(time.RFC3339, at); time.Since(tm) > OfflineMaxAge {
+			old++
+		}
+	}
+	if !prepared.Load() || used != 2 || warned != old {
 		t.Fatal(logs)
 	}
 	st := DBStatus()

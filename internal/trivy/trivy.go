@@ -207,6 +207,9 @@ func Prepare(ctx context.Context, logf func(string, ...any)) error {
 var ErrNoDB = errors.New("no trivy vulnerability DB: run `kanareika db update` with network access, " +
 	"or `kanareika db import <bundle>` with a bundle made by `kanareika db export`")
 
+// OfflineMaxAge: an offline scan says out loud when a DB is older than this (trivy-db is rebuilt every 6 hours).
+const OfflineMaxAge = 7 * 24 * time.Hour
+
 // PrepareOffline: use the cached DBs as they are, without touching the network; ErrNoDB when one is missing.
 func PrepareOffline(logf func(string, ...any)) error {
 	for _, k := range dbKinds {
@@ -215,8 +218,17 @@ func PrepareOffline(logf func(string, ...any)) error {
 			return fmt.Errorf("trivy %s: %w", k.name, ErrNoDB)
 		}
 		if logf != nil {
-			logf("trivy %s: offline, using the copy from %s (%s old)", k.name, at.UTC().Format("2006-01-02 15:04Z"),
-				time.Since(at).Round(time.Hour))
+			age := time.Since(at)
+			warn := ""
+			if age > OfflineMaxAge {
+				warn = "WARNING: "
+			}
+			logf("%strivy %s: offline, using the copy from %s (%s old)", warn, k.name, at.UTC().Format("2006-01-02 15:04Z"),
+				age.Round(time.Hour))
+			if warn != "" {
+				logf("WARNING: vulnerabilities published since then are not found; bring a fresh bundle " +
+					"(`kanareika db export` on a connected machine, `db import` here)")
+			}
 		}
 	}
 	prepared.Store(true)

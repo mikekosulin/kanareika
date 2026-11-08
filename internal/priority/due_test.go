@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mikekosulin/kanareika/internal/finding"
 )
@@ -196,3 +197,35 @@ func TestKEVDueDates(t *testing.T) {
 }
 
 func ptr(s string) *string { return &s }
+
+// TestRefreshScores: KEV and EPSS are fetched when missing or older than maxAge, left alone otherwise; the IP
+// databases are not touched.
+func TestRefreshScores(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "feeds")
+	t.Setenv("KANAREIKA_FEEDS_DIR", dir)
+	hits := 0
+	srv := feedServer(t, map[string][]byte{"/kev.json": []byte(kevJSON), "/epss.csv.gz": gz(epssCSV)})
+	pol := &Policy{KEVURL: srv.URL + "/kev.json", EPSSURL: srv.URL + "/epss.csv.gz"}
+	for i, want := range []bool{true, false} {
+		got, err := RefreshScores(context.Background(), pol, time.Hour)
+		must(t, err)
+		if got != want {
+			t.Fatalf("call %d: downloaded %v, want %v", i, got, want)
+		}
+		if got {
+			hits++
+		}
+	}
+	if got, err := RefreshScores(context.Background(), pol, 0); err != nil || !got {
+		t.Fatal("max age 0: always", got, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "dbip-city.mmdb")); err == nil || hits != 1 {
+		t.Fatal("IP databases are db update's business", hits)
+	}
+	if _, err := RefreshScores(context.Background(), &Policy{}, 0); err == nil {
+		t.Fatal("no feed URLs: an error")
+	}
+	if _, err := FeedsTime("yesterday"); err == nil {
+		t.Fatal("bad stamp")
+	}
+}

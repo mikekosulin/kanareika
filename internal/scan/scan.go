@@ -31,7 +31,26 @@ import (
 var (
 	prepare        = trivy.Prepare
 	prepareOffline = trivy.PrepareOffline
+	refreshScores  = priority.RefreshScores
 )
+
+// feedsWarn: what a scan says about KEV / EPSS it could not refresh (or, offline, did not try to).
+func (s *Scanner) feedsWarn(offline bool) {
+	f, _ := priority.LoadFeeds()
+	if f.Updated == "" || len(f.KEV) == 0 {
+		s.log("WARNING: no KEV / EPSS data: priorities ignore known-exploited CVEs and exploit likelihood. " +
+			"Run `kanareika db update` (or `db import` on an isolated network).")
+		return
+	}
+	at, err := priority.FeedsTime(f.Updated)
+	if err != nil {
+		return
+	}
+	if age := time.Since(at); offline && age > 7*24*time.Hour || !offline && age > priority.FeedsMaxAge {
+		s.log("WARNING: KEV / EPSS from %s (%s old): newly exploited CVEs may be missing", at.UTC().Format("2006-01-02"),
+			age.Round(time.Hour))
+	}
+}
 
 // Options of one scan run.
 type Options struct {
@@ -211,11 +230,20 @@ func (s *Scanner) Org(ctx context.Context, o *config.Org, env string, opt Option
 		if err := prepareOffline(s.log); err != nil {
 			return refuse(err)
 		}
+		s.feedsWarn(true)
 	} else {
 		s.log("trivy: updating vulnerability DB ...")
 		if err := prepare(ctx, s.log); err != nil {
 			return refuse(err)
 		}
+		if pol, err := priority.LoadPolicy(s.Paths); err == nil { // a broken policy is reported where it is used
+			if got, err := refreshScores(ctx, pol, priority.FeedsMaxAge); err != nil {
+				s.log("KEV / EPSS: not updated: %v", err)
+			} else if got {
+				s.log("KEV / EPSS: updated")
+			}
+		}
+		s.feedsWarn(false)
 	}
 	conn, err := sshx.New(o, s.Paths)
 	if err != nil {

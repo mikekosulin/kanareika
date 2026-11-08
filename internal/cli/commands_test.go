@@ -9,7 +9,9 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/mikekosulin/kanareika/assets"
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/priv"
 	"github.com/mikekosulin/kanareika/internal/scan"
@@ -85,6 +87,13 @@ func TestInitAndOrgNew(t *testing.T) {
 	must(t, err)
 	if strings.Contains(string(b), "__ORG_ID__") || !strings.Contains(string(b), "id: beta") {
 		t.Fatal(string(b))
+	}
+	// consent dated today, valid a year: not the template's placeholder dates, which run out for everyone at once
+	today := time.Now().UTC()
+	if !strings.Contains(string(b), "signed: "+today.Format(time.DateOnly)) ||
+		!strings.Contains(string(b), "valid_until: "+today.AddDate(1, 0, 0).Format(time.DateOnly)) ||
+		strings.Contains(string(b), assets.OrgTemplateUntil) {
+		t.Fatal("consent dates:", string(b))
 	}
 	if st, err := os.Stat(filepath.Join(home(), "secrets", "beta")); err != nil || !st.IsDir() {
 		t.Fatal(err)

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -43,6 +44,9 @@ func workspace(p config.Paths) error {
 	}
 	return nil
 }
+
+// orgNow: the date `org new` puts in the consent; tests replace it.
+var orgNow = time.Now
 
 func (a *app) initCmd() *cobra.Command {
 	return &cobra.Command{
@@ -102,6 +106,11 @@ func (a *app) orgNewCmd() *cobra.Command {
 			}
 			path := filepath.Join(a.paths.Orgs, id+".yml")
 			body := bytes.ReplaceAll(assets.OrgTemplate(), []byte(assets.OrgTemplateID), []byte(id))
+			// consent dated today for a year: the template's placeholder dates would expire on everyone at once
+			day := orgNow().UTC()
+			body = bytes.Replace(body, []byte("signed: "+assets.OrgTemplateSigned), []byte("signed: "+day.Format(time.DateOnly)), 1)
+			body = bytes.Replace(body, []byte("valid_until: "+assets.OrgTemplateUntil),
+				[]byte("valid_until: "+day.AddDate(1, 0, 0).Format(time.DateOnly)), 1)
 			f, err := openFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 			if errors.Is(err, fs.ErrExist) {
 				return fail(1, "%s already exists", path)

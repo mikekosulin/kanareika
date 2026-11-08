@@ -22,6 +22,7 @@ type dbAnswer struct {
 	} `json:"dbs"`
 	Trivy        string   `json:"trivy"`
 	FeedsUpdated string   `json:"feeds_updated"`
+	FeedsOld     bool     `json:"feeds_outdated"`
 	Enabled      bool     `json:"enabled"`
 	Updating     bool     `json:"updating"`
 	Output       []string `json:"output"`
@@ -55,8 +56,18 @@ func TestDBStatusAndUpdate(t *testing.T) {
 	}})
 
 	d := dbOf(t, s)
-	if !d.Enabled || d.Updating || len(d.DBs) != 2 || d.DBs[0].Name != "db" || d.DBs[0].Updated != "" || !d.DBs[0].Outdated {
+	if !d.Enabled || d.Updating || len(d.DBs) != 2 || d.DBs[0].Name != "db" || d.DBs[0].Updated != "" || !d.DBs[0].Outdated ||
+		!d.FeedsOld {
 		t.Fatalf("%+v", d)
+	}
+	feeds := t.TempDir()
+	t.Setenv("KANAREIKA_FEEDS_DIR", feeds)
+	for name, body := range map[string]string{"kev.json": `[]`, "epss.json": `{}`,
+		"updated": time.Now().UTC().Format("2006-01-02T15:04:05.000000-07:00")} {
+		must(t, os.WriteFile(filepath.Join(feeds, name), []byte(body), 0o644))
+	}
+	if d := dbOf(t, s); d.FeedsOld || d.FeedsUpdated == "" {
+		t.Fatalf("fresh feeds: %+v", d)
 	}
 	meta := func(name string, updated, next time.Time) {
 		must(t, os.MkdirAll(filepath.Join(cache, name), 0o755))

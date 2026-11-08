@@ -94,7 +94,13 @@ func (s *Server) apiDB(w http.ResponseWriter, _ *http.Request) {
 		dbs = append(dbs, e)
 	}
 	feeds, _ := priority.LoadFeeds()
-	out := map[string]any{"dbs": dbs, "feeds_updated": feeds.Updated, "enabled": s.db != nil, "trivy": embeddedTrivy()}
+	// KEV / EPSS: missing, or older than a scan would accept without refreshing them
+	feedsOld := feeds.Updated == ""
+	if at, err := priority.FeedsTime(feeds.Updated); err == nil {
+		feedsOld = now.Sub(at) > priority.FeedsMaxAge
+	}
+	out := map[string]any{"dbs": dbs, "feeds_updated": feeds.Updated, "feeds_outdated": feedsOld, "enabled": s.db != nil,
+		"trivy": embeddedTrivy()}
 	if u := s.db; u != nil {
 		u.mu.Lock()
 		out["updating"], out["output"], out["error"] = u.running, append([]string{}, u.out...), u.err
