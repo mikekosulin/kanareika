@@ -51,35 +51,13 @@ func TestOrgsEnvs(t *testing.T) {
 		t.Fatal(h.m.org, h.m.env, h.m.toast)
 	}
 	h.key("O", "down", "down", "enter") // the setup
-	h.has("New organization")
+	h.has("Add servers")
 	h.key("esc", "O", "up", "enter") // acme
 	h.has(" acme  production ")
 	h.key("E", "s", "t", "a", "enter")
 	h.has(" acme  staging ", "No runs yet")
 	h.key("E", "esc")
 	h.has(" acme  staging ")
-}
-
-// TestFirstScanOfEnv: an env with no runs: enter checks the SSH access, then starts the first scan.
-func TestFirstScanOfEnv(t *testing.T) {
-	h := newHarness(t, Options{Org: "acme", Env: "staging"}, true)
-	h.has("No runs yet", "<enter> checks SSH access to every host", "enter check access, first scan")
-	h.key("enter")
-	h.has("Access check(acme/staging)", "✗ ")
-	h.key("esc") // later
-	if h.m.setup != nil || h.m.view != vActions {
-		t.Fatal("esc: back to ToDo")
-	}
-	h.key("enter", "enter")
-	h.has("Scans[1]")
-	if h.m.firstScan == "" {
-		t.Fatal("first scan not followed")
-	}
-	close(h.scan.release)
-	h.waitJob("done")
-	if h.m.view != vActions {
-		t.Fatal("ToDo after the first scan")
-	}
 }
 
 // TestDetails: the details pane next to the tree on a wide terminal, full screen on enter on a narrow one; it

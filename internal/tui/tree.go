@@ -148,7 +148,6 @@ var (
 	groupNames   = map[string]string{"fix": "fix", "cve": "CVE", "host": "host"}
 	sectionNames = map[string]string{"parts": "components", "where": "runs on"}
 	menuTitles   = map[string]string{"filters": "Filters", "orgs": "Organizations", "envs": "Environments", "jump": "Jump to"}
-	choiceWords  = map[string]string{"no": "no", "yes": "yes", "none": "none", "sudo": "sudo"}
 )
 
 const wideDetails = 140 // from this width the details pane stands next to the tree
@@ -182,6 +181,11 @@ func (m *Model) wantTree() string { return m.wantKey() + "?" + m.treeQuery() }
 
 // sync: fetch what the screen needs and doesn't have yet: the tree, the details of the node under the cursor.
 func (m *Model) sync() tea.Cmd {
+	if m.setup != nil {
+		if c := m.fetchDBSize(); c != nil {
+			return c
+		}
+	}
 	if m.run == "" || m.org == "" || m.runKey != m.wantKey() {
 		return nil
 	}

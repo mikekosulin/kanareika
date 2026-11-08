@@ -114,7 +114,11 @@ type Model struct {
 	menu      *menuDlg // filters (f), organizations (O), environments (E), jump (:)
 	setup     *wizard  // first-run setup (no organization yet, N) and the first scan of an env
 	setupSeen bool     // the setup opened on its own once
-	firstScan string   // the job of a first scan: ToDo when it ends
+	found     *foundResp
+	dbSize    *dbSizeResp
+	dlStart   time.Time // when the download asked for here started
+	dbPolled  time.Time
+	spinning  bool // a spinner frame is due
 
 	toast   string
 	toastAt time.Time
@@ -237,6 +241,7 @@ func (m *Model) onDB(d dbResp) tea.Cmd {
 	case was && !d.Updating && d.Error != "":
 		m.err = m.t.T("DB update failed") + ": " + d.Error
 	case was && !d.Updating:
+		m.dbSize = nil // what is still needed: asked again
 		m.say(m.t.T("Vulnerability DBs updated"))
 		m.runKey = "" // the current state is rebuilt with them on the next look
 		return m.refresh()
@@ -322,10 +327,6 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.open = m.jobs.Jobs[0].ID
 		}
 		m.autoSetup()
-		if i := slices.IndexFunc(m.jobs.Jobs, func(j jobInfo) bool { return j.ID == m.firstScan }); i >= 0 && m.jobs.Jobs[i].State != "running" {
-			m.firstScan = "" // the first scan of an env ended: what to do
-			m.setView(vActions)
-		}
 		if was && !m.busy() {
 			return m, m.refresh() // a scan just ended: its results
 		}
@@ -340,8 +341,8 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.menu != nil && m.menu.kind == "jump" {
 			m.menu.trees[msg.by] = msg.d
 		}
-	case setupMsg:
-		return m, m.onSetup(msg)
+	case setupMsg, foundMsg, parsedMsg, parseDueMsg, hostsMsg, checkedMsg, dbSizeMsg, spinMsg, dlStartedMsg:
+		return m, m.setupUpdate(msg)
 	case tickMsg:
 		return m, tea.Batch(m.refresh(), m.tick())
 	case errMsg:
@@ -358,8 +359,9 @@ func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.runInfo.meta, m.runInfo.log = msg.meta, msg.log
 		}
 	case startedMsg:
-		if m.setup != nil {
-			m.setup, m.firstScan = nil, msg.id
+		if w := m.setup; w != nil && w.step == 2 { // the first scan: its output in the setup
+			w.step, w.job, w.busy, w.off = 3, msg.id, false, 0
+			return m, m.fetchJobs()
 		}
 		m.form, m.open, m.view = nil, msg.id, vScans
 		m.say(m.t.T("Scan started"))
@@ -395,7 +397,7 @@ func (m *Model) onOrgs(o orgsResp) tea.Cmd {
 func (m *Model) autoSetup() {
 	if m.loaded && len(m.orgs.Orgs) == 0 && m.scanOK && m.setup == nil && !m.setupSeen {
 		m.setupSeen = true
-		m.setup = newWizard()
+		m.setup = m.newWizard()
 	}
 }
 
@@ -405,7 +407,7 @@ func (m *Model) newOrg() {
 		m.say(m.t.T("Scans can't be started here (read-only)"))
 		return
 	}
-	m.setup = newWizard()
+	m.setup = m.newWizard()
 }
 
 func (m *Model) orgRow() *orgRow {
@@ -717,7 +719,7 @@ func (m *Model) viewKey(s string) tea.Cmd {
 	case vActions:
 		if s == "enter" && m.run == "" && m.org != "" { // no runs yet: check the access, then the first scan
 			m.setup = checkWizard(m.org, m.env)
-			return m.setup.check(m)
+			return m.fetchHosts()
 		}
 	case vAccess, vNetwork, vHealth:
 		var hosts []string
