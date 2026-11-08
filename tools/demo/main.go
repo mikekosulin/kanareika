@@ -249,6 +249,21 @@ var versions = map[string][2]string{
 	"kernel-core": {"5.14.0-427.el9", "5.14.0-503.el9"}, "linux-image-4.15.0-213-generic": {"4.15.0-213.224", ""},
 }
 
+// byFamily: the same package name in another family has its own versions.
+var byFamily = map[string][2]string{
+	"ubu:libc6": {"2.35-0ubuntu3.8", "2.35-0ubuntu3.9"}, "ubu18:libc6": {"2.27-3ubuntu1.6", ""},
+	"ubu:openssh-server": {"1:8.9p1-3ubuntu0.7", "1:8.9p1-3ubuntu0.10"}, "ubu18:openssh-server": {"1:7.6p1-4ubuntu0.7", ""},
+	"ubu:curl": {"7.81.0-1ubuntu1.16", "7.81.0-1ubuntu1.18"}, "rpm:curl": {"7.76.1-29.el9_4", "7.76.1-31.el9"},
+	"rpm:sudo": {"1.9.5p2-10.el9_3", "1.9.5p2-10.el9_5"}, "rpm:libxml2": {"2.9.13-6.el9_4", ""},
+}
+
+func versionOf(family, pkg string) [2]string {
+	if v, ok := byFamily[family+":"+pkg]; ok {
+		return v
+	}
+	return versions[pkg]
+}
+
 var advisories = []advisory{
 	{"openssh", []string{"openssh-server"}, "CRITICAL", "AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H", false, .87},
 	{"openssh", []string{"openssh-server"}, "MEDIUM", "AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L", false, .03},
@@ -304,7 +319,7 @@ func makeVulns(r *rand.Rand, days int) []vuln {
 				if !slices.Contains(a.pkgs, p) {
 					continue
 				}
-				v := versions[p]
+				v := versionOf(h.family, p)
 				fixed := rollout[h.group]
 				if fixed >= 0 {
 					fixed += r.IntN(4)
