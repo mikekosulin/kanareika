@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="{{.L.Code}}"><head><meta charset="utf-8"><title>kanareika</title>
+<style>{{.CSS}}
+html, body { width: 1280px; height: 360px; }
+.card { border-radius: 18px; }
+.edge { inset: 0; border-radius: 18px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.win { left: 640px; top: 48px; width: 600px; height: 360px; font-size: 13px;
+  transform: perspective(1300px) rotateY(-10deg) rotateX(4deg); transform-origin: left top; }
+.row { padding: 6px 14px; gap: 12px; }
+.row .h { width: 70px; }
+.aurora { inset: 0; background:
+  radial-gradient(520px 300px at 1000px 40px, rgba(130,100,255,.34), transparent 70%),
+  radial-gradient(460px 260px at 1200px 360px, rgba(255,190,60,.2), transparent 70%),
+  radial-gradient(420px 240px at 120px 380px, rgba(60,200,190,.12), transparent 70%); }
+.fade { left: 0; right: 0; bottom: 0; height: 70px; background: linear-gradient(transparent, #0b0d12); }
+.logo { left: 60px; top: 66px; width: 84px; height: 84px; filter: drop-shadow(0 8px 22px rgba(255,200,60,.35)); }
+.name { left: 160px; top: 72px; font-size: 66px; }
+.tag { left: 62px; top: 178px; width: 540px; font-size: 23px; line-height: 1.42; color: #c4c9d8; }
+.sub { left: 62px; top: 268px; font-size: 14px; color: #7f879b; }
+</style></head>
+<body><div class="card">
+<div class="abs aurora"></div>
+<svg class="abs" width="1280" height="360" style="left:0;top:0"><defs><pattern id="g" width="44" height="44" patternUnits="userSpaceOnUse">
+<path d="M44 0H0V44" fill="none" stroke="rgba(160,175,210,.07)"/></pattern></defs><rect width="1280" height="360" fill="url(#g)"/></svg>
+
+<img class="abs logo" src="{{.Logo}}" alt="">
+<div class="abs word name">kanareika</div>
+<div class="abs tag">{{.L.Tag}}<br><span class="accent">{{.L.Accent}}</span></div>
+<div class="abs mono sub">{{.L.Sub}}</div>
+
+<div class="abs win mono">
+ <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">~ kanareika</span></div>
+ <div class="tabs">{{range $i, $t := .L.Tabs}}<span{{if eq $i 0}} class="on"{{end}}>{{$t}}</span>{{end}}</div>
+ {{range $i, $r := .Rows}}<div class="row{{if eq $i 0}} sel{{end}}"><span class="p p{{$r.P}}">P{{$r.P}}</span><span class="h">{{$r.Host}}</span><span class="x">{{$r.Text}}</span><span class="k">{{$r.Kind}}</span></div>
+ {{end}}
+</div>
+<div class="abs fade"></div>
+<div class="abs edge"></div>
+</div></body></html>

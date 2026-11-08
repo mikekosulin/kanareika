@@ -1,0 +1,43 @@
+# Total coverage of main as a badge: a shields.io endpoint JSON in the badges branch, which the READMEs show.
+# Its own workflow, not a job of ci.yml: it needs contents: write, and ci.yml is also called by the release
+# workflow, which grants only read (a called workflow may not ask for more, even for a job that would not run).
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coverage
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # the badges branch only
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: coverage
+        run: |
+          go test -count=1 -coverpkg=./... -coverprofile=cover.out ./... > /dev/null
+          pct="$(go tool cover -func=cover.out | awk '/^total:/ {sub("%", "", $3); print int($3 + 0.5)}')"
+          color=red; [ "$pct" -ge 70 ] && color=yellow; [ "$pct" -ge 85 ] && color=brightgreen
+          printf '{"schemaVersion":1,"label":"coverage","message":"%s%%","color":"%s"}\n' "$pct" "$color" > "$RUNNER_TEMP/coverage.json"
+          echo "coverage: $pct%"
+      - name: publish the badge
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin badges || true
+          git switch badges 2>/dev/null || git switch --orphan badges
+          git rm -rq --ignore-unmatch .
+          cp "$RUNNER_TEMP/coverage.json" coverage.json
+          git add coverage.json
+          git diff --cached --quiet || { git commit -qm "coverage badge"; git push origin badges; }

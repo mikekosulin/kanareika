@@ -1,4 +1,4 @@
-# Kanareika
+<h1><img src="docs/brand/banner-zh.png" alt="Kanareika：通过 SSH 审计服务器安全"></h1>
 
 [![CI](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml/badge.svg)](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml) [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/mikekosulin/kanareika/badges/coverage.json)](https://github.com/mikekosulin/kanareika/actions/workflows/coverage.yml) [![Release](https://img.shields.io/github/v/release/mikekosulin/kanareika)](https://github.com/mikekosulin/kanareika/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Stars](https://img.shields.io/github/stars/mikekosulin/kanareika?style=social)](https://github.com/mikekosulin/kanareika)
 
@@ -48,6 +48,9 @@ kanareika web                    # Web 界面，http://127.0.0.1:8088
 - **健康** — 内核错误、磁盘、内存、时间同步、待重启。
 - **修复** — 选中的操作会生成一份现成的任务，交给工程师或 AI 智能体：执行、验证、回滚。
 - **安全设计** — 只读；组织之间相互隔离；主机密钥变化即拒绝连接；未获授权不扫描；Web 界面仅限 localhost（或使用令牌）。
+
+**免责声明。** Kanareika 只报告它发现的问题，不保证发现全部问题。优先级和修复步骤仅供参考：在主机上执行任何操作前请先审阅。
+只审计你有权审计的服务器。本软件按“原样”提供，不附带任何担保（[MIT](LICENSE)）。
 
 喜欢吗？[点个星](https://github.com/mikekosulin/kanareika) · 有问题？[提交 issue](https://github.com/mikekosulin/kanareika/issues/new/choose)
 （请勿包含真实主机或地址）· 发现漏洞？[私下报告](SECURITY.md)

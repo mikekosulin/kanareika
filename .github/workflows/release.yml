@@ -77,5 +77,9 @@ jobs:
         run: |
           prerelease=""
           case "$TAG" in *-*) prerelease="--prerelease" ;; esac
+          # the notes: this version's section of CHANGELOG.md (without its heading), then the generated list
+          gh api "repos/$GITHUB_REPOSITORY/contents/CHANGELOG.md?ref=$TAG" -H "Accept: application/vnd.github.raw" \
+            | awk -v v="${TAG#v}" '/^## /{if(f)exit; if($2==v){f=1;next}} f' > "$RUNNER_TEMP/notes.md"
+          [ -s "$RUNNER_TEMP/notes.md" ] || { echo "CHANGELOG.md has no section for ${TAG#v}"; exit 1; }
           gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --title "kanareika $TAG" \
-            --generate-notes --verify-tag $prerelease
+            --notes-file "$RUNNER_TEMP/notes.md" --generate-notes --verify-tag $prerelease

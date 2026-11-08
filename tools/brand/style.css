@@ -1,0 +1,29 @@
+/* Shared by both pictures. Colors: the TUI's priorities (P1-P4) and the canary's yellow. */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { overflow: hidden; background: transparent; }
+body { font-family: -apple-system, "SF Pro Display", "Inter", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif; color: #eceef5; }
+.mono { font-family: "SF Mono", "JetBrains Mono", Menlo, "PingFang SC", "Noto Sans Mono CJK SC", monospace; }
+.abs { position: absolute; }
+.card { position: absolute; inset: 0; overflow: hidden; background: #0b0d12; }
+.word { font-weight: 700; letter-spacing: -.03em; }
+.accent { color: #ffd23f; }
+.p { display: inline-block; font-weight: 700; padding: 1px 6px; border-radius: 4px; font-size: 11px; color: #0b0d12; }
+.p1 { background: #ff5d6c; } .p2 { background: #ff9f43; } .p3 { background: #ffd23f; } .p4 { background: #7d8597; }
+.c1 { color: #ff5d6c; } .c2 { color: #ff9f43; } .c3 { color: #ffd23f; } .c4 { color: #7d8597; }
+
+/* the terminal window */
+.win { border-radius: 14px; overflow: hidden; background: rgba(14,16,23,.93); border: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 40px 120px rgba(0,0,0,.6), 0 0 90px rgba(140,110,255,.18); }
+.bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.07); color: #8b93a7; }
+.bar i { width: 12px; height: 12px; border-radius: 50%; }
+.bar .t { margin-left: 14px; }
+.tabs { display: flex; gap: 18px; padding: 12px 16px; color: #6f778c; }
+.tabs .on { color: #0b0d12; background: #ffd23f; padding: 1px 8px; border-radius: 4px; font-weight: 700; }
+.row { display: flex; gap: 14px; align-items: center; padding: 7px 16px; border-left: 2px solid transparent; }
+.row.sel { background: rgba(255,210,63,.09); border-left-color: #ffd23f; }
+.row .h { width: 104px; color: #8fd8ff; }
+.row .x { flex: 1; color: #dfe3ee; }
+.row .k { color: #6f778c; }
+.foot { position: absolute; bottom: 0; left: 0; right: 0; display: flex; padding: 10px 16px; color: #6f778c;
+  border-top: 1px solid rgba(255,255,255,.07); }
+.foot span:last-child { margin-left: auto; }

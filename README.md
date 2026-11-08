@@ -1,4 +1,4 @@
-# Kanareika
+<h1><img src="docs/brand/banner-en.png" alt="Kanareika: security audit of your servers over SSH"></h1>
 
 [![CI](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml/badge.svg)](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml) [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/mikekosulin/kanareika/badges/coverage.json)](https://github.com/mikekosulin/kanareika/actions/workflows/coverage.yml) [![Release](https://img.shields.io/github/v/release/mikekosulin/kanareika)](https://github.com/mikekosulin/kanareika/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Stars](https://img.shields.io/github/stars/mikekosulin/kanareika?style=social)](https://github.com/mikekosulin/kanareika)
 
@@ -50,6 +50,10 @@ kanareika web                    # web interface, http://127.0.0.1:8088
 - **Fixing** — selected actions become a ready task for an engineer or an AI agent: apply, verify, roll back.
 - **Safe by design** — read-only, organizations isolated, changed host keys refused, no scan without consent, the web
   interface on localhost only (or with a token).
+
+**Disclaimer.** Kanareika reports what it finds; it does not promise to find everything. Priorities and fix steps are
+advice: review them before running anything on your hosts. Audit only servers you are allowed to. Provided as is,
+without warranty ([MIT](LICENSE)).
 
 Like it? [Star it](https://github.com/mikekosulin/kanareika) · Something wrong? [Open an issue](https://github.com/mikekosulin/kanareika/issues/new/choose)
 (no real hosts or addresses, please) · Vulnerability? [Report privately](SECURITY.md)
