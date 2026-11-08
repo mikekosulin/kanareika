@@ -73,7 +73,8 @@ func TestHostCardSections(t *testing.T) {
 	}
 }
 
-// TestOtherLayout: hotkeys work on a Cyrillic layout (the same physical keys); the filter keeps the letters typed.
+// TestOtherLayout: hotkeys work on Russian, Korean and French layouts (the same physical keys); the filter keeps
+// the letters typed.
 func TestOtherLayout(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.key("3") // Hosts
@@ -100,6 +101,24 @@ func TestOtherLayout(t *testing.T) {
 	runes("щ")
 	h.has("Panels(Hosts)")
 	h.key("esc")
+	// Korean 2-set: ㅓ is j, ㅃ (shift+q) is Q; French AZERTY: é is 2 (ToDo), à is 0 (Runs)
+	h.key("3")
+	before := h.m.cur[vHosts]
+	runes("ㅓ")
+	if h.m.cur[vHosts] != before+1 {
+		t.Fatal("ㅓ is not j")
+	}
+	if latin['ㅃ'] != 'Q' || latin['ㅖ'] != 'P' {
+		t.Fatal("shifted jamo")
+	}
+	runes("é")
+	if h.m.view != vActions {
+		t.Fatalf("é is not 2: view %d", h.m.view)
+	}
+	runes("à")
+	if h.m.view != vRuns {
+		t.Fatalf("à is not 0: view %d", h.m.view)
+	}
 	_, cmd := h.m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("й")}) // q
 	if _, ok := cmd().(tea.QuitMsg); !ok {
 		t.Fatal("й is not q")

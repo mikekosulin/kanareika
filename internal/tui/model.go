@@ -394,13 +394,18 @@ func (m *Model) selectEnv(org, env string) tea.Cmd {
 	return m.fetchEnv()
 }
 
-// latin: keys typed with another keyboard layout, as the same keys on a QWERTY one (й -> q, о -> j): the
-// hotkeys work whatever layout is on. Text (the filter) is never mapped.
+// latin: keys typed with another keyboard layout, as the same keys on a QWERTY one (й -> q, ㅂ -> q, é -> 2):
+// the hotkeys work whatever layout is on. Russian ЙЦУКЕН, Korean 2-set (shifted letters give the same jamo as
+// unshifted ones but the five doubled consonants and two vowels), and the French AZERTY digit row, which types
+// & é " ' ( - è _ ç à without Shift. Text (the filter) is never mapped.
 var latin = func() map[rune]rune {
 	m := map[rune]rune{}
 	for _, p := range [][2]string{
 		{"йцукенгшщзхъфывапролджэячсмитьбю.ё", "qwertyuiop[]asdfghjkl;'zxcvbnm,./`"},
 		{"ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,Ё", "QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?~"},
+		{"ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔㅁㄴㅇㄹㅎㅗㅓㅏㅣㅋㅌㅊㅍㅠㅜㅡ", "qwertyuiopasdfghjklzxcvbnm"},
+		{"ㅃㅉㄸㄲㅆㅒㅖ", "QWERTOP"},
+		{"&é\"'(-è_çà", "1234567890"},
 	} {
 		from, to := []rune(p[0]), []rune(p[1])
 		for i := range from {
