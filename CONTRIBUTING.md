@@ -61,7 +61,9 @@ The guard in `tools/anonymize` runs with `go test ./...`:
 - commit messages in [Conventional Commits](https://www.conventionalcommits.org) style (`feat:`, `fix:`, `docs:`,
   `test:`, `ci:`, `deps:`), imperative mood; the PR is squash-merged with its title as the commit message;
 - commits on `main` must be signed — GitHub signs the squash commit, so your branch commits need not be;
-- CI (`test`, `lint`) must pass and review threads must be resolved before merge.
+- CI (`test`, `lint`) must pass and review threads must be resolved before merge;
+- AI tools are welcome, and you don't have to say you used one; you answer for every line: see
+  [AI_POLICY.md](AI_POLICY.md).
 
 Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
 
