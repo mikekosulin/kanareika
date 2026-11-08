@@ -28,11 +28,15 @@ type Client interface {
 type APIError struct {
 	Status int
 	Msg    string
+	Errors []string // a form's problems (400 {errors})
 }
 
 func (e *APIError) Error() string {
 	if e.Msg != "" {
 		return e.Msg
+	}
+	if len(e.Errors) > 0 {
+		return strings.Join(e.Errors, "; ")
 	}
 	return fmt.Sprintf("HTTP %d", e.Status)
 }
@@ -98,13 +102,14 @@ func (c *client) roundTrip(r *http.Request, out any) error {
 	}
 	if resp.StatusCode >= 300 {
 		var e struct {
-			Error string `json:"error"`
+			Error  string   `json:"error"`
+			Errors []string `json:"errors"`
 		}
 		_ = json.Unmarshal(b, &e)
 		if e.Error == "" && resp.StatusCode == http.StatusUnauthorized {
 			e.Error = "access token required or wrong (--token)"
 		}
-		return &APIError{Status: resp.StatusCode, Msg: e.Error}
+		return &APIError{Status: resp.StatusCode, Msg: e.Error, Errors: e.Errors}
 	}
 	if out == nil {
 		return nil

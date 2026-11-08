@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"net/url"
 	"slices"
@@ -19,8 +18,7 @@ import (
 type view int
 
 const (
-	vOrgs view = iota
-	vActions
+	vActions view = iota
 	vHosts
 	vPackages
 	vChanges
@@ -33,12 +31,13 @@ const (
 	nViews
 )
 
-// viewNames: tab titles (English keys of the web page's translations where it has them).
-var viewNames = [nViews]string{"Organizations", "ToDo", "Hosts", "Packages", "Changes", "Access", "Network", "Health",
+// viewNames: tab titles (English keys of the web page's translations where it has them). Organizations and
+// environments are chosen with O and E.
+var viewNames = [nViews]string{"ToDo", "Hosts", "Packages", "Changes", "Access", "Network", "Health",
 	"Exceptions", "Runs", "Scans"}
 
-// viewHotkeys: the key of each view: 1-9, 0, then S.
-var viewHotkeys = [nViews]string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "S"}
+// viewHotkeys: the key of each view: 1-9, 0 (S opens Scans too).
+var viewHotkeys = [nViews]string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}
 
 // Options of a TUI session.
 type Options struct {
@@ -84,9 +83,6 @@ type Model struct {
 	set     Settings
 	setPath string
 	sysZone *time.Location
-	sel     map[string]bool // selected action ids
-	onlySel bool            // ToDo lists only the selected actions (v)
-	detail  bool
 	help    bool
 	helpOff int
 	host    string // the host whose card the Hosts view shows ("" = the list)
@@ -98,6 +94,27 @@ type Model struct {
 	langs       *panelsDlg // the language list (L)
 	form        *scanForm
 	open        string // job whose output the Scans view shows
+
+	// ToDo: the tree
+	by      string                 // grouping: fix, cve, host (g)
+	flt     map[string]bool        // filters on (f)
+	tree    *treeResp              // nil until it comes
+	treeKey string                 // what the tree on screen is for (wantTree)
+	nodes   map[string]*nodeDetail // details by treeKey#node id
+	pending map[string]string      // requests on the way: "tree" -> its key, a node's key -> itself
+	opened  map[string]bool        // expanded nodes
+	sel     map[string]bool        // selected nodes (a node selects everything under it)
+	onlySel bool                   // only the selected (v)
+	curID   string                 // the node under the cursor, kept when the tree is rebuilt
+	jumpTo  string                 // the node to put the cursor on when the next tree comes (:)
+	full    bool                   // the details full screen (enter)
+	detOff  int
+	cmdCur  int // the command of the details c copies ([ ])
+
+	menu      *menuDlg // filters (f), organizations (O), environments (E), jump (:)
+	setup     *wizard  // first-run setup (no organization yet, N) and the first scan of an env
+	setupSeen bool     // the setup opened on its own once
+	firstScan string   // the job of a first scan: ToDo when it ends
 
 	toast   string
 	toastAt time.Time
@@ -116,13 +133,11 @@ func New(o Options) *Model {
 		o.Zone = time.Local
 	}
 	m := &Model{c: o.Client, now: o.Now, every: o.Tick, clip: o.Clip, org: o.Org, env: o.Env, view: vActions, sel: map[string]bool{},
-		t: &tr{lang: "en", ui: i18n.UI()}, set: loadSettings(o.Settings), setPath: o.Settings, sysZone: o.Zone}
+		t: &tr{lang: "en", ui: i18n.UI()}, set: loadSettings(o.Settings), setPath: o.Settings, sysZone: o.Zone,
+		by: "fix", flt: map[string]bool{}, nodes: map[string]*nodeDetail{}, pending: map[string]string{}, opened: map[string]bool{}}
 	m.applyZone()
 	if o.Lang != "" && (o.Lang == "en" || m.t.ui[o.Lang] != nil) {
 		m.t.lang = o.Lang
-	}
-	if o.Org == "" {
-		m.view = vOrgs
 	}
 	return m
 }
@@ -272,7 +287,16 @@ func (m *Model) say(s string) { m.toast, m.toastAt = s, m.now() }
 
 // --- update -------------------------------------------------------------------------------------------------------
 
+// Update: the message, then whatever the screen now needs fetched.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	_, cmd := m.update(msg)
+	if c := m.sync(); c != nil {
+		cmd = tea.Batch(cmd, c)
+	}
+	return m, cmd
+}
+
+func (m *Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -297,13 +321,34 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.open == "" && len(m.jobs.Jobs) > 0 {
 			m.open = m.jobs.Jobs[0].ID
 		}
+		m.autoSetup()
+		if i := slices.IndexFunc(m.jobs.Jobs, func(j jobInfo) bool { return j.ID == m.firstScan }); i >= 0 && m.jobs.Jobs[i].State != "running" {
+			m.firstScan = "" // the first scan of an env ended: what to do
+			m.setView(vActions)
+		}
 		if was && !m.busy() {
 			return m, m.refresh() // a scan just ended: its results
 		}
+	case treeMsg:
+		m.onTree(msg)
+	case nodeMsg:
+		delete(m.pending, msg.key)
+		if strings.HasPrefix(msg.key, m.treeKey+"#") {
+			m.nodes[msg.key] = msg.d
+		}
+	case jumpTreeMsg:
+		if m.menu != nil && m.menu.kind == "jump" {
+			m.menu.trees[msg.by] = msg.d
+		}
+	case setupMsg:
+		return m, m.onSetup(msg)
 	case tickMsg:
 		return m, tea.Batch(m.refresh(), m.tick())
 	case errMsg:
 		m.err = msg.err.Error()
+		if m.setup != nil {
+			m.setup.busy = false
+		}
 	case toastMsg:
 		m.say(string(msg))
 	case optsMsg:
@@ -313,6 +358,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.runInfo.meta, m.runInfo.log = msg.meta, msg.log
 		}
 	case startedMsg:
+		if m.setup != nil {
+			m.setup, m.firstScan = nil, msg.id
+		}
 		m.form, m.open, m.view = nil, msg.id, vScans
 		m.say(m.t.T("Scan started"))
 		return m, m.fetchJobs()
@@ -336,10 +384,28 @@ func (m *Model) onOrgs(o orgsResp) tea.Cmd {
 			m.env = o.Envs[0].Env
 		}
 	}
+	m.autoSetup()
 	if m.envd.Runs == nil {
 		return m.fetchEnv()
 	}
 	return nil
+}
+
+// autoSetup: no organization yet, and one can be set up here: the setup, once (esc leaves it, N brings it back).
+func (m *Model) autoSetup() {
+	if m.loaded && len(m.orgs.Orgs) == 0 && m.scanOK && m.setup == nil && !m.setupSeen {
+		m.setupSeen = true
+		m.setup = newWizard()
+	}
+}
+
+// newOrg: the setup of a new organization (where it writes org files: as scans, not on a read-only dashboard).
+func (m *Model) newOrg() {
+	if !m.scanOK {
+		m.say(m.t.T("Scans can't be started here (read-only)"))
+		return
+	}
+	m.setup = newWizard()
 }
 
 func (m *Model) orgRow() *orgRow {
@@ -390,7 +456,8 @@ func (m *Model) selectEnv(org, env string) tea.Cmd {
 	}
 	m.org, m.env, m.run = org, env, ""
 	m.envd, m.rund, m.runKey = envResp{}, nil, ""
-	m.sel = map[string]bool{}
+	m.tree, m.treeKey, m.nodes, m.pending = nil, "", map[string]*nodeDetail{}, map[string]string{}
+	m.sel, m.opened, m.curID, m.full = map[string]bool{}, map[string]bool{}, "", false
 	m.cur, m.off = [nViews]int{}, [nViews]int{}
 	return m.fetchEnv()
 }
@@ -417,7 +484,8 @@ var latin = func() map[rune]rune {
 }()
 
 func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if !m.typing && k.Type == tea.KeyRunes && len(k.Runes) == 1 {
+	texting := m.typing || m.setup != nil && m.setup.texting() || m.menu != nil && m.menu.kind != "filters"
+	if !texting && k.Type == tea.KeyRunes && len(k.Runes) == 1 {
 		if r, ok := latin[k.Runes[0]]; ok {
 			k.Runes = []rune{r}
 		}
@@ -426,8 +494,14 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if s == "ctrl+c" {
 		return m, tea.Quit
 	}
+	if m.setup != nil {
+		return m, m.setupKey(k)
+	}
 	if m.form != nil {
 		return m, m.formKey(s)
+	}
+	if m.menu != nil {
+		return m, m.menuKey(k)
 	}
 	if m.panels != nil {
 		m.panelsKey(s)
@@ -459,7 +533,7 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.cur[m.view], m.off[m.view] = 0, 0
 		return m, nil
 	}
-	if m.host != "" && m.view == vHosts && !m.typing && m.form == nil && m.panels == nil && !m.help {
+	if m.host != "" && m.view == vHosts && !m.help {
 		switch s {
 		case "up", "k":
 			m.hostOff = max(m.hostOff-1, 0)
@@ -495,6 +569,11 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
+	if m.view == vActions {
+		if cmd, ok := m.todoKey(s); ok {
+			return m, cmd
+		}
+	}
 	switch s {
 	case "q":
 		return m, tea.Quit
@@ -504,15 +583,27 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.setView((m.view + 1) % nViews)
 	case "shift+tab", "left", "h":
 		m.setView((m.view + nViews - 1) % nViews)
-	case "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "S":
+	case "1", "2", "3", "4", "5", "6", "7", "8", "9", "0":
 		m.setView(view(slices.Index(viewHotkeys[:], s)))
+	case "S":
+		m.setView(vScans)
 	case "r", "ctrl+r":
-		m.runKey = "" // reload the run too
+		m.runKey, m.treeKey = "", "" // reload the run and the tree too
+		m.nodes, m.pending = map[string]*nodeDetail{}, map[string]string{}
 		return m, m.refresh()
 	case "L":
 		m.langs = &panelsDlg{cur: max(slices.Index(m.languages(), m.t.lang), 0)}
 	case "o":
 		m.panels = &panelsDlg{cur: 1}
+	case "O":
+		m.menu = m.newMenu("orgs")
+	case "E":
+		m.menu = m.newMenu("envs")
+	case ":", "ctrl+k":
+		m.menu = m.newMenu("jump")
+		return m, m.fetchJumpTrees()
+	case "N":
+		m.newOrg()
 	case "z":
 		m.toggleZone()
 	case "U":
@@ -520,7 +611,7 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "/":
 		m.typing = true
 	case "esc":
-		m.filter, m.detail = "", false
+		m.filter = ""
 	case "s":
 		return m, m.openForm()
 	case "up", "k":
@@ -542,7 +633,7 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) setView(v view) {
-	m.view, m.filter, m.detail = v, "", false
+	m.view, m.filter, m.full = v, "", false
 	m.host, m.hostOff, m.runInfo = "", 0, nil
 }
 
@@ -584,6 +675,12 @@ func (m *Model) move(d int) {
 	n := m.rows()
 	c := min(max(m.cur[m.view]+d, 0), max(n-1, 0))
 	m.cur[m.view] = c
+	if m.view == vActions {
+		if rows := m.treeRows(); c < len(rows) {
+			m.curID = rows[c].n.ID
+		}
+		m.cmdCur = 0
+	}
 }
 
 func (m *Model) page() int { return max(m.bodyHeight()-2, 1) }
@@ -591,10 +688,8 @@ func (m *Model) page() int { return max(m.bodyHeight()-2, 1) }
 // rows: how many rows the current view lists.
 func (m *Model) rows() int {
 	switch m.view {
-	case vOrgs:
-		return len(m.envList())
 	case vActions:
-		return len(m.actions())
+		return len(m.treeRows())
 	case vHosts:
 		return len(m.hostList())
 	case vPackages:
@@ -619,48 +714,10 @@ func (m *Model) rows() int {
 
 func (m *Model) viewKey(s string) tea.Cmd {
 	switch m.view {
-	case vOrgs:
-		if s == "enter" {
-			if l := m.envList(); m.cur[vOrgs] < len(l) {
-				e := l[m.cur[vOrgs]]
-				cmd := m.selectEnv(e.org, e.env)
-				m.view = vActions
-				return cmd
-			}
-		}
 	case vActions:
-		list := m.actions()
-		switch s {
-		case " ", "space":
-			if c := m.cur[vActions]; c < len(list) {
-				id := list[c].ID
-				m.sel[id] = !m.sel[id]
-				if !m.sel[id] {
-					delete(m.sel, id)
-				}
-				m.move(1)
-			}
-		case "a":
-			all := len(list) > 0 && !slices.ContainsFunc(list, func(a action) bool { return !m.sel[a.ID] })
-			for _, a := range list {
-				if all {
-					delete(m.sel, a.ID)
-				} else {
-					m.sel[a.ID] = true
-				}
-			}
-		case "p":
-			m.toggleP4()
-		case "v":
-			m.onlySel = !m.onlySel
-			m.cur[vActions], m.off[vActions] = 0, 0
-			if m.onlySel && len(m.sel) == 0 {
-				m.say(m.t.T("Nothing selected yet: space selects an action"))
-			}
-		case "enter":
-			m.detail = !m.detail
-		case "y":
-			return m.copyPrompt(list)
+		if s == "enter" && m.run == "" && m.org != "" { // no runs yet: check the access, then the first scan
+			m.setup = checkWizard(m.org, m.env)
+			return m.setup.check(m)
 		}
 	case vAccess, vNetwork, vHealth:
 		var hosts []string
@@ -745,35 +802,7 @@ func (m *Model) post(path string, body any, ok func(any) tea.Msg) tea.Cmd {
 	}
 }
 
-// copyPrompt: the agent task for the selected actions (or the one under the cursor) to the terminal clipboard.
-func (m *Model) copyPrompt(list []action) tea.Cmd {
-	ids := make([]string, 0, len(m.sel))
-	for id := range m.sel {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	if len(ids) == 0 && m.cur[vActions] < len(list) {
-		ids = []string{list[m.cur[vActions]].ID}
-	}
-	if len(ids) == 0 || m.run == "" {
-		return nil
-	}
-	if m.clip == nil {
-		m.say(m.t.T("This terminal session can't copy"))
-		return nil
-	}
-	q := fmt.Sprintf("/api/prompt?org=%s&env=%s&run=%s&lang=%s&ids=%s", url.QueryEscape(m.org), url.QueryEscape(m.env),
-		url.QueryEscape(m.run), url.QueryEscape(m.t.lang), url.QueryEscape(strings.Join(ids, ",")))
-	clip, n, done := m.clip, len(ids), m.t.T("Task copied to the clipboard")
-	var out struct {
-		Text string `json:"text"`
-	}
-	return m.get(q, func(any) tea.Msg {
-		// OSC 52: the terminal puts it on the clipboard (also over SSH)
-		_, _ = fmt.Fprintf(clip, "\x1b]52;c;%s\a", base64.StdEncoding.EncodeToString([]byte(out.Text)))
-		return toastMsg(fmt.Sprintf("%s (%d)", done, n))
-	}, &out)
-}
+func b64(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) }
 
 func (m *Model) openForm() tea.Cmd {
 	if !m.scanOK {
@@ -850,19 +879,20 @@ func (m *Model) saveSettings() {
 // zoneNames: the time zone setting as the panel settings show it.
 var zoneNames = map[bool]string{false: "system", true: "UTC"}
 
-var headerNames = map[string]string{headerAuto: "auto", headerFull: "six lines", headerCompact: "one line", headerOff: "hidden"}
-
 // panelItems: the settings dialog's lines (value of a column item: its title, the setting key).
 func (m *Model) panelItems() []formItem {
 	zone := zoneNames[m.set.UTC]
 	items := []formItem{{kind: itemHead, label: "Layout"},
-		{kind: itemChoice, label: "header", value: headerNames[m.set.Header]},
 		{kind: itemFlag, label: "view tabs", value: "tabs", on: !m.set.NoTabs},
 		{kind: itemFlag, label: "show P4 too", value: "p4", on: m.set.ShowP4},
 		{kind: itemChoice, label: "time zone", value: zone},
 		{kind: itemHead, label: "Columns"}}
-	for _, c := range viewCols[m.view] {
-		if c.drop > 0 {
+	cols := viewCols[m.view]
+	if m.view == vActions {
+		cols = m.treeCols()
+	}
+	for _, c := range cols {
+		if c.drop > 0 && c.title != "" {
 			items = append(items, formItem{kind: itemColumn, label: c.title, on: !m.set.hidden(m.view, c.key())})
 		}
 	}
@@ -890,16 +920,9 @@ func (m *Model) panelsKey(s string) {
 	case " ", "space", "enter", "x", "right", "l", "left", "h":
 		it := items[d.cur]
 		switch it.kind {
-		case itemChoice:
-			if it.label == "time zone" {
-				m.toggleZone()
-				return
-			}
-			dir := 1
-			if s == "left" || s == "h" {
-				dir = len(headerModes) - 1
-			}
-			m.set.Header = headerModes[(slices.Index(headerModes, m.set.Header)+dir)%len(headerModes)]
+		case itemChoice: // the time zone
+			m.toggleZone()
+			return
 		case itemFlag:
 			if it.value == "tabs" {
 				m.set.NoTabs = !m.set.NoTabs
@@ -987,24 +1010,6 @@ func (f *scanForm) request() scanRequest {
 
 // --- lists of the views ---------------------------------------------------------------------------------------------
 
-type envItem struct {
-	org, name, env string
-	e              envRow
-}
-
-func (m *Model) envList() []envItem {
-	var out []envItem
-	for _, o := range m.orgs.Orgs {
-		for _, e := range o.Envs {
-			it := envItem{o.ID, o.Name, e.Env, e}
-			if m.match(o.ID, o.Name, e.Env) {
-				out = append(out, it)
-			}
-		}
-	}
-	return out
-}
-
 func (m *Model) match(fields ...string) bool {
 	if m.filter == "" {
 		return true
@@ -1016,25 +1021,6 @@ func (m *Model) match(fields ...string) bool {
 		}
 	}
 	return false
-}
-
-func (m *Model) actions() []action {
-	if m.rund == nil {
-		return nil
-	}
-	var out []action
-	for _, a := range m.rund.Actions {
-		if m.onlySel && !m.sel[a.ID] {
-			continue
-		}
-		if !m.set.ShowP4 && !m.onlySel && (a.Priority == "P4" || a.Priority == "") {
-			continue
-		}
-		if m.match(append([]string{m.t.title(a), a.Detail, a.Cat, a.Priority}, a.Hosts...)...) {
-			out = append(out, a)
-		}
-	}
-	return out
 }
 
 type hostItem struct {

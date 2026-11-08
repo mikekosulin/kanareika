@@ -56,12 +56,13 @@ func uiStrings(t *testing.T) []string {
 					}
 				}
 			case *ast.KeyValueExpr:
-				if k, ok := x.Key.(*ast.Ident); ok && slices.Contains([]string{"title", "label", "what"}, k.Name) {
+				if k, ok := x.Key.(*ast.Ident); ok && slices.Contains([]string{"title", "label", "what", "hint"}, k.Name) {
 					add(x.Value)
 				}
 			case *ast.ValueSpec:
 				for _, name := range x.Names {
-					if slices.Contains([]string{"viewNames", "helpRows", "headerNames", "zoneNames"}, name.Name) {
+					if slices.Contains([]string{"viewNames", "helpRows", "headerNames", "zoneNames", "whyTexts", "dueWhy", "groupNames",
+						"sectionNames", "menuTitles", "choiceWords"}, name.Name) {
 						ast.Inspect(x, func(n ast.Node) bool {
 							if cl, ok := n.(*ast.CompositeLit); ok {
 								for i, e := range cl.Elts {
