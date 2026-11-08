@@ -268,3 +268,28 @@ func TestQuote(t *testing.T) {
 		}
 	}
 }
+
+// A socket without a process is docker-proxy unless the kernel owns the port (VXLAN): then INPUT, not DOCKER-USER.
+func TestClosePortChain(t *testing.T) {
+	for _, c := range []struct {
+		port      int
+		proto     string
+		process   string
+		wantChain string
+	}{
+		{4789, "udp", "", "INPUT"},
+		{8080, "tcp", "", "DOCKER-USER"},
+		{443, "tcp", "docker-proxy", "DOCKER-USER"},
+		{9100, "tcp", "node_exporter", "INPUT"},
+	} {
+		v := &report.View{Exposure: map[string]any{"h": map[string]any{"listen": []any{
+			map[string]any{"port": float64(c.port), "proto": c.proto, "process": c.process, "public": true}}}}}
+		rs, manual := closePort(&report.Action{Args: map[string]any{"port": float64(c.port)}}, "h", v)
+		if manual != "" || len(rs) != 1 {
+			t.Fatalf("%s/%d: manual %q, %d recipes", c.proto, c.port, manual, len(rs))
+		}
+		if got := rs[0].NoteArgs["chain"]; got != c.wantChain {
+			t.Errorf("%s/%d (%q): chain %v, want %s", c.proto, c.port, c.process, got, c.wantChain)
+		}
+	}
+}

@@ -159,8 +159,12 @@ func StepsFor(a *report.Action, host string, v *report.View) ([]Recipe, string) 
 	return nil, "manual.none"
 }
 
+// kernelPorts: sockets owned by the kernel itself (no process in ss): VXLAN of Docker Swarm and flannel. Their
+// packets end in INPUT, never in FORWARD, so a DOCKER-USER rule would not close them.
+var kernelPorts = map[string]bool{"udp/4789": true, "udp/8472": true}
+
 // closePort: rpcbind on 111 is turned off; anything else gets a firewall rule, in DOCKER-USER when docker publishes
-// the port (or no process is known: docker-proxy is not always visible).
+// the port (or no process is known: docker-proxy is not always visible), in INPUT for kernel sockets.
 func closePort(a *report.Action, host string, v *report.View) ([]Recipe, string) {
 	port, ok := num(a.Args["port"])
 	if !ok || port == 0 { // older actions: the port only in the title ("… :8080 …")
@@ -195,7 +199,8 @@ func closePort(a *report.Action, host string, v *report.View) ([]Recipe, string)
 		proto = "tcp"
 	}
 	docker := slices.ContainsFunc(socks, func(m map[string]any) bool { return proc(m) == "docker-proxy" }) ||
-		!slices.ContainsFunc(socks, func(m map[string]any) bool { return proc(m) != "" })
+		!slices.ContainsFunc(socks, func(m map[string]any) bool { return proc(m) != "" }) &&
+			!kernelPorts[fmt.Sprintf("%s/%d", proto, int(port))]
 	return []Recipe{RestrictPort(int(port), proto, docker)}, ""
 }
 
