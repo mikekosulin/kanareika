@@ -271,7 +271,8 @@ func (f globErrFS) Glob(string) ([]string, error) {
 }
 
 func TestPageAssetErrors(t *testing.T) {
-	web := fstest.MapFS{"index.html": {Data: []byte("<html>/*I18N_UI*/{}</html>")}, "logo.png": {Data: []byte("png")}}
+	page := &fstest.MapFile{Data: []byte("<html>/*I18N_UI*/{}</html>")}
+	web := fstest.MapFS{"index.html": page, "classic.html": page, "logo.png": {Data: []byte("png")}}
 	t.Cleanup(func() { webFS, localesFS = assets.Web, assets.Locales })
 	for _, c := range []struct {
 		name    string
@@ -279,8 +280,9 @@ func TestPageAssetErrors(t *testing.T) {
 		locales fs.FS
 		want    string
 	}{
-		{"no page", fstest.MapFS{"logo.png": web["logo.png"]}, assets.Locales(), "index.html"},
-		{"no logo", fstest.MapFS{"index.html": web["index.html"]}, assets.Locales(), "logo.png"},
+		{"no page", fstest.MapFS{"logo.png": web["logo.png"], "classic.html": page}, assets.Locales(), "index.html"},
+		{"no classic page", fstest.MapFS{"logo.png": web["logo.png"], "index.html": page}, assets.Locales(), "classic.html"},
+		{"no logo", fstest.MapFS{"index.html": page, "classic.html": page}, assets.Locales(), "logo.png"},
 		{"glob", web, globErrFS{glob: true}, "glob failed"},
 		{"read", web, globErrFS{}, "permission denied"},
 		{"bad json", web, fstest.MapFS{"en.json": {Data: []byte("{")}}, "locales/en.json"},

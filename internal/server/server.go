@@ -64,17 +64,18 @@ type Options struct {
 
 // Server holds the API state: org configs (reloaded by /api/orgs) and the last few views.
 type Server struct {
-	paths  config.Paths
-	prompt PromptFunc
-	log    *log.Logger
-	state  atomic.Pointer[orgState]
-	page   []byte // index.html with the UI strings and the CSRF token filled in
-	logo   []byte
-	token  string
-	csrf   string
-	jobs   *jobs       // nil: scans disabled
-	db     *dbUpdater  // nil: DB updates disabled
-	local  atomic.Bool // bound to loopback: only loopback Host headers are served
+	paths   config.Paths
+	prompt  PromptFunc
+	log     *log.Logger
+	state   atomic.Pointer[orgState]
+	page    []byte // index.html with the UI strings and the CSRF token filled in
+	classic []byte // classic.html, the same way
+	logo    []byte
+	token   string
+	csrf    string
+	jobs    *jobs       // nil: scans disabled
+	db      *dbUpdater  // nil: DB updates disabled
+	local   atomic.Bool // bound to loopback: only loopback Host headers are served
 
 	mu    sync.Mutex // view builds and current/ updates, one at a time (each can take seconds on big runs)
 	views []cachedView
@@ -99,10 +100,14 @@ func New(o Options) (*Server, error) {
 		s.db = &dbUpdater{fn: o.UpdateDB, now: time.Now}
 	}
 	var err error
-	if s.page, err = page(); err != nil {
+	if s.page, err = page("index.html"); err != nil {
 		return nil, err
 	}
 	s.page = bytes.Replace(s.page, []byte(`/*CSRF*/""`), []byte(`"`+s.csrf+`"`), 1)
+	if s.classic, err = page("classic.html"); err != nil {
+		return nil, err
+	}
+	s.classic = bytes.Replace(s.classic, []byte(`/*CSRF*/""`), []byte(`"`+s.csrf+`"`), 1)
 	if s.logo, err = fs.ReadFile(webFS(), "logo.png"); err != nil {
 		return nil, err
 	}
@@ -115,8 +120,8 @@ var webFS, localesFS = assets.Web, assets.Locales
 
 // page: index.html with the /*I18N_UI*/{} placeholder replaced by the UI strings of every language, encoded
 // as Python's json.dumps did ("</" escaped so a string cannot close the script tag).
-func page() ([]byte, error) {
-	html, err := fs.ReadFile(webFS(), "index.html")
+func page(name string) ([]byte, error) {
+	html, err := fs.ReadFile(webFS(), name)
 	if err != nil {
 		return nil, err
 	}
@@ -173,6 +178,7 @@ func (s *Server) Handler() http.Handler {
 	index := func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "text/html; charset=utf-8", s.page) }
 	r.Get("/", index)
 	r.Get("/index.html", index)
+	r.Get("/classic", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "text/html; charset=utf-8", s.classic) })
 	for path, fn := range map[string]func(query) (any, error){
 		"/api/orgs": s.apiOrgs, "/api/env": s.apiEnv, "/api/run": s.apiRun, "/api/log": s.apiLog,
 		"/api/hostfile": s.apiHostfile, "/api/ipinfo": s.apiIPInfo, "/api/prompt": s.apiPrompt,
