@@ -585,6 +585,12 @@ main { background: var(--bg); }
 .picklist { display: grid; gap: 2px; max-height: 50vh; overflow: auto; }
 .pick { display: flex; gap: 8px; align-items: baseline; padding: 6px 4px; border-radius: 4px; cursor: pointer; font-size: 13px; }
 .pick:hover { background: var(--hover); } .pick b { font-family: var(--mono); font-weight: 500; }
+.checksum { display: flex; gap: 18px; margin: 8px 0 12px; font-size: 13px; color: var(--ink-2); align-items: center; }
+.checksum b { font: 600 15px var(--mono); }
+.spin { display: inline-block; width: 10px; height: 10px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; margin-right: 6px; vertical-align: -1px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+.st .spin { margin-right: 4px; }
 
 /* end-extra-css */
 </style>
@@ -1069,7 +1075,7 @@ async function addHosts(org, body) {
     const r = await post("/api/setup/add", { org: org.id, ...body });
     await loadOrgs();
     const o = S.orgs.find((x) => x.id === org.id);
-    s.org = org.id; s.env = (o?.envs.find((e) => e.env === S.env) || o?.envs[0])?.env || "production"; s.only = r.added; s.file = ""; s.skipped = r.skipped || [];
+    s.org = org.id; s.env = (o?.envs.find((e) => e.env === S.env) || o?.envs[0])?.env || "production"; s.only = r.added; s.file = ""; s.skipped = r.skipped || []; s.res = {}; s.hosts = null;
     s.step = 2; s.results = null; render(); checkAccess();
   } catch (e) {
     const errs = e.body?.errors || [e.message];
@@ -1080,31 +1086,68 @@ async function createOrg(body) {
   const s = S.setup;
   try {
     const r = await post("/api/setup", body);
-    s.org = r.org; s.file = r.path; s.env = body.env; s.step = 2; s.results = null; s.skipped = r.skipped || [];
+    s.org = r.org; s.file = r.path; s.env = body.env; s.step = 2; s.results = null; s.res = {}; s.hosts = null; s.only = null; s.skipped = r.skipped || [];
     await loadOrgs(); render(); checkAccess();
   } catch (e) {
     const errs = e.body?.errors || [e.message];
     $("#formerr").innerHTML = `<div class="banner err">${icon("alert")}<ul>${errs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
   }
 }
+// checkView: every host from the start, each one filled in as its own check answers.
 function checkView(s) {
-  const r = s.results;
-  if (!r) return `<div class="onb">${stepsHead(s)}<h2>${t("Access check")}</h2><p>${t("Kanareika logs in to every server and runs uname -sr.")}</p><div class="sk" style="height:60px"></div></div>`;
-  const ok = r.filter((x) => x.ok), bad = r.filter((x) => !x.ok);
-  const byHint = {}; bad.forEach((x) => (byHint[x.hint || x.error] ||= []).push(x));
-  const list = r.length <= 12 ? `<table class="tbl checks"><tbody>${r.map((x) => `<tr><td>${x.ok ? `<span class="st available">${t("ok")}</span>` : `<span class="st bad">${t("failed")}</span>`}</td><td style="font-family:var(--mono);color:var(--host)">${esc(x.host)}</td><td class="note">${esc(x.address)}</td><td>${x.ok ? esc(x.system) : `<div>${esc(x.hint || x.error)}</div><div class="note">${esc(x.error)}</div>`}</td></tr>`).join("")}</tbody></table>`
-    : `<div class="kpis2"><div><b style="color:var(--ok)">${ok.length}</b>${t("answered")}</div><div><b style="color:var(--err)">${bad.length}</b>${t("failed")}</div></div>
-      ${Object.entries(byHint).map(([h, xs]) => `<div class="failgroup"><b>${xs.length} × ${esc(h)}</b><div class="note">${xs.slice(0, 20).map((x) => esc(x.host)).join(", ")}${xs.length > 20 ? " …" : ""}</div></div>`).join("")}`;
+  const hosts = s.hosts || [];
+  const res = s.res || {};
+  const done = hosts.filter((h) => res[h.name]), ok = done.filter((h) => res[h.name].ok), bad = done.filter((h) => !res[h.name].ok);
+  const waiting = hosts.length - done.length;
+  const secs = Math.round((Date.now() - (s.started || Date.now())) / 1000);
+  const row = (h) => {
+    const r = res[h.name];
+    const st = !r ? `<span class="st reboot"><i class="spin"></i>${t("connecting… {s} s", { s: secs })}</span>` : r.ok ? `<span class="st available">${t("ok")}</span>` : `<span class="st bad">${t("failed")}</span>`;
+    return `<tr><td>${st}</td><td style="font-family:var(--mono);color:var(--host)">${esc(h.name)}</td><td class="note mono">${esc(h.address || "")}</td><td>${!r ? "" : r.ok ? esc(r.system) : `<div>${esc(r.hint || r.error)}</div><div class="note">${esc(r.error)}</div>`}</td></tr>`;
+  };
+  const many = hosts.length > 12;
+  const byHint = {}; bad.forEach((h) => (byHint[res[h.name].hint || res[h.name].error] ||= []).push(h.name));
+  const body = many
+    ? `${Object.entries(byHint).map(([hint, names]) => `<div class="failgroup"><b>${names.length} × ${esc(hint)}</b><div class="note">${esc(names.slice(0, 20).join(", "))}${names.length > 20 ? " …" : ""}</div></div>`).join("")}`
+    : `<table class="tbl checks"><tbody>${hosts.map(row).join("")}</tbody></table>`;
   const skipped = (s.skipped || []).length ? `<div class="skipped">${icon("alert")}<div><b>${t("{n} lines skipped when saving", { n: s.skipped.length })}</b>${s.skipped.map((x) => `<div class="note">${esc(x)}</div>`).join("")}</div></div>` : "";
-  return `<div class="onb">${stepsHead(s)}<h2>${t("Access check")}</h2>${skipped}${list}
+  return `<div class="onb">${stepsHead(s)}<h2>${t("Access check")}</h2>
+    <p>${t("Kanareika logs in to each server and runs uname -sr. Nothing is changed.")}</p>${skipped}
+    <div class="checksum"><span><b style="color:var(--ok)">${ok.length}</b> ${t("answered")}</span><span><b style="color:var(--err)">${bad.length}</b> ${t("failed")}</span>${waiting ? `<span><i class="spin"></i><b>${waiting}</b> ${t("still checking")}</span>` : ""}</div>
+    ${body}
     ${s.file ? `<p class="note">${t("The settings are in {path}: edit it to fix addresses, add jump hosts or more servers.", { path: esc(s.file) })}</p>` : ""}
-    <div class="actions"><button class="btn" data-setup-recheck>${t("Check again")}</button><button class="btn primary" data-setup-scan ${ok.length ? "" : "disabled"}>${bad.length && ok.length ? t("Scan the {n} that answered", { n: ok.length }) : t("Start the first scan")}</button></div></div>`;
+    <div class="actions"><button class="btn" data-setup-recheck ${waiting ? "disabled" : ""}>${bad.length ? t("Check the failed again") : t("Check again")}</button>
+      <button class="btn primary" data-setup-scan ${ok.length ? "" : "disabled"}>${bad.length || waiting ? t("Scan the {n} that answered", { n: ok.length }) : t("Start the first scan")}</button></div></div>`;
 }
-async function checkAccess() {
-  const s = S.setup; s.results = null; render();
-  try { s.results = (await post("/api/setup/check", { org: s.org, env: s.env, hosts: s.only })).results; } catch (e) { s.results = [{ host: "—", ok: false, error: e.message }]; }
+let checkTick;
+async function checkAccess(onlyFailed) {
+  const s = S.setup;
+  if (!s.hosts) {
+    try { const e = await api("/api/env?" + qs({ org: s.org, env: s.env })); s.hosts = (e.hosts || []).filter((h) => !s.only || s.only.includes(h.name)).map((h) => ({ name: h.name, address: h.address })); }
+    catch { s.hosts = []; }
+  }
+  s.res ||= {};
+  const todo = s.hosts.filter((h) => !onlyFailed || (s.res[h.name] && !s.res[h.name].ok));
+  todo.forEach((h) => delete s.res[h.name]);
+  s.started = Date.now();
+  clearInterval(checkTick);
+  checkTick = setInterval(() => { if (S.view === "setup" && S.setup?.step === 2) $("#view").innerHTML = setupView(); else clearInterval(checkTick); }, 1000);
   render();
+  let i = 0;
+  const worker = async () => {
+    while (i < todo.length) {
+      const h = todo[i++];
+      try { const r = await post("/api/setup/check", { org: s.org, env: s.env, hosts: [h.name] }); s.res[h.name] = r.results[0] || { ok: false, error: t("no answer") }; }
+      catch (e) { s.res[h.name] = { ok: false, error: e.message }; }
+      if (S.view === "setup") $("#view").innerHTML = setupView();
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(8, todo.length) }, worker));
+  clearInterval(checkTick);
+  s.results = s.hosts.map((h) => ({ host: h.name, ...s.res[h.name] }));
+  if (S.view === "setup") $("#view").innerHTML = setupView();
 }
+
 /* ---------- scans ---------- */
 async function startScan(org, env) {
   try { const r = await post("/api/scan", { org, env }); toast(t("Scan started")); pollJobs(); return r.id; }
@@ -1207,7 +1250,7 @@ document.addEventListener("click", async (e) => {
     preview(); return;
   }
   if ("importSsh" in d) { const dd = await discover(); const ta = $("#fleetform textarea[name=hosts]"); ta.value = (ta.value.trim() ? ta.value.trim() + "\n" : "") + dd.hosts.map((h) => `${h.alias.toLowerCase().replace(/[^a-z0-9_-]+/g, "-")} ${(h.hostname || h.alias)}${h.port ? ":" + h.port : ""}`).join("\n"); return; }
-  if ("setupRecheck" in d) { checkAccess(); return; }
+  if ("setupRecheck" in d) { const s = S.setup; checkAccess(Object.values(s.res || {}).some((r) => !r.ok)); return; }
   if ("setupScan" in d) {
     const s = S.setup; await loadOrgs(); S.org = s.org; S.env = s.env; store.set("org", S.org); store.set("env", S.env);
     const ok = (s.results || []).filter((x) => x.ok).map((x) => x.host), all = (s.results || []).length;

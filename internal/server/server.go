@@ -98,6 +98,18 @@ func New(o Options) (*Server, error) {
 	}
 	if o.UpdateDB != nil {
 		s.db = &dbUpdater{fn: o.UpdateDB, now: time.Now}
+		if s.jobs != nil {
+			db := s.db
+			s.jobs.before = func(ctx context.Context, out io.Writer) {
+				db.mu.Lock()
+				running := db.running
+				db.mu.Unlock()
+				if running {
+					fmt.Fprintln(out, "waiting for the vulnerability DB download started from the page to finish ...")
+					db.wait(ctx)
+				}
+			}
+		}
 	}
 	var err error
 	if s.page, err = page("index.html"); err != nil {
@@ -190,6 +202,7 @@ func (s *Server) Handler() http.Handler {
 	r.Get("/api/session", s.apiSession)
 	r.Get("/api/jobs", s.apiJobs)
 	r.Get("/api/db", s.apiDB)
+	r.Get("/api/db/size", s.apiDBSize)
 	r.Get("/api/setup/discover", s.apiSetupDiscover)
 	r.With(s.csrfCheck).Post("/api/db/update", s.apiDBUpdate)
 	r.With(s.csrfCheck).Post("/api/scan", s.apiScan)

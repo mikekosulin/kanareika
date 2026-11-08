@@ -95,7 +95,9 @@ func SetAgentKeys(f func() int) { agentKeys = f }
 // Discover: the local SSH setup, read-only: ~/.ssh/config hosts, private keys in ~/.ssh, keys in the agent.
 func Discover() Found {
 	f := Found{Keys: []string{}, Hosts: []SSHHost{}}
-	if u, err := user.Current(); err == nil {
+	if u := os.Getenv("USER"); u != "" { // what a shell shows; Windows and odd setups fall back to the account
+		f.User = u
+	} else if u, err := user.Current(); err == nil {
 		f.User = u.Username
 		if i := strings.LastIndexAny(f.User, `\`); i >= 0 { // DOMAIN\user on Windows
 			f.User = f.User[i+1:]
