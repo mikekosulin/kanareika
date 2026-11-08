@@ -7,8 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/mikekosulin/kanareika/internal/i18n"
 )
 
 // fakeChrome: writes the picture Chrome was asked for and remembers what it was asked.
@@ -224,5 +227,19 @@ func TestMain_(t *testing.T) {
 	main()
 	if died == nil {
 		t.Fatal("no logo, not fatal")
+	}
+}
+
+// TestEveryLanguage: a banner for every language the interfaces speak, and none for one they do not.
+func TestEveryLanguage(t *testing.T) {
+	var codes []string
+	for _, l := range langs {
+		codes = append(codes, l.Code)
+	}
+	want := i18n.Langs()
+	slices.Sort(codes)
+	slices.Sort(want)
+	if !slices.Equal(codes, want) {
+		t.Fatalf("banners %v, languages %v", codes, want)
 	}
 }
