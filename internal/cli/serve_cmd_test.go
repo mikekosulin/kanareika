@@ -3,9 +3,13 @@ package cli
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
+	"net"
+	"os"
 	"slices"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/mikekosulin/kanareika/internal/config"
@@ -36,6 +40,51 @@ func TestServe(t *testing.T) {
 	}
 	if code, _, _ := cli(t, "web", "extra"); code != 1 {
 		t.Fatal("arguments are refused")
+	}
+}
+
+// TestServeEnvAndPort: KANAREIKA_HOST / KANAREIKA_PORT give the defaults, flags win over them, bad ports are
+// refused before listening, and a busy port says what to do.
+func TestServeEnvAndPort(t *testing.T) {
+	sandbox(t)
+	fixtureOrg(t)
+	oldServe := serveFunc
+	t.Cleanup(func() { serveFunc = oldServe })
+	var host string
+	var port int
+	var fail error
+	serveFunc = func(_ context.Context, _ *server.Server, h string, p int, _ io.Writer) error {
+		host, port = h, p
+		return fail
+	}
+	t.Setenv("KANAREIKA_HOST", "::1")
+	t.Setenv("KANAREIKA_PORT", "9123")
+	if code, _, errs := cli(t, "web"); code != 0 || host != "::1" || port != 9123 {
+		t.Fatal(code, host, port, errs)
+	}
+	if code, _, _ := cli(t, "web", "--port", "0", "--host", "127.0.0.1"); code != 0 || host != "127.0.0.1" || port != 0 {
+		t.Fatal("flags win over the environment:", code, host, port)
+	}
+	t.Setenv("KANAREIKA_PORT", "http")
+	if code, _, errs := cli(t, "web"); code != 1 || !strings.Contains(errs, "KANAREIKA_PORT") {
+		t.Fatal(code, errs)
+	}
+	t.Setenv("KANAREIKA_PORT", "")
+	if code, _, errs := cli(t, "web", "--port", "70000"); code != 1 || !strings.Contains(errs, "0-65535") {
+		t.Fatal(code, errs)
+	}
+	fail = &net.OpError{Op: "listen", Net: "tcp", Err: os.NewSyscallError("bind", syscall.EADDRINUSE)}
+	if code, _, errs := cli(t, "web", "--port", "8791"); code != 1 || !strings.Contains(errs, "port 8791 is busy") ||
+		!strings.Contains(errs, "--port 0") {
+		t.Fatal(code, errs)
+	}
+	fail = errors.New("listen tcp: Only one usage of each socket address (protocol/network address/port) is normally permitted.")
+	if code, _, errs := cli(t, "web"); code != 1 || !strings.Contains(errs, "is busy") {
+		t.Fatal("the Windows wording too:", code, errs)
+	}
+	fail = errors.New("listen tcp: permission denied")
+	if code, _, errs := cli(t, "web"); code != 1 || strings.Contains(errs, "is busy") {
+		t.Fatal("other errors pass through:", code, errs)
 	}
 }
 
