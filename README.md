@@ -127,6 +127,7 @@ Everything else: `kanareika --help`.
 - **Health** — kernel errors, disks, memory, time sync, pending reboots.
 - **Fixing** — selected actions become a ready task for an engineer or an AI agent: apply, verify, roll back.
 - **Safe by design** — read-only, organizations isolated, changed host keys refused, no scan without consent, the web interface on localhost only (or with a token).
+- **Private** — no telemetry: nothing about you or your servers is sent anywhere, and reports stay on your machine. It only downloads public data: the vulnerability databases (ghcr.io, with mirror.gcr.io and public.ecr.aws as fallbacks), CISA KEV (cisa.gov), EPSS (FIRST, empiricalsecurity.com) and the DB-IP Lite IP databases (db-ip.com), which IP lookups run against offline. Even the embedded trivy's telemetry is switched off.
 
 **Disclaimer.** Kanareika reports what it finds; it does not promise to find everything. Priorities and fix steps are advice: review them before running anything on your hosts. Audit only servers you are allowed to. Provided as is, without warranty ([MIT](LICENSE)).
 

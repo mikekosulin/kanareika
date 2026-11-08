@@ -127,6 +127,7 @@ Todo o resto: `kanareika --help`.
 - **Saúde** — erros do kernel, discos, memória, sincronização de horário, reinicializações pendentes.
 - **Correção** — as ações selecionadas viram uma tarefa pronta para um engenheiro ou um agente de IA: aplicar, verificar, reverter.
 - **Seguro por design** — somente leitura, organizações isoladas, chaves de host alteradas são recusadas, nenhum scan sem consentimento, a interface web só em localhost (ou com token).
+- **Privado** — sem telemetria: nada sobre você ou seus servidores é enviado a lugar nenhum, e os relatórios ficam na sua máquina. Ele só baixa dados públicos: as bases de vulnerabilidades (ghcr.io, com mirror.gcr.io e public.ecr.aws como alternativas), CISA KEV (cisa.gov), EPSS (FIRST, empiricalsecurity.com) e as bases de IP DB-IP Lite (db-ip.com), nas quais as consultas de IP são feitas offline. Até a telemetria do trivy embutido está desligada.
 
 **Aviso.** O Kanareika relata o que encontra; não promete encontrar tudo. Prioridades e etapas de correção são recomendações: revise-as antes de executar qualquer coisa nos seus hosts. Audite apenas servidores que você tem autorização para auditar. Fornecido “como está”, sem garantias ([MIT](../../LICENSE)).
 
