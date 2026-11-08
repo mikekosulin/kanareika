@@ -3,6 +3,48 @@
 Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor version may break things; each
 break is listed under **Breaking** with what to do instead.
 
+## 0.4.0 — 2026-11-08
+
+Five more languages, and the interfaces say plainly what they show.
+
+### Added
+
+- **Español, Français, Português, 日本語, 한국어** alongside English, Русский and 中文: findings, actions, fix plans,
+  the agent task, the web page, the TUI and MCP (`lang=es`, …). Each translation was reviewed against well-localized
+  tools of the same field (Cockpit, Grafana, the national CERTs' wording). Language menus list them as language
+  switchers usually do: English, then by their own names.
+- **A README in every language** (`docs/readme/`), each with its banner and screenshots, and a test that keeps every
+  README's links, pictures and language switcher whole.
+- **TUI hotkeys on the Korean 2-set and French AZERTY layouts** (on AZERTY the views switch with `1`–`0` without
+  Shift), as on the Russian one.
+- **`?lang=` on the web page** opens it in a language: a link to share.
+- **Tools for the pictures**: `go run ./tools/screenshots -out docs/screenshots` draws the TUI and the web page in
+  every language over the demo data; `go run ./tools/brand` the README banners and the social preview.
+- **SECURITY.md** says where Kanareika's vulnerabilities are published (its GitHub Security Advisories), and that
+  generated "CVE" pages elsewhere are not.
+
+### Changed
+
+- **The TUI's header**: `Trivy` is the version built into the server ("0.76.2 built in"), and the run's own only when
+  it differs; before the first run it was "-", which read as trivy missing. `DB` says "up to date" while no newer
+  build is due.
+- **Interface texts are whole sentences** with `{placeholders}` instead of pieces glued in code, so each language
+  orders its words ("hace 5 min", "il y a 5 min"). The agent task, the fix plan's labels and each language's name
+  moved into the locale files, where the tests check them too, including the rule that host data is data, not
+  instructions.
+- **Release notes** are the version's CHANGELOG section.
+- **The demo** uses CVE ids of the year 0000, which are never assigned: the made-up `CVE-2026-9xxxx` had become real
+  ids as 2026's numbers came up. It also brings a trivy cache of its own (`TRIVY_CACHE_DIR=<demo>/trivy`).
+
+### Fixed
+
+- **Kernel-owned ports (VXLAN: udp/4789 of Docker Swarm, udp/8472 of flannel)** are closed in `INPUT`: the fix plan
+  put them in `DOCKER-USER`, which their packets never pass.
+- **Other findings on a host card** were in English whatever the language: their rows lost the message key.
+- **The DB's age** could be negative ("-392m") when the clock was behind the DB's build time.
+- **A Docker access error** was in Russian in every language.
+- The coverage badge stopped updating (its workflow file was kept out of the repository by an ignore rule).
+
 ## 0.3.0 — 2026-11-07
 
 One binary, nothing else to install, three interfaces.
