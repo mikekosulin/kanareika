@@ -14,7 +14,7 @@ import (
 
 func TestParseHosts(t *testing.T) {
 	hs, errs := ParseHosts("192.0.2.11\nweb-02 192.0.2.12:2222  # the second\n\n# a comment\ndb.example.com, \n[2001:db8::1]:22\n")
-	if len(errs) != 0 || len(hs) != 4 || hs[0].Name != "192-0-2-11" || hs[1] != (Host{Name: "web-02", Address: "192.0.2.12:2222"}) ||
+	if len(errs) != 0 || len(hs) != 4 || hs[0].Name != "192-0-2-11" || hs[1] != (Host{Name: "web-02", Address: "192.0.2.12:2222", Line: 2}) ||
 		hs[2].Name != "db" || hs[3].Name != "2001-db8-1" {
 		t.Fatalf("%+v %v", hs, errs)
 	}
@@ -42,7 +42,7 @@ db-01 ansible_host=192.0.2.31
 web
 `
 	hs, errs = ParseHosts(inv)
-	if len(errs) != 0 || len(hs) != 3 || hs[0] != (Host{Name: "web-01", Address: "192.0.2.11:2222", Group: "web", User: "deploy"}) ||
+	if len(errs) != 0 || len(hs) != 3 || hs[0] != (Host{Name: "web-01", Address: "192.0.2.11:2222", Group: "web", User: "deploy", Line: 2}) ||
 		hs[1].Name != "web-02" || hs[1].Group != "web" || hs[2].Group != "db" || hs[2].Address != "192.0.2.31" {
 		t.Fatalf("%+v %v", hs, errs)
 	}
@@ -83,10 +83,10 @@ func TestCreateFleet(t *testing.T) {
 func TestParsePasted(t *testing.T) {
 	hs, errs := ParseHosts("admin@192.0.2.40\nnas root@192.0.2.41:2222\nssh -p 2200 -i ~/.ssh/k -J jump@203.0.113.10 deploy@web-01.example.com uptime\nssh -l ops db.example.com\n")
 	if len(errs) != 0 || len(hs) != 4 ||
-		hs[0] != (Host{Name: "192-0-2-40", Address: "192.0.2.40", User: "admin"}) ||
-		hs[1] != (Host{Name: "nas", Address: "192.0.2.41:2222", User: "root"}) ||
-		hs[2] != (Host{Name: "web-01", Address: "web-01.example.com:2200", User: "deploy", Jump: "jump@203.0.113.10"}) ||
-		hs[3] != (Host{Name: "db", Address: "db.example.com", User: "ops"}) {
+		hs[0] != (Host{Name: "192-0-2-40", Address: "192.0.2.40", User: "admin", Line: 1}) ||
+		hs[1] != (Host{Name: "nas", Address: "192.0.2.41:2222", User: "root", Line: 2}) ||
+		hs[2] != (Host{Name: "web-01", Address: "web-01.example.com:2200", User: "deploy", Jump: "jump@203.0.113.10", Line: 3}) ||
+		hs[3] != (Host{Name: "db", Address: "db.example.com", User: "ops", Line: 4}) {
 		t.Fatalf("%+v %v", hs, errs)
 	}
 	if _, errs := ParseHosts("ssh -v"); len(errs) == 0 {
@@ -94,7 +94,7 @@ func TestParsePasted(t *testing.T) {
 	}
 	cfg := "Host bastion\n  HostName 203.0.113.10\n  User jumper\nHost app-01\n  HostName 10.0.0.5\n  User deploy\n  Port 2222\n  ProxyJump bastion\n"
 	hs, errs = ParseHosts(cfg)
-	if len(errs) != 0 || len(hs) != 2 || hs[1] != (Host{Name: "app-01", Address: "10.0.0.5:2222", User: "deploy", Jump: "bastion"}) {
+	if len(errs) != 0 || len(hs) != 2 || hs[1] != (Host{Name: "app-01", Address: "10.0.0.5:2222", User: "deploy", Jump: "bastion", Line: 4}) {
 		t.Fatalf("%+v %v", hs, errs)
 	}
 	if _, errs := ParseHosts("Host *\n  User x\n"); len(errs) == 0 {
@@ -351,7 +351,7 @@ func TestBadIPv4Skipped(t *testing.T) {
 	if len(hosts) != 2 || hosts[0].Address != "10.0.0.5" || hosts[1].Address != "nas" {
 		t.Fatalf("%+v", hosts)
 	}
-	if len(errs) != 3 || !strings.Contains(errs[0], `"10.0.0.300" is not an IP address`) {
+	if len(errs) != 3 || !strings.Contains(errs[0], `"10.0.0.300": not an IP address`) {
 		t.Fatal(errs)
 	}
 }
@@ -360,5 +360,35 @@ func TestCSVHeaderIgnored(t *testing.T) {
 	hosts, errs := ParseHosts("name,address,group,env\nweb-01,192.0.2.11,web,staging")
 	if len(hosts) != 1 || hosts[0].Name != "web-01" || len(errs) != 0 {
 		t.Fatal(hosts, errs)
+	}
+}
+
+// TestLinesAndAliases: every host knows its pasted line, also after ssh-config blocks; a bare alias of the local
+// ~/.ssh/config is written out as ssh would use it, its ProxyJump alias too.
+func TestLinesAndAliases(t *testing.T) {
+	old := LocalSSHConfig
+	t.Cleanup(func() { LocalSSHConfig = old })
+	LocalSSHConfig = func() []SSHHost {
+		return []SSHHost{{Alias: "nas", HostName: "192.168.1.20", User: "mike"},
+			{Alias: "app", HostName: "10.0.0.31", Port: 2200, Jump: "bastion"},
+			{Alias: "bastion", HostName: "203.0.113.5", User: "jump"}}
+	}
+	text := "Host web\n  HostName 192.0.2.10\n  User admin\n\nnas\nroot@nas\napp\nnas:2222\n10.0.0.300"
+	hosts, errs := ParseHosts(text)
+	got := map[string]Host{}
+	for _, h := range hosts {
+		got[h.Name] = h
+	}
+	if h := got["web"]; h.Line != 1 || h.From != "" {
+		t.Errorf("web: %+v", h)
+	}
+	if h := got["nas"]; h.Line != 5 || h.Address != "192.168.1.20" || h.User != "mike" || h.From != "ssh-config" {
+		t.Errorf("nas: %+v", h)
+	}
+	if h := got["app"]; h.Address != "10.0.0.31:2200" || h.Jump != "jump@203.0.113.5" || h.Line != 7 {
+		t.Errorf("app: %+v", h)
+	}
+	if len(errs) != 3 || !strings.HasPrefix(errs[2], "line 9: ") {
+		t.Errorf("%q", errs) // root@nas: twice the name nas; nas:2222 likewise; 10.0.0.300
 	}
 }

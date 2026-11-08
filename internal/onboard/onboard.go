@@ -46,6 +46,9 @@ type Host struct {
 	Env     string `json:"env,omitempty"`   // "": the form's environment
 	User    string `json:"user,omitempty"`  // "": the form's SSH user
 	Jump    string `json:"jump,omitempty"`  // a jump host: another pasted host's name, or [user@]host[:port]
+	Line    int    `json:"line,omitempty"`  // the pasted line it came from (1-based)
+	// From: "ssh-config" when the address, user, port or jump came from the local ~/.ssh/config (a pasted alias)
+	From string `json:"from,omitempty"`
 }
 
 var (
@@ -83,7 +86,7 @@ func ParseHosts(text string) ([]Host, []string) {
 	var errs []string
 	seen := map[string]bool{}
 	for _, c := range ParseSSHConfig(cfg) {
-		h := Host{Name: slug(c.Alias), Address: cmpOr(c.HostName, c.Alias), User: c.User, Jump: c.Jump}
+		h := Host{Name: slug(c.Alias), Address: cmpOr(c.HostName, c.Alias), User: c.User, Jump: c.Jump, Line: hostLine(text, c.Alias)}
 		if c.Port != 0 && c.Port != 22 {
 			h.Address = net.JoinHostPort(strings.Trim(h.Address, "[]"), strconv.Itoa(c.Port))
 		}
@@ -188,7 +191,7 @@ func ParseHosts(text string) ([]Host, []string) {
 			continue
 		}
 		if !slugRE.MatchString(h.Name) {
-			errs = append(errs, fmt.Sprintf("line %d: %q is not a usable host name (a-z, 0-9, '-', '_')", i+1, h.Name))
+			errs = append(errs, fmt.Sprintf("line %d: %q: not a usable host name (a-z, 0-9, '-', '_')", i+1, h.Name))
 			continue
 		}
 		if h.Group != "" && !slugRE.MatchString(h.Group) {
@@ -206,7 +209,7 @@ func ParseHosts(text string) ([]Host, []string) {
 			}
 		}
 		if badIPv4(hostOnly(h.Address)) {
-			errs = append(errs, fmt.Sprintf("line %d: %q is not an IP address (each part 0-255)", i+1, hostOnly(h.Address)))
+			errs = append(errs, fmt.Sprintf("line %d: %q: not an IP address", i+1, hostOnly(h.Address)))
 			continue
 		}
 		if seen[h.Name] {
@@ -214,8 +217,10 @@ func ParseHosts(text string) ([]Host, []string) {
 			continue
 		}
 		seen[h.Name] = true
+		h.Line = i + 1
 		out = append(out, h)
 	}
+	resolveAliases(out, LocalSSHConfig())
 	if len(out) == 0 && len(errs) == 0 {
 		errs = append(errs, "no hosts: one per line, an address or `name address`")
 	}
@@ -248,7 +253,9 @@ func splitSSHConfig(text string) (cfg, rest string) {
 		default:
 			in = false
 			r = append(r, line)
+			continue
 		}
+		r = append(r, "") // the rest keeps its line numbers
 	}
 	return strings.Join(c, "\n"), strings.Join(r, "\n")
 }
@@ -674,4 +681,73 @@ func badIPv4(host string) bool {
 		return false
 	}
 	return net.ParseIP(host) == nil
+}
+
+// LocalSSHConfig: the Host entries of this machine's ~/.ssh/config, which a pasted alias resolves against (kanareika
+// does not read ssh config when it connects, so the alias is written out in the org file). Tests replace it.
+var LocalSSHConfig = func() []SSHHost {
+	home, err := homeDir()
+	if err != nil {
+		return nil
+	}
+	b, err := os.ReadFile(filepath.Join(home, ".ssh", "config"))
+	if err != nil {
+		return nil
+	}
+	return ParseSSHConfig(string(b))
+}
+
+// resolveAliases: a pasted bare alias of ~/.ssh/config (`nas`, `deploy@nas`) becomes what `ssh nas` would use:
+// its HostName, Port, User (unless the line names one) and ProxyJump. The name stays the alias.
+func resolveAliases(hosts []Host, cfg []SSHHost) {
+	by := map[string]SSHHost{}
+	for _, c := range cfg {
+		by[strings.ToLower(c.Alias)] = c
+	}
+	for i := range hosts {
+		h := &hosts[i]
+		c, ok := by[strings.ToLower(h.Address)] // no port given: with one, the line means a real address
+		if !ok || c.HostName == "" && c.User == "" && c.Port == 0 && c.Jump == "" {
+			continue
+		}
+		h.Address = cmpOr(c.HostName, c.Alias)
+		if c.Port != 0 && c.Port != 22 {
+			h.Address = net.JoinHostPort(strings.Trim(h.Address, "[]"), strconv.Itoa(c.Port))
+		}
+		if h.User == "" {
+			h.User = c.User
+		}
+		if h.Jump == "" {
+			h.Jump = c.Jump
+		}
+		h.From = "ssh-config"
+	}
+	// a jump named by its alias (ProxyJump bastion) is written out the same way, unless it is a pasted host
+	pasted := map[string]bool{}
+	for _, h := range hosts {
+		pasted[h.Name] = true
+	}
+	for i := range hosts {
+		h := &hosts[i]
+		if j, ok := by[strings.ToLower(h.Jump)]; ok && !pasted[strings.ToLower(h.Jump)] && j.HostName != "" {
+			addr := j.HostName
+			if j.Port != 0 && j.Port != 22 {
+				addr = net.JoinHostPort(strings.Trim(addr, "[]"), strconv.Itoa(j.Port))
+			}
+			if j.User != "" {
+				addr = j.User + "@" + addr
+			}
+			h.Jump = addr
+		}
+	}
+}
+
+// hostLine: the line of text where `Host alias` stands (0: not found).
+func hostLine(text, alias string) int {
+	for i, l := range strings.Split(text, "\n") {
+		if f := strings.Fields(l); len(f) > 1 && strings.EqualFold(f[0], "host") && slices.Contains(f[1:], alias) {
+			return i + 1
+		}
+	}
+	return 0
 }
