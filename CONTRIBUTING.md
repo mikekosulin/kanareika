@@ -21,11 +21,18 @@ about 1 GB on the host) builds the Linux binary, scans a Debian container over S
 
 ## Screenshots
 
-`docs/screenshots/{tui,web}-{en,ru,zh}.png` are the README's, one per language, from demo data only (they are
-published). `go run ./tools/demo -out <dir>` writes it: a month of daily runs of a made-up organization. The TUI
-ones come from `go run ./tools/screenshots -home <dir> -lang <lang> -org acme -env production -size 150x26 -keys 2`,
-a colored frame rendered as HTML and captured in a browser; the web ones from `kanareika web` on the same directory,
-1600 px wide, dark theme. The demo data is also the quickest way to try the interfaces out.
+The README pictures come from tools, from made-up data only (they are published):
+
+```bash
+go run ./tools/demo -out /tmp/kanareika-demo     # a month of daily runs of a made-up organization
+go run ./tools/screenshots -home /tmp/kanareika-demo -org acme -env production -size 150x26 -keys 2 \
+  -now "$(date -u +%Y-%m-%dT12:00:00Z)" -out docs/screenshots   # tui-<lang>.png, web-<lang>.png
+go run ./tools/brand                                     # docs/brand: banners and the social preview
+```
+
+Both draw with headless Chrome (found on its own, or `-chrome`). The banners' look is in `tools/brand/*.html` and
+`style.css`; their words in `tools/brand/main.go`. The demo data is also the quickest way to try the interfaces out:
+`KANAREIKA_FEEDS_DIR=/tmp/kanareika-demo/feeds TRIVY_CACHE_DIR=/tmp/kanareika-demo/trivy kanareika --home /tmp/kanareika-demo`.
 
 ## Test data must be fake
 
