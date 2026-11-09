@@ -74,7 +74,7 @@ o en el navegador, en http://127.0.0.1:8088 (solo escucha en localhost):
 kanareika web
 ```
 
-En el primer inicio le guía para añadir sus servidores (usuario y clave SSH, hosts, consentimiento para el escaneo) y ejecuta el primer escaneo; las bases de vulnerabilidades se descargan solas.
+En el primer inicio le guía para añadir sus servidores (usuario y clave SSH, hosts, consentimiento para el escaneo) y ejecuta el primer escaneo; antes de descargar la lista de vulnerabilidades (unos 210 MB) le pregunta.
 
 ### Para scripts y cron
 

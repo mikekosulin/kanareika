@@ -58,7 +58,7 @@ func TestDownloadQuestion(t *testing.T) {
 	}
 	// the vulnerability DBs are there now: only the rest is asked about
 	tty = onTTY(t, "y\n")
-	if code, _, _ := cli(t, "db", "update"); code != 0 || tty.String() != "Download the vulnerability list (41 MB)? [Y/n] " {
+	if code, _, _ := cli(t, "db", "update"); code != 0 || tty.String() != "Download the vulnerability list (30 MB)? [Y/n] " {
 		t.Fatal(code, tty)
 	}
 	// not asked: --yes, KANAREIKA_YES, no terminal, no /dev/tty
