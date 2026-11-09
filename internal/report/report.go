@@ -295,7 +295,8 @@ func writeAtomic(path string, write func(io.Writer) error) error {
 	return err
 }
 
-// HistoryTable: the runs of an environment, one line each (CLI `history`).
+// HistoryTable: the runs of an environment, one line each (CLI `history`); P1–P4 are fixes (runs before 0.5:
+// finding rows).
 func HistoryTable(p config.Paths, org, env string) (string, error) {
 	rows := []string{"run                   hosts  fail   P1    P2    P3    P4  accepted  scope", strings.Repeat("-", 90)}
 	for _, r := range Runs(p, org, env) {
@@ -310,8 +311,14 @@ func HistoryTable(p config.Paths, org, env string) (string, error) {
 		}
 		row := fmt.Sprintf("%-20s %6d %5d ", m.RunID, m.HostsOK, m.HostsFailed.Len())
 		var ps []string
-		for _, pr := range Prios {
-			ps = append(ps, fmt.Sprintf("%5d", c[pr]))
+		if t := m.Totals; t != nil { // fixes per priority, as the scan's last line and every interface count them
+			for _, n := range []int{t.P1, t.P2, t.P3, t.P4} {
+				ps = append(ps, fmt.Sprintf("%5d", n))
+			}
+		} else { // a run from before 0.5: its finding rows, the only count it has
+			for _, pr := range Prios {
+				ps = append(ps, fmt.Sprintf("%5d", c[pr]))
+			}
 		}
 		rows = append(rows, row+strings.Join(ps, " ")+fmt.Sprintf(" %9d  %s", c["accepted"], pyfmt.Head(scope, 30)))
 	}

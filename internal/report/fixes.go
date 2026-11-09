@@ -186,5 +186,13 @@ func (c Totals) Line() string {
 	if c.NoFix > 0 {
 		s += fmt.Sprintf(", %d of them with nothing to install yet", c.NoFix)
 	}
-	return s + fmt.Sprintf("; %d unique CVEs; %d hosts with something to do", c.CVEs, c.Hosts)
+	return s + fmt.Sprintf("; %d unique %s; %d %s with something to do", c.CVEs, plural(c.CVEs, "CVE", "CVEs"),
+		c.Hosts, plural(c.Hosts, "host", "hosts"))
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return many
 }
