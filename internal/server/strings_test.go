@@ -74,3 +74,40 @@ func TestPageShape(t *testing.T) {
 		}
 	}
 }
+
+// TestPageEscapesData: the page writes what the server sends (vulnerability DB texts, what the scanned hosts
+// reported, the org files) through esc(). The tests do not run the page's JavaScript, so this looks for the
+// shapes that let such text through as HTML: a field interpolated straight into an element or an attribute, a
+// field passed raw into t()'s {args}, a link not limited to http(s), and the CVSS vector's parts written unescaped.
+func TestPageEscapesData(t *testing.T) {
+	b, err := fs.ReadFile(assets.Web(), "index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(b)
+	const field = `[\w?.\[\]]+\.(?:description|title|label|pkg|reason|owner|note|comment|problem|process|mount|error|message|command|output|installed|fixed|path|address|user|host|name|env|jump|system|os|priority|severity|state|url|vector|id)`
+	risky := map[string]*regexp.Regexp{
+		"a field as element text":           regexp.MustCompile(`>\$\{` + field + `\}`),
+		"a field as an attribute":           regexp.MustCompile(`="\$\{` + field + `\}"`),
+		"a raw field in t() args":           regexp.MustCompile(`\bt\("[^"]*", \{[^}]*?\w+: ` + field + `\b`),
+		"a raw S.env in t() args":           regexp.MustCompile(`\bt\("[^"]*", \{[^}]*?\w+: S\.(?:env|org|run)\b`),
+		"a link not limited to http(s)":     regexp.MustCompile(`href="\$\{(?:esc\((?:c|x|n|d)\.url\)|(?:c|x|n|d)\.url)`),
+		"a translated value left unescaped": regexp.MustCompile(`<b>\$\{t\((?:val|v|txt)\)\}</b>`),
+	}
+	for i, line := range strings.Split(page, "\n") {
+		if !strings.Contains(line, "<") { // plain text: the palette, the clipboard, filters
+			continue
+		}
+		for what, re := range risky {
+			for _, m := range re.FindAllString(line, -1) {
+				t.Errorf("line %d: %s: %s", i+1, what, m)
+			}
+		}
+	}
+	// the vector: only known CVSS 3 metric letters make the table, the rest is shown as escaped text
+	for _, must := range []string{`const CVSS3 = { AV: "NALP"`, `<b>${esc(t(val))}</b>`, `const webURL = `, `href="${esc(webURL(c.url))}"`} {
+		if !strings.Contains(page, must) {
+			t.Errorf("the page lost %q", must)
+		}
+	}
+}
