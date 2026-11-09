@@ -13,17 +13,27 @@ func TestPlaces(t *testing.T) {
 	h.key("1")
 	h.has(" 1 Servers ", "2 ToDo", "3 History", "show  priorities  logins  network  health  w", "group by  server")
 	h.key("w")
-	h.has("Access(acme/production)", "show  priorities  logins  network  health  w")
+	h.has("Servers(acme/production)", "show  priorities  logins  network  health  w") // the server's own lenses
+	if h.m.lens != "logins" {
+		t.Fatal(h.m.lens)
+	}
 	h.click(" network ")
-	h.has("Network(acme/production)")
+	if h.m.lens != "network" {
+		t.Fatal(h.m.lens)
+	}
 	h.key("w", "w")
 	if h.m.lens != "priorities" || h.m.view != vServers {
 		t.Fatal(h.m.lens, h.m.view)
 	}
 	h.key(":", "h", "e", "a", "l", "t", "h", "enter")
-	h.has("Health(acme/production)")
+	if h.m.lens != "health" {
+		t.Fatal(h.m.lens)
+	}
 	h.key("2", "1") // the lens stays
-	h.has("Health(acme/production)")
+	h.has("Servers(acme/production)", "show  priorities  logins  network  health  w")
+	if h.m.lens != "health" {
+		t.Fatal(h.m.lens)
+	}
 	// History: runs; n what changed, j the scans, esc back
 	h.key("3")
 	h.has("History(acme/production)[5]", "n changes", "S scans")

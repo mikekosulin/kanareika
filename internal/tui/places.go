@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"slices"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -220,7 +221,7 @@ func (m *Model) lensView(w, h int) []string {
 func (m *Model) showSwitch() string {
 	g := sMuted.Render(m.t.T("show")) + " "
 	for _, l := range m.lenses() {
-		name := m.t.T(l.Title)
+		name := strings.ToLower(m.t.T(l.Title)) // lowercase like the group-by switch beside it
 		s := sMuted.Render(" " + name + " ")
 		if l.ID == m.lens {
 			s = sCrumb2.Render(name)
