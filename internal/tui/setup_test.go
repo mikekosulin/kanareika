@@ -24,7 +24,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	for k, v := range map[string]string{"HOME": home, "SSH_AUTH_SOCK": "", "USER": "demo", "LOGNAME": "demo"} {
+	for k, v := range map[string]string{"HOME": home, "USERPROFILE": home, "SSH_AUTH_SOCK": "", "USER": "demo", "LOGNAME": "demo"} { // USERPROFILE: Windows' home
 		_ = os.Setenv(k, v)
 	}
 	dbsize.Lookup = func(context.Context, priority.Policy) map[string]int64 {
@@ -78,6 +78,7 @@ func demoSSH(t *testing.T) {
 	must(t, os.MkdirAll(filepath.Join(home, ".ssh"), 0o700))
 	must(t, os.WriteFile(filepath.Join(home, ".ssh", "config"), []byte(demoConfig), 0o600))
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home) // os.UserHomeDir on Windows
 	t.Setenv("SSH_AUTH_SOCK", "")
 	t.Setenv("USER", "demo")
 	t.Setenv("LOGNAME", "demo")

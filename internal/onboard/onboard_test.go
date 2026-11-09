@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -372,7 +373,7 @@ func TestCreate(t *testing.T) {
 		!strings.Contains(string(b), "port: 2222") || !strings.Contains(string(b), "privilege: sudo") {
 		t.Fatal(string(b))
 	}
-	if st, err := os.Stat(filepath.Join(p.Secrets, "beta", "id_ed25519")); err != nil || st.Mode().Perm() != 0o600 {
+	if st, err := os.Stat(filepath.Join(p.Secrets, "beta", "id_ed25519")); err != nil || (runtime.GOOS != "windows" && st.Mode().Perm() != 0o600) {
 		t.Fatal("key copied 0600:", err)
 	}
 }

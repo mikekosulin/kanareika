@@ -269,11 +269,11 @@ func Reason(err error) string {
 		return "TLS: the server does not speak TLS"
 	case errors.As(err, &dns):
 		return "cannot resolve " + dns.Name + " (offline? DNS?)"
-	case errors.Is(err, syscall.ECONNREFUSED):
+	case refused(err):
 		return "connection refused"
-	case errors.Is(err, syscall.ECONNRESET):
+	case reset(err):
 		return "connection reset"
-	case errors.Is(err, syscall.ENETUNREACH), errors.Is(err, syscall.EHOSTUNREACH):
+	case unreachable(err):
 		return "network unreachable (offline?)"
 	case errors.Is(err, context.DeadlineExceeded):
 		return "timed out"

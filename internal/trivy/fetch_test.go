@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -112,7 +113,7 @@ func TestFetchAsTrivy(t *testing.T) {
 	}
 	fi, err := os.Stat(filepath.Join(dir, "trivy.db"))
 	must(t, err)
-	if fi.Mode().Perm() != 0o644 || !fi.ModTime().Equal(ocitest.ModTime) {
+	if (runtime.GOOS != "windows" && fi.Mode().Perm() != 0o644) || !fi.ModTime().Equal(ocitest.ModTime) { // Windows has no Unix modes
 		t.Fatal(fi.Mode(), fi.ModTime())
 	}
 	// metadata.json: byte for byte what trivy's metadata client writes after its download
@@ -169,10 +170,10 @@ func TestFetchJavaDB(t *testing.T) {
 	}
 	d, err := javadb.New(dir)
 	must(t, err)
-	defer d.Close()
 	if idx, err := d.SelectIndexBySha1("0000"); err != nil || idx.ArtifactID != "" {
 		t.Fatal(idx, err)
 	}
+	must(t, d.Close()) // Windows cannot rename a directory with an open file in it
 	// the day after DownloadedAt, past NextUpdate: trivy would download again, so does kanareika
 	clockNow = func() time.Time { return testNow.Add(25 * time.Hour) }
 	if it, _ := runJob(t, "java-db"); it.State != dbget.Done {
@@ -461,7 +462,7 @@ func TestHostileMirror(t *testing.T) {
 		for name, want := range map[string]os.FileMode{"": 0o755, "sub": 0o755, "trivy.db": 0o644, "metadata.json": 0o644} {
 			fi, err := os.Stat(filepath.Join(cache, "db", name))
 			must(t, err)
-			if fi.Mode().Perm() != want {
+			if runtime.GOOS != "windows" && fi.Mode().Perm() != want { // Windows has no Unix modes
 				t.Errorf("%q: %v, want %v", name, fi.Mode().Perm(), want)
 			}
 		}
