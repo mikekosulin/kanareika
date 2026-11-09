@@ -77,6 +77,8 @@ type Server struct {
 	db      *dbUpdater  // nil: DB updates disabled
 	local   atomic.Bool // bound to loopback: only loopback Host headers are served
 
+	orgFiles sync.Map // org id -> *sync.Mutex: one setup write (create, add hosts) per org file at a time
+
 	mu    sync.Mutex // view builds and current/ updates, one at a time (each can take seconds on big runs)
 	views []cachedView
 	trees *treeInput // the last tree input (findings + view), by view mtime

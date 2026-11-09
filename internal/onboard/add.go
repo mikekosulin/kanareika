@@ -247,9 +247,29 @@ func AddWithSkipped(p config.Paths, orgID string, r Request) ([]string, []string
 	if err := os.WriteFile(path+".bak", b, 0o600); err != nil {
 		return nil, nil, nil, err
 	}
-	tmpFile := path + ".tmp"
-	if err := os.WriteFile(tmpFile, out.Bytes(), 0o600); err != nil {
-		return nil, nil, nil, err
+	return added, skipped, nil, replaceFile(path, out.Bytes())
+}
+
+// replaceFile: path gets b in one rename, through a temporary file of its own in the same directory (two writers
+// never share one).
+func replaceFile(path string, b []byte) error {
+	f, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*.tmp")
+	if err != nil {
+		return err
 	}
-	return added, skipped, nil, os.Rename(tmpFile, path)
+	tmp := f.Name()
+	_, err = f.Write(b)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Chmod(tmp, 0o600)
+	}
+	if err == nil {
+		err = os.Rename(tmp, path)
+	}
+	if err != nil {
+		_ = os.Remove(tmp)
+	}
+	return err
 }

@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"slices"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/mikekosulin/kanareika/internal/config"
@@ -19,6 +21,15 @@ var newConn = func(o *config.Org, p config.Paths) (onboard.Runner, error) { retu
 
 // setupNow: the date a new org's consent starts; tests replace it.
 var setupNow = time.Now
+
+// lockOrgFile: holds the org's file for one read-modify-write (two adds at once would each write the file as they
+// read it, and one's hosts would be lost); returns the unlock.
+func (s *Server) lockOrgFile(id string) func() {
+	m, _ := s.orgFiles.LoadOrStore(strings.TrimSpace(strings.ToLower(id)), &sync.Mutex{})
+	mu := m.(*sync.Mutex)
+	mu.Lock()
+	return mu.Unlock
+}
 
 // apiSetup: POST /api/setup {onboard.Request} -> 201 {org, path} or 400 {errors}. It writes an org file, so it is
 // allowed where scans are (localhost, or with a token).
@@ -34,7 +45,9 @@ func (s *Server) apiSetup(w http.ResponseWriter, r *http.Request) {
 		sendErr(w, http.StatusBadRequest, "bad request: "+err.Error())
 		return
 	}
+	unlock := s.lockOrgFile(req.ID)
 	path, skipped, problems, err := onboard.CreateWithSkipped(s.paths, req, setupNow().UTC())
+	unlock()
 	switch {
 	case errors.Is(err, onboard.ErrExists):
 		sendErr(w, http.StatusConflict, err.Error())
@@ -71,7 +84,9 @@ func (s *Server) apiSetupAdd(w http.ResponseWriter, r *http.Request) {
 		sendErr(w, http.StatusNotFound, "unknown org")
 		return
 	}
+	unlock := s.lockOrgFile(req.Org)
 	added, skipped, problems, err := onboard.AddWithSkipped(s.paths, req.Org, req.Request)
+	unlock()
 	switch {
 	case err != nil:
 		sendErr(w, http.StatusInternalServerError, err.Error())
