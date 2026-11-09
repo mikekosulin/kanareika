@@ -9,7 +9,7 @@ require (
 	github.com/aquasecurity/trivy-java-db v0.0.0-20240109071736-184bd7481d48
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/charmbracelet/x/ansi v0.10.1
+	github.com/charmbracelet/x/ansi v0.11.9
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/muesli/termenv v0.16.0
 	github.com/oschwald/maxminddb-golang/v2 v2.9.0
@@ -112,6 +112,7 @@ require (
 	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/cheggaaa/pb/v3 v3.2.1 // indirect
+	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/cloudflare/circl v1.6.5 // indirect
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 // indirect
