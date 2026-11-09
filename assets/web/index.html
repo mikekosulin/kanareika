@@ -1924,7 +1924,7 @@ addEventListener("popstate", () => { if (location.pathname.startsWith("/setup"))
    under those; the server card beside. /api/tree?by=host&all=1 (every server with its state); until the server
    answers with states, the run's own data fills them in ---------- */
 const SRV = { list: [], byId: {}, byName: {}, p4: false };
-const SFILT = [["front", "internet"], ["kev", "KEV"], ["overdue", "overdue"]];
+const SFILT = [["front", "Public"], ["kev", "KEV"], ["overdue", "overdue"]];
 const redraw = () => (S.view === "servers" ? drawServers() : drawTree());
 function serversShell() {
   return `<div class="work"><div class="listcol"><div class="work-top"><div class="hdr"><div style="min-width:0"><h1>${t("Servers")}</h1><div class="sub" id="sub"></div></div></div></div>
@@ -1994,7 +1994,7 @@ function srvRows(n, depth, out) {
     const c = n.counts || {}, why = problemText(n), sub = n.state === "failed" || n.state === "partial" || n.state === "not_scanned" ? why : n.os_short || n.os || "";
     name = `<span class="hostn" title="${esc(n.label)}">${esc(n.label)}</span>`
       + (n.target ? `<span class="tgt">${t(n.label.startsWith("k8s:") ? "cluster" : "target")}</span>` : `<span class="os ${sub === why && why ? "prob" : ""}" title="${esc(sub)}">${esc(sub)}</span>`)
-      + (n.exposure === 1 || n.public ? `<span class="inet">${t("internet")}</span>` : "");
+      + (n.exposure === 1 || n.public ? `<span class="inet" title="${t("reachable from the internet: its findings rank higher")}">${t("Public")}</span>` : "");
     pri = n.state === "clean" ? t("nothing to fix") : !n.fixes && (n.state === "failed" || n.state === "not_scanned") ? t("not checked")
       : ["P1", "P2", "P3", "P4"].map((p) => (c[p] ? `<b class="c${p}">${c[p]}</b>` : "0")).join("<i>•</i>");
     fx = n.fixes ? String(n.fixes) : "";

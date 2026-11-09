@@ -874,6 +874,8 @@
     "Servers, ToDo, History": "서버, 할 일, 기록",
     "Servers: what to show (priorities, logins, network, health)": "서버: 표시할 내용 (우선순위, 로그인, 네트워크, 상태)",
     "accepted risks": "수용한 위험",
-    "show": "표시"
+    "show": "표시",
+    "reachable from the internet: its findings rank higher": "인터넷에서 접근 가능: 발견 항목의 우선순위가 높아집니다",
+    "Public": "공개"
   }
 }

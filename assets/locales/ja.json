@@ -874,6 +874,8 @@
     "Servers, ToDo, History": "サーバー、やること、履歴",
     "Servers: what to show (priorities, logins, network, health)": "サーバー：表示する内容（優先度、ログイン、ネットワーク、ヘルス）",
     "accepted risks": "受容したリスク",
-    "show": "表示"
+    "show": "表示",
+    "reachable from the internet: its findings rank higher": "インターネットから到達可能: 検出の優先度が上がります",
+    "Public": "公開"
   }
 }

@@ -874,6 +874,8 @@
     "Servers, ToDo, History": "Серверы, Что делать, История",
     "Servers: what to show (priorities, logins, network, health)": "Серверы: что показать (приоритеты, входы, сеть, здоровье)",
     "accepted risks": "принятые риски",
-    "show": "показать"
+    "show": "показать",
+    "reachable from the internet: its findings rank higher": "доступен из интернета: его находки важнее",
+    "Public": "Публичный"
   }
 }

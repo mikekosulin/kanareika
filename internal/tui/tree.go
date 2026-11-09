@@ -801,7 +801,7 @@ func (m *Model) nodeText(n *tnode, full, styled bool) string {
 		s += "  " + st(sMuted, fit(orStr(n.OSShort, n.OS), m.osW, false))
 		face := ""
 		if n.Exposure == 1 {
-			face = m.t.T("internet")
+			face = m.t.T("Public")
 		}
 		s += "  " + st(lipgloss.NewStyle().Foreground(cP["P2"]), fit(face, m.faceW, false))
 		if n.State == "clean" || n.Fixes == 0 && len(n.Kids) == 0 {
@@ -864,10 +864,17 @@ func (m *Model) dueCell(due string) string {
 // every cell, so they line up.
 func (m *Model) treeCols() []col {
 	text := groupNames[m.grouping()]
-	return []col{{width: 1, tight: true}, {width: 1, tight: true}, {width: 2, tight: true}, {width: 6, tight: true},
+	cols := []col{{width: 1, tight: true}, {width: 1, tight: true}, {width: 2, tight: true}, {width: 6, tight: true},
 		{title: text, min: 18, grow: true, tight: true}, {title: "hosts", width: 5, right: true, drop: 2, tight: true},
 		{title: "CVE", width: 4, right: true, drop: 4, tight: true}, {title: "EPSS", width: 5, right: true, drop: 5, tight: true},
 		{width: 3, drop: 3, tight: true}, {title: "due by", width: 11, right: true, drop: 1}}
+	if m.serverRows() {
+		// a server row has no host count (its width goes to the P1 • P2 • P3 • P4 counts); the last column is the
+		// scan's age, not a due date
+		cols = append(cols[:5:5], cols[6:]...)
+		cols[len(cols)-1].title = "scanned"
+	}
+	return cols
 }
 
 func (m *Model) treeView(w, h int) []string {
@@ -883,7 +890,7 @@ func (m *Model) treeView(w, h int) []string {
 		if r.n.Kind == "host" {
 			m.hostW, m.osW = min(max(m.hostW, ansi.StringWidth(r.n.Label)), 18), min(max(m.osW, ansi.StringWidth(orStr(r.n.OSShort, r.n.OS))), 16)
 			if r.n.Exposure == 1 {
-				m.faceW = ansi.StringWidth(m.t.T("internet"))
+				m.faceW = ansi.StringWidth(m.t.T("Public"))
 			}
 		}
 	}
@@ -952,7 +959,11 @@ func (m *Model) treeView(w, h int) []string {
 				due = sDim.Render(m.t.T("not checked"))
 			}
 		}
-		cells = append(cells, []string{box, caret, p, kindOf(n), sDim.Render(r.prefix) + m.nodeText(n, false, true), hosts, cves, epss, flag, due})
+		row := []string{box, caret, p, kindOf(n), sDim.Render(r.prefix) + m.nodeText(n, false, true), hosts, cves, epss, flag, due}
+		if m.serverRows() {
+			row = append(row[:5:5], row[6:]...)
+		}
+		cells = append(cells, row)
 	}
 	if len(rows) == 0 && m.tree.Hidden > 0 && !m.flt["backported"] {
 		return append(m.table(m.treeCols(), nil, w, h), "", " "+sMuted.Render(m.t.F("{n} found CVEs are fixed by backports (f: show them)", "n", strconv.Itoa(m.tree.Hidden))))
@@ -1330,3 +1341,6 @@ func (m *Model) detailView(w int, full bool) []string {
 	}
 	return out
 }
+
+// serverRows: the tree lists servers themselves (Servers, grouped by host).
+func (m *Model) serverRows() bool { return m.view == vServers && m.grouping() == "host" }

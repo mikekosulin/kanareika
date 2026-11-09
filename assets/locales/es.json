@@ -874,6 +874,8 @@
     "Servers, ToDo, History": "Servidores, Por hacer, Historial",
     "Servers: what to show (priorities, logins, network, health)": "Servidores: qué mostrar (prioridades, accesos, red, salud)",
     "accepted risks": "riesgos aceptados",
-    "show": "mostrar"
+    "show": "mostrar",
+    "reachable from the internet: its findings rank higher": "accesible desde internet: sus hallazgos pesan más",
+    "Public": "Público"
   }
 }
