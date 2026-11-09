@@ -876,6 +876,9 @@
     "accepted risks": "已接受的风险",
     "show": "显示",
     "reachable from the internet: its findings rank higher": "可从互联网访问：其发现优先级更高",
-    "Public": "公网"
+    "Public": "公网",
+    "dark": "深色",
+    "light": "浅色",
+    "theme": "主题"
   }
 }

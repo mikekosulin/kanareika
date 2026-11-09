@@ -876,6 +876,9 @@
     "accepted risks": "riscos aceitos",
     "show": "mostrar",
     "reachable from the internet: its findings rank higher": "acessível pela internet: suas descobertas pesam mais",
-    "Public": "Público"
+    "Public": "Público",
+    "dark": "escuro",
+    "light": "claro",
+    "theme": "tema"
   }
 }

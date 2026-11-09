@@ -876,6 +876,9 @@
     "accepted risks": "risques acceptés",
     "show": "afficher",
     "reachable from the internet: its findings rank higher": "accessible depuis internet : ses constats passent en priorité",
-    "Public": "Public"
+    "Public": "Public",
+    "dark": "sombre",
+    "light": "clair",
+    "theme": "thème"
   }
 }

@@ -37,19 +37,28 @@ func TestShots(t *testing.T) {
 	if err := shots(out, home, "", "acme", "production", "150x26", "2", "2026-11-07T12:00:00Z"); err != nil {
 		t.Fatal(err)
 	}
-	if len(*calls) != 3*len(i18n.Langs()) {
+	if len(*calls) != 4*len(i18n.Langs()) {
 		t.Fatalf("%d pictures", len(*calls))
 	}
-	tui, web := (*calls)[0], (*calls)[1]
+	tui, tuiLight, web := (*calls)[0], (*calls)[1], (*calls)[2]
 	if !strings.HasPrefix(tui, "chrome file:///") || !strings.Contains(tui, "tui-en.png 1207x472") {
 		t.Error(tui)
+	}
+	if !strings.Contains(tuiLight, "tui-en-light.png 1207x472") {
+		t.Error(tuiLight)
+	}
+	dark, _ := os.ReadFile(filepath.Join(out, "tui-en.html"))
+	light, _ := os.ReadFile(filepath.Join(out, "tui-en-light.html"))
+	if !strings.Contains(string(dark), "background:#141413") || !strings.Contains(string(light), "background:#fafaf8") ||
+		!strings.Contains(string(light), "color:#1f1f1d") || !strings.Contains(string(light), "#ff5f57") || string(dark) == string(light) {
+		t.Error("the light terminal window")
 	}
 	for _, want := range []string{"/todo?by=cve&env=production&lang=en&org=acme", "web-en.png 1600x1000", "--force-dark-mode", "--virtual-time-budget="} {
 		if !strings.Contains(web, want) {
 			t.Errorf("%q not in %s", want, web)
 		}
 	}
-	if light := (*calls)[2]; !strings.Contains(light, "web-en-light.png 1600x1000") || strings.Contains(light, "--force-dark-mode") {
+	if light := (*calls)[3]; !strings.Contains(light, "web-en-light.png 1600x1000") || strings.Contains(light, "--force-dark-mode") {
 		t.Error(light)
 	}
 	if !strings.Contains(strings.Join(*calls, "\n"), "lang=ja&") {

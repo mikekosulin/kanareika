@@ -83,13 +83,13 @@ func TestPanels(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production", Settings: path}, true)
 	h.show(vPackages)
 	h.key("o")
-	h.has("Panels(Packages)", "[x] view tabs", "[ ] show P4 too", "[x] mouse (shift+drag still selects text)", "time zone: < system >",
+	h.has("Panels(Packages)", "[x] view tabs", "[ ] show P4 too", "[x] mouse (shift+drag still selects text)", "time zone: < system >", "theme: < auto >",
 		"[x] where", "[x] installed")
 	h.hasNot("[x] package", "header:") // never switched off; the header is gone
 
 	h.key("down", "space") // P4
 	h.has("[x] show P4 too")
-	h.key("down", "down", "down", "down", "space", "down", "x", "k", "up", "up", "up", "up", "up", "up", "up", "up") // where and installed off
+	h.key("down", "down", "down", "down", "down", "space", "down", "x", "k", "up", "up", "up", "up", "up", "up", "up", "up", "up") // where and installed off
 	h.has("[ ] where", "[ ] installed")
 	h.key("esc")
 	h.has("Packages(acme/production)", "? all keys")
@@ -112,7 +112,7 @@ func TestPanels(t *testing.T) {
 
 	// switched back on, the column returns and the view's entry leaves the file
 	h2.show(vPackages)
-	h2.key("o", "down", "down", "down", "down", "down", "space", "down", "space", "q")
+	h2.key("o", "down", "down", "down", "down", "down", "down", "space", "down", "space", "q")
 	h2.has("WHERE", "INSTALLED")
 	h2.key("p") // P4 off from Packages too
 	b, _ = os.ReadFile(path)

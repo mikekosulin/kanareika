@@ -876,6 +876,9 @@
     "accepted risks": "受容したリスク",
     "show": "表示",
     "reachable from the internet: its findings rank higher": "インターネットから到達可能: 検出の優先度が上がります",
-    "Public": "公開"
+    "Public": "公開",
+    "dark": "ダーク",
+    "light": "ライト",
+    "theme": "テーマ"
   }
 }

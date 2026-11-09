@@ -48,6 +48,7 @@ type Options struct {
 	// Settings: the file the panel layout is kept in (DefaultSettingsPath); "": not kept.
 	Settings string
 	Zone     *time.Location // the system's time zone; nil: time.Local (tests fix it)
+	Theme    string         // dark, light: over the setting and KANAREIKA_THEME (the screenshots); "": as set
 }
 
 // Model: the bubbletea model of the whole interface.
@@ -125,7 +126,8 @@ type Model struct {
 	handlers     map[string]func(dx int) tea.Cmd // what a click on a zone does (drawn this frame)
 	zones        []hitZone                       // where the zones are on screen
 	zoneSeq      int
-	hostW, osW   int // Servers: the widths of the servers' names and OS, so their rows line up
+	theme        string // Options.Theme
+	hostW, osW   int    // Servers: the widths of the servers' names and OS, so their rows line up
 	faceW        int
 
 	toast   string
@@ -148,6 +150,8 @@ func New(o Options) *Model {
 		t: &tr{lang: "en", ui: i18n.UI()}, set: loadSettings(o.Settings), setPath: o.Settings, sysZone: o.Zone,
 		lens: "priorities", by: [nViews]string{vServers: "host", vActions: "fix"}, flt: map[string]bool{}, nodes: map[string]*nodeDetail{}, pending: map[string]string{}, opened: map[string]bool{}}
 	m.applyZone()
+	m.theme = o.Theme
+	m.applyTheme()
 	if o.Lang != "" && (o.Lang == "en" || m.t.ui[o.Lang] != nil) {
 		m.t.lang = o.Lang
 	}
@@ -907,6 +911,7 @@ func (m *Model) panelItems() []formItem {
 		{kind: itemFlag, label: "show P4 too", value: "p4", on: m.set.ShowP4},
 		{kind: itemFlag, label: "mouse (shift+drag still selects text)", value: "mouse", on: !m.set.NoMouse},
 		{kind: itemChoice, label: "time zone", value: zone},
+		{kind: itemChoice, label: "theme", value: themeNames[m.set.Theme]},
 		{kind: itemHead, label: "Columns"}}
 	cols := viewCols[m.view]
 	if m.isTree() {
@@ -941,7 +946,12 @@ func (m *Model) panelsKey(s string) tea.Cmd {
 	case " ", "space", "enter", "x", "right", "l", "left", "h":
 		it := items[d.cur]
 		switch it.kind {
-		case itemChoice: // the time zone
+		case itemChoice:
+			if it.label == "theme" {
+				m.set.Theme = themes[(slices.Index(themes, m.set.Theme)+1)%len(themes)]
+				m.applyTheme()
+				break
+			}
 			m.toggleZone()
 			return nil
 		case itemFlag:

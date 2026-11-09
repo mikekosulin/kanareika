@@ -17,7 +17,7 @@ import (
 // The frame around the views: the status bar, the key hints above it, and the popup lists: filters (f),
 // organizations (O), environments (E), and the jump palette (:), the web page's ⌘K.
 
-var sEnv = lipgloss.NewStyle().Foreground(lipgloss.Color("#0b0b0b")).Background(lipgloss.Color("#5aa9d6")).Bold(true).Padding(0, 1)
+var sEnv = lipgloss.NewStyle().Foreground(cInk).Background(lipgloss.AdaptiveColor{Dark: "#5aa9d6", Light: "#9cc9e6"}).Bold(true).Padding(0, 1)
 
 // --- popup lists ------------------------------------------------------------------------------------------------------
 
