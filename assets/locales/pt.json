@@ -808,6 +808,11 @@
     "nothing to fix": "nada a corrigir",
     "server": "servidor",
     "to fix": "a corrigir",
-    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "telas: servidores, A fazer, pacotes, mudanças, acesso, rede, saúde, exceções, execuções, varreduras"
+    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "telas: servidores, A fazer, pacotes, mudanças, acesso, rede, saúde, exceções, execuções, varreduras",
+    "deferred by the vendor": "adiado pelo fornecedor",
+    "no fix released yet": "ainda sem correção publicada",
+    "only with Ubuntu Pro (ESM)": "só com Ubuntu Pro (ESM)",
+    "released, not in this host's repositories": "publicado, não nos repositórios deste host",
+    "won't be fixed": "não será corrigido"
   }
 }

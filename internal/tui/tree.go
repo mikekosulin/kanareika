@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"net/url"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -48,21 +47,30 @@ type tnode struct {
 	Preauth  bool           `json:"preauth"`
 	States   map[string]int `json:"states"`
 	Kids     []*tnode       `json:"kids"`
+	Pkgs     []string       `json:"pkgs"`   // a source package's binary packages
+	NoFix    map[string]int `json:"no_fix"` // hosts per reason there is nothing to install yet
 	// a server of the Servers tree (/api/tree?by=host&all=1)
-	State    string         `json:"state"` // clean, failed, partial, not_scanned
-	LastScan string         `json:"last_scan"`
-	Error    string         `json:"error"` // why it failed
-	Counts   map[string]int `json:"counts"`
+	State       string         `json:"state"` // todo, clean, partial, failed, not_scanned
+	Problem     string         `json:"problem"`
+	ProblemMsg  string         `json:"problem_msg"`
+	ProblemArgs map[string]any `json:"problem_args"`
+	OSShort     string         `json:"os_short"`
+	LastScan    string         `json:"last_scan"`
+	Fixes       int            `json:"fixes"`
+	Counts      map[string]int `json:"counts"`
+	Overdue     bool           `json:"overdue"`
 }
 
 type treeResp struct {
-	By     string         `json:"by"`
-	Nodes  []*tnode       `json:"nodes"`
-	Counts map[string]int `json:"counts"`
-	Fixes  int            `json:"fixes"`
-	CVEs   int            `json:"cves"`
-	Hosts  int            `json:"hosts"`
-	Hidden int            `json:"hidden_backported"`
+	By      string         `json:"by"`
+	Nodes   []*tnode       `json:"nodes"`
+	Counts  map[string]int `json:"counts"`
+	Fixes   int            `json:"fixes"`
+	CVEs    int            `json:"cves"`
+	Hosts   int            `json:"hosts"`
+	Hidden  int            `json:"hidden_backported"`
+	NoFix   int            `json:"no_fix"`
+	Servers map[string]int `json:"servers"` // hosts per state
 }
 
 type reason struct {
@@ -295,10 +303,6 @@ func (m *Model) treeRows() []trow {
 	var walk func(ns []*tnode, depth int, pre string)
 	walk = func(ns []*tnode, depth int, pre string) {
 		for i, n := range ns {
-			if depth == 0 && n.Kind == "group" && m.grouping() == "host" { // by server: the servers, not their groups
-				walk(n.Kids, 0, "")
-				continue
-			}
 			if depth == 0 && m.onlySel && !m.anySel(n) {
 				continue
 			}
@@ -784,23 +788,23 @@ func (m *Model) nodeText(n *tnode, full, styled bool) string {
 		s := st(lipgloss.NewStyle().Foreground(cCyan), fit(n.Label, m.hostW, false))
 		switch n.State {
 		case "failed":
-			return s + "  " + st(sErr, orStr(n.Error, m.t.T("failed")))
+			return s + "  " + st(sErr, m.problem(n))
 		case "not_scanned":
-			return s + "  " + st(sDim, m.t.T("not scanned"))
+			return s + "  " + st(sDim, m.problem(n))
 		}
-		s += "  " + st(sMuted, fit(shortOS(n.OS), m.osW, false))
+		s += "  " + st(sMuted, fit(orStr(n.OSShort, n.OS), m.osW, false))
 		face := ""
 		if n.Exposure == 1 {
 			face = m.t.T("internet")
 		}
 		s += "  " + st(lipgloss.NewStyle().Foreground(cP["P2"]), fit(face, m.faceW, false))
-		if hostCounts(n)["P1"]+hostCounts(n)["P2"]+hostCounts(n)["P3"]+hostCounts(n)["P4"] == 0 {
+		if n.State == "clean" || n.Fixes == 0 && len(n.Kids) == 0 {
 			return s + "  " + st(sMuted, m.t.T("nothing to fix"))
 		}
 		var counts []string
 		for _, p := range []string{"P1", "P2", "P3", "P4"} {
-			c := strconv.Itoa(hostCounts(n)[p])
-			if hostCounts(n)[p] == 0 {
+			c := strconv.Itoa(n.Counts[p])
+			if n.Counts[p] == 0 {
 				counts = append(counts, st(sDim, c))
 			} else {
 				counts = append(counts, st(lipgloss.NewStyle().Foreground(cP[p]), c))
@@ -871,7 +875,7 @@ func (m *Model) treeView(w, h int) []string {
 	m.hostW, m.osW, m.faceW = 0, 0, 0 // the servers' parts line up
 	for _, r := range rows {
 		if r.n.Kind == "host" {
-			m.hostW, m.osW = min(max(m.hostW, ansi.StringWidth(r.n.Label)), 18), min(max(m.osW, ansi.StringWidth(shortOS(r.n.OS))), 16)
+			m.hostW, m.osW = min(max(m.hostW, ansi.StringWidth(r.n.Label)), 18), min(max(m.osW, ansi.StringWidth(orStr(r.n.OSShort, r.n.OS))), 16)
 			if r.n.Exposure == 1 {
 				m.faceW = ansi.StringWidth(m.t.T("internet"))
 			}
@@ -907,7 +911,7 @@ func (m *Model) treeView(w, h int) []string {
 				p = sErr.Render("✗")
 			case n.State == "not_scanned":
 				p = sDim.Render("–")
-			case hostCounts(n)["P1"]+hostCounts(n)["P2"]+hostCounts(n)["P3"]+hostCounts(n)["P4"] == 0:
+			case n.State == "clean":
 				p = sOK.Render("✓")
 			}
 		}
@@ -950,31 +954,19 @@ func (m *Model) treeView(w, h int) []string {
 	return m.table(m.treeCols(), cells, w, h)
 }
 
-// shortOS: an OS name as a column has room for it: Debian GNU/Linux 12 (bookworm) -> Debian 12, Ubuntu 22.04.5 LTS
-// -> Ubuntu 22.04.
-func shortOS(s string) string {
-	s = osParen.ReplaceAllString(strings.ReplaceAll(s, "GNU/Linux ", ""), "")
-	s = strings.TrimSuffix(strings.TrimSpace(s), " LTS")
-	return osPatch.ReplaceAllString(s, "$1")
+// problem: why a server is failed, partial or not scanned, in the interface's language.
+func (m *Model) problem(n *tnode) string {
+	if n.Problem == "" && n.ProblemMsg == "" {
+		return m.t.T(map[string]string{"failed": "failed", "not_scanned": "not scanned", "partial": "partial"}[n.State])
+	}
+	return m.t.msg(n.ProblemMsg, n.ProblemArgs, n.Problem)
 }
 
-var (
-	osParen = regexp.MustCompile(` *\([^)]*\)`)
-	osPatch = regexp.MustCompile(`\b(\d+\.\d+)\.\d+\b`)
-)
-
-// hostCounts: a server's fixes per priority: as the server counts them, else from the fixes under it.
-func hostCounts(n *tnode) map[string]int {
-	if n.Counts != nil {
-		return n.Counts
-	}
-	c := map[string]int{}
-	for _, k := range n.Kids {
-		if k.Kind != "section" {
-			c[k.Priority]++
-		}
-	}
-	return c
+// noFixReasons: why there is nothing to install yet, in plain words (node no_fix keys).
+var noFixReasons = []struct{ key, label string }{
+	{key: "pending", label: "no fix released yet"}, {key: "repos", label: "released, not in this host's repositories"},
+	{key: "esm", label: "only with Ubuntu Pro (ESM)"}, {key: "deferred", label: "deferred by the vendor"},
+	{key: "wontfix", label: "won't be fixed"},
 }
 
 // primary: a row that is a thing to do, with its own priority and due date shown; hosts and groups under a fix or
@@ -999,23 +991,14 @@ func (m *Model) todoTitle() string {
 		}
 		t += " " + strings.Join(c, sMuted.Render(" • ")) // a dot between the groups: "P1 6 P2 16" reads as one run of numbers
 	}
-	if m.view == vServers && m.tree != nil {
-		ok, bad := 0, 0
-		var count func([]*tnode)
-		count = func(ns []*tnode) {
-			for _, n := range ns {
-				switch {
-				case n.Kind == "host" && n.State == "failed":
-					bad++
-				case n.Kind == "host" && n.State == "clean":
-					ok++
-				}
-				count(n.Kids)
+	if m.view == vServers && m.tree != nil { // the servers per state
+		for _, st := range []struct {
+			key, mark string
+			style     lipgloss.Style
+		}{{"clean", "✓", sOK}, {"partial", "!", lipgloss.NewStyle().Foreground(cP["P3"])}, {"failed", "✗", sErr}, {"not_scanned", "–", sDim}} {
+			if n := m.tree.Servers[st.key]; n > 0 {
+				t += sDim.Render(" · ") + st.style.Render(strconv.Itoa(n)+" "+st.mark)
 			}
-		}
-		count(m.tree.Nodes)
-		if ok+bad > 0 {
-			t += sDim.Render(" · ") + sOK.Render(strconv.Itoa(ok)+" ✓") + sDim.Render(" · ") + sErr.Render(strconv.Itoa(bad)+" ✗")
 		}
 	}
 	for _, f := range treeFilters {
@@ -1170,15 +1153,17 @@ func (m *Model) detailView(w int, full bool) []string {
 	}
 	if n.Kind == "host" && m.grouping() == "host" { // a server: its card
 		var out []string
-		if n.State == "failed" {
-			out = append(out, " "+sErr.Render("✗ "+m.t.T("failed")+": ")+sText.Render(orStr(n.Error, "?")), "")
-		}
-		if n.State == "not_scanned" {
-			out = append(out, " "+sMuted.Render(m.t.T("not scanned")), "")
+		switch n.State {
+		case "failed":
+			out = append(out, " "+sErr.Render("✗ ")+sText.Render(m.problem(n)), "")
+		case "partial":
+			out = append(out, " "+lipgloss.NewStyle().Foreground(cP["P3"]).Render("! ")+sText.Render(m.problem(n)), "")
+		case "not_scanned":
+			out = append(out, " "+sMuted.Render("– "+m.problem(n)), "")
 		}
 		var fix []string
 		for _, p := range []string{"P1", "P2", "P3", "P4"} {
-			if c := hostCounts(n)[p]; c > 0 {
+			if c := n.Counts[p]; c > 0 {
 				fix = append(fix, prio(p)+" "+strconv.Itoa(c))
 			}
 		}
@@ -1229,6 +1214,14 @@ func (m *Model) detailView(w int, full bool) []string {
 		facts = append(facts, "EPSS "+epssText(n.EPSS))
 	}
 	out = append(out, " "+sMuted.Render(strings.Join(facts, " · ")))
+	if len(n.Pkgs) > 0 {
+		wrap(" ", sMuted.Render(m.t.T("packages")+": ")+sText.Render(strings.Join(n.Pkgs, ", ")))
+	}
+	for _, r := range noFixReasons {
+		if c := n.NoFix[r.key]; c > 0 {
+			wrap(" ", lipgloss.NewStyle().Foreground(cP["P3"]).Render(m.t.T(r.label))+sMuted.Render(" · "+m.hostsN(c)))
+		}
+	}
 
 	head(m.t.F("why {p}", "p", n.Priority))
 	if len(d.Why) == 0 {

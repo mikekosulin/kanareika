@@ -165,7 +165,7 @@ func TestKeysMore(t *testing.T) {
 		t.Fatal("r reloads the run")
 	}
 	h.key("G", "k")
-	if h.m.cur[vActions] != 28 {
+	if h.m.cur[vActions] != 24 {
 		t.Fatal(h.m.cur[vActions])
 	}
 	h.key("G", "up", "pgup")

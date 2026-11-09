@@ -94,8 +94,8 @@ func (m *Model) menuItems(d *menuDlg) []menuItem {
 				last := sDim.Render(m.t.T("no runs"))
 				if e.Last != nil {
 					last = sMuted.Render(m.t.runShort(e.Last.RunID))
-					if e.Last.PlanCounts != nil {
-						pc, known = e.Last.PlanCounts, true
+					if c, ok := e.Last.counts(); ok {
+						pc, known = c, true
 					}
 				}
 				state := sMuted.Render(m.t.T("idle"))

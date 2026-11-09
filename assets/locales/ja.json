@@ -808,6 +808,11 @@
     "nothing to fix": "修正不要",
     "server": "サーバー",
     "to fix": "要修正",
-    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "ビュー：サーバー、やること、パッケージ、変更、アクセス、ネットワーク、ヘルス、例外、実行、スキャン"
+    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "ビュー：サーバー、やること、パッケージ、変更、アクセス、ネットワーク、ヘルス、例外、実行、スキャン",
+    "deferred by the vendor": "ベンダーが延期",
+    "no fix released yet": "修正はまだ公開されていない",
+    "only with Ubuntu Pro (ESM)": "Ubuntu Pro (ESM) のみ",
+    "released, not in this host's repositories": "公開済み、このホストのリポジトリには未収録",
+    "won't be fixed": "修正されない"
   }
 }

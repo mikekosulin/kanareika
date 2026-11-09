@@ -10,10 +10,10 @@ func TestJump(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.key(":")
 	h.has("Jump to", "> _", "ToDo", "view")
-	h.key("3", ".", "0", ".", "2")
-	h.has("openssl 3.0.1 → 3.0.2", "P2 fix")
+	h.key("3", ".", "2", ".", "7")
+	h.has("rsync 3.2.3 → 3.2.7", "P2 fix")
 	h.key("enter")
-	if n := h.m.curNode(); n == nil || n.ID != "pkg:os:openssl:3.0.1:3.0.2" {
+	if n := h.m.curNode(); n == nil || n.ID != "pkg:os:rsync:3.2.3" {
 		t.Fatal("not on the fix", n)
 	}
 	// a CVE: grouped by CVE, the cursor on it (the filters cleared)
@@ -67,7 +67,7 @@ func TestDetails(t *testing.T) {
 	h.size(100, 30)
 	h.hasNot("Details")
 	h.key("enter")
-	h.has("Details(openssl 3.0.1 → 3.0.10)", "WHY P1", "APPLY", "↑↓ scroll")
+	h.has("Details(openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10)", "WHY P1", "APPLY", "↑↓ scroll")
 	h.key("down", "j", "pgdown", "home", "up", "k", "pgup", "space")
 	h.key("left")
 	h.hasNot("WHY P1")
@@ -91,5 +91,5 @@ func TestDetails(t *testing.T) {
 	}
 	// hosts grouping: a group's details
 	h.key("esc", "g", "g", "enter")
-	h.has("Details(web-01", "CentOS Stream 9", "SSH and logins")
+	h.has("Details(", "to fix", "scanned")
 }

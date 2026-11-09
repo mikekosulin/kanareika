@@ -588,9 +588,9 @@ func (m *Model) runsView(list []runInfo, w, h int) []string {
 		if r.Partial {
 			kind = sMuted.Render(m.t.T("partial"))
 		}
-		known := r.PlanCounts != nil
+		pc, known := r.counts()
 		rows = append(rows, []string{name, state, kind, fmt.Sprintf("%d/%d", r.HostsTotal-r.HostsFailed, r.HostsTotal),
-			count("P1", r.PlanCounts["P1"], known), count("P2", r.PlanCounts["P2"], known), count("P3", r.PlanCounts["P3"], known)})
+			count("P1", pc["P1"], known), count("P2", pc["P2"], known), count("P3", pc["P3"], known)})
 	}
 	return m.table(viewCols[vRuns], rows, w, h)
 }

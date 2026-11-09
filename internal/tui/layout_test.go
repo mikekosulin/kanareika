@@ -26,10 +26,10 @@ func (h *harness) hasNot(parts ...string) {
 func TestNarrow(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.key("2")
-	h.has("HOSTS", "EPSS", "DUE BY", "openssl 3.0.1 → 3.0.10", "? all keys", "Details")
+	h.has("HOSTS", "EPSS", "DUE BY", "openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10", "? all keys", "Details")
 
 	h.size(60, 18)
-	h.has("ToDo(acme/production)[30]", "HOSTS", "DUE BY", "? all keys", " acme  production ")
+	h.has("ToDo(acme/production)[26]", "HOSTS", "DUE BY", "? all keys", " acme  production ")
 	h.hasNot("CVE EPSS", "Details")
 	h.size(40, 18)
 	h.has(" acme  production ", "? all keys", "openssl")

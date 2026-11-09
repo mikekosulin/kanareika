@@ -16,9 +16,32 @@ type runInfo struct {
 	Started     string         `json:"started"`
 	Finished    string         `json:"finished"`
 	PlanCounts  map[string]int `json:"plan_counts"`
+	Totals      *totals        `json:"totals"` // what there is to do (runs before 0.5 have none: plan_counts)
 	HostsTotal  int            `json:"hosts_total"`
 	HostsFailed int            `json:"hosts_failed"`
 	Partial     bool           `json:"partial"`
+}
+
+// totals: a run's fixes to apply, per priority, and its CVEs (report.Totals).
+type totals struct {
+	Fixes int `json:"fixes"`
+	P1    int `json:"P1"`
+	P2    int `json:"P2"`
+	P3    int `json:"P3"`
+	P4    int `json:"P4"`
+	NoFix int `json:"no_fix"`
+	CVEs  int `json:"cves"`
+}
+
+// counts: a run's numbers per priority: its totals, or the plan counts of a run from before them; known: any.
+func (r *runInfo) counts() (map[string]int, bool) {
+	if r == nil {
+		return nil, false
+	}
+	if t := r.Totals; t != nil {
+		return map[string]int{"P1": t.P1, "P2": t.P2, "P3": t.P3, "P4": t.P4}, true
+	}
+	return r.PlanCounts, r.PlanCounts != nil
 }
 
 type envRow struct {

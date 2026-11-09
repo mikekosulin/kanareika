@@ -123,5 +123,5 @@ func TestOnlySelected(t *testing.T) {
 	h.key("v")
 	h.has("ToDo(acme/production)[2]", "<v> selected only")
 	h.key("v")
-	h.has("ToDo(acme/production)[30]", "2 selected")
+	h.has("ToDo(acme/production)[26]", "2 selected")
 }

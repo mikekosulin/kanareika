@@ -808,6 +808,11 @@
     "nothing to fix": "无需修复",
     "server": "服务器",
     "to fix": "待修复",
-    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "视图：服务器、待办、软件包、变更、访问、网络、健康、例外、运行记录、扫描"
+    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "视图：服务器、待办、软件包、变更、访问、网络、健康、例外、运行记录、扫描",
+    "deferred by the vendor": "供应商已推迟",
+    "no fix released yet": "尚未发布修复",
+    "only with Ubuntu Pro (ESM)": "仅限 Ubuntu Pro (ESM)",
+    "released, not in this host's repositories": "已发布，但不在此主机的软件源中",
+    "won't be fixed": "不会修复"
   }
 }

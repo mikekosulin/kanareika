@@ -808,6 +808,11 @@
     "nothing to fix": "исправлять нечего",
     "server": "сервер",
     "to fix": "исправить",
-    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "экраны: серверы, Что делать, пакеты, изменения, доступ, сеть, здоровье, исключения, прогоны, сканы"
+    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "экраны: серверы, Что делать, пакеты, изменения, доступ, сеть, здоровье, исключения, прогоны, сканы",
+    "deferred by the vendor": "отложено поставщиком",
+    "no fix released yet": "исправление ещё не выпущено",
+    "only with Ubuntu Pro (ESM)": "только с Ubuntu Pro (ESM)",
+    "released, not in this host's repositories": "выпущено, но не в репозиториях этого хоста",
+    "won't be fixed": "исправлено не будет"
   }
 }

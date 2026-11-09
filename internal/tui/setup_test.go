@@ -178,7 +178,8 @@ func TestSetup(t *testing.T) {
 	h.hasNot("downloads the vuln list")
 	h.key("enter")
 	h.has("✓ Servers › ✓ Access ›", "First scan", "A few minutes.")
-	if r := h.scan.reqs; len(r) != 1 || len(r[0].Hosts) != 1 || r[0].Hosts[0] != w.hosts[0].name {
+	r := h.scan.requests() // the scan waits for the download, then starts
+	if len(r) != 1 || len(r[0].Hosts) != 1 || r[0].Hosts[0] != w.hosts[0].name {
 		t.Fatalf("%+v", r)
 	}
 	close(h.scan.release)
