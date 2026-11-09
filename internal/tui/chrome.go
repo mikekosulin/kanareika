@@ -54,7 +54,7 @@ func (m *Model) fetchJumpTrees() tea.Cmd {
 	}
 	var cmds []tea.Cmd
 	for _, by := range []string{"fix", "cve"} {
-		q := "/api/tree?org=" + url.QueryEscape(m.org) + "&env=" + url.QueryEscape(m.env) + "&run=" + url.QueryEscape(m.run) + "&by=" + by
+		q := "/api/tree?org=" + url.QueryEscape(m.org) + "&env=" + url.QueryEscape(m.env) + "&run=" + url.QueryEscape(m.run) + "&by=" + by + "&levels=0" // the top rows are what the palette lists
 		cmds = append(cmds, m.get(q, func(v any) tea.Msg { return jumpTreeMsg{by, v.(*treeResp)} }, &treeResp{}))
 	}
 	return tea.Batch(cmds...)

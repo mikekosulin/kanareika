@@ -121,6 +121,27 @@ func TestByCVEAndHost(t *testing.T) {
 	}
 }
 
+// TestShallow: the top rows without their kids (counted in More), an image with its parts; the tree unchanged.
+func TestShallow(t *testing.T) {
+	fs, hosts := fleet()
+	tr := Build(fs, hosts, Opts{By: ByCVE})
+	s := tr.Shallow(0)
+	c1 := s.Nodes[slices.IndexFunc(s.Nodes, func(n *Node) bool { return n.ID == "cve:CVE-1" })]
+	if c1.Kids != nil || c1.More != 3 || len(tr.Find("cve:CVE-1").Kids) != 3 || tr.Find("cve:CVE-1").More != 0 {
+		t.Fatalf("top row: %+v", c1)
+	}
+	kids := tr.Under("cve:CVE-1", 0)
+	if labels(kids) != "pkg:openssl image:reg/api:1 image:reg/worker:5" || kids[0].Kids != nil || kids[0].More == 0 {
+		t.Fatalf("its kids: %s %+v", labels(kids), kids[0])
+	}
+	if img := kids[1]; len(img.Kids) == 0 || img.More != 0 {
+		t.Fatalf("an image keeps its parts: %+v", img)
+	}
+	if tr.Under("nope", 0) != nil || len(tr.Shallow(1).Nodes[0].Kids) == 0 {
+		t.Fatal("unknown node, or one level of kids")
+	}
+}
+
 func TestFilters(t *testing.T) {
 	fs, hosts := fleet()
 	for _, c := range []struct {

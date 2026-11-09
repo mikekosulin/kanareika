@@ -353,6 +353,8 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		if strings.HasPrefix(msg.key, m.treeKey+"#") {
 			m.nodes[msg.key] = msg.d
 		}
+	case kidsMsg:
+		m.onKids(msg)
 	case jumpTreeMsg:
 		if m.menu != nil && m.menu.kind == "jump" {
 			m.menu.trees[msg.by] = msg.d

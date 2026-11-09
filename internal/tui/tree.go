@@ -47,6 +47,7 @@ type tnode struct {
 	Preauth  bool           `json:"preauth"`
 	States   map[string]int `json:"states"`
 	Kids     []*tnode       `json:"kids"`
+	More     int            `json:"more"`   // kids not sent with the tree: fetched when the node is opened (kidsMsg)
 	Pkgs     []string       `json:"pkgs"`   // a source package's binary packages
 	NoFix    map[string]int `json:"no_fix"` // hosts per reason there is nothing to install yet
 	// a server of the Servers tree (/api/tree?by=host&all=1)
@@ -135,12 +136,20 @@ type (
 		key string
 		d   *nodeDetail
 	}
+	// kidsMsg: the kids of an opened node, which the tree came without
+	kidsMsg struct {
+		key, id string
+		d       *treeResp
+	}
 	// jumpTreeMsg: a tree of the jump palette (all fixes or all CVEs, no filters)
 	jumpTreeMsg struct {
 		by string
 		d  *treeResp
 	}
 )
+
+// hasKids: the node opens (its kids are here, or come when it is opened).
+func (n *tnode) hasKids() bool { return len(n.Kids) > 0 || n.More > 0 }
 
 // isTree: the view on screen is a tree (Servers, ToDo).
 func (m *Model) isTree() bool { return m.view == vServers || m.view == vActions }
@@ -187,6 +196,8 @@ func (m *Model) treeQuery() string {
 	v.Set("by", m.grouping())
 	if m.grouping() == "host" {
 		v.Set("all", "1") // every server, scanned or not
+	} else {
+		v.Set("levels", "0") // the top rows; a row's kids come when it is opened (by CVE all of it is >100 MB)
 	}
 	var f []string
 	for _, x := range treeFilters {
@@ -228,6 +239,9 @@ func (m *Model) sync() tea.Cmd {
 		q := "/api/tree?" + m.treeQuery()
 		return m.get(q, func(v any) tea.Msg { return treeMsg{k, v.(*treeResp)} }, &treeResp{})
 	}
+	if c := m.fetchKids(); c != nil {
+		return c
+	}
 	if m.tree == nil || !m.isTree() || !m.full && m.w < wideDetails {
 		return nil
 	}
@@ -236,6 +250,64 @@ func (m *Model) sync() tea.Cmd {
 		return nil
 	}
 	return m.fetchNode(n.ID, nil)
+}
+
+// fetchKids: the kids of the open rows that came without them (the tree is sent a level at a time).
+func (m *Model) fetchKids() tea.Cmd {
+	if m.tree == nil || !m.isTree() || m.treeKey != m.wantTree() {
+		return nil
+	}
+	var cmds []tea.Cmd
+	for _, r := range m.treeRows() {
+		n := r.n
+		k := m.treeKey + "#kids#" + n.ID
+		if !m.opened[n.ID] || n.More == 0 || len(n.Kids) > 0 || m.pending[k] != "" {
+			continue
+		}
+		m.pending[k] = k
+		id := n.ID
+		q := "/api/tree?" + m.treeQuery() + "&under=" + url.QueryEscape(id)
+		cmds = append(cmds, m.get(q, func(v any) tea.Msg { return kidsMsg{k, id, v.(*treeResp)} }, &treeResp{}))
+	}
+	return tea.Batch(cmds...)
+}
+
+// onKids: an opened node's kids into the tree; a selected node selects them too.
+func (m *Model) onKids(msg kidsMsg) {
+	delete(m.pending, msg.key)
+	if m.tree == nil || !strings.HasPrefix(msg.key, m.treeKey+"#") {
+		return
+	}
+	var find func([]*tnode) *tnode
+	find = func(ns []*tnode) *tnode {
+		for _, n := range ns {
+			if n.ID == msg.id {
+				return n
+			}
+			if x := find(n.Kids); x != nil {
+				return x
+			}
+		}
+		return nil
+	}
+	n := find(m.tree.Nodes)
+	if n == nil || len(n.Kids) > 0 {
+		return
+	}
+	n.Kids, n.More = msg.d.Nodes, 0
+	if m.sel[n.ID] {
+		var set func([]*tnode)
+		set = func(ns []*tnode) {
+			for _, k := range ns {
+				if k.Kind != "section" {
+					m.sel[k.ID] = true
+				}
+				set(k.Kids)
+			}
+		}
+		set(n.Kids)
+	}
+	m.placeCursor()
 }
 
 // fetchNode: the details of node id (then done with them, if given); nil when they are here or on the way.
@@ -455,8 +527,8 @@ func (m *Model) todoKey(s string) (tea.Cmd, bool) {
 	}
 	switch s {
 	case "right", "l":
-		if n != nil && len(n.Kids) > 0 {
-			if m.opened[n.ID] {
+		if n != nil && n.hasKids() {
+			if m.opened[n.ID] && len(n.Kids) > 0 {
 				m.move(1)
 			} else {
 				m.opened[n.ID] = true
@@ -466,7 +538,7 @@ func (m *Model) todoKey(s string) (tea.Cmd, bool) {
 		if n == nil {
 			break
 		}
-		if m.opened[n.ID] && len(n.Kids) > 0 {
+		if m.opened[n.ID] && n.hasKids() {
 			delete(m.opened, n.ID)
 			break
 		}
@@ -932,7 +1004,7 @@ func (m *Model) treeView(w, h int) []string {
 			box = sBrand.Render("◐")
 		}
 		caret := ""
-		if len(n.Kids) > 0 {
+		if n.hasKids() {
 			caret = sMuted.Render("▸")
 			if m.opened[n.ID] {
 				caret = sMuted.Render("▾")
