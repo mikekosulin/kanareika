@@ -2,6 +2,15 @@
 
 Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor version may break things; each break is listed under **Breaking** with what to do instead.
 
+## 0.5.1 — 2026-11-09
+
+### Fixed
+
+- **The TUI drew a blank screen.** Its output lost the terminal's size, so nothing was drawn and resizing did nothing.
+- **Web: the menu button on a phone did nothing.** It opens the sidebar over the page; a tap beside it, Esc or a view picked closes it.
+- **Web: collapsing in a list no longer jumps.** Collapse all in the header redraws only the list instead of the whole page; a group collapsed near the end stays where it was.
+- **Web: the sidebar's status no longer spills past its edge**; long lines end in "…".
+
 ## 0.5.0 — 2026-11-09
 
 Three places instead of ten pages: Servers, ToDo, History. What to fix, grouped the way it gets fixed; setup for a homelab, a client or a fleet; a web page and a TUI that work the same.
