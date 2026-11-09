@@ -110,10 +110,10 @@ func TestUpdateFeedsErrors(t *testing.T) {
 		}
 	}
 	// not gzip, or nowhere to write: the IP DB is skipped, the rest goes on
-	if err := download(context.Background(), u("/dbip-city-x.mmdb.gz"), filepath.Join(t.TempDir(), "x")); err == nil {
+	if err := download(context.Background(), u("/dbip-city-x.mmdb.gz"), filepath.Join(t.TempDir(), "x"), nil); err == nil {
 		t.Fatal("not gzip accepted")
 	}
-	if err := download(context.Background(), u("/epss.csv.gz"), filepath.Join(t.TempDir(), "no", "x")); err == nil {
+	if err := download(context.Background(), u("/epss.csv.gz"), filepath.Join(t.TempDir(), "no", "x"), nil); err == nil {
 		t.Fatal("missing dir accepted")
 	}
 

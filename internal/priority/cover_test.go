@@ -81,7 +81,7 @@ func TestTruncatedGzip(t *testing.T) {
 	}
 
 	dest := filepath.Join(t.TempDir(), "dbip-city.mmdb")
-	if err := download(context.Background(), srv.URL+"/cut.gz", dest); !errors.Is(err, io.ErrUnexpectedEOF) {
+	if err := download(context.Background(), srv.URL+"/cut.gz", dest, nil); !errors.Is(err, io.ErrUnexpectedEOF) {
 		t.Fatalf("truncated download: %v", err)
 	}
 	for _, p := range []string{dest, dest + ".tmp"} {

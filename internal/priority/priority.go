@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/mikekosulin/kanareika/internal/config"
+	"github.com/mikekosulin/kanareika/internal/dbget"
 	"github.com/mikekosulin/kanareika/internal/finding"
 	"github.com/mikekosulin/kanareika/internal/pyfmt"
 )
@@ -32,7 +33,11 @@ func userAgent(version string) string {
 }
 
 // SetVersion: the version the downloads announce.
-func SetVersion(version string) { UserAgent = userAgent(version) }
+// (the registry requests for trivy's DBs announce the same).
+func SetVersion(version string) {
+	UserAgent = userAgent(version)
+	dbget.UserAgent = UserAgent
+}
 
 // FeedsDir: KANAREIKA_FEEDS_DIR, else the user cache dir (the Docker image sets the variable to /data/feeds).
 func FeedsDir() string {
@@ -260,44 +265,25 @@ type Stats struct {
 // get: a response whose body must deliver data at least every `idle` (socket-timeout semantics of the Python
 // version: a large download may take long as long as it keeps flowing).
 func get(ctx context.Context, url string, idle time.Duration) (io.ReadCloser, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	timer := time.AfterFunc(idle, cancel)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	r, _, err := getSized(ctx, url, idle, nil)
+	return r, err
+}
+
+// getSized: get with the body's bytes counted by p (which learns the size the server announced; may be nil).
+// Errors read as dbget.Reason explains them ("too many requests (429)", "timed out after 30 s").
+func getSized(ctx context.Context, url string, idle time.Duration, p *dbget.Progress) (io.ReadCloser, int64, error) {
+	resp, err := dbget.GetIdle(ctx, url, http.Header{"User-Agent": {UserAgent}}, idle) //nolint:bodyclose // returned, the caller closes it
 	if err != nil {
-		cancel()
-		return nil, err
+		return nil, 0, err
 	}
-	req.Header.Set("User-Agent", UserAgent)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
-		cancel()
-		return nil, fmt.Errorf("%s: HTTP %s", url, resp.Status)
-	}
-	return &idleBody{resp.Body, timer, idle, cancel}, nil
+	n := max(resp.ContentLength, 0)
+	p.Start(n)
+	return readCloser{p.Reader(resp.Body), resp.Body}, n, nil
 }
 
-type idleBody struct {
-	io.ReadCloser
-	timer  *time.Timer
-	idle   time.Duration
-	cancel context.CancelFunc
-}
-
-func (b *idleBody) Read(p []byte) (int, error) {
-	n, err := b.ReadCloser.Read(p)
-	b.timer.Reset(b.idle)
-	return n, err
-}
-
-func (b *idleBody) Close() error {
-	b.timer.Stop()
-	b.cancel()
-	return b.ReadCloser.Close()
+type readCloser struct {
+	io.Reader
+	io.Closer
 }
 
 // writeFile: tmp + rename, so a reader never sees half a file.
@@ -342,49 +328,79 @@ func FeedsTime(s string) (time.Time, error) {
 	return time.Parse("2006-01-02T15:04:05.000000-07:00", strings.TrimSpace(s))
 }
 
-func stamp() error {
+// Stamp: KEV and EPSS are both fresh now (the "updated" file scans and the interfaces read).
+func Stamp() error {
 	updated := time.Now().UTC().Format("2006-01-02T15:04:05.000000-07:00")
 	return writeFile(filepath.Join(FeedsDir(), "updated"), []byte(updated))
 }
 
+func stamp() error { return Stamp() }
+
 // updateScores: KEV (ids and CISA's due dates) and EPSS into FeedsDir.
 func updateScores(ctx context.Context, pol *Policy) (Stats, error) {
 	var st Stats
-	dir := FeedsDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return st, err
-	}
-	if pol.KEVURL == "" || pol.EPSSURL == "" {
-		return st, errors.New("priority.yml: feeds.kev_url and feeds.epss_url are required")
-	}
-	ids, due, err := fetchKEV(ctx, pol.KEVURL)
+	n, err := FetchKEV(ctx, pol, nil)
 	if err != nil {
 		return st, err
+	}
+	st.KEV = n
+	st.EPSS, err = FetchEPSS(ctx, pol, nil)
+	return st, err
+}
+
+func feedsDirFor(pol *Policy, url string) (string, error) {
+	dir := FeedsDir()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	if pol.KEVURL == "" || pol.EPSSURL == "" || url == "" {
+		return "", errors.New("priority.yml: feeds.kev_url and feeds.epss_url are required")
+	}
+	return dir, nil
+}
+
+// FetchKEV: the CISA KEV catalog into FeedsDir (kev.json, kev_due.json), its bytes counted by p (may be nil); the
+// number of CVEs in it.
+func FetchKEV(ctx context.Context, pol *Policy, p *dbget.Progress) (int, error) {
+	dir, err := feedsDirFor(pol, pol.KEVURL)
+	if err != nil {
+		return 0, err
+	}
+	ids, due, err := fetchKEV(ctx, pol.KEVURL, p)
+	if err != nil {
+		return 0, err
 	}
 	b, _ := json.Marshal(ids)
 	if err := writeFile(filepath.Join(dir, "kev.json"), b); err != nil {
-		return st, err
+		return 0, err
 	}
 	b, _ = json.Marshal(due)
 	if err := writeFile(filepath.Join(dir, "kev_due.json"), b); err != nil {
-		return st, err
+		return 0, err
 	}
-	st.KEV = len(ids)
-	epss, err := fetchEPSS(ctx, pol.EPSSURL)
+	return len(ids), nil
+}
+
+// FetchEPSS: the EPSS scores into FeedsDir (epss.json), its bytes counted by p (may be nil); the number of scores.
+func FetchEPSS(ctx context.Context, pol *Policy, p *dbget.Progress) (int, error) {
+	dir, err := feedsDirFor(pol, pol.EPSSURL)
 	if err != nil {
-		return st, err
+		return 0, err
 	}
-	b, _ = json.Marshal(epss)
+	epss, err := fetchEPSS(ctx, pol.EPSSURL, p)
+	if err != nil {
+		return 0, err
+	}
+	b, _ := json.Marshal(epss)
 	if err := writeFile(filepath.Join(dir, "epss.json"), b); err != nil {
-		return st, err
+		return 0, err
 	}
-	st.EPSS = len(epss)
-	return st, nil
+	return len(epss), nil
 }
 
 // fetchKEV: the catalog's CVE ids, and CISA's due date of each (the earliest when listed twice).
-func fetchKEV(ctx context.Context, url string) ([]string, map[string]string, error) {
-	r, err := get(ctx, url, 60*time.Second)
+func fetchKEV(ctx context.Context, url string, p *dbget.Progress) ([]string, map[string]string, error) {
+	r, _, err := getSized(ctx, url, 60*time.Second, p)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -417,8 +433,8 @@ func fetchKEV(ctx context.Context, url string) ([]string, map[string]string, err
 }
 
 // fetchEPSS: a gzipped CSV, "#" comment lines first, then cve,epss,percentile.
-func fetchEPSS(ctx context.Context, url string) (map[string]float64, error) {
-	r, err := get(ctx, url, 120*time.Second)
+func fetchEPSS(ctx context.Context, url string, p *dbget.Progress) (map[string]float64, error) {
+	r, _, err := getSized(ctx, url, 120*time.Second, p)
 	if err != nil {
 		return nil, err
 	}
@@ -469,24 +485,59 @@ var ipdbURL = "https://download.db-ip.com/free/dbip-%s-lite-%s.mmdb.gz"
 // be fetched (this month's file may not be published yet, then last month's is tried) is missing.
 func UpdateIPDB(ctx context.Context) map[string]string {
 	out := map[string]string{}
-	dir := FeedsDir()
-	today := time.Now()
-	months := []string{today.Format("2006-01"), today.AddDate(0, 0, -today.Day()).Format("2006-01")}
 	for _, kind := range []string{"city", "asn"} {
-		for _, m := range months {
-			url := fmt.Sprintf(ipdbURL, kind, m)
-			if err := download(ctx, url, filepath.Join(dir, "dbip-"+kind+".mmdb")); err != nil {
-				continue
-			}
+		if m, _, err := FetchIPDB(ctx, kind, nil); err == nil {
 			out[kind] = m
-			break
 		}
 	}
 	return out
 }
 
-func download(ctx context.Context, url, dest string) error {
-	r, err := get(ctx, url, 300*time.Second)
+// IPDBMonth: the month of the DB-IP file of a kind in FeedsDir ("2026-11"); "" when unknown or missing.
+func IPDBMonth(kind string) string {
+	dir := FeedsDir()
+	if _, err := os.Stat(filepath.Join(dir, "dbip-"+kind+".mmdb")); err != nil {
+		return ""
+	}
+	b, _ := os.ReadFile(filepath.Join(dir, "dbip-"+kind+".month"))
+	return strings.TrimSpace(string(b))
+}
+
+// FetchIPDB: one DB-IP Lite file ("city", "asn") into FeedsDir, its bytes counted by p (may be nil). This month's
+// file, or last month's while this month's is not published; cached when this month's is there already (DB-IP
+// publishes monthly). Returns the month in place.
+func FetchIPDB(ctx context.Context, kind string, p *dbget.Progress) (month string, cached bool, err error) {
+	dir := FeedsDir()
+	today := time.Now()
+	months := []string{today.Format("2006-01"), today.AddDate(0, 0, -today.Day()).Format("2006-01")}
+	if IPDBMonth(kind) == months[0] {
+		p.Cached("already up to date (cached)")
+		return months[0], true, nil
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", false, dbget.NoSpace(err, 0)
+	}
+	var first error
+	for _, m := range months {
+		url := fmt.Sprintf(ipdbURL, kind, m)
+		err := download(ctx, url, filepath.Join(dir, "dbip-"+kind+".mmdb"), p)
+		if err == nil {
+			_ = writeFile(filepath.Join(dir, "dbip-"+kind+".month"), []byte(m+"\n"))
+			return m, false, nil
+		}
+		var se *dbget.StatusError
+		if first == nil || errors.As(first, &se) && se.Code == http.StatusNotFound {
+			first = err // the reason worth telling: not "not published yet" when something else broke first
+		}
+		if ctx.Err() != nil {
+			break
+		}
+	}
+	return "", false, first
+}
+
+func download(ctx context.Context, url, dest string, p *dbget.Progress) error {
+	r, n, err := getSized(ctx, url, 300*time.Second, p)
 	if err != nil {
 		return err
 	}
@@ -498,7 +549,7 @@ func download(ctx context.Context, url, dest string) error {
 	tmp := dest + ".tmp"
 	w, err := os.Create(tmp)
 	if err != nil {
-		return err
+		return dbget.NoSpace(err, n)
 	}
 	_, err = io.Copy(w, gz)
 	if cerr := w.Close(); err == nil {
@@ -506,7 +557,7 @@ func download(ctx context.Context, url, dest string) error {
 	}
 	if err != nil {
 		os.Remove(tmp)
-		return err
+		return dbget.NoSpace(err, n*4) // the database unpacked is about four times the download
 	}
 	return os.Rename(tmp, dest)
 }

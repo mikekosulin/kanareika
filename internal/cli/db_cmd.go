@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"io"
@@ -10,15 +11,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mikekosulin/kanareika/internal/dbbundle"
+	"github.com/mikekosulin/kanareika/internal/dbget"
 	"github.com/mikekosulin/kanareika/internal/priority"
 	"github.com/mikekosulin/kanareika/internal/trivy"
-)
-
-// Downloads, replaceable in tests (they need the network).
-var (
-	updateFeeds = priority.UpdateFeeds
-	prepareDB   = trivy.Prepare
-	fetchJavaDB = trivy.DownloadOnDemand
 )
 
 // dbParts: what `db export` packs and `db import` restores.
@@ -60,11 +55,7 @@ func (a *app) dbUpdateCmd(use string) *cobra.Command {
 			if !a.confirmDownload(ctx, yes) {
 				return fail(1, "nothing downloaded")
 			}
-			if err := a.updateDBs(ctx, cmd.OutOrStdout(), cmd.ErrOrStderr(), skipTrivy); err != nil || !java {
-				return err
-			}
-			errOut := cmd.ErrOrStderr()
-			return fetchJavaDB(ctx, func(f string, a ...any) { fmt.Fprintf(errOut, f+"\n", a...) })
+			return a.updateDBs(ctx, cmd.OutOrStdout(), cmd.ErrOrStderr(), skipTrivy, java)
 		},
 	}
 	c.Flags().BoolVar(&skipTrivy, "skip-trivy", false, "feeds only, not trivy's vulnerability DBs")
@@ -73,34 +64,44 @@ func (a *app) dbUpdateCmd(use string) *cobra.Command {
 	return c
 }
 
-// updateDBs: the feeds (KEV, EPSS, IP database), then trivy's DBs unless skipTrivy; what `db update` does, and what
-// the TUI and the web start with U / the update button.
-func (a *app) updateDBs(ctx context.Context, out, errOut io.Writer, skipTrivy bool) error {
+// updateDBs: everything at once — the IP databases, KEV, EPSS and, unless skipTrivy, trivy's DB (and the Java DB
+// when java, or when it was downloaded before); what `db update` does, and what the TUI and the web start with U /
+// the update button. Progress goes to errOut (redrawn on a terminal), the summary to out. Fails when something
+// needed is missing afterwards; a failed download whose cached copy stays in use is a warning.
+func (a *app) updateDBs(ctx context.Context, out, errOut io.Writer, skipTrivy, java bool) error {
 	pol, err := priority.LoadPolicy(a.paths)
 	if err != nil {
 		return err
 	}
-	st, err := updateFeeds(ctx, pol)
-	if err != nil {
-		return err
+	names := []string{"dbip-city", "dbip-asn", "kev", "epss"}
+	if !skipTrivy {
+		names = append(names, "db")
+		for _, d := range trivy.DBStatus() {
+			if d.Name == "java-db" && (java || !d.Updated.IsZero()) {
+				names = append(names, "java-db")
+			}
+		}
 	}
-	city, asn := st.IPDBCity, st.IPDBASN
-	if city == "" {
-		city = "none"
+	jobs := downloadJobs(pol, names)
+	errs := runDownloads(ctx, errOut, jobs)
+	if errs["kev"] == nil && errs["epss"] == nil {
+		if err := priority.Stamp(); err != nil {
+			return err
+		}
 	}
-	if asn == "" {
-		asn = "none"
-	}
+	f, _ := priority.LoadFeeds()
+	city, asn := cmp.Or(priority.IPDBMonth("city"), "none"), cmp.Or(priority.IPDBMonth("asn"), "none")
 	fmt.Fprintf(out, "KEV: %d CVEs, EPSS: %d scores, IP DB (DB-IP Lite): city %s, asn %s -> %s\n",
-		st.KEV, st.EPSS, city, asn, priority.FeedsDir())
-	if skipTrivy {
-		return nil
+		len(f.KEV), len(f.EPSS), city, asn, priority.FeedsDir())
+	if !skipTrivy {
+		printDBStatus(out, time.Now())
 	}
-	logf := func(f string, a ...any) { fmt.Fprintf(errOut, f+"\n", a...) }
-	if err := prepareDB(ctx, logf); err != nil {
+	if err := dbget.Fatal(jobs, errs); err != nil {
 		return err
 	}
-	printDBStatus(out, time.Now())
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	return nil
 }
 

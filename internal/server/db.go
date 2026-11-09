@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mikekosulin/kanareika/internal/dbget"
 	"github.com/mikekosulin/kanareika/internal/dbsize"
 	"github.com/mikekosulin/kanareika/internal/priority"
 	"github.com/mikekosulin/kanareika/internal/trivy"
@@ -29,6 +30,8 @@ type dbUpdater struct {
 	err      string
 	cancel   context.CancelFunc
 	done     chan struct{}
+	// progress of the running (or last) update, per download: what /api/db shows as "progress"
+	tracker *dbget.Tracker
 }
 
 type dbLines struct{ u *dbUpdater }
@@ -52,6 +55,8 @@ func (u *dbUpdater) start() bool {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	u.running, u.started, u.finished, u.out, u.err, u.cancel, u.done = true, u.now(), time.Time{}, nil, "", cancel, make(chan struct{})
+	u.tracker = dbget.NewTracker()
+	ctx = dbget.WithTracker(ctx, u.tracker)
 	go func() {
 		defer close(u.done)
 		err := u.fn(ctx, dbLines{u})
@@ -123,7 +128,14 @@ func (s *Server) apiDB(w http.ResponseWriter, _ *http.Request) {
 		if !u.finished.IsZero() {
 			out["finished"] = u.finished.UTC().Format(time.RFC3339)
 		}
+		t := u.tracker
 		u.mu.Unlock()
+		out["progress"] = nil
+		if t != nil {
+			if p := t.Snapshot(); len(p.Items) > 0 {
+				out["progress"] = p
+			}
+		}
 	}
 	sendJSON(w, http.StatusOK, out)
 }

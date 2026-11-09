@@ -249,6 +249,9 @@ echo "$repo" >> "$CALLS"; case $repo in ghcr.io/*) echo "FATAL stream error" >&2
 		must(t, os.WriteFile(filepath.Join(p, "metadata.json"), []byte(`{"UpdatedAt":"2026-11-01T19:08:08Z"}`), 0o644))
 	}
 	logs = nil
+	old := retryAfter
+	retryAfter = 0 // every attempt again (the memo is TestFailureMemo's)
+	t.Cleanup(func() { retryAfter = old })
 	must(t, Prepare(ctx, logf))
 	if len(logs) != 8 || !strings.HasPrefix(logs[3], "WARNING") || !strings.HasPrefix(logs[7], "WARNING") {
 		t.Fatal(logs)

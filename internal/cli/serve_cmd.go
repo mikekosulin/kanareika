@@ -36,7 +36,7 @@ func (a *app) dashboardScan(ctx context.Context, o *config.Org, req server.ScanR
 
 // updateDBFunc: `db update` as the interfaces start it (its log to the update's output).
 func (a *app) updateDBFunc(ctx context.Context, out io.Writer) error {
-	return a.updateDBs(ctx, out, out, false)
+	return a.updateDBs(ctx, out, out, false, false)
 }
 
 // envDefault: the value of an environment variable, or def when it is unset or empty.

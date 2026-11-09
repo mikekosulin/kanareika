@@ -77,6 +77,9 @@ report directory and history. An org with several environments needs --env (or -
 			if !offline && !dryRun && !a.confirmDownload(ctx, yes) {
 				return fail(1, "refusing to scan: the vulnerability DBs are not downloaded (kanareika db update, or db import and --offline)")
 			}
+			if !offline && !dryRun {
+				a.downloadFirst(ctx, cmd.ErrOrStderr())
+			}
 			s := &scan.Scanner{Paths: a.paths, Out: cmd.OutOrStdout(), Err: cmd.ErrOrStderr()}
 			rc := 0
 			for _, o := range targets {
