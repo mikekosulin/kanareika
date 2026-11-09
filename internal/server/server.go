@@ -130,8 +130,16 @@ func New(o Options) (*Server, error) {
 // webFS and localesFS: where the page and the UI strings come from (variables so tests can break them).
 var webFS, localesFS = assets.Web, assets.Locales
 
-// views: the page's views, each at its own address (/servers?org=…&env=…), all the same page; / lands on Servers.
-var views = []string{"servers", "todo", "packages", "changes", "access", "network", "health", "exceptions", "runs"}
+// views: the page's three places, each at its own address (/servers?org=…&env=…), all the same page; / lands on
+// Servers.
+var views = []string{"servers", "todo", "history"}
+
+// moved: where the earlier addresses went (their query is kept, after the target's own).
+var moved = map[string]string{
+	"/hosts": "/servers", "/packages": "/todo", "/access": "/servers?show=logins", "/network": "/servers?show=network",
+	"/health": "/servers?show=health", "/exceptions": "/todo?f=accepted", "/changes": "/history", "/runs": "/history",
+	"/setup/access": "/setup/connect",
+}
 
 // page: index.html with the /*I18N_UI*/{} placeholder replaced by the UI strings of every language, encoded
 // as Python's json.dumps did ("</" escaped so a string cannot close the script tag).
@@ -199,14 +207,19 @@ func (s *Server) Handler() http.Handler {
 	for _, v := range views {
 		r.Get("/"+v, index)
 	}
-	// the Hosts table became Servers
-	r.Get("/hosts", func(w http.ResponseWriter, r *http.Request) {
-		to := "/servers"
-		if r.URL.RawQuery != "" {
-			to += "?" + r.URL.RawQuery
-		}
-		http.Redirect(w, r, to, http.StatusMovedPermanently)
-	})
+	for from, to := range moved {
+		r.Get(from, func(w http.ResponseWriter, r *http.Request) {
+			u := to
+			if q := r.URL.RawQuery; q != "" {
+				if strings.Contains(u, "?") {
+					u += "&" + q
+				} else {
+					u += "?" + q
+				}
+			}
+			http.Redirect(w, r, u, http.StatusMovedPermanently)
+		})
+	}
 	r.Get("/classic", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "text/html; charset=utf-8", s.classic) })
 	for path, fn := range map[string]func(query) (any, error){
 		"/api/orgs": s.apiOrgs, "/api/env": s.apiEnv, "/api/run": s.apiRun, "/api/log": s.apiLog,

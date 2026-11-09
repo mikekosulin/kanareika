@@ -920,7 +920,7 @@ async function post(path, data) {
 /* ---------- state ---------- */
 const S = {
   orgs: [], org: store.get("org", ""), env: store.get("env", ""), run: "current", runs: [],
-  view: "servers", by: store.get("by", "fix"), flt: new Set(), q: "", open: new Set(), cur: null, stack: [], sel: new Set(),
+  view: "servers", lens: "priorities", accepted: false, by: store.get("by", "fix"), flt: new Set(), q: "", open: new Set(), cur: null, stack: [], sel: new Set(),
   tree: null, theme: store.get("theme", "system"), scans: false, db: null, jobs: [], setup: null,
 };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -943,8 +943,7 @@ darkMQ.addEventListener("change", applyTheme);
 applyTheme();
 
 /* ---------- sidebar ---------- */
-const NAV = [["servers", "Servers", "server"], ["todo", "ToDo", "list"], ["packages", "Packages", "box"], ["changes", "Changes", "diff"], ["access", "Access", "key"],
-  ["network", "Network", "globe"], ["health", "Health", "heart"], ["exceptions", "Exceptions", "shield"], "-", ["runs", "Runs and log", "clock"]];
+const NAV = [["servers", "Servers", "server"], ["todo", "ToDo", "list"], ["history", "History", "clock"]];
 const isTree = (v) => v === "servers" || v === "todo";
 const orgOf = () => S.orgs.find((o) => o.id === S.org);
 const envOf = () => orgOf()?.envs.find((e) => e.env === S.env);
@@ -957,15 +956,9 @@ const viewHref = (v) => "/" + v + "?" + qs({ org: S.org, env: S.env });
 // the number beside a view: what needs a look there (from the run shown, once loaded)
 function navCount(v) {
   const rd = RD.key === [S.org, S.env, S.run].join("|") ? RD.data : null;
-  if (v === "todo") { const f = rd?.totals?.fixes ?? S.tree?.fixes; return f != null ? `<span class="n hot">${f}</span>` : ""; }
   if (v === "servers") return envOf() ? `<span class="n">${envOf().hosts}</span>` : "";
-  if (!rd) return "";
-  const n = v === "packages" ? (rd.plan || []).filter((p) => p.priority && p.priority !== "P4").length || ""
-    : v === "changes" ? (rd.new ? `+${rd.new.rows.length} −${rd.resolved?.rows.length || 0}` : "")
-    : v === "network" ? Object.values(rd.exposure || {}).filter((e) => e.listen.some((x) => x.public)).length || ""
-    : v === "health" ? (rd.other || []).filter((f) => f.kind === "health").length || ""
-    : v === "exceptions" ? (rd.exceptions || []).length || "" : "";
-  return n === "" ? "" : `<span class="n">${n}</span>`;
+  if (v === "todo") { const f = rd?.totals?.fixes ?? S.tree?.fixes; return f != null ? `<span class="n hot">${f}</span>` : ""; }
+  return "";
 }
 function renderSide() {
   const o = orgOf(), e = envOf();
@@ -1064,7 +1057,7 @@ function todoShell() {
       <div class="bar2">
         <div class="seg2" role="group" aria-label="${t("Group by")}"><span class="lbl">${t("group")}</span>${[["host", "server"], ["fix", "fix"], ["cve", "CVE"]].map(([k, l]) => `<button data-by="${k}" aria-pressed="${S.by === k}">${t(l)}</button>`).join("")}</div>
         <label class="search">${icon("search")}<span class="sr">${t("Filter")}</span><input id="q" placeholder="${t("Package, CVE, host or group")}" value="${esc(S.q)}"><kbd>/</kbd></label>
-        <div class="chips">${FILTERS.map(([k, l]) => `<button class="chip" data-flt="${k}" aria-pressed="${S.flt.has(k)}">${t(l)}</button>`).join("")}</div>
+        <div class="chips">${S.accepted ? "" : FILTERS.map(([k, l]) => `<button class="chip" data-flt="${k}" aria-pressed="${S.flt.has(k)}">${t(l)}</button>`).join("")}<button class="chip" data-acc aria-pressed="${!!S.accepted}">${t("accepted")}</button></div>
       </div>
       <div class="scroll" id="scroll"><div class="thead"><button class="tw" data-${S.open.size ? "collapse" : "expand"} aria-expanded="${S.open.size > 0}" title="${S.open.size ? t("Collapse all") : t("Expand all")}">${icon("chev")}</button><span></span><span>${t("Pri")}</span>
         <span>${S.by === "fix" ? t("Fix") : S.by === "cve" ? t("Vulnerability") : t("Group / host")}</span><span class="c-h">${t("Hosts")}</span><span class="num c-cve">CVE</span><span class="num c-ep">EPSS</span><span class="c-fl">${t("Flags")}</span><span class="c-st">${t("State")}</span><span class="dd">${t("Due")}</span></div>
@@ -1081,6 +1074,32 @@ function drawTree() {
   drawSelbar();
   renderSide();
 }
+// accepted risks: the org file's exceptions, until when, whose, why
+const EXC_COLS = () => [
+  { l: "", w: "28px", v: (x) => { const e = x.exception || {}; return e.fix_available || e.expired ? `<span class="mk bad" title="${e.expired ? t("expired: back in the plan") : t("fix in the repositories: back in the plan")}">!</span>` : `<span class="mk ok" title="${t("accepted")}">✓</span>`; } },
+  { l: t("Package"), w: "minmax(0, .8fr)", c: "pk", v: (x) => esc(x.pkg), s: (x) => x.pkg },
+  { l: t("Server"), w: "minmax(84px, .7fr)", v: (x) => hcell(x.host), s: (x) => x.host },
+  { l: "ID", w: "minmax(0, .8fr)", k: 3, c: "m d", v: (x) => esc(x.id), s: (x) => x.id },
+  { l: t("Until"), w: "96px", c: "m", v: (x) => `<span class="${x.exception?.expired ? "bad" : ""}">${esc(x.exception?.review_by)}</span>`, s: (x) => x.exception?.review_by || "" },
+  { l: t("Who"), w: "minmax(0, .5fr)", k: 2, c: "d", v: (x) => esc(x.exception?.owner), s: (x) => x.exception?.owner || "" },
+];
+async function loadAccepted() {
+  let rd; try { rd = await loadRunData(); } catch (e) { if (e.status === 404) { $("#view").innerHTML = noRuns(); return; } toast(e.message); return; }
+  if (S.view !== "todo" || !S.accepted) return;
+  const n = drawAccepted();
+  if (n && !matchMedia("(max-width: 1240px)").matches) { VS.sel = VTKEY(VLIST[0]); markSel(); vshow({ ...VLIST[0], kind: "exc" }, false, true); }
+  else $("#detail").innerHTML = "";
+}
+function drawAccepted() {
+  const rd = RD.data, ex = rd?.exceptions || [], q = S.q.trim().toLowerCase();
+  const rows = ex.filter((f) => !q || `${f.host} ${f.pkg} ${f.id} ${f.exception?.owner || ""} ${f.exception?.reason || ""}`.toLowerCase().includes(q));
+  document.querySelector(".thead")?.setAttribute("hidden", "");
+  $("#tree").innerHTML = rows.length ? vtable(EXC_COLS(), rows, (f) => `${f.host}/${f.id}`)
+    : `<div class="empty"><h3>${ex.length ? t("Nothing matches") : t("No accepted risks")}</h3>${ex.length ? "" : t("They live in {section} of the organization file.", { section: "<code>exceptions</code>" })}</div>`;
+  $("#sub").innerHTML = t("{n} accepted · {e} expired", { n: ex.length, e: ex.filter((f) => f.exception?.expired || f.exception?.fix_available).length });
+  $("#counts").innerHTML = ""; $("#hidden").innerHTML = ""; $("#selbar").innerHTML = "";
+  return rows.length;
+}
 function drawSelbar() {
   const n = S.sel.size;
   $("#selbar").innerHTML = `<div class="selbar ${n ? "on" : ""}"><div class="what"><b>${t("{n} selected", { n })}</b></div>
@@ -1088,6 +1107,7 @@ function drawSelbar() {
 }
 async function loadTree() {
   if (!S.org || !S.env) return;
+  if (S.view === "todo" && S.accepted) return loadAccepted();
   try {
     S.tree = await api("/api/tree?" + qs({ ...scope(), by: S.by, f: [...S.flt].join(","), q: S.q, backported: S.backport ? 1 : "" }));
   } catch (e) {
@@ -1196,10 +1216,10 @@ const FOUND = { v: null };
 async function discover() { if (!FOUND.v) { try { FOUND.v = await api("/api/setup/discover"); } catch { FOUND.v = { user: "", keys: [], agent_keys: 0, hosts: [] }; } } return FOUND.v; }
 function freeId(base) { let id = base, i = 2; while (S.orgs.some((o) => o.id === id)) id = base + "-" + i++; return id; }
 /* ---------- setup: one window, as on the banner. Steps at /setup, /setup/access, /setup/scan ---------- */
-const STEP_PATH = { 1: "/setup", 2: "/setup/access", 3: "/setup/scan" };
+const STEP_PATH = { 1: "/setup", 2: "/setup/connect", 3: "/setup/scan" };
 function setupURL(s) { const p = STEP_PATH[s.step] || "/setup"; if (location.pathname !== p) history.replaceState(null, "", p + location.search); }
 function stepTabs(s) {
-  return `<nav class="stabs" aria-label="${t("Setup steps")}">${["Servers", "Access", "First scan"].map((l, i) => {
+  return `<nav class="stabs" aria-label="${t("Setup steps")}">${["Servers", "Connect", "First scan"].map((l, i) => {
     const n = i + 1, st = n < s.step ? "done" : n === s.step ? "on" : "";
     return (i ? `<i aria-hidden="true">›</i>` : "") + `<span class="${st}" ${n === s.step ? 'aria-current="step"' : ""}>${n < s.step ? "✓ " : ""}${t(l)}</span>`;
   }).join("")}</nav>`;
@@ -1303,7 +1323,7 @@ function serversForm(s) {
     <div class="q"><h3>${t("Login")}</h3>${login}</div>
     <label class="chk"><input type="checkbox" name="confirmed" ${f.confirmed ? "checked" : ""}><span>${t("I’m allowed to audit these servers")}</span></label>
     <div id="formerr"></div>
-    <div class="go"><button class="btn primary" type="submit">${t("Check access")}</button></div>
+    <div class="go"><button class="btn primary" type="submit">${t("Check connection")}</button></div>
   </form>`;
 }
 // editor: line numbers | the text | what each line becomes, on the same row
@@ -1424,7 +1444,7 @@ function checkView(s) {
   const actions = waiting.length ? "" : ok.length
     ? `<button class="btn primary" data-setup-scan>${bad.length ? t("Scan the {n} that answered", { n: ok.length }) : t("Start the first scan")}</button>${bad.length ? `<button class="btn" data-setup-recheck>${t("Check again")}</button>` : ""}${dl}`
     : `<button class="btn primary" data-setup-recheck>${t("Check again")}</button><button class="btn ghost" data-setup-back>${t("Back")}</button>`;
-  return `<div class="q"><h3>${t("Checking access")}</h3><p class="qn">${t("One login per server, {cmd}, log out. Nothing is changed.", { cmd: "<code>uname -sr</code>" })}</p></div>
+  return `<div class="q"><h3>${t("Connecting")}</h3><p class="qn">${t("One login per server, {cmd}, log out. Nothing is changed.", { cmd: "<code>uname -sr</code>" })}</p></div>
     <div class="groups">${groups.join("")}${skipped}</div>
     ${s.file ? `<p class="qn">${t("Saved in {file}", { file: `<code class="copyable" data-copy-text="${esc(s.file)}" title="${esc(s.file)}">${esc(s.file.split("/").pop())}</code>` })}</p>` : ""}
     <div class="go">${actions}</div>`;
@@ -1480,7 +1500,7 @@ async function pollJobs() {
   banner();
   if (running) polling = setTimeout(pollJobs, 1500);
   else if (S.wasRunning) { S.wasRunning = false; await loadOrgs(); await loadEnv(); RD.key = ""; if (S.view === "todo") loadTree(); else if (S.view === "servers") loadServers(); else if (isData(S.view)) loadData(); }
-  if (S.view === "runs" && $("#vtable")) drawData(RD.data, true);
+  if (S.view === "history" && $("#vtable")) drawData(RD.data, true);
   S.wasRunning ||= running;
 }
 function banner() {
@@ -1492,7 +1512,7 @@ function banner() {
 /* ---------- data views: Hosts, Changes, Access, Network, Health, Exceptions, Runs and log. One run's data
    (/api/run), the environment (/api/env), a run's log (/api/log), firewall rules (/api/hostfile), address owners
    (/api/ipinfo). The same content as the TUI's views and its host card (and MCP get_host). ---------- */
-const DATA_VIEWS = ["packages", "changes", "access", "network", "health", "exceptions", "runs"];
+const DATA_VIEWS = ["history"];
 const isData = (v) => DATA_VIEWS.includes(v);
 const RD = { key: "", data: null };
 const VS = { q: "", flt: new Set(), tab: {}, sort: {}, sel: "", all: false, stack: [], item: null };
@@ -1573,182 +1593,8 @@ async function loadRunData() {
 /* ---- the views: header line, sub-lists, filters, columns. Column: l label, w width, k level (1 always, 2 from 620px,
    3 from 900px of list), c class, v cell, s sort value (d0 -1: descending first) ---- */
 const VIEWS = {
-  packages: {
-    title: "Packages",
-    chips: [["ready", "fix ready"], ["kev", "KEV"], ["rce", "pre-auth RCE"], ["p4", "+ P4"]],
-    sub: (rd, xs) => t("{n} to update on {h} servers · {c} CVE", { n: fmtN(xs.filter((p) => p.priority !== "P4").length), h: new Set(xs.map((p) => p.host)).size, c: fmtN((rd.totals || rd.plan_counts)?.cves) }),
-    right: (rd) => ["P1", "P2", "P3", "P4"].map((p) => `<span class="cnt"><i style="background:var(--${p.toLowerCase()})"></i><b>${fmtN((rd.totals || rd.plan_counts)?.[p])}</b> ${p}</span>`).join(""),
-    items: (rd) => rd.plan || [],
-    flt: (x, f) => (f.has("p4") || x.priority !== "P4") && (!f.has("ready") || x.fix_state === "available") && (!f.has("kev") || x.kev) && (!f.has("rce") || x.preauth_rce),
-    text: (x) => `${x.host} ${x.pkg} ${x.target} ${(x.cve_top || []).join(" ")}`,
-    cols: () => [
-      { l: t("Pri"), w: "30px", v: (x) => (x.priority ? `<span class="pb ${x.priority}">${x.priority}</span>` : ""), s: (x) => x.priority || "P9" },
-      { l: t("Server"), w: "minmax(84px, .7fr)", v: (x) => hcell(x.host), s: (x) => x.host },
-      { l: t("Package"), w: "minmax(0, 1fr)", v: (x) => `<span class="pk">${esc(x.pkg)}</span>${x.kev || x.preauth_rce ? `<span class="flags">${flags({ kev: x.kev, rce: x.preauth_rce })}</span>` : ""}`, s: (x) => x.pkg },
-      { l: t("Where"), w: "minmax(0, .6fr)", k: 3, c: "d", v: (x) => `<span title="${esc(x.target)}">${esc(whereTxt(x.target))}</span>`, s: (x) => x.target },
-      { l: t("Installed"), w: "minmax(0, .9fr)", k: 3, c: "m d", v: (x) => `<span title="${esc(x.installed)}">${esc(x.installed)}</span>` },
-      { l: t("Update to"), w: "minmax(0, .9fr)", k: 2, c: "m", v: (x) => fixTxt(x) },
-      { l: "CVE", w: "48px", k: 2, c: "r", v: (x) => fmtN(x.cves), s: (x) => x.cves, d0: -1 },
-      { l: t("Due"), w: "72px", c: "r", v: (x) => `<span class="${x.due && days(x.due) < 0 && x.priority !== "P4" ? "late" : "d"}" title="${esc(x.due)}">${esc(dueText(x.due))}</span>`, s: (x) => x.due || "9" },
-    ],
-    key: (x) => `${x.host}/${x.target}/${x.pkg}`, open: (x) => ({ kind: "host", name: x.host }),
-  },
-  changes: {
-    title: "Changes",
-    tabs: [["all", "All"], ["new", "New"], ["resolved", "Resolved"]],
-    sub: (rd) => (rd.new ? t("vs. the full run {run} · hosts scanned in both", { run: runLabel(rd.prev) }) : ""),
-    right: (rd) => (rd.new ? `<span class="cnt"><b class="bad">+${fmtN(rd.new.rows.length)}</b> ${fmtN(rd.new.total)} CVE</span><span class="cnt"><b class="ok">−${fmtN(rd.resolved?.rows.length)}</b> ${fmtN(rd.resolved?.total)} CVE</span>` : ""),
-    empty: (rd) => (rd.new ? "" : partialRun(rd.meta) ? t("A partial run is not compared with full runs.") : t("No previous full run.")),
-    items: (rd, tab) => [...(tab !== "resolved" ? (rd.new?.rows || []).map((r) => ({ ...r, plus: true })) : []), ...(tab !== "new" ? (rd.resolved?.rows || []).map((r) => ({ ...r, plus: false })) : [])],
-    text: (x) => `${x.host} ${x.pkg} ${x.target} ${(x.ids || []).join(" ")}`,
-    cols: () => [
-      { l: "", w: "12px", v: (x) => (x.plus ? `<span class="sgn bad" title="${t("New")}">+</span>` : `<span class="sgn ok" title="${t("Resolved")}">−</span>`), s: (x) => (x.plus ? 0 : 1) },
-      { l: t("Pri"), w: "30px", v: (x) => (x.priority ? `<span class="pb ${x.priority}">${x.priority}</span>` : ""), s: (x) => x.priority || "P9" },
-      { l: t("Host"), w: "minmax(84px, .7fr)", v: (x) => hcell(x.host), s: (x) => x.host },
-      { l: t("Package / check"), w: "minmax(0, 1.2fr)", v: (x) => `<span class="pk" title="${esc((x.ids || []).join(", "))}">${esc(x.pkg)}</span>${x.kev || x.rce ? `<span class="flags">${flags(x)}</span>` : ""}`, s: (x) => x.pkg },
-      { l: t("Where"), w: "minmax(0, .8fr)", k: 3, c: "d", v: (x) => `<span title="${esc(x.target)}">${esc(whereTxt(x.target))}</span>`, s: (x) => x.target },
-      { l: "CVE", w: "52px", k: 2, c: "r", v: (x) => fmtN(x.count), s: (x) => x.count, d0: -1 },
-    ],
-    key: (x) => `${x.plus ? "+" : "-"}${x.host}/${x.pkg}/${x.target}`, open: (x) => ({ kind: "host", name: x.host }),
-  },
-  access: {
-    title: "Access",
-    tabs: [["hosts", "Hosts"], ["logins", "Logins"], ["keys", "Keys"], ["attackers", "Password guessing"]],
-    sub: (rd) => { const A = rd.access || {}, hs = Object.keys(A); return hs.length ? t("{n} hosts · password login on {p} · {f} failed logins, 30 d", { n: hs.length, p: hs.filter((h) => A[h].password_auth).length, f: fmtN(hs.reduce((n, h) => n + (A[h].logins?.failed_total || 0), 0)) }) : ""; },
-    right: (rd) => {
-      const daily = {}; Object.values(rd.access || {}).forEach((a) => Object.entries(a.logins?.failed_daily || {}).forEach(([d, n]) => { daily[d] = (daily[d] || 0) + n; }));
-      const end = new Date(); end.setUTCHours(0, 0, 0, 0);
-      const ds = Array.from({ length: 30 }, (_, i) => new Date(end - (29 - i) * 864e5).toISOString().slice(0, 10)), vs = ds.map((d) => daily[d] || 0), max = Math.max(1, ...vs);
-      if (!vs.some(Boolean)) return "";
-      return `<div class="spkw"><span>${t("failed, 30 d")}</span><span class="spk" role="img" aria-label="${t("failed, 30 d")}">${vs.map((v, i) => `<i class="${v ? "" : "z"}" style="height:${v ? Math.max(8, (v / max) * 100) : 4}%" title="${ds[i]}: ${fmtN(v)}"></i>`).join("")}</span></div>`;
-    },
-    note: (rd) => deniedNote(rd.access),
-    items: (rd, tab) => {
-      const A = rd.access || {}, hs = Object.keys(A).sort();
-      if (tab === "logins") return hs.flatMap((h) => (A[h].logins?.accepted || []).map((x) => ({ host: h, ...x }))).sort((a, b) => (b.last || "").localeCompare(a.last || ""));
-      if (tab === "keys") {
-        const keys = {}; hs.forEach((h) => (A[h].keys || []).forEach((k) => { (keys[k.fp] ||= { ...k, kind: "key", where: [] }).where.push(`${k.user}@${h}`); }));
-        return Object.values(keys).sort((a, b) => b.where.length - a.where.length);
-      }
-      if (tab === "attackers") {
-        const by = {};
-        hs.forEach((h) => { const lg = A[h].logins || {}; (lg.attackers || (lg.failed_top_ips || []).map(([ip, n]) => ({ ip, n, users: [] }))).forEach((x) => {
-          const a = (by[x.ip] ||= { kind: "ip", ip: x.ip, n: 0, first: x.first, last: x.last, users: {}, hosts: [] });
-          a.n += x.n; a.hosts.push(h);
-          if (x.first && (!a.first || x.first < a.first)) a.first = x.first;
-          if (x.last && (!a.last || x.last > a.last)) a.last = x.last;
-          (x.users || []).forEach(([u, n]) => { a.users[u] = (a.users[u] || 0) + n; });
-        }); });
-        return Object.values(by).map((a) => ({ ...a, users: Object.entries(a.users).sort((x, y) => y[1] - x[1]) })).sort((a, b) => b.n - a.n);
-      }
-      return hs.map((h) => ({ host: h, ...A[h] }));
-    },
-    text: (x) => [x.host, x.user, x.ip, x.comment, x.fp, ...(x.where || []), ...(x.hosts || [])].filter(Boolean).join(" "),
-    cols: (tab) => tab === "logins" ? [
-      { l: t("Host"), w: "minmax(84px, .8fr)", v: (x) => hcell(x.host), s: (x) => x.host },
-      { l: t("User"), w: "minmax(60px, .6fr)", c: "m", v: (x) => esc(x.user), s: (x) => x.user },
-      { l: t("From"), w: "minmax(0, 1.2fr)", k: 2, v: (x) => ipcell(x.ip), s: (x) => x.ip },
-      { l: t("How"), w: "72px", k: 3, v: (x) => (x.method === "publickey" ? `<span class="d">${t("key")}</span>` : stl("wn", t("password"))), s: (x) => x.method },
-      { l: t("Times"), w: "52px", k: 3, c: "r", v: (x) => fmtN(x.count), s: (x) => x.count, d0: -1 },
-      { l: t("Last"), w: "112px", c: "m d", v: (x) => `<span title="${t("first")}: ${esc(tsShort(x.first))}">${esc(tsShort(x.last))}</span>`, s: (x) => x.last || "", d0: -1 },
-    ] : tab === "keys" ? [
-      { l: t("Key"), w: "minmax(120px, .8fr)", c: "m", v: (x) => `<span title="${esc(x.fp)}">${esc(x.type.replace("ssh-", "").replace("ecdsa-sha2-", ""))} ${esc(x.fp.slice(7, 15))}</span>`, s: (x) => x.fp },
-      { l: t("Comment"), w: "minmax(0, 1fr)", k: 2, c: "d", v: (x) => (x.comment ? esc(x.comment) : `<span class="z">—</span>`), s: (x) => x.comment || "" },
-      { l: t("Where"), w: "minmax(0, 1.4fr)", k: 3, c: "m d", v: (x) => esc(x.where.join(", ")) },
-      { l: t("Hosts"), w: "52px", c: "r", v: (x) => fmtN(new Set(x.where.map((w) => w.split("@")[1])).size), s: (x) => x.where.length, d0: -1 },
-    ] : tab === "attackers" ? [
-      { l: t("Address"), w: "minmax(110px, 1.1fr)", v: (x) => ipcell(x.ip), s: (x) => x.ip },
-      { l: t("Attempts"), w: "72px", c: "r", v: (x) => fmtN(x.n), s: (x) => x.n, d0: -1 },
-      { l: t("First"), w: "112px", k: 3, c: "m d", v: (x) => esc(tsShort(x.first)), s: (x) => x.first || "" },
-      { l: t("Last"), w: "84px", k: 2, c: "d", v: (x) => `<span title="${esc(tsShort(x.last))}">${esc(ago(x.last))}</span>`, s: (x) => x.last || "", d0: -1 },
-      { l: t("Logins tried"), w: "minmax(0, .8fr)", k: 3, c: "m d", v: (x) => esc(x.users.slice(0, 4).map(([u]) => u).join(" ")) },
-      { l: t("Hosts"), w: "52px", c: "r", v: (x) => fmtN(x.hosts.length), s: (x) => x.hosts.length, d0: -1 },
-    ] : [
-      { l: t("Host"), w: "minmax(96px, 1fr)", v: (x) => hcell(x.host), s: (x) => x.host },
-      { l: t("Password"), w: "72px", v: (x) => { const p = pwState(x); return stl(p[0], p[1], p[2]); }, s: (x) => (x.password_auth ? 0 : 1) },
-      { l: "root", w: "84px", k: 2, v: (x) => (x.sshd?.permitrootlogin === "yes" ? stl("bad", t("yes")) : `<span class="d">${esc(rootTxt(x.sshd?.permitrootlogin))}</span>`), s: (x) => x.sshd?.permitrootlogin || "" },
-      { l: t("With password"), w: "minmax(0, .7fr)", k: 3, c: "m", v: (x) => (x.users_with_password == null ? `<span class="z">?</span>` : x.users_with_password.length ? `<span class="bad">${esc(x.users_with_password.join(", "))}</span>` : `<span class="z">—</span>`) },
-      { l: t("Keys"), w: "44px", k: 3, c: "r", v: (x) => fmtN((x.keys || []).length), s: (x) => (x.keys || []).length, d0: -1 },
-      { l: t("Logins"), w: "56px", k: 3, c: "r", v: (x) => fmtN((x.logins?.accepted || []).reduce((n, a) => n + a.count, 0)), s: (x) => (x.logins?.accepted || []).reduce((n, a) => n + a.count, 0), d0: -1 },
-      { l: t("Failed"), w: "64px", c: "r", v: (x) => (x.logins?.failed_total ? fmtN(x.logins.failed_total) : `<span class="z">0</span>`), s: (x) => x.logins?.failed_total || 0, d0: -1 },
-      { l: t("Attackers"), w: "72px", k: 3, c: "r", v: (x) => fmtN(x.logins?.failed_ips), s: (x) => x.logins?.failed_ips || 0, d0: -1 },
-      { l: t("Last attack"), w: "84px", k: 2, c: "d", v: (x) => { const l = lastAttack(x.logins); return l ? `<span title="${esc(tsShort(l))}">${esc(ago(l))}</span>` : `<span class="z">—</span>`; }, s: (x) => lastAttack(x.logins), d0: -1 },
-    ],
-    key: (x) => x.fp || (x.kind === "ip" ? "ip:" + x.ip : x.ip ? `${x.host}/${x.user}/${x.ip}` : x.host),
-    open: (x) => (x.kind === "key" || x.kind === "ip" ? x : { kind: "host", name: x.host }),
-  },
-  network: {
-    title: "Network",
-    tabs: [["hosts", "Hosts"], ["ports", "Ports"]],
-    chips: [["outside", "open to the outside"], ["nofw", "no filtering"]],
-    sub: (rd) => { const E = rd.exposure || {}, hs = Object.keys(E); const open = hs.filter((h) => E[h].listen.some((x) => x.public)); return hs.length ? t("{n} hosts · {o} open to the outside · {f} without filtering", { n: hs.length, o: open.length, f: hs.filter((h) => fwState(E[h].firewall)[0] === "bad").length }) : ""; },
-    note: (rd) => deniedNote(rd.exposure),
-    items: (rd, tab) => { const E = rd.exposure || {}, hs = Object.keys(E).sort(); return tab === "ports" ? hs.flatMap((h) => E[h].listen.map((x) => ({ host: h, fw: E[h].firewall, ...x }))) : hs.map((h) => ({ host: h, ...E[h], fw: E[h].firewall })); },
-    flt: (x, f) => (!f.has("outside") || (x.listen ? x.listen.some((y) => y.public) : x.public)) && (!f.has("nofw") || fwState(x.fw)[0] === "bad"),
-    text: (x) => [x.host, x.process, x.port, x.addr, ...(x.public && Array.isArray(x.public) ? x.public : [])].filter((v) => v != null).join(" "),
-    cols: (tab) => tab === "ports" ? [
-      { l: t("Host"), w: "minmax(84px, .8fr)", v: (x) => hcell(x.host), s: (x) => x.host },
-      { l: t("Port"), w: "52px", c: "r", v: (x) => `<b>${x.port}</b>`, s: (x) => x.port },
-      { l: "proto", w: "44px", k: 3, c: "d", v: (x) => esc(x.proto), s: (x) => x.proto },
-      { l: t("Address"), w: "minmax(0, 1fr)", k: 2, v: (x) => (x.addr && !["0.0.0.0", "*", "::", "::1"].includes(x.addr) && !x.addr.startsWith("127.") ? ipcell(x.addr) : `<span class="m">${esc(x.addr || "*")}</span>`), s: (x) => x.addr },
-      { l: t("Process"), w: "minmax(0, .8fr)", c: "m", v: (x) => (x.process ? esc(x.process) : `<span class="z">?</span>`), s: (x) => x.process || "" },
-      { l: t("Access"), w: "76px", v: (x) => (x.local_only ? `<span class="z">${t("local")}</span>` : x.public ? stl("wn", t("outside")) : `<span class="d">${t("internal")}</span>`), s: (x) => (x.public ? 0 : x.local_only ? 2 : 1) },
-    ] : [
-      { l: t("Host"), w: "minmax(96px, .9fr)", v: (x) => hcell(x.host), s: (x) => x.host },
-      { l: t("Public IP"), w: "minmax(0, 1fr)", k: 2, c: "m", v: (x) => (x.public.length ? x.public.map((ip) => (x.unlisted_public.includes(ip) ? `<span class="bad" title="${t("not in the organization config")}">${esc(ip)}</span>` : esc(ip))).join(" ") : `<span class="z" title="${t("no public addresses on the interfaces")}">NAT</span>`) },
-      { l: t("Open to the outside"), w: "minmax(0, 1.1fr)", c: "m", v: (x) => { const ps = [...new Set(x.listen.filter((y) => y.public).map((y) => y.port))].sort((a, b) => a - b); return ps.length ? `<span title="${esc(ps.join(", "))}">${esc(ps.join(" "))}</span>` : `<span class="z">—</span>`; }, s: (x) => x.listen.filter((y) => y.public).length, d0: -1 },
-      { l: t("Firewall"), w: "minmax(0, .8fr)", v: (x) => { const f = fwState(x.fw); return stl(f[0], f[1], f[2]); }, s: (x) => fwState(x.fw)[0] },
-    ],
-    key: (x) => (x.port != null ? `${x.host}/${x.proto}/${x.addr}/${x.port}` : x.host), open: (x) => ({ kind: "host", name: x.host }),
-  },
-  health: {
-    title: "Health",
-    chips: [["disk", "disk ≥ 85%"], ["units", "failed units"], ["time", "clock off"]],
-    sub: (rd) => { const H = rd.health || {}, hs = Object.keys(H); return hs.length ? t("{n} hosts · disk ≥ 85%: {d} · failed units: {u} · clock off: {c}", { n: hs.length, d: hs.filter((h) => (maxUse(H[h].disks)?.use || 0) >= 85).length, u: hs.filter((h) => H[h].failed_units?.length).length, c: hs.filter((h) => timeState(H[h])[0] !== "ok").length }) : ""; },
-    note: (rd) => deniedNote(rd.health),
-    items: (rd) => { const H = rd.health || {}, hs = Object.keys(H).sort(), tzs = hs.map((h) => H[h].time?.timezone).filter(Boolean); const cnt = {}; tzs.forEach((z) => { cnt[z] = (cnt[z] || 0) + 1; }); const main = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0]; return hs.map((h) => ({ host: h, ...H[h], tzMain: main })); },
-    flt: (x, f) => (!f.has("disk") || (maxUse(x.disks)?.use || 0) >= 85 || (maxUse(x.inodes)?.use || 0) >= 85) && (!f.has("units") || x.failed_units?.length) && (!f.has("time") || timeState(x)[0] !== "ok"),
-    text: (x) => x.host,
-    cols: () => [
-      { l: t("Host"), w: "minmax(96px, 1fr)", v: (x) => hcell(x.host), s: (x) => x.host },
-      { l: t("Disk"), w: "minmax(132px, .9fr)", v: (x) => { const d = maxUse(x.disks); return d ? `<span title="${esc((x.disks || []).map((r) => `${r.mount} ${r.use}%`).join("\n"))}">${meter(d.use, ` <span class="z">${esc(d.mount)}</span>`)}</span>` : "—"; }, s: (x) => maxUse(x.disks)?.use || 0, d0: -1 },
-      { l: "inode", w: "52px", k: 3, c: "r", v: (x) => { const i = maxUse(x.inodes); return i ? `<span class="${i.use >= 85 ? "wn" : ""}">${i.use}%</span>` : "—"; }, s: (x) => maxUse(x.inodes)?.use || 0, d0: -1 },
-      { l: t("Memory free"), w: "84px", k: 2, c: "r", v: (x) => (x.mem ? `<span title="${esc(t("{avail} / {total} MB free", { avail: fmtN(x.mem.available_mb), total: fmtN(x.mem.total_mb) }))}">${Math.round((100 * x.mem.available_mb) / x.mem.total_mb)}%</span>` : "—"), s: (x) => (x.mem ? x.mem.available_mb / x.mem.total_mb : 1) },
-      { l: "load", w: "64px", k: 3, c: "r", v: (x) => (x.load?.load15 != null ? `${x.load.load15}<span class="z">/${x.load.cpus}</span>` : "—"), s: (x) => (x.load ? x.load.load15 / (x.load.cpus || 1) : 0), d0: -1 },
-      { l: t("Units"), w: "48px", k: 3, c: "r", v: (x) => (x.failed_units?.length ? `<span class="wn" title="${esc(x.failed_units.join("\n"))}">${x.failed_units.length}</span>` : `<span class="z">—</span>`), s: (x) => x.failed_units?.length || 0, d0: -1 },
-      { l: t("Kernel"), w: "minmax(0, .8fr)", k: 3, c: "d", v: (x) => { const cls = Object.values(x.dmesg?.classes || {}); return (x.denied || []).some((d) => /dmesg/.test(d)) ? `<span class="z">${t("no access")}</span>` : cls.length ? `<span class="wn">${esc(cls.map((c) => `${catMsg(c.key, c.title).split(" (")[0]} ${c.count}`).join(", "))}</span>` : `<span class="z">—</span>`; } },
-      { l: "journal", w: "60px", k: 3, c: "r", v: (x) => ((x.denied || []).some((d) => /journal/.test(d)) ? `<span class="z">?</span>` : fmtN(x.journal?.errors_7d)), s: (x) => x.journal?.errors_7d || 0, d0: -1 },
-      { l: t("Time zone"), w: "minmax(0, .7fr)", k: 3, c: "m", v: (x) => { const z = x.time?.timezone; return z ? (z !== x.tzMain ? `<span class="wn" title="${esc(t("differs from most hosts"))} (${esc(x.tzMain)})">${esc(z)}</span>` : `<span class="d">${esc(z)}</span>`) : `<span class="z">?</span>`; } },
-      { l: t("Time"), w: "84px", k: 2, v: (x) => { const s = timeState(x); return stl(s[0], s[1], s[2]); }, s: (x) => ({ bad: 0, wn: 1, mut: 2, ok: 3 })[timeState(x)[0]] },
-    ],
-    key: (x) => x.host, open: (x) => ({ kind: "host", name: x.host }),
-  },
-  exceptions: {
-    title: "Exceptions",
-    tabs: [["accepted", "Accepted"], ["backported", "Fixed by a backport"]],
-    sub: (rd) => { const ex = rd.exceptions || []; return t("{n} accepted · {e} expired · {b} fixed by a backport", { n: ex.length, e: ex.filter((f) => f.exception?.expired || f.exception?.fix_available).length, b: (rd.backported || []).length }); },
-    empty: (rd, tab) => (tab === "backported" ? "" : t("No exceptions. Accepted risks live in {section} of the organization file.", { section: "<code>exceptions</code>" })),
-    items: (rd, tab) => (tab === "backported" ? (rd.backported || []).map((r) => ({ ...r, kind: "bp" })) : (rd.exceptions || []).map((f) => ({ ...f, kind: "exc" }))),
-    text: (x) => `${x.host} ${x.pkg} ${x.id || ""} ${(x.ids || []).join(" ")} ${x.exception?.owner || ""} ${x.exception?.reason || ""}`,
-    cols: (tab) => tab === "backported" ? [
-      { l: t("Host"), w: "minmax(84px, .8fr)", v: (x) => hcell(x.host), s: (x) => x.host },
-      { l: t("Package"), w: "minmax(0, .8fr)", c: "pk", v: (x) => esc(x.pkg), s: (x) => x.pkg },
-      { l: t("Installed"), w: "minmax(0, 1fr)", k: 3, c: "m d", v: (x) => esc(x.installed) },
-      { l: "CVE", w: "48px", c: "r", v: (x) => fmtN(x.cves), s: (x) => x.cves, d0: -1 },
-      { l: "ID", w: "minmax(0, 1.2fr)", k: 2, c: "m d", v: (x) => `<span title="${esc(x.ids.join(" "))}">${esc(x.ids.join(" "))}</span>` },
-    ] : [
-      { l: "", w: "8px", v: (x) => { const e = x.exception || {}; return e.fix_available ? `<span class="dot bad" title="${t("fix in the repositories: back in the plan")}"></span>` : e.expired ? `<span class="dot bad" title="${t("expired: back in the plan")}"></span>` : `<span class="dot ok" title="${t("accepted")}"></span>`; } },
-      { l: t("Host"), w: "minmax(84px, .7fr)", v: (x) => hcell(x.host), s: (x) => x.host },
-      { l: "ID", w: "minmax(0, .8fr)", k: 2, c: "m d", v: (x) => esc(x.id), s: (x) => x.id },
-      { l: t("Package"), w: "minmax(0, .7fr)", c: "pk", v: (x) => esc(x.pkg), s: (x) => x.pkg },
-      { l: t("Until"), w: "96px", c: "m", v: (x) => `<span class="${x.exception?.expired ? "bad" : ""}">${esc(x.exception?.review_by)}</span>`, s: (x) => x.exception?.review_by || "" },
-      { l: t("Who"), w: "minmax(0, .5fr)", k: 3, c: "d", v: (x) => esc(x.exception?.owner), s: (x) => x.exception?.owner || "" },
-      { l: t("Reason"), w: "minmax(0, 1.2fr)", k: 3, c: "d", v: (x) => `<span title="${esc(x.exception?.reason)}">${esc(x.exception?.reason)}</span>` },
-    ],
-    key: (x) => `${x.kind}/${x.host}/${x.id || x.pkg}`, open: (x) => (x.kind === "exc" ? x : { kind: "host", name: x.host }),
-  },
-  runs: {
-    title: "Runs and log",
+  history: {
+    title: "History",
     sub: () => { const rs = (S.envd?.runs || []).filter((r) => r.state === "done"); return rs.length ? t("{n} runs · last {ago}", { n: rs.length, ago: ago(rs.at(-1).finished) }) : ""; },
     items: () => [...(S.jobs || []).filter((j) => j.request?.org === S.org && j.request?.env === S.env).map((j) => ({ ...j, kind: "job" })),
       ...[...(S.envd?.runs || [])].reverse().map((r) => ({ ...r, kind: "run" }))],
@@ -1781,7 +1627,9 @@ function deniedNote(map) {
 
 /* ---- the view shell and the table ---- */
 const vkey = () => S.view + "/" + (VS.tab[S.view] || "");
+let VTCOLS = [], VTKEY = (x) => x;
 function vtable(cols, items, key) {
+  VTCOLS = cols; VTKEY = key;
   const tpl = (lv) => cols.filter((c) => (c.k || 1) <= lv).map((c) => c.w).join(" ");
   const sk = VS.sort[vkey()];
   const xs = sk && cols[sk.i]?.s ? [...items].sort((a, b) => { const f = cols[sk.i].s, x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * sk.d; }) : items;
@@ -1840,7 +1688,7 @@ function drawData(rd, keepDetail) {
   else if (VLIST[0] && !matchMedia("(max-width: 1240px)").matches) { VS.sel = V.key(VLIST[0]); markSel(); vshow(V.open(VLIST[0]), false, true); }
   else $("#detail").innerHTML = `<div class="nodetail">${t("Pick a row")}</div>`;
 }
-function markSel() { const V = VIEWS[S.view]; document.querySelectorAll(".vrow[data-vrow]").forEach((r) => r.setAttribute("aria-selected", V.key(VLIST[+r.dataset.vrow]) === VS.sel)); }
+function markSel() { document.querySelectorAll(".vrow[data-vrow]").forEach((r) => r.setAttribute("aria-selected", VTKEY(VLIST[+r.dataset.vrow]) === VS.sel)); }
 
 /* ---- the details panel ---- */
 async function vshow(item, push, quiet) {
@@ -1855,7 +1703,7 @@ async function vshow(item, push, quiet) {
   enrichIps(el);
   syncURL();
   if (!quiet && matchMedia("(max-width: 1240px)").matches) el.classList.add("open");
-  if (item.kind === "run" && item.state !== "running") loadLog(item.run_id);
+  if (item.kind === "run" && item.state !== "running") { loadLog(item.run_id); if (item.state === "done" && !item.partial) loadRunChanges(item.run_id); }
 }
 function dhead(meta, title, sub, extra = "") {
   const crumb = VS.stack.length ? `<div class="crumb"><button data-vback>${icon("left")} ${esc(VS.stack.at(-1).name || VS.stack.at(-1).ip || VS.stack.at(-1).pkg || t("Back"))}</button></div>` : "";
@@ -1964,8 +1812,19 @@ function runDetail(x) {
       + kv(t("Hosts"), x.hosts_total ? `${x.hosts_total - (x.hosts_failed || 0)} / ${x.hosts_total}${x.hosts_failed ? ` <span class="bad">· ${t("{n} unreachable", { n: x.hosts_failed })}</span>` : ""}` : "")
       + (job && x.code ? kv(t("Exit code"), `<code class="bad">${x.code}</code>`) : ""))
     + (job ? sec(t("Output"), `<pre class="term">${(x.dropped ? `… ${x.dropped}\n` : "") + esc((x.output || []).join("\n")) || "&nbsp;"}</pre>`)
-      : sec(t("Log"), `<pre class="term" id="runlog">${x.state === "running" ? t("The scan is running.") : `<i class="spin"></i>`}</pre>`))
+      : (x.state === "done" && !x.partial ? sec(t("Changes"), `<div id="runchg"><i class="spin"></i></div>`) : "") + sec(t("Log"), `<pre class="term" id="runlog">${x.state === "running" ? t("The scan is running.") : `<i class="spin"></i>`}</pre>`))
     + (!job && x.state === "done" && x.run_id !== S.run ? `<div class="dfoot"><button class="btn primary" data-showrun="${esc(x.run_id)}">${t("Show this run's data")}</button></div>` : "");
+}
+// what changed in a run against the full run before it: new and resolved, the most urgent first
+async function loadRunChanges(run) {
+  let d; try { d = await api("/api/run?" + qs({ org: S.org, env: S.env, run })); } catch (e) { d = { error: e.message }; }
+  const el = $("#runchg"); if (!el || VS.item?.run_id !== run) return;
+  if (!d.new) { el.innerHTML = `<div class="dnote">${esc(d.error || t("No previous full run."))}</div>`; return; }
+  const row = (r, plus) => `<div class="li" title="${esc((r.ids || []).join(", "))}"><span class="mk ${plus ? "bad" : "ok"}">${plus ? "+" : "−"}</span><span>${r.priority ? `<span class="pb ${r.priority}">${r.priority}</span> ` : ""}<code>${esc(r.pkg)}</code> <span class="z">${esc(r.host)}</span></span><span>${r.count ? fmtN(r.count) + " CVE" : ""}</span></div>`;
+  const part = (rows, plus) => `<div class="lis">${rows.slice(0, 20).map((r) => row(r, plus)).join("")}</div>${rows.length > 20 ? `<div class="dnote">${t("+{n} more", { n: rows.length - 20 })}</div>` : ""}`;
+  el.innerHTML = `<div class="dnote" style="margin:0 0 6px">${t("vs. the full run {run}", { run: runLabel(d.prev) })} · <span class="bad">+${d.new.rows.length}</span> · <span class="ok">−${d.resolved?.rows.length || 0}</span></div>`
+    + (d.new.rows.length ? part(d.new.rows, true) : "") + (d.resolved?.rows.length ? part(d.resolved.rows, false) : "")
+    + (!d.new.rows.length && !d.resolved?.rows.length ? `<div class="dnote">${t("Nothing changed")}</div>` : "");
 }
 async function loadLog(run) {
   let d; try { d = await api("/api/log?" + qs({ org: S.org, env: S.env, run })); } catch (e) { d = { lines: [], error: e.message }; }
@@ -1991,7 +1850,8 @@ function syncURL(push) {
   const keep = new URLSearchParams(location.search).get("lang");
   const host = isData(S.view) ? (VS.item?.kind === "host" ? VS.item.name : VS.want || "") : S.view === "servers" ? S.cardHost || S.wantHost || "" : "";
   const tab = isData(S.view) ? VS.tab[S.view] : "";
-  const u = "/" + S.view + "?" + qs({ org: S.org, env: S.env, run: S.run !== "current" ? S.run : "", tab, host, lang: keep || "" });
+  const show = S.view === "servers" && S.lens !== "priorities" ? S.lens : "", f = S.view === "todo" && S.accepted ? "accepted" : "";
+  const u = "/" + S.view + "?" + qs({ org: S.org, env: S.env, run: S.run !== "current" ? S.run : "", show, f, tab, host, lang: keep || "" });
   const cur = location.pathname + location.search;
   if (u.replace(/\?$/, "") !== cur) history[push ? "pushState" : "replaceState"](null, "", u.replace(/\?$/, ""));
 }
@@ -2004,6 +1864,8 @@ function readURL() {
   if (isData(S.view) && p.get("tab")) VS.tab[S.view] = p.get("tab");
   VS.want = isData(S.view) ? p.get("host") || "" : "";
   S.wantHost = S.view === "servers" ? p.get("host") || "" : "";
+  S.lens = p.get("show") || "priorities";
+  S.accepted = S.view === "todo" && p.get("f") === "accepted";
 }
 function go(view, push = true, q) {
   if (view !== S.view) { VS.q = ""; VS.flt.clear(); VS.all = false; VS.sel = ""; VS.item = null; VS.stack = []; VS.want = ""; S.cardHost = ""; if (isTree(view) && isTree(S.view)) { S.open.clear(); S.cur = null; S.q = ""; } }
@@ -2012,9 +1874,13 @@ function go(view, push = true, q) {
   $("#side")?.classList.remove("open");
 }
 function vopenRow(i) {
-  const V = VIEWS[S.view], x = VLIST[i]; if (!x) return;
-  VS.sel = V.key(x); markSel(); vshow(V.open(x));
+  const x = VLIST[i]; if (!x) return;
+  VS.sel = VTKEY(x); markSel();
+  if (S.view === "servers") showServer(SRV.byName[x.host] || { id: "h:" + x.host, label: x.host });
+  else if (S.view === "todo") vshow({ ...x, kind: "exc" });
+  else vshow(VIEWS[S.view].open(x));
 }
+const vredraw = () => (S.view === "servers" ? drawLens() : S.view === "todo" ? drawAccepted() : drawData(RD.data, true));
 document.addEventListener("click", (e) => {
   if (!isData(S.view) && !isTree(S.view)) return;
   const el = e.target.closest("[data-vrow], [data-vtab], [data-vflt], [data-vsort], [data-vall], [data-vreset], [data-vhost], [data-vback], [data-fwrules], [data-showrun], [data-todohost]");
@@ -2023,8 +1889,8 @@ document.addEventListener("click", (e) => {
   if (d.vrow) vopenRow(+d.vrow);
   else if (d.vtab) { VS.tab[S.view] = d.vtab; VS.all = false; document.querySelectorAll("[data-vtab]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.vtab === d.vtab)); drawData(RD.data, true); syncURL(); }
   else if (d.vflt) { VS.flt.has(d.vflt) ? VS.flt.delete(d.vflt) : VS.flt.add(d.vflt); el.setAttribute("aria-pressed", VS.flt.has(d.vflt)); drawData(RD.data, true); }
-  else if (d.vsort) { const k = vkey(), i = +d.vsort, c = V.cols(VS.tab[S.view] || V.tabs?.[0][0])[i], cur = VS.sort[k]; VS.sort[k] = { i, d: cur?.i === i ? -cur.d : c.d0 || 1 }; drawData(RD.data, true); }
-  else if ("vall" in d) { VS.all = true; drawData(RD.data, true); }
+  else if (d.vsort) { const k = vkey(), i = +d.vsort, c = VTCOLS[i], cur = VS.sort[k]; VS.sort[k] = { i, d: cur?.i === i ? -cur.d : c.d0 || 1 }; vredraw(); }
+  else if ("vall" in d) { VS.all = true; vredraw(); }
   else if ("vreset" in d) { VS.q = ""; VS.flt.clear(); render(); }
   else if (d.vhost) { if (isData(S.view)) vshow({ kind: "host", name: d.vhost }, true); else openServer(d.vhost); }
   else if ("vback" in d) { const p = VS.stack.pop(); if (p) vshow(p, "back"); }
@@ -2045,7 +1911,7 @@ document.addEventListener("input", (e) => {
 function vkeys(e) {
   if (e.key === "/") { e.preventDefault(); $("#vq")?.focus(); return; }
   if (e.key === "Escape") { $("#detail")?.classList.remove("open"); return; }
-  const V = VIEWS[S.view], i = VLIST.findIndex((x) => V.key(x) === VS.sel);
+  const i = VLIST.findIndex((x) => VTKEY(x) === VS.sel);
   const step = e.key === "j" || e.key === "ArrowDown" ? 1 : e.key === "k" || e.key === "ArrowUp" ? -1 : 0;
   if (!step) return;
   e.preventDefault();
@@ -2064,10 +1930,11 @@ function serversShell() {
   return `<div class="work"><div class="listcol"><div class="work-top"><div class="hdr"><div style="min-width:0"><h1>${t("Servers")}</h1><div class="sub" id="sub"></div></div></div></div>
       <div class="bar2 vbar">
         <div class="seg2" role="group" aria-label="${t("Group by")}"><span class="lbl">${t("group")}</span>${[["host", "server"], ["fix", "fix"], ["cve", "CVE"]].map(([k, l]) => `<button data-by="${k}" aria-pressed="${k === "host"}">${t(l)}</button>`).join("")}</div>
-        <div class="chips">${SFILT.map(([k, l]) => `<button class="chip" data-flt="${k}" aria-pressed="${S.flt.has(k)}">${t(l)}</button>`).join("")}<button class="chip" data-sp4 aria-pressed="${SRV.p4}">+ P4</button></div>
+        <div class="seg2" role="group" aria-label="${t("Show")}"><span class="lbl">${t("show")}</span>${lensList().map((l) => `<button data-lens="${esc(l.id)}" aria-pressed="${S.lens === l.id}">${esc(t(l.title))}</button>`).join("")}</div>
+        ${S.lens === "priorities" ? `<div class="chips">${SFILT.map(([k, l]) => `<button class="chip" data-flt="${k}" aria-pressed="${S.flt.has(k)}">${t(l)}</button>`).join("")}<button class="chip" data-sp4 aria-pressed="${SRV.p4}">+ P4</button></div>` : ""}
         <label class="search">${icon("search")}<span class="sr">${t("Filter")}</span><input id="q" placeholder="${t("Filter")}" value="${esc(S.q)}" autocomplete="off"><kbd>/</kbd></label>
       </div>
-      <div class="scroll" id="scroll"><div class="svh"><span></span><span></span><span>${t("Server")}</span><span>${t("Priorities")}</span><span class="r c-fx">${t("Fixes")}</span><span class="r c-sc">${t("Scanned")}</span></div>
+      <div class="scroll" id="scroll"><div class="svh" ${S.lens === "priorities" ? "" : "hidden"}><span></span><span></span><span>${t("Server")}</span><span>${t("Priorities")}</span><span class="r c-fx">${t("Fixes")}</span><span class="r c-sc">${t("Scanned")}</span></div>
         <div role="tree" id="tree"><div class="nodetail"><i class="spin"></i></div></div><div class="end"></div></div>
     </div><aside class="detail" id="detail" aria-label="${t("Details")}"></aside></div>`;
 }
@@ -2083,6 +1950,14 @@ async function loadServers() {
   if (S.view !== "servers") return;
   S.tree = tr;
   SRV.list = serverList(tr);
+  if (S.lens !== "priorities") {
+    await loadLens(); if (S.view !== "servers") return;
+    const n = drawLens(); renderSide();
+    const want = S.wantHost; S.wantHost = "";
+    if (want) showServer(SRV.byName[want] || { id: "h:" + want, label: want });
+    else if (n && !matchMedia("(max-width: 1240px)").matches) { VS.sel = VTKEY(VLIST[0]); markSel(); showServer(SRV.byName[VLIST[0].host] || { id: "h:" + VLIST[0].host, label: VLIST[0].host }, true); }
+    return;
+  }
   drawServers();
   renderSide();
   const want = S.wantHost; S.wantHost = "";
@@ -2133,12 +2008,91 @@ function srvRows(n, depth, out) {
   if (open) kids.forEach((k) => srvRows(k, depth + 1, out));
   return out;
 }
+/* lenses: other columns for every server, as /api/lens describes them (columns, then a cell per column per
+   server); drawn from the description alone, so a new lens needs no change here */
+const LENS = { key: "", data: null, list: null };
+const LENS_DEFAULT = [["priorities", "Priorities"], ["logins", "Logins"], ["network", "Network"], ["health", "Health"]].map(([id, title]) => ({ id, title }));
+const lensList = () => LENS.list || LENS_DEFAULT;
+async function loadLens() {
+  const key = [S.org, S.env, S.run, S.lens].join("|");
+  if (LENS.key === key && LENS.data) return LENS.data;
+  let d;
+  try { d = await api("/api/lens?" + qs({ ...scope(), id: S.lens })); }
+  catch { d = lensStub(S.lens, RD.data || (await loadRunData().catch(() => null))); } // until /api/lens is there: the same shape from the run's data
+  LENS.key = key; LENS.data = d; if (d.lenses?.length) LENS.list = d.lenses;
+  return d;
+}
+function lensCols(lens) {
+  const LV = { warn: "wn", bad: "bad" };
+  const cell = (c) => (r) => { const x = r.cells?.[c.key]; if (!x) return `<span class="z">—</span>`; const txt = x.s ?? (x.v == null ? "—" : x.v + (c.unit || "")); return `<span class="${LV[x.level] || ""}" ${x.note ? `title="${esc(x.note)}"` : ""}>${esc(txt)}</span>`; };
+  return [
+    { l: "", w: "28px", v: (r) => { const n = SRV.byName[r.host]; return n && n.state !== "todo" ? srvMark(n) : n?.priority ? `<span class="pb ${n.priority}">${n.priority}</span>` : ""; } },
+    { l: t("Server"), w: "minmax(96px, 1fr)", v: (r) => hcell(r.host), s: (r) => r.host },
+    ...(lens.columns || []).map((c) => ({ l: t(c.title), w: c.width_hint ? (typeof c.width_hint === "number" ? c.width_hint + "px" : c.width_hint) : c.kind === "text" ? "minmax(0, 1fr)" : "80px",
+      k: c.drop >= 2 ? 3 : c.drop === 1 ? 2 : 1, c: c.align === "right" ? "r" : c.kind === "text" ? "d" : "", v: cell(c),
+      s: c.sortable === false ? undefined : (r) => r.cells?.[c.key]?.v ?? "", d0: c.align === "right" ? -1 : 1 })),
+  ];
+}
+function drawLens() {
+  const d = LENS.data, el = $("#tree"); if (!d || !el || S.view !== "servers") return 0;
+  VS.tab.servers = S.lens;
+  const q = S.q.trim().toLowerCase(), rows = (d.rows || []).filter((r) => !q || r.host.toLowerCase().includes(q));
+  el.innerHTML = rows.length ? vtable(lensCols(d.lens || {}), rows, (r) => r.host) : `<div class="empty"><h3>${t("Nothing matches")}</h3></div>`;
+  enrichIps(el);
+  drawServersSub();
+  return rows.length;
+}
+// the stub of /api/lens from the run: the same shape the backend sends
+function lensStub(id, rd) {
+  const hosts = (S.envd?.hosts || []).map((h) => h.name), st = (h) => SRV.byName[h]?.state || "";
+  const C = (key, title, kind, align, drop, width_hint) => ({ key, title, kind, align, drop, width_hint, sortable: true });
+  const cols = {
+    logins: [C("password", "Password", "text", "left", 0, 96), C("root", "Root login", "text", "left", 2, 100), C("keys", "Keys", "num", "right", 2, 56),
+      C("logins", "Logins", "num", "right", 1, 64), C("failed", "Failed", "num", "right", 0, 72), C("last_attack", "Last attack", "text", "right", 1, 96)],
+    network: [C("public", "Public IP", "text", "left", 1), C("open", "Open to the outside", "text", "left", 0), C("firewall", "Firewall", "text", "left", 0, 120), C("listening", "Listening", "num", "right", 2, 76)],
+    health: [C("disk", "Disk", "pct", "right", 0, 72), C("memory", "Memory free", "pct", "right", 1, 96), C("load", "Load", "num", "right", 2, 64), C("units", "Failed units", "num", "right", 2, 96),
+      C("time", "Time", "text", "left", 1, 96), C("journal", "Journal errors", "num", "right", 2, 104)],
+  }[id] || [];
+  const cells = (h) => {
+    const A = rd?.access?.[h], E = rd?.exposure?.[h], H = rd?.health?.[h], c = {};
+    if (id === "logins" && A) {
+      const lg = A.logins || {}, pw = pwState(A), la = lastAttack(lg);
+      c.password = { v: A.password_auth, s: pw[1], level: pw[0] === "bad" ? "bad" : pw[0] === "wn" ? "warn" : "", note: pw[2] };
+      c.root = { v: A.sshd?.permitrootlogin || "", s: rootTxt(A.sshd?.permitrootlogin), level: A.sshd?.permitrootlogin === "yes" ? "bad" : "" };
+      c.keys = { v: (A.keys || []).length }; c.logins = { v: (lg.accepted || []).reduce((n, x) => n + x.count, 0) };
+      c.failed = { v: lg.failed_total || 0, level: lg.failed_total ? "warn" : "", note: lg.failed_ips ? t("from {n} addresses", { n: lg.failed_ips }) : "" };
+      c.last_attack = { v: la, s: la ? ago(la) : "—" };
+    }
+    if (id === "network" && E) {
+      const fw = fwState(E.firewall), ports = [...new Set((E.listen || []).filter((y) => y.public).map((y) => y.port))].sort((a, b) => a - b);
+      c.public = { v: (E.public || []).join(" "), s: (E.public || []).join(" ") || "NAT", level: E.unlisted_public?.length ? "bad" : "" };
+      c.open = { v: ports.length, s: ports.map((p) => ":" + p).join(" ") || "—", level: ports.length && fw[0] === "bad" ? "warn" : "" };
+      c.firewall = { v: fw[0], s: fw[1], level: fw[0] === "bad" ? "bad" : "", note: fw[2] };
+      c.listening = { v: (E.listen || []).length };
+    }
+    if (id === "health" && H) {
+      const d = maxUse(H.disks), tm = timeState(H);
+      if (d) c.disk = { v: d.use, s: d.use + "%", level: d.use >= 95 ? "bad" : d.use >= 85 ? "warn" : "", note: (H.disks || []).map((r) => `${r.mount} ${r.use}%`).join("\n") };
+      if (H.mem) { const f = Math.round((100 * H.mem.available_mb) / H.mem.total_mb); c.memory = { v: f, s: f + "%", level: f < 10 ? "warn" : "" }; }
+      if (H.load) c.load = { v: H.load.load15 / (H.load.cpus || 1), s: `${H.load.load15}/${H.load.cpus}` };
+      c.units = { v: (H.failed_units || []).length, level: H.failed_units?.length ? "warn" : "", note: (H.failed_units || []).join("\n") };
+      c.time = { v: tm[0], s: tm[1], level: tm[0] === "bad" ? "bad" : tm[0] === "wn" ? "warn" : "", note: tm[2] };
+      c.journal = { v: H.journal?.errors_7d || 0 };
+    }
+    return c;
+  };
+  return { lenses: LENS_DEFAULT, lens: { id, columns: cols }, rows: hosts.map((h) => ({ host: h, state: st(h), cells: cells(h) })) };
+}
 function drawServers() {
   if (!$("#tree") || S.view !== "servers") return;
   FLAT = [];
   const list = SRV.list, c = S.tree?.counts || {}, out = [];
   list.forEach((n) => srvRows(n, 0, out));
   $("#tree").innerHTML = out.length ? out.join("") : `<div class="empty"><h3>${S.flt.size || S.q ? t("Nothing matches") : t("No servers")}</h3>${S.flt.size || S.q ? `<button class="btn ghost" data-reset>${t("Clear filters")}</button>` : t("No server in this environment has been scanned.")}</div>`;
+  drawServersSub();
+}
+function drawServersSub() {
+  const list = SRV.list, c = S.tree?.counts || {};
   const sv = S.tree?.servers || {}, servers = list.filter((n) => !n.target).length;
   const st = [["clean", "ok", "✓", "nothing to fix"], ["failed", "bad", "✗", "not reached"], ["partial", "wn", "◐", "partly checked"], ["not_scanned", "z", "–", "not scanned yet"]]
     .filter(([k]) => sv[k]).map(([k, cls, m, l]) => `<span class="${cls}" title="${t(l)}">${sv[k]} ${m}</span>`).join(" · ");
@@ -2160,6 +2114,10 @@ function openServer(name) {
   S.wantHost = name; S.q = ""; S.flt.clear();
   if (S.view === "servers") render(); else go("servers");
 }
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-lens]"); if (!b) return;
+  S.lens = b.dataset.lens; S.wantHost = S.cardHost || ""; VS.sel = ""; syncURL(); render();
+});
 document.addEventListener("click", (e) => { if (e.target.closest("[data-sp4]")) { SRV.p4 = !SRV.p4; e.target.closest("[data-sp4]").setAttribute("aria-pressed", SRV.p4); drawServers(); } });
 
 /* ---------- views ---------- */
@@ -2191,6 +2149,8 @@ function palItems(q) {
   const walk = (ns, depth) => ns.forEach((n) => { if (n.kind !== "section") it.push({ g: depth ? t("Inside") : t("Fixes"), label: `${n.priority} · ${n.label}${n.fixed ? " → " + n.fixed : ""}`, hint: n.hosts ? t("{n} hosts", { n: n.hosts }) : "", go: () => { if (isTree(S.view)) show(n.id); else { go("servers"); S.cur = n.id; } } }); if (depth < 2) walk(n.kids || [], depth + 1); });
   walk(S.tree?.nodes || [], 0);
   NAV.filter((n) => n !== "-").forEach((n) => it.push({ g: t("Go to"), label: t(n[1]), hint: n[0] === "todo" ? "/" : "/" + n[0], go: () => go(n[0]) }));
+  lensList().forEach((l) => it.push({ g: t("Go to"), label: t(l.title), hint: "/servers?show=" + l.id, go: () => { S.lens = l.id; S.wantHost = ""; if (S.view === "servers") { syncURL(); render(); } else go("servers"); } }));
+  it.push({ g: t("Go to"), label: t("Accepted risks"), hint: "/todo?f=accepted", go: () => { S.accepted = true; if (S.view === "todo") { syncURL(); render(); } else go("todo"); } });
   (S.envd?.hosts || []).forEach((h) => it.push({ g: t("Servers"), label: h.name, hint: h.group, go: () => openServer(h.name) }));
   [["fix", "Group by fix"], ["cve", "Group by CVE"]].forEach(([k, l]) => it.push({ g: t("Commands"), label: t(l), hint: "/todo", go: () => { S.by = k; store.set("by", k); S.open.clear(); S.cur = null; S.view === "todo" ? render() : go("todo"); } }));
   if (S.scans && S.env) it.push({ g: t("Commands"), label: t("Scan {env}", { env: S.env }), hint: "", go: () => startScan(S.org, S.env) });
@@ -2218,6 +2178,7 @@ document.addEventListener("click", async (e) => {
   if ("back" in d) { const p = S.stack.pop(); if (p) { S.cur = p.id; DETAIL = await api("/api/node?" + qs({ ...scope(), by: S.by, f: [...S.flt].join(","), q: S.q, id: p.id })); $("#detail").innerHTML = detailHTML(DETAIL); } return; }
   if (d.by) { if (d.by === "host") { go("servers"); return; } S.by = d.by; store.set("by", d.by); S.open.clear(); S.cur = null; S.stack = []; if (S.view !== "todo") go("todo"); else render(); return; }
   if (d.flt) { S.flt.has(d.flt) ? S.flt.delete(d.flt) : S.flt.add(d.flt); el.setAttribute("aria-pressed", S.flt.has(d.flt)); S.view === "servers" ? loadServers() : loadTree(); return; }
+  if ("acc" in d) { S.accepted = !S.accepted; S.cur = null; VS.item = null; VS.sel = ""; syncURL(); render(); return; }
   if ("bp" in d) { S.backport = !S.backport; loadTree(); return; }
   if ("expand" in d) { const all = (ns) => ns.forEach((n) => { if ((n.kids || []).length) { S.open.add(n.id); all(n.kids); } }); all(S.tree?.nodes || []); render(); return; }
   if ("collapse" in d) { S.open.clear(); render(); return; }
@@ -2276,7 +2237,7 @@ document.addEventListener("input", (e) => {
   if (e.target.id === "pickq") { const q = e.target.value.toLowerCase(); document.querySelectorAll("#picklist .pick").forEach((l) => (l.hidden = !l.dataset.alias.includes(q) && !l.textContent.toLowerCase().includes(q))); return; }
   if (e.target.id === "pastebox") grow(e.target);
   if (e.target.id === "pastebox" || e.target.name === "user") { clearTimeout(previewTimer); previewTimer = setTimeout(preview, 250); }
-  if (e.target.id === "q") { S.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(S.view === "servers" ? loadServers : loadTree, 200); } else if (e.target.id === "palq") { PI = 0; palRender(); } });
+  if (e.target.id === "q") { S.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(S.view === "servers" ? (S.lens === "priorities" ? loadServers : drawLens) : S.accepted ? drawAccepted : loadTree, 200); } else if (e.target.id === "palq") { PI = 0; palRender(); } });
 document.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); palOpen(); return; }
   if (e.target.id === "palq") {
@@ -2287,7 +2248,7 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (e.target.matches?.("input, select, textarea")) { if (e.key === "Escape") e.target.blur(); return; }
-  if (isData(S.view)) { vkeys(e); return; }
+  if (isData(S.view) || S.view === "servers" && S.lens !== "priorities" || S.view === "todo" && S.accepted) { vkeys(e); return; }
   if (!isTree(S.view)) return;
   const i = FLAT.findIndex((n) => n.id === S.cur), n = FLAT[i];
   const go = (m) => { if (!m) return; show(m.id); document.querySelector(`.node[data-n="${CSS.escape(m.id)}"]`)?.scrollIntoView({ block: "nearest" }); };
