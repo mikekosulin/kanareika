@@ -94,8 +94,8 @@ func (m *Model) menuItems(d *menuDlg) []menuItem {
 				last := sDim.Render(m.t.T("no runs"))
 				if e.Last != nil {
 					last = sMuted.Render(m.t.runShort(e.Last.RunID))
-					if e.Last.PlanCounts != nil {
-						pc, known = e.Last.PlanCounts, true
+					if c, ok := e.Last.counts(); ok {
+						pc, known = c, true
 					}
 				}
 				state := sMuted.Render(m.t.T("idle"))
@@ -109,8 +109,11 @@ func (m *Model) menuItems(d *menuDlg) []menuItem {
 			}
 		}
 	case "jump":
-		for v := range nViews {
+		for _, v := range places {
 			all = append(all, menuItem{kind: "view", id: strconv.Itoa(int(v)), label: m.t.T(viewNames[v]), cols: []string{sMuted.Render(m.t.T("view"))}})
+		}
+		for _, l := range m.lenses() {
+			all = append(all, menuItem{kind: "lens", id: l.ID, label: m.t.T(viewNames[vServers]) + " · " + m.t.T(l.Title), cols: []string{sMuted.Render(m.t.T("show"))}})
 		}
 		if t := d.trees["fix"]; t != nil {
 			for _, n := range t.Nodes {
@@ -221,7 +224,9 @@ func (m *Model) pick(it menuItem) tea.Cmd {
 		return m.selectEnv(m.org, it.id)
 	case "view":
 		v, _ := strconv.Atoi(it.id)
-		m.setView(view(v))
+		m.toPlace(view(v))
+	case "lens":
+		m.setLens(it.id)
 	case "fix", "cve":
 		m.setView(vActions)
 		m.by[vActions], m.flt, m.onlySel = it.kind, map[string]bool{}, false
@@ -349,12 +354,13 @@ func (m *Model) hints() string {
 	default:
 		l = map[view][]k{
 			vPackages:   {{"p", "P4"}},
-			vAccess:     {{"enter", "host card"}},
-			vNetwork:    {{"enter", "host card"}, {"f", "outside only"}},
-			vHealth:     {{"enter", "host card"}},
-			vRuns:       {{"enter", "open"}, {"i", "errors and log"}, {"c", "current state"}},
-			vScans:      {{"enter", "output"}, {"x", "stop"}},
-			vChanges:    {},
+			vAccess:     {{"enter", "host card"}, {"w", "show"}},
+			vNetwork:    {{"enter", "host card"}, {"f", "outside only"}, {"w", "show"}},
+			vHealth:     {{"enter", "host card"}, {"w", "show"}},
+			vLens:       {{"enter", "host card"}, {"w", "show"}},
+			vRuns:       {{"enter", "open"}, {"n", "changes"}, {"i", "errors and log"}, {"S", "scans"}, {"c", "current state"}},
+			vScans:      {{"enter", "output"}, {"x", "stop"}, {"esc", "back"}},
+			vChanges:    {{"esc", "back"}},
 			vExceptions: {},
 		}[m.view]
 		if m.host != "" && m.view == vServers {

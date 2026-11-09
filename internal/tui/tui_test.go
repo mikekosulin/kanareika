@@ -275,25 +275,25 @@ func (h *harness) waitJob(state string) {
 
 func TestBrowse(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.has("ToDo(acme/production)[30] P1 6 • P2 12 • P3 12 • P4 4", "openssl 3.0.1 → 3.0.10", "group by  server  fix  CVE  g",
+	h.has("ToDo(acme/production)[26] P1 6 • P2 10 • P3 10 • P4 4", "openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10", "group by  server  fix  CVE  g",
 		"space select", "? all keys", " acme  production ", "4 hosts", "DB ok", "12:00 UTC")
 	h.hasNot("P4 os")
 	h.key("p") // P4 too
 	h.has("P4 os")
 	h.key("p", "enter")
-	h.has("Details(openssl 3.0.1 → 3.0.10)", "WHY P1", "in CISA KEV: exploited in the wild", "due 2026-11-08 · in 1 d",
-		"CVE-2026-0002    high   91% KEV openssl issue", "web    1 CentOS Stream 9  ● ready 1 internet-facing", "$ dnf update openssl",
-		"node: pkg:os:openssl:3.0.1:3.0.10", "esc back")
+	h.has("Details(openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10)", "WHY P1", "in CISA KEV: exploited in the wild", "due 2026-11-08 · in 1 d",
+		"CVE-2026-0002    high   91% KEV openssl issue", "web    2 CentOS Stream 9  ● ready 2 internet-facing", "$ dnf update openssl",
+		"node: pkg:os:openssl:3.0.1", "esc back")
 	h.key("esc", "1")
 	h.has("Servers(acme/production)", "web-01")
-	h.key("3")
+	h.show(vPackages)
 	h.has("Packages(acme/production)", "nginx", "1.25.5")
-	h.key("9")
-	h.has("Runs(acme/production)[5]", "2026-11-02 11:00", "partial")
+	h.key("3")
+	h.has("History(acme/production)[5]", "2026-11-02 11:00", "partial")
 	// open an older run, then back to the current state
 	h.key("G", "enter")
 	h.has("ToDo(acme/production@2026-11-01 10:00)", "run 2026-11-01 10:00")
-	h.key("9", "c")
+	h.key("3", "c")
 	h.has("ToDo(acme/production)[")
 	// the environments: another one, no runs yet, with the hints
 	h.key("E")
@@ -301,11 +301,11 @@ func TestBrowse(t *testing.T) {
 	h.key("down", "enter")
 	h.has(" acme  staging ", "kanareika scan acme --env staging", "or press <s>", "<enter> checks SSH access", "enter check access, first scan")
 	h.key("tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab") // around all views and one more
-	h.has(" 3 Packages ", " acme  staging ")
+	h.has(" 1 Servers ", " acme  staging ")
 	h.key("?")
 	h.has("Hotkeys", "OSC 52", "list_fixes · get_fix")
 	h.key("x")
-	h.has("Packages(acme/staging)")
+	h.has("Servers(acme/staging)")
 }
 
 // TestTree: open and close, the cursor to the parent, grouping, a node's selection covering what is under it.
@@ -380,10 +380,13 @@ func TestFilters(t *testing.T) {
 	if !strings.Contains(h.m.treeKey, "f=kev") {
 		t.Fatal(h.m.treeKey)
 	}
-	h.key("f", "j", "j", "j", "j", "j", "j", "x", "f") // overdue too: none
-	h.has("ToDo(acme/production)[0]", "nothing here")
+	h.key("f", "j", "j", "j", "j", "j", "j", "x", "f") // overdue too (what is overdue depends on the server's clock)
+	h.has(" overdue ")
+	if !strings.Contains(h.m.treeKey, "kev%2Coverdue") {
+		t.Fatal(h.m.treeKey)
+	}
 	h.key("f", "k", "x", "j", "j", "j", "j", "j", "j", "x", "q")
-	h.has("ToDo(acme/production)[30]")
+	h.has("ToDo(acme/production)[26]")
 	h.key("/", "k", "e", "r", "n", "e", "l")
 	h.has("</kernel_>", "ToDo(acme/production)[2]")
 	h.key("backspace", "enter")
@@ -418,15 +421,15 @@ func TestFilterSelectCopy(t *testing.T) {
 		t.Fatal(h.m.sel)
 	}
 	h.key("y")
-	if text := clipText(t, h); !strings.HasPrefix(text, "TASK production en ") || strings.Count(text, ",") != 0 {
+	if text := clipText(t, h); !strings.HasPrefix(text, "TASK production en ") {
 		t.Fatal(text)
 	}
 	h.has("Task copied to the clipboard (1)")
 	h.key("a") // all of the list
-	if n := len(h.m.picked()); n != 30 {
+	if n := len(h.m.picked()); n != 26 {
 		t.Fatal(n)
 	}
-	h.has("30 selected")
+	h.has("26 selected")
 	h.key("a")
 	if len(h.m.sel) != 0 {
 		t.Fatal("a again clears")
@@ -438,11 +441,11 @@ func TestFilterSelectCopy(t *testing.T) {
 	// the context of a node for an agent's chat
 	h.key("home", "Y")
 	ctx := clipText(t, h)
-	for _, want := range []string{"kanareika finding: acme/production (run current)", "node: pkg:os:openssl:3.0.1:3.0.10",
-		"what: openssl 3.0.1 → 3.0.10", "facts: P1, 1 host, 1 CVE, EPSS 91%, in CISA KEV, RCE without login",
+	for _, want := range []string{"kanareika finding: acme/production (run current)", "node: pkg:os:openssl:3.0.1",
+		"what: openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10", "facts: P1, 2 hosts, 2 CVEs, EPSS 91%, in CISA KEV, RCE without login",
 		"why: in CISA KEV: exploited in the wild;", "due: due 2026-11-08 · in 1 d", "cve: CVE-2026-0002 HIGH EPSS 91% KEV RCE — openssl issue",
-		"where: web (1 host, CentOS Stream 9): web-01", "apply on CentOS Stream 9 (1 host): dnf update openssl", "action ids: ",
-		`get_fix org=acme env=production by=fix id="pkg:os:openssl:3.0.1:3.0.10"`} {
+		"where: web (2 hosts, CentOS Stream 9): dead-01, web-01", "apply on CentOS Stream 9 (2 hosts): dnf update openssl", "action ids: ",
+		`get_fix org=acme env=production by=fix id="pkg:os:openssl:3.0.1"`} {
 		if !strings.Contains(ctx, want) {
 			t.Fatalf("%q not in the context:\n%s", want, ctx)
 		}
@@ -535,8 +538,8 @@ func TestSizes(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	for _, sz := range [][2]int{{60, 15}, {90, 24}, {120, 30}, {200, 60}} {
 		h.m.Update(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
-		for _, v := range viewHotkeys {
-			h.key(v)
+		for v := range nViews {
+			h.show(v)
 			h.screen()
 		}
 		h.key("2", "pgdown", "G", "g")

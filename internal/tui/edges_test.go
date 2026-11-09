@@ -150,10 +150,9 @@ func TestKeysMore(t *testing.T) {
 	if h.m.view != vServers {
 		t.Fatal("shift+tab: the previous view", h.m.view)
 	}
-	h.key("shift+tab")
-	h.key("h", "l") // other views: h and l go through them
-	if h.m.view != vScans {
-		t.Fatal("h, l", h.m.view)
+	h.key("shift+tab", "h") // from History (not a tree) h goes to the place before
+	if h.m.view != vActions {
+		t.Fatal("h", h.m.view)
 	}
 	h.key("S", "2")
 	if h.m.view != vActions || h.m.rund == nil {
@@ -165,7 +164,7 @@ func TestKeysMore(t *testing.T) {
 		t.Fatal("r reloads the run")
 	}
 	h.key("G", "k")
-	if h.m.cur[vActions] != 28 {
+	if h.m.cur[vActions] != 24 {
 		t.Fatal(h.m.cur[vActions])
 	}
 	h.key("G", "up", "pgup")
@@ -187,18 +186,21 @@ func TestKeysMore(t *testing.T) {
 	h.key("y")
 	h.has("This terminal session can't copy")
 	// P4 from Packages
-	h.key("3", "p")
+	h.show(vPackages)
+	h.key("p")
 	if !h.m.set.ShowP4 {
 		t.Fatal("p in Packages")
 	}
 	// a host card from Health
-	h.key("7", "enter")
+	h.show(vHealth)
+	h.key("enter")
 	h.has("Host(")
 	// the rows of every view a cursor moves in
-	for _, v := range viewHotkeys {
-		h.key(v, "G")
+	for v := range vLens {
+		h.show(v)
+		h.key("end")
 		if n := h.m.rows(); h.m.cur[h.m.view] != max(n-1, 0) {
-			t.Fatalf("view %s: cursor %d of %d", v, h.m.cur[h.m.view], n)
+			t.Fatalf("view %d: cursor %d of %d", v, h.m.cur[h.m.view], n)
 		}
 	}
 	h.m.view = nViews
@@ -216,10 +218,10 @@ func TestNoRunData(t *testing.T) {
 			t.Fatal(v)
 		}
 	}
-	h.key("3")
+	h.show(vPackages)
 	h.has("Packages(acme/production)[0]")
 	h.m.org = ""
-	h.key("9")
+	h.key("3")
 	h.has("no organizations")
 }
 
@@ -277,7 +279,8 @@ func TestFormMore(t *testing.T) {
 func TestPanelsScroll(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(80, 12)
-	h.key("3", "o")
+	h.show(vPackages)
+	h.key("o")
 	for range 12 {
 		h.key("down")
 	}
@@ -338,19 +341,19 @@ func TestOddData(t *testing.T) {
 	// the open run highlighted, a run still running
 	h.m.envd.Runs = append(h.m.envd.Runs, runInfo{RunID: "2026-11-07_110000", State: "running"})
 	h.m.run = "2026-11-07_110000"
-	h.key("9")
+	h.key("3")
 	h.has("running", "2026-11-07 11:00")
 	h.m.run = "current"
 	// new changes with KEV and RCE; nothing resolved
 	h.m.rund.New = &diffSet{Total: 3, Rows: []diffRow{{Host: "web-01", Pkg: "openssl", Priority: "P1", KEV: true, RCE: 1, Count: 3}}}
 	h.m.rund.Resolved = nil
-	h.key("4")
+	h.show(vChanges)
 	h.has("Changes(acme/production)[1]", "+ P1  web-01", "KEV RCE openssl")
 	// logins: none accepted; attackers sorted by attempts, users by tries then name
 	h.m.rund.Access = map[string]map[string]any{"web-01": {"logins": map[string]any{"attackers": []any{
 		map[string]any{"ip": "203.0.113.7", "n": 5.0, "users": []any{[]any{"root", 2.0}, []any{"admin", 2.0}}},
 		map[string]any{"ip": "203.0.113.9", "n": 50.0, "users": []any{}}}}}}
-	h.key("5")
+	h.show(vAccess)
 	h.has("No login data", "admin,root")
 	if s := h.screen(); strings.Index(s, "203.0.113.9") > strings.Index(s, "203.0.113.7") {
 		t.Fatal("most attempts first")
@@ -381,7 +384,7 @@ func maps(ui map[string]map[string]string, lang string) map[string]map[string]st
 
 func TestRunInfoMore(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.key("9")
+	h.key("3")
 	h.m.runInfo = &runInfoView{id: "2026-11-02_110000"}
 	h.has("loading")
 	h.m.runInfo.meta = &runMeta{ModuleErrors: map[string][]string{"web-01": {"os_packages: trivy failed"}}}

@@ -808,6 +808,20 @@
     "nothing to fix": "rien à corriger",
     "server": "serveur",
     "to fix": "à corriger",
-    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "vues : serveurs, À faire, paquets, changements, accès, réseau, santé, exceptions, exécutions, scans"
+    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "vues : serveurs, À faire, paquets, changements, accès, réseau, santé, exceptions, exécutions, scans",
+    "deferred by the vendor": "reporté par l'éditeur",
+    "no fix released yet": "pas encore de correctif publié",
+    "only with Ubuntu Pro (ESM)": "seulement avec Ubuntu Pro (ESM)",
+    "released, not in this host's repositories": "publié, pas dans les dépôts de cet hôte",
+    "won't be fixed": "ne sera pas corrigé",
+    "Check connection": "Vérifier la connexion",
+    "Connect": "Connexion",
+    "Connecting": "Connexion…",
+    "History": "Historique",
+    "History: what changed; the scans started here": "Historique : ce qui a changé ; les scans lancés ici",
+    "Servers, ToDo, History": "Serveurs, À faire, Historique",
+    "Servers: what to show (priorities, logins, network, health)": "Serveurs : quoi afficher (priorités, connexions, réseau, santé)",
+    "accepted risks": "risques acceptés",
+    "show": "afficher"
   }
 }

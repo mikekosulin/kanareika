@@ -252,7 +252,7 @@ func (m *Model) setupFields() []field {
 		{key: "jump", label: "Jump host", placeholder: "bastion", login: true, only: "company"},
 		{key: "sudo", label: "passwordless sudo: also check passwords, keys and the firewall", kind: fCheck, login: true},
 		{key: "confirmed", label: "I’m allowed to audit these servers", kind: fCheck},
-		{key: "submit", label: "Check access", kind: fButton},
+		{key: "submit", label: "Check connection", kind: fButton},
 	}
 }
 
@@ -1026,7 +1026,7 @@ func (f *field) line(d int) bool {
 func (m *Model) setupTitle() string { return sTitle.Render("~ kanareika setup") }
 
 // steps: the setup's steps, as tabs.
-var steps = []string{"Servers", "Access", "First scan"}
+var steps = []string{"Servers", "Connect", "First scan"}
 
 // stepTabs: Servers › Access › First scan; the current one a tab, the done ones ✓ green, the rest dim.
 func (m *Model) stepTabs() string {
@@ -1199,9 +1199,9 @@ func (m *Model) serversView(w int) []string {
 	if focus("submit") {
 		mark()
 	}
-	b := sCrumb.Render("⏎ " + m.t.T("Check access"))
+	b := sCrumb.Render("⏎ " + m.t.T("Check connection"))
 	if focus("submit") {
-		b = sSel.Render(" ⏎ " + m.t.T("Check access") + " ")
+		b = sSel.Render(" ⏎ " + m.t.T("Check connection") + " ")
 	}
 	if wz.busy {
 		b += " " + sRun.Render(m.spinChar())
@@ -1415,7 +1415,7 @@ var authFail = regexp.MustCompile(`(?i)authenticat|permission denied|publickey|r
 // how to fix a refused login), the ones that answered, the lines skipped when saving.
 func (m *Model) checkView(w int) []string {
 	wz := m.setup
-	out := []string{" " + sBold.Render(m.t.T("Checking access")) + "   " + sMuted.Render(m.t.T("One login per server, uname -sr, log out. Nothing is changed.")), ""}
+	out := []string{" " + sBold.Render(m.t.T("Connecting")) + "   " + sMuted.Render(m.t.T("One login per server, uname -sr, log out. Nothing is changed.")), ""}
 	if m.err != "" && wz.hosts == nil {
 		return append(out, " "+sErr.Render("✗ "+m.err))
 	}
@@ -1671,7 +1671,7 @@ func (m *Model) setupHints() string {
 	case wz.pick != nil:
 		l = []k{{"space", "toggle"}, {"⏎", "Add"}, {"esc", "Cancel"}}
 	case wz.step == 1:
-		l = []k{{"tab", "next"}, {"ctrl+s", "Check access"}, {"ctrl+o", "~/.ssh/config"}, {"ctrl+d", "download"}}
+		l = []k{{"tab", "next"}, {"ctrl+s", "Check connection"}, {"ctrl+o", "~/.ssh/config"}, {"ctrl+d", "download"}}
 		if len(m.orgs.Orgs) > 0 {
 			l = append(l, k{"esc", "close"})
 		}

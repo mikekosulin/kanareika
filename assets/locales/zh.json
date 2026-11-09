@@ -808,6 +808,20 @@
     "nothing to fix": "无需修复",
     "server": "服务器",
     "to fix": "待修复",
-    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "视图：服务器、待办、软件包、变更、访问、网络、健康、例外、运行记录、扫描"
+    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "视图：服务器、待办、软件包、变更、访问、网络、健康、例外、运行记录、扫描",
+    "deferred by the vendor": "供应商已推迟",
+    "no fix released yet": "尚未发布修复",
+    "only with Ubuntu Pro (ESM)": "仅限 Ubuntu Pro (ESM)",
+    "released, not in this host's repositories": "已发布，但不在此主机的软件源中",
+    "won't be fixed": "不会修复",
+    "Check connection": "检查连接",
+    "Connect": "连接",
+    "Connecting": "正在连接",
+    "History": "历史",
+    "History: what changed; the scans started here": "历史：变化了什么；从这里启动的扫描",
+    "Servers, ToDo, History": "服务器、待办、历史",
+    "Servers: what to show (priorities, logins, network, health)": "服务器：显示什么（优先级、登录、网络、健康）",
+    "accepted risks": "已接受的风险",
+    "show": "显示"
   }
 }

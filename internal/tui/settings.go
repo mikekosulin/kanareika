@@ -86,4 +86,4 @@ func (s *Settings) toggle(v view, key string) {
 
 // viewKeys: stable names of the views in the settings file.
 var viewKeys = [nViews]string{"servers", "actions", "packages", "changes", "access", "network", "health", "exceptions",
-	"runs", "scans"}
+	"runs", "scans", "lens"}

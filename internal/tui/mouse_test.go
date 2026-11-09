@@ -63,7 +63,7 @@ func TestMouseTree(t *testing.T) {
 		t.Fatal("group by", h.m.by)
 	}
 	h.click(" fix ")
-	h.has("openssl 3.0.1 → 3.0.10")
+	h.has("openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10")
 	// a row: the cursor there; the check selects; the caret opens
 	h.click("kernel-modules")
 	if n := h.m.curNode(); n == nil || !strings.HasPrefix(n.ID, "pkg:os:kernel-modules") {
@@ -80,7 +80,7 @@ func TestMouseTree(t *testing.T) {
 	h.mouse(row+2, y, tea.MouseButtonLeft)
 	h.has("● ▸ P1 os     kernel-modules")
 	// the details pane: its commands, the copy, the wheel
-	h.click("openssl 3.0.1 → 3.0.10")
+	h.click("openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10")
 	h.has("$ dnf update openssl", "c copy")
 	h.click("$ dnf update openssl") // the chosen one: copied
 	if clipText(t, h) != "dnf update openssl" {
@@ -103,9 +103,9 @@ func TestMouseTree(t *testing.T) {
 		t.Fatal("wheel", h.m.cur[vActions])
 	}
 	h.size(100, 30)
-	h.click("openssl 3.0.1 → 3.0.10")
-	h.click("openssl 3.0.1 → 3.0.10")
-	h.has("Details(openssl 3.0.1 → 3.0.10)")
+	h.click("openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10")
+	h.click("openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10")
+	h.has("Details(openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10)")
 	h.wheel("WHY P1", true)
 	h.wheel("APPLY", false)
 	h.size(160, 40)
@@ -206,10 +206,10 @@ func TestMouseSetup(t *testing.T) {
 	h.has("[x] I’m allowed")
 	h.click("↓ d download")
 	h.has("vulnerability list ")
-	h.click("⏎ Check access")
-	h.has("Checking access")
+	h.click("⏎ Check connection")
+	h.has("Connecting")
 	h.click("r Check again")
-	h.has("Checking access")
+	h.has("Connecting")
 	h.click("esc Back")
 	if h.m.setup.step != 1 {
 		t.Fatal("back")

@@ -808,6 +808,20 @@
     "nothing to fix": "고칠 것 없음",
     "server": "서버",
     "to fix": "고칠 것",
-    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "보기: 서버, 할 일, 패키지, 변경, 접근, 네트워크, 상태, 예외, 실행, 스캔"
+    "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans": "보기: 서버, 할 일, 패키지, 변경, 접근, 네트워크, 상태, 예외, 실행, 스캔",
+    "deferred by the vendor": "공급업체가 연기함",
+    "no fix released yet": "아직 수정 미배포",
+    "only with Ubuntu Pro (ESM)": "Ubuntu Pro (ESM) 전용",
+    "released, not in this host's repositories": "배포됨, 이 호스트 저장소에는 없음",
+    "won't be fixed": "수정되지 않음",
+    "Check connection": "연결 확인",
+    "Connect": "연결",
+    "Connecting": "연결 중",
+    "History": "기록",
+    "History: what changed; the scans started here": "기록: 무엇이 바뀌었는지, 여기서 시작한 스캔",
+    "Servers, ToDo, History": "서버, 할 일, 기록",
+    "Servers: what to show (priorities, logins, network, health)": "서버: 표시할 내용 (우선순위, 로그인, 네트워크, 상태)",
+    "accepted risks": "수용한 위험",
+    "show": "표시"
   }
 }
