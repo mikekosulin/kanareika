@@ -158,7 +158,8 @@ type Tracker struct {
 	items   []item
 	running bool
 	now     func() time.Time
-	// OnEvent: called (outside the lock) when a download changes state or note; the plain CLI output prints it
+	// OnEvent: called (outside the lock) when a download changes state or note; the plain CLI output prints it.
+	// It is called concurrently, from the goroutines of the jobs running in parallel: guard what it touches.
 	OnEvent func(Item)
 }
 
