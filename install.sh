@@ -12,7 +12,7 @@
 # to remove it, delete that one file.
 #
 #   KANAREIKA_BIN_DIR=<DIR>   install there instead
-#   KANAREIKA_YES=1           don't ask (scripts, CI)
+#   KANAREIKA_YES=1           don't ask (scripts, CI, docker build); without a terminal to ask on, it is needed
 #
 # Everything runs from main() on the last line: a download cut short executes nothing.
 set -eu
@@ -23,6 +23,17 @@ die() {
   say "kanareika install: $*"
   exit 1
 }
+
+# said_yes: KANAREIKA_YES says yes (1, true, yes, y), as the CLI reads it.
+said_yes() {
+  case "${KANAREIKA_YES:-}" in
+    1 | [Tt][Rr][Uu][Ee] | [Yy][Ee][Ss] | [Yy]) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# can_ask: a terminal can be opened to ask on (in `docker build` /dev/tty exists but does not open).
+can_ask() { (: </dev/tty) 2>/dev/null; }
 
 main() {
   case "$(uname -s)" in
@@ -83,20 +94,24 @@ main() {
   if [ -z "$dir" ]; then
     if [ -w /usr/local/bin ]; then
       dir=/usr/local/bin
-    elif [ "$(id -u)" != 0 ] && command -v sudo >/dev/null 2>&1 && [ -r /dev/tty ]; then
+    elif [ "$(id -u)" != 0 ] && command -v sudo >/dev/null 2>&1 && can_ask; then
       dir=/usr/local/bin sudo=sudo
     else
       dir="$HOME/.local/bin"
     fi
   fi
 
-  if [ "${KANAREIKA_YES:-}" != 1 ] && [ -r /dev/tty ]; then
+  if said_yes; then
+    :
+  elif can_ask; then
     printf 'Install kanareika %s into %s%s? [Y/n] ' "$version" "$dir" "${sudo:+ (with sudo)}" >&2
     read -r answer </dev/tty || answer=n
     case "$answer" in
       "" | y | Y | yes | YES) ;;
       *) die "not installed" ;;
     esac
+  else
+    die "no terminal to ask on: not installed. To install without asking: KANAREIKA_YES=1 sh install.sh"
   fi
 
   $sudo mkdir -p "$dir"
