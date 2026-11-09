@@ -2,7 +2,9 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"slices"
 	"strings"
@@ -68,7 +70,8 @@ type lensResp struct {
 
 type lensMsg struct {
 	key string
-	d   *lensResp // nil: the server has no lenses yet
+	d   *lensResp
+	err error // 404: the server has no lenses yet
 }
 
 // stubLenses: the lenses until the server lists them, each drawn by the view it had before.
@@ -136,7 +139,7 @@ func (m *Model) lensKey() string { return m.wantKey() + "?" + m.lens }
 
 // fetchLens: the rows of the lens on screen (and the list of lenses); nil when they are here or on the way.
 func (m *Model) fetchLens() tea.Cmd {
-	if m.run == "" || m.lensNone {
+	if m.run == "" || m.lensNone || m.lensFail != "" && m.lensFail == m.lensKey() { // failed: again with r
 		return nil
 	}
 	id := m.lens
@@ -157,18 +160,28 @@ func (m *Model) fetchLens() tea.Cmd {
 		defer cancel()
 		var d lensResp
 		if err := c.Get(ctx, q, &d); err != nil {
-			return lensMsg{k, nil}
+			return lensMsg{k, nil, err}
 		}
-		return lensMsg{k, &d}
+		return lensMsg{k, &d, nil}
 	}
 }
 
 func (m *Model) onLens(msg lensMsg) {
-	delete(m.pending, "lens")
-	if msg.d == nil { // no lens API: the views that showed them
+	if m.pending["lens"] == msg.key {
+		delete(m.pending, "lens")
+	}
+	var ae *APIError
+	switch {
+	case errors.As(msg.err, &ae) && ae.Status == http.StatusNotFound: // no lens API: the views that showed them
 		m.lensNone = true
 		return
+	case msg.err != nil: // shown; asked again with r
+		m.lensFail, m.err = msg.key, msg.err.Error()
+		return
+	case msg.d == nil || msg.key != m.lensKey(): // for a screen left since
+		return
 	}
+	m.lensFail = ""
 	m.lensAPI, m.lensData, m.lensFor = true, msg.d, msg.key
 	if m.view != vLens && place(m.view) == vServers && m.lens != "priorities" {
 		m.setLens(m.lens)

@@ -123,6 +123,7 @@ type Model struct {
 	lensFor      string                          // what the rows are for
 	lensAPI      bool                            // the server draws lenses
 	lensNone     bool                            // it does not (yet): the views that showed them
+	lensFail     string                          // the lens key whose fetch failed: not asked again until r
 	setupCurLine int                             // the line of the setup form the cursor is on (kept in view)
 	handlers     map[string]func(dx int) tea.Cmd // what a click on a zone does (drawn this frame)
 	zones        []hitZone                       // where the zones are on screen
@@ -614,6 +615,7 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "r", "ctrl+r":
 		m.runKey, m.treeKey = "", "" // reload the run and the tree too
+		m.lensNone, m.lensFail = false, ""
 		m.nodes, m.pending = map[string]*nodeDetail{}, map[string]string{}
 		return m, m.refresh()
 	case "L":

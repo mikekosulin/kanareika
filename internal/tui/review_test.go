@@ -56,6 +56,35 @@ func TestClicksBehindDialogs(t *testing.T) {
 	}
 }
 
+// TestLensErrors: only a 404 means the server has no lenses; another error shows, is not asked again on every frame,
+// and r asks again; an answer for a lens left since is dropped.
+func TestLensErrors(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, false)
+	m := h.m
+	h.key("1")
+	k := m.lensKey()
+	m.onLens(lensMsg{key: k, err: &APIError{Status: 500, Msg: "boom"}})
+	if m.lensNone || m.err != "boom" || m.fetchLens() != nil {
+		t.Fatalf("none %v err %q", m.lensNone, m.err)
+	}
+	h.key("r")
+	if m.lensFail != "" || m.lensNone {
+		t.Fatal("r keeps the failure")
+	}
+	m.onLens(lensMsg{key: "elsewhere", d: &lensResp{}})
+	if m.lensFor == "elsewhere" {
+		t.Fatal("a stale lens taken")
+	}
+	m.onLens(lensMsg{key: k, err: &APIError{Status: 404}})
+	if !m.lensNone {
+		t.Fatal("404: no lens API")
+	}
+	h.key("r")
+	if m.lensNone {
+		t.Fatal("r asks again")
+	}
+}
+
 // TestSetupOrgWithoutEnvs: adding servers to an organization with no environments yet goes to production.
 func TestSetupOrgWithoutEnvs(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, false)
