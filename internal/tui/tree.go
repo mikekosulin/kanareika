@@ -598,9 +598,9 @@ func (m *Model) copyTask() tea.Cmd {
 func (m *Model) agentContext(d *nodeDetail) string {
 	n := d.Node
 	var b strings.Builder
-	line := func(k, v string) {
-		if v != "" {
-			fmt.Fprintf(&b, "%s: %s\n", k, v)
+	line := func(k, v string) { // one line each: what a host reported cannot add lines of its own (prompt's data())
+		if v = oneLine(v); v != "" {
+			fmt.Fprintf(&b, "%s: %s\n", oneLine(k), v)
 		}
 	}
 	line("kanareika finding", m.org+"/"+m.env+" (run "+m.run+")")
@@ -649,7 +649,8 @@ func (m *Model) agentContext(d *nodeDetail) string {
 	if len(d.Actions) > 0 {
 		line("action ids", strings.Join(d.Actions, ", "))
 	}
-	fmt.Fprintf(&b, "more: kanareika MCP get_fix org=%s env=%s by=%s id=%q; fix_prompt / fix_plan take the action ids\n", m.org, m.env, m.grouping(), n.ID)
+	fmt.Fprintf(&b, "more: kanareika MCP get_fix org=%s env=%s by=%s id=%q; fix_prompt / fix_plan take the action ids\n",
+		oneLine(m.org), oneLine(m.env), m.grouping(), oneLine(n.ID))
 	return b.String()
 }
 

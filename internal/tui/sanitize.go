@@ -3,6 +3,7 @@ package tui
 import (
 	"reflect"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -127,4 +128,12 @@ func safeFrame(l string) string {
 		i += n
 	}
 	return b.String()
+}
+
+// oneLine: s as one line of text for an agent: controls and line breaks (also U+2028/9) as single spaces, as the
+// server's prompts do (internal/prompt's data).
+func oneLine(s string) string {
+	return strings.Join(strings.FieldsFunc(s, func(r rune) bool {
+		return unicode.IsControl(r) || r == '\u2028' || r == '\u2029'
+	}), " ")
 }
