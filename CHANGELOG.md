@@ -4,13 +4,14 @@ Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor ve
 
 ## 0.5.0 — 2026-11-XX
 
-What to fix, grouped the way it gets fixed; a new web page and TUI; setup for a homelab, a client or a fleet.
+Three places instead of ten pages: Servers, ToDo, History. What to fix, grouped the way it gets fixed; setup for a homelab, a client or a fleet; a web page and a TUI that work the same.
 
 ### Breaking
 
 - **Due dates count from the first scan that saw a finding** (`first_seen`), not from every scan, and are never later than CISA's KEV due date. Long-open findings may now show as overdue. To change it, set `due:` in `assets/policy/priority.yml` or in the org file, per environment too (`start: scan` restores the old count); see [Due dates](docs/org-file.md#due-dates).
-- **TUI views are renumbered**: `1` ToDo, `2` Hosts … `9` Runs, `0` Scans. The Organizations view is gone: pick an organization with `O`, an environment with `E`. The status bar replaces the header, so the `header` setting is ignored.
-- **The 0.4 web page moved to `/classic`**; `/` is the new one, and `/index.html` redirects to `/`.
+- **Three places instead of ten views**, in the TUI and on the web: `1` Servers, `2` ToDo, `3` History. Hosts, Access, Network and Health are lenses of Servers (`w` in the TUI, the "show" switch on the web); Packages is ToDo grouped by fix; Exceptions is ToDo's "accepted" filter; Changes, Runs and Scans are in History. In the TUI, the Organizations view is gone (`O` picks an organization, `E` an environment) and the status bar replaces the header, so the `header` setting is ignored.
+- **The 0.4 web page moved to `/classic`**; `/` is the new one. Old addresses redirect: `/index.html` → `/`, `/hosts` → `/servers`, `/access`, `/network`, `/health` → `/servers?show=…`, `/packages` → `/todo`, `/exceptions` → `/todo?f=accepted`, `/changes` and `/runs` → `/history`.
+- **Counts are of fixes**: one fix is one package update (all binaries of a source package, up to the highest fixed version), one image rebuild or one setting, so the numbers are lower than 0.4's finding rows. MCP `get_summary` returns `totals` instead of `packages_to_update`; `/api/env` runs carry `totals`.
 - **`db update` and scans ask before downloading** on a terminal, with the size. In scripts nothing changes (no terminal, no question); otherwise pass `--yes` (`-y`) or set `KANAREIKA_YES=1`.
 - **The Java DB (about 1 GB) is downloaded only when a scan first finds .jar files.** To have it in advance, e.g. before `db export` for an isolated network, run `kanareika db update --java`.
 - **Release assets are archives**: `kanareika-<OS>-<ARCH>.tar.xz` (`.zip` on Windows), about a fifth of the binary's size. The bare binaries are still published with this release only; switch download links and scripts to the archives.
@@ -19,9 +20,12 @@ What to fix, grouped the way it gets fixed; a new web page and TUI; setup for a 
 
 - **The vulnerability tree**: findings grouped by fix (one package update on many hosts, one image to rebuild, with where it runs), by CVE or by host; per group the hosts, CVEs, max EPSS, KEV/RCE, fix states and the earliest due date. A node's details say why its priority, where the due date comes from (`due_why`), every CVE with its CVSS vector, EPSS, KEV and description, and the commands per OS family. The web page, the TUI and MCP show the same tree (`/api/tree`, `/api/node`).
 - **A new web page** on the tree, with first-run setup and scans from the page; `⌘K` / `Ctrl+K` opens a command palette.
-- **The TUI's ToDo is the tree**, with a details pane, a status bar, organization and environment pickers (`O`, `E`), filters (`f`) and `:` to jump to a fix, a CVE, a host or a view.
+- **Servers**: every server of the environment, worst first, with its state (clean, partial, failed with the reason, never scanned), its fixes under it and a card with packages, access, network and health. Lenses (priorities, logins, network, health) are defined by the server (`/api/lens`, MCP `list_servers`), so new ones need no interface change.
+- **History**: runs newest first with what appeared and went (`/api/history`), the log and the scans running.
+- **The TUI** on the same tree, with a details pane, a status bar, organization and environment pickers (`O`, `E`), filters (`f`), `:` to jump to a fix, a CVE, a host or a view, mouse clicks and the wheel (off in `o`), and a light palette for light terminals (`o`, or `KANAREIKA_THEME=light`).
+- **Why there is nothing to install**: no fix released yet, released but not in this host's repositories, only with Ubuntu Pro (ESM), deferred, or won't be fixed. "Not checked" says plainly what needed root and why it wasn't available.
 - **Context for AI agents**: `Y` in the TUI copies one node's context for an agent's chat, `y` the task for the selection; `/api/prompt?nodes=`; MCP `list_fixes` and `get_fix`.
-- **Setup for every case**: my servers (homelab), a client's servers (one org per client) or a fleet. One field takes IPs, `user@host`, ssh command lines, `~/.ssh/config` blocks and aliases, CSV and Ansible inventories, and shows live what each line becomes; `~/.ssh/config` hosts can be picked from a list. Servers can be added to an existing org (the old file kept as `.bak`). The access check runs per host and groups failures by cause, with what to do. The TUI has the same setup.
+- **Setup for every case**: Personal (a homelab), Client (one org per client) or Company (a fleet). One field takes IPs, `user@host`, ssh command lines, `~/.ssh/config` blocks and aliases, CSV and Ansible inventories, and shows live what each line becomes; `~/.ssh/config` hosts can be picked from a list. Servers can be added to an existing org (the old file kept as `.bak`). The connection check runs per host and groups failures by cause, with what to do (e.g. the `ssh-copy-id` line). The TUI has the same setup.
 - **The download question shows real sizes**, read from the registries (`/api/db/size`).
 - **The web page on any port**: `--port` or `KANAREIKA_PORT`, `--port 0` for a free one; `--host` or `KANAREIKA_HOST`. It still listens on localhost by default. A busy port gets a plain message.
 - **install.sh**: picks the build for this OS and CPU, checks its checksum and the build attestation (with the GitHub CLI), asks before installing. Read it before running it; the README shows how.
@@ -31,9 +35,9 @@ What to fix, grouped the way it gets fixed; a new web page and TUI; setup for a 
 
 - **Scans refresh KEV and EPSS** when they are older than a day, and say so when they run without them; `--offline` warns about a vulnerability DB older than a week.
 - **The demo** is a fleet of 118 hosts in groups, with shared advisories, updates rolling out per group, kernels waiting for a reboot, and images in Docker and Kubernetes.
-- **The remaining web views** are redrawn in the new design.
-- **DB downloads run in parallel**, with progress per download and in total.
-- **Counts agree** between the web page, the TUI and MCP, "no access" messages say plainly what could not be read, and findings waiting for a vendor fix are counted.
+- **DB downloads run in parallel**, with progress per download and in total, straight from the registries with a checksum, and say why when a mirror fails (rate limit, timeout, TLS, disk space).
+- **Counts agree** between the scan's output, `summary.md`, the web page, the TUI and MCP.
+- **The README** shows its banner and screenshots in the reader's theme (light or dark), as lossless WebP, and the manual install finds the OS and CPU itself.
 
 ### Fixed
 
