@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -185,7 +186,8 @@ func TestMirrorFallback(t *testing.T) {
 	t.Setenv("KANAREIKA_TRIVY_DB_REPOS", strings.Join(refs, ","))
 	var notes []string
 	tr := dbget.NewTracker()
-	tr.OnEvent = func(it dbget.Item) { notes = append(notes, it.Note) }
+	var mu sync.Mutex // OnEvent runs in the jobs' goroutines
+	tr.OnEvent = func(it dbget.Item) { mu.Lock(); notes = append(notes, it.Note); mu.Unlock() }
 	if errs := tr.Run(context.Background(), []dbget.Job{Job("db", nil)}); errs != nil {
 		t.Fatal(errs)
 	}
@@ -322,7 +324,8 @@ func TestViaTrivy(t *testing.T) {
 	fake(t, `exit 0`)
 	tr := dbget.NewTracker()
 	var notes []string
-	tr.OnEvent = func(it dbget.Item) { notes = append(notes, it.Note) }
+	var mu sync.Mutex // OnEvent runs in the jobs' goroutines
+	tr.OnEvent = func(it dbget.Item) { mu.Lock(); notes = append(notes, it.Note); mu.Unlock() }
 	if errs := tr.Run(context.Background(), []dbget.Job{Job("db", nil), Job("nope", nil)}); errs["db"] != nil || errs["nope"] == nil {
 		t.Fatal(errs)
 	}
