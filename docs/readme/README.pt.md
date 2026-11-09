@@ -20,7 +20,7 @@ Execute `kanareika`. Ele abre na lista “A fazer”: o que corrigir primeiro, o
 
 Execute `kanareika web` para ver os mesmos dados no navegador, com a tendência das últimas 30 execuções.
 
-![Dados de demonstração, fictícios.](../screenshots/web-pt.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-pt.png"><img alt="Dados de demonstração, fictícios." src="../screenshots/web-pt-light.png"></picture>
 
 <sub>Dados de demonstração, fictícios.</sub>
 

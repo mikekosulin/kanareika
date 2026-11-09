@@ -20,7 +20,7 @@
 
 运行 `kanareika web`：在浏览器中查看相同的数据，以及最近 30 次运行的趋势。
 
-![演示数据，均为虚构。](../screenshots/web-zh.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-zh.png"><img alt="演示数据，均为虚构。" src="../screenshots/web-zh-light.png"></picture>
 
 <sub>演示数据，均为虚构。</sub>
 

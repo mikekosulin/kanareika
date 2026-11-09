@@ -39,7 +39,7 @@ func tuiSize(cols, rows int) (int, int) {
 }
 
 // shots: the README's screenshots in every language: tui-<lang>.png (the frame of size after keys, as run
-// draws it) and web-<lang>.png (the page of `kanareika web` over the same directory, dark theme), in out.
+// draws it), web-<lang>.png and web-<lang>-light.png (ToDo of `kanareika web` grouped by CVE, dark and light), in out.
 // The directory is demo data (tools/demo): its trivy cache and feeds are used, not this machine's.
 func shots(out, home, bin, org, env, size, keys, at string) error {
 	if bin == "" {
@@ -84,9 +84,15 @@ func shots(out, home, bin, org, env, size, keys, at string) error {
 		if err := shot(bin, u, filepath.Join(out, "tui-"+lang+".png"), tuiW, tuiH); err != nil {
 			return err
 		}
-		where := url.Values{"org": {org}, "env": {env}}
-		if err := shot(bin, web.URL+"/?lang="+lang+"#"+where.Encode(), filepath.Join(out, "web-"+lang+".png"), webW, webH,
-			"--force-dark-mode", "--virtual-time-budget=10000"); err != nil {
+		// the web page grouped by CVE (the most telling view), in both themes: the README picks by the reader's theme
+		where := url.Values{"org": {org}, "env": {env}, "by": {"cve"}, "lang": {lang}}
+		page2 := web.URL + "/todo?" + where.Encode()
+		if err := shot(bin, page2, filepath.Join(out, "web-"+lang+".png"), webW, webH,
+			"--force-dark-mode", "--blink-settings=preferredColorScheme=0", "--virtual-time-budget=10000"); err != nil {
+			return err
+		}
+		if err := shot(bin, page2, filepath.Join(out, "web-"+lang+"-light.png"), webW, webH,
+			"--blink-settings=preferredColorScheme=1", "--virtual-time-budget=10000"); err != nil {
 			return err
 		}
 	}

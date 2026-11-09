@@ -76,6 +76,7 @@ nav.nav { padding: 10px 8px; display: grid; gap: 1px; overflow: auto; }
 .nav hr { border: 0; border-top: 1px solid var(--line); margin: 8px 2px; }
 .status { margin-top: auto; padding: 12px; border-top: 1px solid var(--line); display: grid; gap: 8px; font-size: 12.5px; }
 .status .row { display: flex; align-items: center; gap: 8px; color: var(--ink-2); }
+.status .row > span:last-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* one line in every language */
 .status .row b { color: var(--ink); font-weight: 550; }
 .status .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
@@ -998,7 +999,7 @@ function mainText(n) {
     case "where": return `<span class="ttl" style="color:var(--ink)">${esc(n.label)}</span>`;
     case "cve": return `<span class="cveid">${esc(n.label)}</span><span class="ttl">${esc(n.title)}</span>`;
     case "group": return `<span class="hostn" style="color:var(--ink)">${esc(n.label)}</span><span class="kind">${n.hosts} ${t("hosts")}${n.os ? " · " + esc(n.os) : ""}</span>`;
-    case "host": return `<span class="hostn">${esc(n.label)}</span><span class="kind">${esc(n.os)}${n.exposure === 1 ? " · " + t("internet-facing") : ""}</span>`;
+    case "host": return `<span class="hostn">${esc(n.label)}</span><span class="kind">${esc(n.os)}${n.exposure === 1 ? " · " + t("Public") : ""}</span>`;
     case "other": return `<span class="pkg" style="font-weight:500">${esc(n.label)}</span>`;
     case "section": return `<span class="secl">${esc(n.label === "parts" ? t("inside the image") : t("runs on"))}</span>`;
   }
@@ -1050,7 +1051,7 @@ function counts() {
 function find(id, ns = S.tree?.nodes || []) { for (const n of ns) { if (n.id === id) return n; const k = find(id, n.kids || []); if (k) return k; } return null; }
 
 /* ---------- ToDo ---------- */
-const FILTERS = [["kev", "KEV"], ["rce", "pre-auth RCE"], ["epss", "EPSS ≥ 10%"], ["front", "internet-facing"], ["ready", "fix ready"], ["nofix", "no fix yet"], ["overdue", "overdue"]];
+const FILTERS = [["kev", "KEV"], ["rce", "pre-auth RCE"], ["epss", "EPSS ≥ 10%"], ["front", "Public"], ["ready", "fix ready"], ["nofix", "no fix yet"], ["overdue", "overdue"]];
 function todoShell() {
   return `<div class="work"><div class="listcol"><div class="work-top"><div class="hdr"><div><h1>${t("ToDo")}</h1><div class="sub" id="sub"></div></div>
       <div class="counts" id="counts"></div></div></div>
@@ -1727,7 +1728,7 @@ function hostDetail(rd, n) {
   const lis = (rows) => (rows.filter(Boolean).length ? `<div class="lis">${rows.filter(Boolean).join("")}</div>` : "");
   const denied = (x) => (x?.denied?.length ? li(MK.mut, `<span class="z">${t("no access to {what}", { what: esc(x.denied.map((d) => catMsg(deniedKey(d), d)).join(", ")) })}</span>`) : "");
   const pcs = ["P1", "P2", "P3", "P4"].filter((p) => c[p]).map((p) => `<span class="c${p}">${p} ${c[p]}</span>`).join(" <span class=\"z\">•</span> ");
-  const meta = [eh.address, f.os, eh.group && t("group {g}", { g: eh.group }), (eh.exposure === 1 || eh.public) && t("internet-facing")].filter(Boolean);
+  const meta = [eh.address, f.os, eh.group && t("group {g}", { g: eh.group }), (eh.exposure === 1 || eh.public) && t("Public")].filter(Boolean);
   const reboot = pk.some((p) => p.fix_state === "reboot");
   const sn = SRV.byName?.[n], probl = sn && ["failed", "partial", "not_scanned"].includes(sn.state) ? problemText(sn) : "";
   const scannedAt = sn?.last_scan || (s[0] === "mut" ? "" : last);
@@ -1851,7 +1852,8 @@ function syncURL(push) {
   const host = isData(S.view) ? (VS.item?.kind === "host" ? VS.item.name : VS.want || "") : S.view === "servers" ? S.cardHost || S.wantHost || "" : "";
   const tab = isData(S.view) ? VS.tab[S.view] : "";
   const show = S.view === "servers" && S.lens !== "priorities" ? S.lens : "", f = S.view === "todo" && S.accepted ? "accepted" : "";
-  const u = "/" + S.view + "?" + qs({ org: S.org, env: S.env, run: S.run !== "current" ? S.run : "", show, f, tab, host, lang: keep || "" });
+  const by = S.view === "todo" && S.by !== "fix" ? S.by : "";
+  const u = "/" + S.view + "?" + qs({ org: S.org, env: S.env, run: S.run !== "current" ? S.run : "", by, show, f, tab, host, lang: keep || "" });
   const cur = location.pathname + location.search;
   if (u.replace(/\?$/, "") !== cur) history[push ? "pushState" : "replaceState"](null, "", u.replace(/\?$/, ""));
 }
@@ -1866,6 +1868,7 @@ function readURL() {
   S.wantHost = S.view === "servers" ? p.get("host") || "" : "";
   S.lens = p.get("show") || "priorities";
   S.accepted = S.view === "todo" && p.get("f") === "accepted";
+  if (S.view === "todo" && ["fix", "cve"].includes(p.get("by"))) S.by = p.get("by"); // a link to a grouping
 }
 function go(view, push = true, q) {
   if (view !== S.view) { VS.q = ""; VS.flt.clear(); VS.all = false; VS.sel = ""; VS.item = null; VS.stack = []; VS.want = ""; S.cardHost = ""; if (isTree(view) && isTree(S.view)) { S.open.clear(); S.cur = null; S.q = ""; } }

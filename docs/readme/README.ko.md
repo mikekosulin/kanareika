@@ -20,7 +20,7 @@
 
 `kanareika web`을 실행하면 같은 데이터를 브라우저에서 최근 30회 실행 추이와 함께 볼 수 있습니다.
 
-![데모 데이터(가상).](../screenshots/web-ko.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-ko.png"><img alt="데모 데이터(가상)." src="../screenshots/web-ko-light.png"></picture>
 
 <sub>데모 데이터(가상).</sub>
 

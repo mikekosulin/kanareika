@@ -20,7 +20,7 @@ Lancez `kanareika`. Il s'ouvre sur « À faire » : ce qu'il faut corriger en pr
 
 Lancez `kanareika web` pour retrouver les mêmes données dans un navigateur, avec la tendance des 30 dernières exécutions.
 
-![Données de démo, fictives.](../screenshots/web-fr.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-fr.png"><img alt="Données de démo, fictives." src="../screenshots/web-fr-light.png"></picture>
 
 <sub>Données de démo, fictives.</sub>
 

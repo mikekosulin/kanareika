@@ -20,7 +20,7 @@ Ejecute `kanareika`. Se abre en «Por hacer»: lo que hay que corregir primero, 
 
 Ejecute `kanareika web` para ver los mismos datos en el navegador, con la tendencia de las últimas 30 ejecuciones.
 
-![Datos de demostración, inventados.](../screenshots/web-es.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-es.png"><img alt="Datos de demostración, inventados." src="../screenshots/web-es-light.png"></picture>
 
 <sub>Datos de demostración, inventados.</sub>
 

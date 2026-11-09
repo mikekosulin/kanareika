@@ -20,7 +20,7 @@
 
 `kanareika web` を実行すると、同じデータをブラウザで確認できます。直近 30 回の実行の推移も表示されます。
 
-![デモデータ (架空のもの)。](../screenshots/web-ja.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-ja.png"><img alt="デモデータ (架空のもの)。" src="../screenshots/web-ja-light.png"></picture>
 
 <sub>デモデータ (架空のもの)。</sub>
 

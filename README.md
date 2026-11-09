@@ -20,7 +20,7 @@ Run `kanareika`. It opens on ToDo: what to fix first, most urgent at the top.
 
 Run `kanareika web` for the same data in a browser, with the trend of the last 30 runs.
 
-![Demo data, made up.](docs/screenshots/web-en.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web-en.png"><img alt="Demo data, made up." src="docs/screenshots/web-en-light.png"></picture>
 
 <sub>Demo data, made up.</sub>
 

@@ -29,27 +29,30 @@ func fakeShots(t *testing.T) *[]string {
 	return &calls
 }
 
-// TestShots: a TUI and a web picture per language, at their sizes; the web page in the language, over the org
-// and environment, dark; the demo's trivy cache and feeds, times in UTC.
+// TestShots: per language a TUI picture and the web page's ToDo grouped by CVE, dark and light, at their sizes, in
+// the language, over the org and environment; the demo's trivy cache and feeds, times in UTC.
 func TestShots(t *testing.T) {
 	calls := fakeShots(t)
 	home, out := t.TempDir(), filepath.Join(t.TempDir(), "shots")
 	if err := shots(out, home, "", "acme", "production", "150x26", "2", "2026-11-07T12:00:00Z"); err != nil {
 		t.Fatal(err)
 	}
-	if len(*calls) != 2*len(i18n.Langs()) {
+	if len(*calls) != 3*len(i18n.Langs()) {
 		t.Fatalf("%d pictures", len(*calls))
 	}
 	tui, web := (*calls)[0], (*calls)[1]
 	if !strings.HasPrefix(tui, "chrome file:///") || !strings.Contains(tui, "tui-en.png 1207x472") {
 		t.Error(tui)
 	}
-	for _, want := range []string{"/?lang=en#env=production&org=acme", "web-en.png 1600x1000", "--force-dark-mode", "--virtual-time-budget="} {
+	for _, want := range []string{"/todo?by=cve&env=production&lang=en&org=acme", "web-en.png 1600x1000", "--force-dark-mode", "--virtual-time-budget="} {
 		if !strings.Contains(web, want) {
 			t.Errorf("%q not in %s", want, web)
 		}
 	}
-	if !strings.Contains(strings.Join(*calls, "\n"), "/?lang=ja#") {
+	if light := (*calls)[2]; !strings.Contains(light, "web-en-light.png 1600x1000") || strings.Contains(light, "--force-dark-mode") {
+		t.Error(light)
+	}
+	if !strings.Contains(strings.Join(*calls, "\n"), "lang=ja&") {
 		t.Error("no Japanese page")
 	}
 	if os.Getenv("TRIVY_CACHE_DIR") != filepath.Join(home, "trivy") || os.Getenv("TZ") != "UTC" {
