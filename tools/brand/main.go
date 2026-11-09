@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"flag"
+	"github.com/mikekosulin/kanareika/tools/internal/webp"
 	"html/template"
 	"log"
 	"os"
@@ -63,7 +64,7 @@ type lang struct {
 var langs = []lang{
 	{Code: "en", Tag: "Security audit of your servers over SSH.", Accent: "What to patch first.",
 		Sub: "agentless · read-only · TUI + web · MCP", DB: "db ok", Keys: "↑↓ move · space select · f fix plan · / search",
-		Tabs: []string{"ToDo", "Hosts", "Packages", "Access", "Network", "Health"},
+		Tabs: []string{"Servers", "ToDo", "History"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -77,7 +78,7 @@ var langs = []lang{
 		}},
 	{Code: "ru", Tag: "Аудит безопасности серверов по SSH.", Accent: "Начните с главного.",
 		Sub:  "без агента · только чтение · TUI + веб · MCP",
-		Tabs: []string{"Что делать", "Хосты", "Пакеты", "Доступ", "Сеть", "Здоровье"},
+		Tabs: []string{"Серверы", "Что делать", "История"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -87,7 +88,7 @@ var langs = []lang{
 		}},
 	{Code: "zh", Tag: "通过 SSH 审计服务器安全。", Accent: "从最重要的开始。",
 		Sub:  "无代理 · 只读 · TUI + Web · MCP",
-		Tabs: []string{"待办", "主机", "软件包", "访问", "网络", "健康"},
+		Tabs: []string{"服务器", "待办", "历史"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -97,7 +98,7 @@ var langs = []lang{
 		}},
 	{Code: "es", Tag: "Auditoría de seguridad de servidores por SSH.", Accent: "Empiece por lo importante.",
 		Sub:  "sin agente · solo lectura · TUI + web · MCP",
-		Tabs: []string{"Por hacer", "Hosts", "Paquetes", "Acceso", "Red", "Salud"},
+		Tabs: []string{"Servidores", "Por hacer", "Historial"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -107,7 +108,7 @@ var langs = []lang{
 		}},
 	{Code: "fr", Tag: "Audit de sécurité des serveurs via SSH.", Accent: "Commencez par l'essentiel.",
 		Sub:  "sans agent · lecture seule · TUI + web · MCP",
-		Tabs: []string{"À faire", "Hôtes", "Paquets", "Accès", "Réseau", "Santé"},
+		Tabs: []string{"Serveurs", "À faire", "Historique"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -117,7 +118,7 @@ var langs = []lang{
 		}},
 	{Code: "pt", Tag: "Auditoria de segurança de servidores via SSH.", Accent: "Comece pelo que importa.",
 		Sub:  "sem agente · somente leitura · TUI + web · MCP",
-		Tabs: []string{"A fazer", "Hosts", "Pacotes", "Acesso", "Rede", "Saúde"},
+		Tabs: []string{"Servidores", "A fazer", "Histórico"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -127,7 +128,7 @@ var langs = []lang{
 		}},
 	{Code: "ja", Tag: "SSH によるサーバーのセキュリティ監査。", Accent: "まずは重要なものから。",
 		Sub:  "エージェント不要 · 読み取り専用 · TUI + Web · MCP",
-		Tabs: []string{"やること", "ホスト", "パッケージ", "アクセス", "ネット", "ヘルス"},
+		Tabs: []string{"サーバー", "やること", "履歴"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -137,7 +138,7 @@ var langs = []lang{
 		}},
 	{Code: "ko", Tag: "SSH를 통한 서버 보안 감사.", Accent: "중요한 것부터 시작하세요.",
 		Sub:  "에이전트 불필요 · 읽기 전용 · TUI + 웹 · MCP",
-		Tabs: []string{"할 일", "호스트", "패키지", "접근", "네트워크", "상태"},
+		Tabs: []string{"서버", "할 일", "기록"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -197,6 +198,11 @@ func run(out, logoPath, pagesDir, bin string) error {
 		}
 		if err := render(bin, page, filepath.Join(out, p.name+".png"), p.w, p.h); err != nil {
 			return err
+		}
+		if p.name != "og" { // the README's banners as lossless WebP; the social preview stays PNG
+			if _, err := webp.FromPNG(filepath.Join(out, p.name+".png")); err != nil {
+				return err
+			}
 		}
 	}
 	if bin == "" {

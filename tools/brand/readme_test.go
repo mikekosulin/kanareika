@@ -82,12 +82,12 @@ func TestReadmes(t *testing.T) {
 		rel, _ := filepath.Rel(filepath.Dir(path), "docs/brand/banner-"+lang)
 		brand := regexp.QuoteMeta(filepath.ToSlash(rel))
 		banner := regexp.MustCompile(`<picture><source media="\(prefers-color-scheme: dark\)" srcset="` + brand +
-			`\.png"><img alt="[^"]+" src="` + brand + `-light\.png"></picture>`)
+			`\.webp"><img alt="[^"]+" src="` + brand + `-light\.webp"></picture>`)
 		if !banner.MatchString(text) {
 			t.Errorf("%s: no banner picture (dark srcset, light src, alt)", path)
 		}
 
-		for _, pic := range []string{"brand/banner-" + lang + ".png", "brand/banner-" + lang + "-light.png", "screenshots/tui-" + lang + ".png", "screenshots/web-" + lang + ".png"} {
+		for _, pic := range []string{"brand/banner-" + lang + ".webp", "brand/banner-" + lang + "-light.webp", "screenshots/tui-" + lang + ".png", "screenshots/web-" + lang + ".png"} {
 			if !strings.Contains(text, pic) {
 				t.Errorf("%s: does not show %s", path, pic)
 			}
