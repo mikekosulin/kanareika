@@ -906,12 +906,12 @@ func (m *Model) treeView(w, h int) []string {
 		}
 		server := n.Kind == "host" && m.grouping() == "host"
 		if server {
-			switch {
-			case n.State == "failed":
+			switch n.State {
+			case "failed":
 				p = sErr.Render("✗")
-			case n.State == "not_scanned":
+			case "not_scanned":
 				p = sDim.Render("–")
-			case n.State == "clean":
+			case "clean":
 				p = sOK.Render("✓")
 			}
 		}
