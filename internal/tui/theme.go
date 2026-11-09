@@ -17,12 +17,12 @@ var themeNames = map[string]string{"": "auto", "dark": "dark", "light": "light"}
 
 var (
 	detectOnce sync.Once
-	detected   bool // the terminal's background is dark (asked once, before any theme was forced)
+	detected   bool // the terminal's background is dark (asked once, the first time the theme is auto)
+	hasDark    = lipgloss.HasDarkBackground
 )
 
 // applyTheme: dark or light colors, by Options.Theme, KANAREIKA_THEME, the setting, or the terminal.
 func (m *Model) applyTheme() {
-	detectOnce.Do(func() { detected = lipgloss.HasDarkBackground() })
 	theme := m.set.Theme
 	if t := os.Getenv("KANAREIKA_THEME"); t == "dark" || t == "light" {
 		theme = t
@@ -35,7 +35,8 @@ func (m *Model) applyTheme() {
 		lipgloss.SetHasDarkBackground(true)
 	case "light":
 		lipgloss.SetHasDarkBackground(false)
-	default:
+	default: // the terminal is asked (OSC 11) only when nothing decides
+		detectOnce.Do(func() { detected = hasDark() })
 		lipgloss.SetHasDarkBackground(detected)
 	}
 }

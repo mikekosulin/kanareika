@@ -434,8 +434,10 @@ func (m *Model) todoKey(s string) (tea.Cmd, bool) {
 			m.detOff = max(m.detOff-m.page(), 0)
 		case "pgdown", "ctrl+f", " ", "space":
 			m.detOff += m.page()
-		case "home":
+		case "home", "g":
 			m.detOff = 0
+		case "end", "G":
+			m.detOff = 1 << 30 // the drawing keeps it to the last page
 		case "esc", "enter", "backspace", "left", "h":
 			m.full, m.detOff = false, 0
 		case "c", "[", "]", "y", "Y":

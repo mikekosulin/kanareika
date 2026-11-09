@@ -1,9 +1,11 @@
 package tui
 
 import (
+	"sync"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // TestStaleWizardAnswers: a check, the hosts or the setup's answer for a wizard closed since (esc, N) is dropped; a
@@ -82,6 +84,54 @@ func TestLensErrors(t *testing.T) {
 	h.key("r")
 	if m.lensNone {
 		t.Fatal("r asks again")
+	}
+}
+
+// TestQuickWins: a forced theme never asks the terminal its background; end/G reach the bottom of full details;
+// right/left switch places outside the trees (in them they open and close nodes).
+func TestQuickWins(t *testing.T) {
+	oldDark, oldOnce := hasDark, detectOnce
+	t.Cleanup(func() { hasDark, detectOnce = oldDark, oldOnce; lipgloss.SetHasDarkBackground(true) })
+	asked := 0
+	hasDark = func() bool { asked++; return true }
+	detectOnce = sync.Once{}
+	h := newHarness(t, Options{Org: "acme", Env: "production", Theme: "light"}, false)
+	if asked != 0 {
+		t.Fatal("asked the terminal with the theme forced")
+	}
+	h.m.theme, h.m.set.Theme = "", ""
+	h.m.applyTheme()
+	if asked != 1 {
+		t.Fatal("auto: the terminal decides", asked)
+	}
+
+	h.size(100, 14)
+	h.key("2", "enter")
+	if !h.m.full {
+		t.Skip("no node to open")
+	}
+	h.screen()
+	h.key("end")
+	h.screen()
+	bottom := h.m.detOff
+	h.key("g")
+	h.screen()
+	if bottom == 0 || h.m.detOff != 0 {
+		t.Fatal(bottom, h.m.detOff)
+	}
+	h.key("G")
+	h.screen()
+	if h.m.detOff != bottom {
+		t.Fatal(h.m.detOff, bottom)
+	}
+	h.key("esc", "3")
+	h.key("right")
+	if h.m.view == vRuns {
+		t.Fatal("right stayed on History")
+	}
+	h.key("3", "left")
+	if h.m.view != vActions {
+		t.Fatal("left from History", h.m.view)
 	}
 }
 
