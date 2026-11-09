@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -75,6 +76,20 @@ func Need(now time.Time) []string {
 		}
 	}
 	return need
+}
+
+// Optional: a download a scan does without (the IP databases: only the country and network of addresses).
+func Optional(name string) bool { return strings.HasPrefix(name, "dbip-") }
+
+// Required: need without the optional downloads: what is worth asking about.
+func Required(need []string) []string {
+	var out []string
+	for _, k := range need {
+		if !Optional(k) {
+			out = append(out, k)
+		}
+	}
+	return out
 }
 
 // Check: the report for now. lazy: the sizes are only looked up when something is needed (the CLI); else always

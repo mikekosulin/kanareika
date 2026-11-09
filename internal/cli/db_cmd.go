@@ -52,7 +52,10 @@ func (a *app) dbUpdateCmd(use string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, stop := interruptible()
 			defer stop()
-			if !a.confirmDownload(ctx, yes) {
+			switch a.confirmDownload(ctx, yes) {
+			case aborted:
+				return fail(130, "interrupted")
+			case declined:
 				return fail(1, "nothing downloaded")
 			}
 			return a.updateDBs(ctx, cmd.OutOrStdout(), cmd.ErrOrStderr(), skipTrivy, java)

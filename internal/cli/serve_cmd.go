@@ -86,9 +86,9 @@ The TUI can connect to it too: kanareika tui --url http://<SERVER>:8088 --token 
 			if port < 0 || port > 65535 {
 				return fmt.Errorf("--port %d: a port number 0-65535 is required", port)
 			}
-			opts := server.Options{Paths: a.paths, Prompt: prompt.Build, Token: token, UpdateDB: a.updateDBFunc}
-			if !noScans {
-				opts.Scan = a.dashboardScan
+			opts := server.Options{Paths: a.paths, Prompt: prompt.Build, Token: token}
+			if !noScans { // read-only: no scans, no downloads, no outbound size lookups
+				opts.Scan, opts.UpdateDB = a.dashboardScan, a.updateDBFunc
 			}
 			s, err := newServer(opts)
 			if err != nil {
@@ -107,6 +107,6 @@ The TUI can connect to it too: kanareika tui --url http://<SERVER>:8088 --token 
 	c.Flags().StringVar(&host, "host", envDefault("KANAREIKA_HOST", server.DefaultHost), "address to listen on (env KANAREIKA_HOST; localhost: reports contain addresses and vulnerabilities)")
 	c.Flags().IntVar(&port, "port", server.DefaultPort, "port, 0 for any free one (env KANAREIKA_PORT)")
 	c.Flags().StringVar(&token, "token", os.Getenv("KANAREIKA_TOKEN"), "access token required for every request (env KANAREIKA_TOKEN)")
-	c.Flags().BoolVar(&noScans, "no-scans", false, "read-only: scans can't be started from it")
+	c.Flags().BoolVar(&noScans, "no-scans", false, "read-only: no scans and no DB updates from it")
 	return c
 }

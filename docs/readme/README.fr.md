@@ -14,13 +14,13 @@ Audit de sécurité de serveurs Linux via SSH, sans agent et en lecture seule. I
 
 Lancez `kanareika`. Il s'ouvre sur « À faire » : ce qu'il faut corriger en premier, le plus urgent en haut.
 
-![Données de démo, fictives.](../screenshots/tui-fr.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-fr.webp"><img alt="Données de démo, fictives." src="../screenshots/tui-fr-light.webp"></picture>
 
 ### Interface web
 
 Lancez `kanareika web` pour retrouver les mêmes données dans un navigateur, avec la tendance des 30 dernières exécutions.
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-fr.png"><img alt="Données de démo, fictives." src="../screenshots/web-fr-light.png"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-fr.webp"><img alt="Données de démo, fictives." src="../screenshots/web-fr-light.webp"></picture>
 
 <sub>Données de démo, fictives.</sub>
 
@@ -45,6 +45,7 @@ Il choisit la version pour cette machine, vérifie sa somme de contrôle (et l'a
 Ou à la main (Linux, macOS) :
 
 ```bash
+cd "$(mktemp -d)"
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')                 # linux, darwin
 ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')  # amd64, arm64
 FILE=kanareika-$OS-$ARCH.tar.xz
@@ -55,9 +56,8 @@ curl -fsSLO "$URL/SHA256SUMS"
 sha256sum -c --ignore-missing SHA256SUMS  # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
 gh attestation verify "$FILE" --repo mikekosulin/kanareika  # facultatif, nécessite la CLI GitHub
 tar -xJf "$FILE" kanareika
+sudo install kanareika /usr/local/bin/  # ou sans sudo: install kanareika ~/.local/bin/
 ```
-
-`tar` dépose `kanareika` dans le répertoire courant.
 
 Windows (PowerShell) :
 

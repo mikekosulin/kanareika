@@ -87,7 +87,7 @@ func TestReadmes(t *testing.T) {
 			t.Errorf("%s: no banner picture (dark srcset, light src, alt)", path)
 		}
 
-		for _, pic := range []string{"brand/banner-" + lang + ".webp", "brand/banner-" + lang + "-light.webp", "screenshots/tui-" + lang + ".png", "screenshots/web-" + lang + ".png"} {
+		for _, pic := range []string{"brand/banner-" + lang + ".webp", "brand/banner-" + lang + "-light.webp", "screenshots/tui-" + lang + ".webp", "screenshots/tui-" + lang + "-light.webp", "screenshots/web-" + lang + ".webp", "screenshots/web-" + lang + "-light.webp"} {
 			if !strings.Contains(text, pic) {
 				t.Errorf("%s: does not show %s", path, pic)
 			}

@@ -14,13 +14,13 @@
 
 运行 `kanareika`。默认打开“待办”：最紧急的排在最前面。
 
-![演示数据，均为虚构。](../screenshots/tui-zh.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-zh.webp"><img alt="演示数据，均为虚构。" src="../screenshots/tui-zh-light.webp"></picture>
 
 ### Web 界面
 
 运行 `kanareika web`：在浏览器中查看相同的数据，以及最近 30 次运行的趋势。
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-zh.png"><img alt="演示数据，均为虚构。" src="../screenshots/web-zh-light.png"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-zh.webp"><img alt="演示数据，均为虚构。" src="../screenshots/web-zh-light.webp"></picture>
 
 <sub>演示数据，均为虚构。</sub>
 
@@ -45,6 +45,7 @@ sh install.sh
 或手动安装（Linux、macOS）：
 
 ```bash
+cd "$(mktemp -d)"
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')                 # linux, darwin
 ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')  # amd64, arm64
 FILE=kanareika-$OS-$ARCH.tar.xz
@@ -55,9 +56,8 @@ curl -fsSLO "$URL/SHA256SUMS"
 sha256sum -c --ignore-missing SHA256SUMS  # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
 gh attestation verify "$FILE" --repo mikekosulin/kanareika  # 可选，需要 GitHub CLI
 tar -xJf "$FILE" kanareika
+sudo install kanareika /usr/local/bin/  # 不用 sudo 时: install kanareika ~/.local/bin/
 ```
-
-`tar` 会把 `kanareika` 解压到当前目录。
 
 Windows（PowerShell）：
 

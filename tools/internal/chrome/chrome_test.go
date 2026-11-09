@@ -1,8 +1,11 @@
 package chrome
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"image"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,7 +22,10 @@ func fake(t *testing.T, write bool, fail error) *[]string {
 		args = append([]string{bin}, a...)
 		for _, x := range a {
 			if p, ok := strings.CutPrefix(x, "--screenshot="); ok && write {
-				return os.WriteFile(p, []byte("png"), 0o644)
+				if err := os.WriteFile(p, pngBytes(), 0o644); err != nil {
+					return err
+				}
+				return fail // Chrome may still fail on its way out
 			}
 		}
 		return fail
@@ -45,6 +51,15 @@ func TestShot(t *testing.T) {
 	fake(t, false, nil)
 	if err := Shot("chrome", "u", png+"2", 1, 1); err == nil || !strings.Contains(err.Error(), "no picture") {
 		t.Error(err)
+	}
+	// the picture is whole although Chrome failed when closing: that is a picture
+	fake(t, true, errors.New("Teardown watchdog expired"))
+	if err := Shot("chrome", "u", png, 1, 1); err != nil {
+		t.Error(err)
+	}
+	// a picture left from before does not count
+	if err := os.WriteFile(png, pngBytes(), 0o644); err != nil {
+		t.Fatal(err)
 	}
 	fake(t, false, errors.New("crashed"))
 	if err := Shot("chrome", "u", png, 1, 1); err == nil || !strings.Contains(err.Error(), "crashed") {
@@ -109,4 +124,11 @@ func TestRun(t *testing.T) {
 	if err := run(context.Background(), os.Args[0], "-test.nosuchflag"); err == nil || !strings.Contains(err.Error(), "nosuchflag") {
 		t.Fatal(err)
 	}
+}
+
+// pngBytes: a small complete PNG.
+func pngBytes() []byte {
+	var b bytes.Buffer
+	_ = png.Encode(&b, image.NewRGBA(image.Rect(0, 0, 1, 1)))
+	return b.Bytes()
 }

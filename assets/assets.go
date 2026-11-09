@@ -14,7 +14,7 @@ var defaults embed.FS
 //go:embed locales/*.json
 var locales embed.FS
 
-//go:embed web/index.html web/classic.html web/logo.png
+//go:embed web/index.html web/classic.html web/logo.png web/logo.webp
 var web embed.FS
 
 //go:embed templates/org.yml

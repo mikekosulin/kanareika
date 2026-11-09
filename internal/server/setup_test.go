@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -24,6 +26,49 @@ func (fakeRunner) Run(_ context.Context, h config.Host, _ string, _ time.Duratio
 	return "Linux 6.1", nil
 }
 func (fakeRunner) Close() error { return nil }
+
+// TestSetupAddConcurrent: adds to one org at the same time all land in its file (each is a read-modify-write of it).
+func TestSetupAddConcurrent(t *testing.T) {
+	p := testHome(t)
+	f := &fakeScan{}
+	s, h := newTest(t, Options{Paths: p, Scan: f.run})
+	form := map[string]any{"id": "neworg", "name": "New Org", "user": "audit", "hosts": "web-01 192.0.2.11", "consent": "Ticket 7",
+		"confirmed": true}
+	if r := do(h, "POST", "/api/setup", form, s.postHdr()); r.code != 201 {
+		t.Fatal(r.code, r.body)
+	}
+	const n = 8
+	codes := make(chan int, n)
+	var wg sync.WaitGroup
+	for i := range n {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			codes <- do(h, "POST", "/api/setup/add", map[string]any{"org": "neworg", "hosts": fmt.Sprintf("admin@192.0.2.%d", 100+i)}, s.postHdr()).code
+		}()
+	}
+	wg.Wait()
+	close(codes)
+	for c := range codes {
+		if c != 200 {
+			t.Errorf("add: %d", c)
+		}
+	}
+	l, err := config.NewLoader(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	o, errs := l.LoadOrg(filepath.Join(p.Orgs, "neworg.yml"))
+	if len(errs) > 0 || len(o.Hosts) != n+1 {
+		t.Fatalf("%d hosts, want %d: %v", len(o.Hosts), n+1, errs)
+	}
+	ents, _ := os.ReadDir(p.Orgs)
+	for _, e := range ents {
+		if strings.HasSuffix(e.Name(), ".tmp") {
+			t.Errorf("left behind: %s", e.Name())
+		}
+	}
+}
 
 // TestSetup: the first-run form creates an org (refusing bad answers with a list, never overwriting), the access
 // check logs in to its hosts; both only where scans are allowed, with the CSRF header.

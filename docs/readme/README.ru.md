@@ -16,13 +16,13 @@ Kanareika проверяет безопасность Linux-серверов п�
 
 Запустите `kanareika` — откроется список задач, самое срочное сверху.
 
-![Терминальный интерфейс на вымышленных данных](../screenshots/tui-ru.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-ru.webp"><img alt="Терминальный интерфейс на вымышленных данных" src="../screenshots/tui-ru-light.webp"></picture>
 
 ### Веб-интерфейс
 
 `kanareika web` показывает те же данные в браузере, плюс динамику за последние 30 сканирований.
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-ru.png"><img alt="Веб-интерфейс на вымышленных данных" src="../screenshots/web-ru-light.png"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-ru.webp"><img alt="Веб-интерфейс на вымышленных данных" src="../screenshots/web-ru-light.webp"></picture>
 
 <sub>На скриншотах вымышленные данные.</sub>
 
@@ -47,6 +47,7 @@ sh install.sh
 Или вручную (Linux, macOS):
 
 ```bash
+cd "$(mktemp -d)"
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')                 # linux, darwin
 ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')  # amd64, arm64
 FILE=kanareika-$OS-$ARCH.tar.xz
@@ -57,9 +58,8 @@ curl -fsSLO "$URL/SHA256SUMS"
 sha256sum -c --ignore-missing SHA256SUMS  # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
 gh attestation verify "$FILE" --repo mikekosulin/kanareika  # необязательно, нужен GitHub CLI
 tar -xJf "$FILE" kanareika
+sudo install kanareika /usr/local/bin/  # или без sudo: install kanareika ~/.local/bin/
 ```
-
-`tar` распакует `kanareika` в текущую папку.
 
 Windows (PowerShell):
 

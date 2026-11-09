@@ -209,18 +209,22 @@ func (k dbKind) pull(ctx context.Context, ref string, p *dbget.Progress, say fun
 	}
 	defer os.Remove(tmp.Name())
 	h := sha256.New()
-	n, err := io.Copy(io.MultiWriter(tmp, h), p.Reader(resp.Body))
+	// one byte more than the manifest says is enough to know the mirror sends more: a mirror can't fill the disk
+	n, err := io.Copy(io.MultiWriter(tmp, h), p.Reader(io.LimitReader(resp.Body, l.Size+1)))
 	if cerr := tmp.Close(); err == nil {
 		err = cerr
 	}
 	if err != nil {
 		return dbget.NoSpace(err, l.Size)
 	}
+	if n > l.Size {
+		return fmt.Errorf("the layer is larger than its manifest says (%s)", dbget.Size(l.Size))
+	}
 	if got := "sha256:" + hex.EncodeToString(h.Sum(nil)); got != l.Digest || n != l.Size {
 		return &dbget.ChecksumError{Want: l.Digest, Got: got}
 	}
 	p.Note("unpacking")
-	return k.install(cache, tmp.Name(), clockNow())
+	return k.install(cache, tmp.Name(), unpackLimit(l.Size), clockNow())
 }
 
 // cleanLeftovers: temp files and directories of downloads that died more than a day ago (one running in another
@@ -236,13 +240,13 @@ func cleanLeftovers(cache, name string) {
 
 // install: the downloaded tar.gz as <cache>/<name>, with DownloadedAt set as trivy sets it (metadata.Client.Update:
 // the same JSON encoder, the same fields).
-func (k dbKind) install(cache, archive string, at time.Time) error {
+func (k dbKind) install(cache, archive string, maxBytes int64, at time.Time) error {
 	tmp := filepath.Join(cache, fmt.Sprintf(".%s-new-%d", k.name, time.Now().UnixNano()))
 	if err := os.Mkdir(tmp, 0o755); err != nil {
 		return dbget.NoSpace(err, 0)
 	}
 	defer os.RemoveAll(tmp)
-	if err := untar(archive, tmp); err != nil {
+	if err := untar(archive, tmp, maxBytes); err != nil {
 		return err
 	}
 	if _, err := os.Stat(filepath.Join(tmp, k.file)); err != nil {
@@ -288,9 +292,25 @@ func (e *unpackError) Error() string  { return "unpacking: " + e.err.Error() }
 func (e *unpackError) Unwrap() error  { return e.err }
 func (e *unpackError) Reason() string { return e.Error() }
 
-// untar: a tar.gz into dst as go-getter (which trivy's downloader uses) unpacks it: regular files with the
-// archive's permission bits and times, directories 0755 then their own mode; no paths outside dst.
-func untar(archive, dst string) error {
+// Limits of what a layer unpacks to: a mirror's archive (its digest only says the mirror meant it) can't fill the
+// disk. trivy's layers unpack to about 15 times their size (trivy-db) and hold two files; a small layer may unpack
+// to unpackFloor whatever its size (an empty DB compresses far better).
+var (
+	unpackRatio   int64 = 30
+	unpackFloor   int64 = 64 << 20
+	unpackMax     int64 = 8 << 30
+	unpackEntries       = 1000
+)
+
+// unpackLimit: the bytes a layer of size may unpack to.
+func unpackLimit(size int64) int64 {
+	return min(max(size*unpackRatio, unpackFloor), unpackMax)
+}
+
+// untar: a tar.gz into dst as go-getter (which trivy's downloader uses) unpacks it, with the archive's times; no
+// paths outside dst. Modes are fixed, whatever the archive says: files 0644, directories 0755 (nothing
+// world-writable in the cache). At most maxBytes of files and unpackEntries entries.
+func untar(archive, dst string, maxBytes int64) error {
 	f, err := os.Open(archive)
 	if err != nil {
 		return err
@@ -314,7 +334,7 @@ func untar(archive, dst string) error {
 	}
 	var dirs []*tar.Header
 	var need int64
-	files := 0
+	files, entries := 0, 0
 	for {
 		h, err := tr.Next()
 		if errors.Is(err, io.EOF) {
@@ -322,6 +342,9 @@ func untar(archive, dst string) error {
 		}
 		if err != nil {
 			return &unpackError{err}
+		}
+		if entries++; entries > unpackEntries {
+			return &unpackError{fmt.Errorf("more than %d entries", unpackEntries)}
 		}
 		if h.Typeflag == tar.TypeXGlobalHeader || h.Typeflag == tar.TypeXHeader {
 			continue
@@ -341,11 +364,14 @@ func untar(archive, dst string) error {
 		default:
 			continue // trivy's layers hold plain files only
 		}
+		if h.Size < 0 || h.Size > maxBytes-need {
+			return &unpackError{fmt.Errorf("more than %s unpacked", dbget.Size(maxBytes))}
+		}
 		need += h.Size
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			return dbget.NoSpace(err, need)
 		}
-		mode := h.FileInfo().Mode() & 0o777
+		const mode = 0o644
 		w, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode)
 		if err != nil {
 			return dbget.NoSpace(err, need)
@@ -370,7 +396,7 @@ func untar(archive, dst string) error {
 	}
 	for _, h := range dirs {
 		path := filepath.Join(dst, h.Name)
-		if err := os.Chmod(path, h.FileInfo().Mode()&os.ModePerm); err != nil {
+		if err := os.Chmod(path, 0o755); err != nil {
 			return err
 		}
 		if err := stamp(path, h); err != nil {

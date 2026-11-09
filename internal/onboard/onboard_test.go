@@ -3,6 +3,7 @@ package onboard
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -244,6 +245,88 @@ func TestDiscover(t *testing.T) {
 	}
 }
 
+// TestAddJumpNameTaken: a jump host whose name is taken by another machine (address or user differ) gets a name of
+// its own; the same machine again is reused.
+func TestAddJumpNameTaken(t *testing.T) {
+	p := config.PathsAt(t.TempDir())
+	r := req()
+	r.Jump = "jumper@203.0.113.10"
+	if _, errs, err := Create(p, r, time.Now()); err != nil || len(errs) > 0 {
+		t.Fatal(errs, err)
+	}
+	add := Request{Hosts: "ssh -J ops@bastion.example.org admin@10.0.0.7\nssh -J other@bastion.example.net admin@10.0.0.9"}
+	if _, errs, err := Add(p, "acme", add); err != nil || len(errs) > 0 {
+		t.Fatal(errs, err)
+	}
+	load := func() (map[string]config.Host, map[string]map[string]any) {
+		t.Helper()
+		l, _ := config.NewLoader(p)
+		o, lerrs := l.LoadOrg(filepath.Join(p.Orgs, "acme.yml"))
+		if len(lerrs) > 0 {
+			t.Fatal(lerrs)
+		}
+		by := map[string]config.Host{}
+		for _, h := range o.Hosts {
+			by[h.Name] = h
+		}
+		return by, o.Jumps()
+	}
+	by, js := load()
+	if by["10-0-0-7"].Jump != "bastion-2" || js["bastion-2"]["address"] != "bastion.example.org" || js["bastion-2"]["user"] != "ops" {
+		t.Fatalf("another machine named bastion: %+v %v", by["10-0-0-7"], js)
+	}
+	if by["10-0-0-9"].Jump != "bastion-3" || js["bastion-3"]["address"] != "bastion.example.net" {
+		t.Fatalf("a third: %+v %v", by["10-0-0-9"], js)
+	}
+	if js["bastion"]["address"] != "203.0.113.10" || js["bastion"]["user"] != "jumper" || by["web-01"].Jump != "bastion" {
+		t.Fatalf("the first bastion untouched: %v", js)
+	}
+	// the same machine again: reused, not added twice
+	if _, errs, err := Add(p, "acme", Request{Hosts: "ssh -J ops@bastion.example.org admin@10.0.0.10"}); err != nil || len(errs) > 0 {
+		t.Fatal(errs, err)
+	}
+	by, js = load()
+	if by["10-0-0-10"].Jump != "bastion-2" || js["bastion-4"] != nil || len(js) != 3 {
+		t.Fatalf("the same jump reused: %+v %v", by["10-0-0-10"], js)
+	}
+}
+
+// TestIPv6WithPort: "[v6]:port" is a YAML flow sequence when written plain; Create and Add quote it, whichever way
+// it was pasted (name address, user@host, an ssh command, CSV, an Ansible line).
+func TestIPv6WithPort(t *testing.T) {
+	p := config.PathsAt(t.TempDir())
+	r := req()
+	r.Hosts = "web-01 [2001:db8::1]:2222\nssh -p 2223 admin@2001:db8::2\ndb-01,[2001:db8::3]:2224,db\n" +
+		"app-01 ansible_host=2001:db8::4 ansible_port=2225\nops@[2001:db8::5]:2226"
+	r.Jump = "jumper@[2001:db8::99]:2200"
+	path, errs, err := Create(p, r, time.Now())
+	if err != nil || len(errs) > 0 {
+		t.Fatal(errs, err)
+	}
+	if _, errs, err := Add(p, "acme", Request{Hosts: "ssh -p 2227 -J ops@[2001:db8::98]:22 admin@2001:db8::7\nmail,[2001:db8::8]:2228"}); err != nil || len(errs) > 0 {
+		t.Fatal(errs, err)
+	}
+	l, _ := config.NewLoader(p)
+	o, lerrs := l.LoadOrg(path)
+	if len(lerrs) > 0 {
+		b, _ := os.ReadFile(path)
+		t.Fatal(lerrs, "\n"+string(b))
+	}
+	want := map[string]int{"web-01": 2222, "2001-db8-2": 2223, "db-01": 2224, "app-01": 2225, "2001-db8-5": 2226, "2001-db8-7": 2227, "mail": 2228}
+	for _, h := range o.Hosts {
+		if want[h.Name] == 0 || h.Port != want[h.Name] || !strings.HasPrefix(h.Address, "2001:db8::") {
+			t.Errorf("%s: %q port %d", h.Name, h.Address, h.Port)
+		}
+		delete(want, h.Name)
+	}
+	if len(want) > 0 {
+		t.Errorf("missing %v", want)
+	}
+	if j := o.Jumps()["bastion"]; j == nil || j["user"] != "jumper" || !strings.Contains(fmt.Sprint(j["address"]), "2001:db8::99") {
+		t.Errorf("jump: %v", o.Jumps())
+	}
+}
+
 func req() Request {
 	return Request{ID: "acme", Name: "ACME Corp", User: "audit", Hosts: "web-01 192.0.2.11\n192.0.2.12", Consent: "Contract 42",
 		Confirmed: true}
@@ -274,7 +357,7 @@ func TestCreate(t *testing.T) {
 		t.Fatal("never overwrites:", err)
 	}
 	// a key is copied into secrets/<id>/ and referenced
-	key := filepath.Join(t.TempDir(), "id_ed25519")
+	key := filepath.Join(fakeHome(t), ".ssh", "id_ed25519")
 	if err := os.WriteFile(key, []byte("-----BEGIN OPENSSH PRIVATE KEY-----\nx\n-----END OPENSSH PRIVATE KEY-----\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -312,12 +395,79 @@ func TestCreateRefuses(t *testing.T) {
 	if ents, _ := os.ReadDir(p.Orgs); len(ents) != 0 {
 		t.Fatal("nothing written on a refusal")
 	}
-	notKey := filepath.Join(t.TempDir(), "k.pub")
+	notKey := filepath.Join(fakeHome(t), ".ssh", "k.pub")
 	_ = os.WriteFile(notKey, []byte("ssh-ed25519 AAAA"), 0o644)
 	r := req()
 	r.Key = notKey
 	if _, errs, _ := Create(p, r, time.Now()); len(errs) == 0 || !strings.Contains(errs[0], "not a private key") {
 		t.Fatal(errs)
+	}
+}
+
+// fakeHome: a home directory with an empty ~/.ssh for the test.
+func fakeHome(t *testing.T) string {
+	t.Helper()
+	home := t.TempDir()
+	old := homeDir
+	t.Cleanup(func() { homeDir = old })
+	homeDir = func() (string, error) { return home, nil }
+	if err := os.MkdirAll(filepath.Join(home, ".ssh"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	return home
+}
+
+// TestCreateRefusesInjection: a jump host or any field with a line break cannot add keys to the org file; a key
+// is read only from ~/.ssh or secrets/, and a missing file reads the same as one that is not a key.
+func TestCreateRefusesInjection(t *testing.T) {
+	p := config.PathsAt(t.TempDir())
+	for name, edit := range map[string]func(*Request){
+		"jump newline":    func(r *Request) { r.Jump = "203.0.113.1\n  privilege: sudo" },
+		"jump spaces":     func(r *Request) { r.Jump = "a b" },
+		"jump user":       func(r *Request) { r.Jump = "Root;x@203.0.113.1" },
+		"name newline":    func(r *Request) { r.Name = "ACME\nexternal_scan: true" },
+		"consent newline": func(r *Request) { r.Consent = "ok\r\nsigned: 1999-01-01" },
+		"hosts control":   func(r *Request) { r.Hosts = "web-01 192.0.2.11\x00" },
+		"front newline":   func(r *Request) { r.Front = []string{"web\n"} },
+		"host jump":       func(r *Request) { r.Hosts = "ssh -J 'x: y' admin@192.0.2.11" },
+	} {
+		r := req()
+		edit(&r)
+		if _, errs, err := Create(p, r, time.Now()); err != nil || len(errs) == 0 {
+			t.Errorf("%s: accepted (%v)", name, err)
+		}
+	}
+	if _, errs, _ := Add(p, "acme", Request{Hosts: "192.0.2.50", Env: "prod\nx"}); len(errs) == 0 {
+		t.Error("Add: a control character accepted")
+	}
+	if ents, _ := os.ReadDir(p.Orgs); len(ents) != 0 {
+		t.Fatal("nothing written on a refusal")
+	}
+	// keys: outside ~/.ssh and secrets/ refused like a missing file; inside, a symlink out is refused too
+	home := fakeHome(t)
+	pem := []byte("-----BEGIN OPENSSH PRIVATE KEY-----\nx\n-----END OPENSSH PRIVATE KEY-----\n")
+	outside := filepath.Join(t.TempDir(), "id_ed25519")
+	_ = os.WriteFile(outside, pem, 0o600)
+	_ = os.Symlink(outside, filepath.Join(home, ".ssh", "id_link"))
+	msg := func(key string) string {
+		r := req()
+		r.Key = key
+		_, errs, _ := Create(p, r, time.Now())
+		if len(errs) != 1 {
+			t.Fatalf("%s: %q", key, errs)
+		}
+		return strings.Replace(errs[0], key, "K", 1)
+	}
+	missing, notKey := msg(filepath.Join(home, ".ssh", "nope")), msg("/etc/hosts")
+	if missing != notKey || msg(outside) != missing || msg(filepath.Join(home, ".ssh", "id_link")) != missing || msg("~/../etc/passwd") != missing {
+		t.Fatalf("the refusals differ: %q %q", missing, notKey)
+	}
+	inSSH := filepath.Join(home, ".ssh", "id_ed25519")
+	_ = os.WriteFile(inSSH, pem, 0o600)
+	r := req()
+	r.Key = "~/.ssh/id_ed25519"
+	if _, errs, err := Create(p, r, time.Now()); err != nil || len(errs) > 0 {
+		t.Fatal("a key in ~/.ssh:", errs, err)
 	}
 }
 

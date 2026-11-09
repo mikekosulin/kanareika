@@ -234,7 +234,7 @@ dialog.scan .err { color: var(--bad-text); font-size: 13px; min-height: 1em; }
 </head>
 <body>
 <header>
-  <div class="brand"><img src="/logo.png" alt="">Kanareika</div>
+  <div class="brand"><img src="/logo.webp" alt="">Kanareika</div>
   <label class="ctl" data-t-title="Organization"><span data-icon="server-stack"></span><select id="org"></select></label>
   <div class="seg" id="envs" role="group"></div>
   <label class="ctl" data-t-title="Which data to show"><span data-icon="clock"></span><select id="run"></select></label>
@@ -552,7 +552,7 @@ function renderJobs() {
   card.innerHTML = `<h2>${icon("arrow-path")}${t("Scans started here")}</h2>` + list.map((j) => `
     <div class="job">
       <div class="h">${st(...[JST[j.state]?.[0] || "none", t(JST[j.state]?.[1] || j.state)])}
-        <span>${esc(ago(j.started))}${j.finished ? " · " + esc(dur(j.started, j.finished)) : ""}${j.state === "failed" ? ` · ${t("exit code")} ${j.code}` : ""}</span>
+        <span>${esc(ago(j.started))}${j.finished ? " · " + esc(dur(j.started, j.finished)) : ""}${j.state === "failed" ? ` · ${t("exit code")} ${esc(j.code)}` : ""}</span>
         <span class="muted trunc">${esc(scope(j.request))}</span><span class="grow"></span>
         ${j.state === "running" ? `<button class="iconbtn xs" data-jcancel="${esc(j.id)}">${t("Stop")}</button>` : ""}
         <button class="linkbtn" data-jopen="${esc(j.id)}">${S.jobs.open === j.id ? t("hide") : t("output")}</button></div>
@@ -1097,7 +1097,7 @@ function timeCell(x) {
 function tabHealth(body) {
   const H = S.runData.health || {}, allHosts = Object.keys(H).sort(), hosts = allHosts.filter(hostOk);
   if (!hosts.length) { body.innerHTML = `<div class="empty">${tf("Module {module} has not run yet.", { module: "health" })}</div>`; return; }
-  const pct = (v) => v >= 95 ? `<b class="overdue">${v}%</b>` : v >= 85 ? `<b>${v}%</b>` : `${v}%`;
+  const pct = (v) => v >= 95 ? `<b class="overdue">${esc(v)}%</b>` : v >= 85 ? `<b>${esc(v)}%</b>` : `${esc(v)}%`;
   const maxOf = (rows) => rows?.length ? rows.reduce((a, b) => (b.use > a.use ? b : a)) : null;
   const tzs = allHosts.map((h) => H[h].time?.timezone).filter(Boolean);
   const tzMain = tzs.sort((a, b) => tzs.filter((v) => v === b).length - tzs.filter((v) => v === a).length)[0];
@@ -1110,7 +1110,7 @@ function tabHealth(body) {
         <td class="nw" title="${x.mem ? `${tf("{avail} of {total} MB free", { avail: fmt(x.mem.available_mb), total: fmt(x.mem.total_mb) })}` : ""}">${x.mem ? `${tf("{pct}% free", { pct: Math.round(100 * x.mem.available_mb / x.mem.total_mb) })}` : "—"}</td>
         <td class="nw">${x.load ? `${x.load.load15}<span class="muted">/${x.load.cpus}</span>` : "—"}</td>
         <td>${x.failed_units?.length ? st("warn", String(x.failed_units.length), x.failed_units.join("\n")) : `<span class="zero">—</span>`}</td>
-        <td>${x.denied?.includes("denied.dmesg") ? `<span class="muted">${t("no access")}</span>` : cls.length ? cls.map((c) => `<span class="tag" title="${esc(c.last)}">${esc(cat(c.key, c.title).split(" (")[0])} ${c.count}</span>`).join(" ") : st("ok", "")}</td>
+        <td>${x.denied?.includes("denied.dmesg") ? `<span class="muted">${t("no access")}</span>` : cls.length ? cls.map((c) => `<span class="tag" title="${esc(c.last)}">${esc(cat(c.key, c.title).split(" (")[0])} ${esc(c.count)}</span>`).join(" ") : st("ok", "")}</td>
         <td class="num">${x.denied?.includes("denied.journal") ? `<span class="muted">?</span>` : fmtc(x.journal?.errors_7d)}</td>
         <td class="nw">${tz ? (tz !== tzMain ? st("warn", tz, `${t("differs from most hosts")} (${tzMain})`) : `<span class="ink2">${esc(tz)}</span>`) : `<span class="muted">?</span>`}</td>
         <td class="nw">${timeCell(x)}</td></tr>`; }).join("")}

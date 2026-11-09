@@ -14,13 +14,13 @@
 
 `kanareika`를 실행하면 **할 일** 화면이 열립니다. 먼저 고칠 항목이 나오고, 가장 긴급한 항목이 맨 위에 있습니다.
 
-![데모 데이터(가상).](../screenshots/tui-ko.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-ko.webp"><img alt="데모 데이터(가상)." src="../screenshots/tui-ko-light.webp"></picture>
 
 ### 웹 인터페이스
 
 `kanareika web`을 실행하면 같은 데이터를 브라우저에서 최근 30회 실행 추이와 함께 볼 수 있습니다.
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-ko.png"><img alt="데모 데이터(가상)." src="../screenshots/web-ko-light.png"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-ko.webp"><img alt="데모 데이터(가상)." src="../screenshots/web-ko-light.webp"></picture>
 
 <sub>데모 데이터(가상).</sub>
 
@@ -45,6 +45,7 @@ sh install.sh
 또는 직접 (Linux, macOS):
 
 ```bash
+cd "$(mktemp -d)"
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')                 # linux, darwin
 ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')  # amd64, arm64
 FILE=kanareika-$OS-$ARCH.tar.xz
@@ -55,9 +56,8 @@ curl -fsSLO "$URL/SHA256SUMS"
 sha256sum -c --ignore-missing SHA256SUMS  # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
 gh attestation verify "$FILE" --repo mikekosulin/kanareika  # 선택 사항, GitHub CLI 필요
 tar -xJf "$FILE" kanareika
+sudo install kanareika /usr/local/bin/  # sudo 없이: install kanareika ~/.local/bin/
 ```
-
-`tar`는 `kanareika`를 현재 디렉터리에 풉니다.
 
 Windows (PowerShell):
 

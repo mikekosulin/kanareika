@@ -1,14 +1,19 @@
 package trivy
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -185,7 +190,8 @@ func TestMirrorFallback(t *testing.T) {
 	t.Setenv("KANAREIKA_TRIVY_DB_REPOS", strings.Join(refs, ","))
 	var notes []string
 	tr := dbget.NewTracker()
-	tr.OnEvent = func(it dbget.Item) { notes = append(notes, it.Note) }
+	var mu sync.Mutex // OnEvent runs in the jobs' goroutines
+	tr.OnEvent = func(it dbget.Item) { mu.Lock(); notes = append(notes, it.Note); mu.Unlock() }
 	if errs := tr.Run(context.Background(), []dbget.Job{Job("db", nil)}); errs != nil {
 		t.Fatal(errs)
 	}
@@ -322,7 +328,8 @@ func TestViaTrivy(t *testing.T) {
 	fake(t, `exit 0`)
 	tr := dbget.NewTracker()
 	var notes []string
-	tr.OnEvent = func(it dbget.Item) { notes = append(notes, it.Note) }
+	var mu sync.Mutex // OnEvent runs in the jobs' goroutines
+	tr.OnEvent = func(it dbget.Item) { mu.Lock(); notes = append(notes, it.Note); mu.Unlock() }
 	if errs := tr.Run(context.Background(), []dbget.Job{Job("db", nil), Job("nope", nil)}); errs["db"] != nil || errs["nope"] == nil {
 		t.Fatal(errs)
 	}
@@ -355,4 +362,108 @@ func TestSchemas(t *testing.T) {
 			t.Fatal(k.repos[0])
 		}
 	}
+}
+
+// tarGz: a tar.gz of the given headers; a regular file's contents are Size zero bytes.
+func tarGz(t *testing.T, hs ...tar.Header) []byte {
+	t.Helper()
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+	tw := tar.NewWriter(gz)
+	for _, h := range hs {
+		h.ModTime = ocitest.ModTime
+		must(t, tw.WriteHeader(&h))
+		if h.Typeflag == tar.TypeReg {
+			_, err := io.CopyN(tw, zeros{}, h.Size)
+			must(t, err)
+		}
+	}
+	must(t, tw.Close())
+	must(t, gz.Close())
+	return b.Bytes()
+}
+
+type zeros struct{}
+
+func (zeros) Read(p []byte) (int, error) { clear(p); return len(p), nil }
+
+// TestHostileMirror: a mirror can't fill the disk or leave the cache writable for others: a blob longer than its
+// manifest is cut at one byte more, a layer unpacking to far more than it weighs or with too many entries is
+// refused, and the archive's modes are not kept.
+func TestHostileMirror(t *testing.T) {
+	cache := fetchEnv(t)
+	files := []tar.Header{
+		{Name: "trivy.db", Typeflag: tar.TypeReg, Mode: 0o777, Size: int64(len(boltDB(t)))},
+		{Name: "metadata.json", Typeflag: tar.TypeReg, Mode: 0o666},
+	}
+	t.Run("oversized blob", func(t *testing.T) {
+		reg := ocitest.New(t)
+		reg.Pad = 8 << 20
+		layer := dbLayer(t)
+		t.Setenv("KANAREIKA_TRIVY_DB_REPOS", reg.Push("a/trivy-db", "2", dbKinds[0].mediaType, layer))
+		it, _ := runJob(t, "db")
+		if it.State != dbget.Failed || !strings.Contains(it.Note, "larger than its manifest says") || it.Bytes > int64(len(layer))+1 {
+			t.Fatalf("%+v", it)
+		}
+	})
+	t.Run("gzip bomb", func(t *testing.T) {
+		reg := ocitest.New(t)
+		old := unpackFloor
+		unpackFloor = 1 << 20
+		t.Cleanup(func() { unpackFloor = old })
+		layer := tarGz(t, tar.Header{Name: "trivy.db", Typeflag: tar.TypeReg, Mode: 0o644, Size: 16 << 20})
+		if len(layer)*int(unpackRatio) > 1<<20 {
+			t.Fatal(len(layer)) // a bomb: far under the floor packed, over it unpacked
+		}
+		t.Setenv("KANAREIKA_TRIVY_DB_REPOS", reg.Push("a/trivy-db", "2", dbKinds[0].mediaType, layer))
+		if it, _ := runJob(t, "db"); it.State != dbget.Failed || !strings.Contains(it.Note, "unpacked") {
+			t.Fatalf("%+v", it)
+		}
+		if unpackLimit(1<<40) != unpackMax || unpackLimit(0) != unpackFloor || unpackLimit(100<<20) != 3000<<20 {
+			t.Fatal(unpackLimit(1<<40), unpackLimit(0), unpackLimit(100<<20))
+		}
+	})
+	t.Run("too many entries", func(t *testing.T) {
+		reg := ocitest.New(t)
+		var hs []tar.Header
+		for i := range unpackEntries + 1 {
+			hs = append(hs, tar.Header{Name: fmt.Sprintf("f%d", i), Typeflag: tar.TypeReg, Mode: 0o644})
+		}
+		t.Setenv("KANAREIKA_TRIVY_DB_REPOS", reg.Push("a/trivy-db", "2", dbKinds[0].mediaType, tarGz(t, hs...)))
+		if it, _ := runJob(t, "db"); it.State != dbget.Failed || !strings.Contains(it.Note, "more than 1000 entries") {
+			t.Fatalf("%+v", it)
+		}
+	})
+	t.Run("modes", func(t *testing.T) {
+		reg := ocitest.New(t)
+		// the real contents, with the hostile modes
+		var b bytes.Buffer
+		gz := gzip.NewWriter(&b)
+		tw := tar.NewWriter(gz)
+		must(t, tw.WriteHeader(&tar.Header{Name: ".", Typeflag: tar.TypeDir, Mode: 0o777, ModTime: ocitest.ModTime}))
+		must(t, tw.WriteHeader(&tar.Header{Name: "sub", Typeflag: tar.TypeDir, Mode: 0o777, ModTime: ocitest.ModTime}))
+		for _, h := range files {
+			body := boltDB(t)
+			if h.Name == "metadata.json" {
+				body = ocitest.Metadata(2, testNext, testUpd)
+			}
+			h.Size, h.ModTime = int64(len(body)), ocitest.ModTime
+			must(t, tw.WriteHeader(&h))
+			_, err := tw.Write(body)
+			must(t, err)
+		}
+		must(t, tw.Close())
+		must(t, gz.Close())
+		t.Setenv("KANAREIKA_TRIVY_DB_REPOS", reg.Push("a/trivy-db", "2", dbKinds[0].mediaType, b.Bytes()))
+		if it, err := runJob(t, "db"); it.State != dbget.Done {
+			t.Fatalf("%+v %v", it, err)
+		}
+		for name, want := range map[string]os.FileMode{"": 0o755, "sub": 0o755, "trivy.db": 0o644, "metadata.json": 0o644} {
+			fi, err := os.Stat(filepath.Join(cache, "db", name))
+			must(t, err)
+			if fi.Mode().Perm() != want {
+				t.Errorf("%q: %v, want %v", name, fi.Mode().Perm(), want)
+			}
+		}
+	})
 }
