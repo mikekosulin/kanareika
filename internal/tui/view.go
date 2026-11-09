@@ -286,12 +286,12 @@ func (m *Model) tabLines() []string {
 // scan running shows on the Scans tab; ToDo's grouping (g) at the right.
 func (m *Model) tabs() string {
 	label := func(v view, full bool) string {
-		n := viewHotkeys[v]
+		n := strconv.Itoa(slices.Index(places, v) + 1)
 		name := m.t.T(viewNames[v])
-		if v == vScans && m.busy() {
+		if v == vRuns && m.busy() {
 			name += " ●"
 		}
-		if v == m.view {
+		if v == place(m.view) {
 			return sCrumb.Render(n + " " + name)
 		}
 		if !full {
@@ -304,12 +304,18 @@ func (m *Model) tabs() string {
 		full bool
 		sep  string
 	}{{true, "  "}, {true, " "}, {false, "  "}} {
-		parts := make([]string, nViews)
-		for v := range nViews {
-			parts[v] = m.zone(fmt.Sprintf("tab:%d", v), label(v, f.full), func(int) tea.Cmd { m.setView(v); return nil })
+		parts := make([]string, len(places))
+		for i, v := range places {
+			parts[i] = m.zone(fmt.Sprintf("tab:%d", v), label(v, f.full), func(int) tea.Cmd { m.toPlace(v); return nil })
 		}
 		if l = " " + strings.Join(parts, f.sep); ansi.StringWidth(l) <= m.w {
 			break
+		}
+	}
+	if place(m.view) == vServers && m.host == "" && m.run != "" && m.view != vServers { // a lens: what else to show
+		g := m.showSwitch()
+		if room := m.w - ansi.StringWidth(l) - ansi.StringWidth(g); room >= 2 {
+			l += strings.Repeat(" ", room) + g
 		}
 	}
 	if m.isTree() && m.host == "" && m.run != "" {
@@ -329,6 +335,9 @@ func (m *Model) tabs() string {
 			})
 		}
 		g += " " + sKey.Render("g") + " "
+		if m.view == vServers {
+			g = m.showSwitch() + "  " + g
+		}
 		if room := m.w - ansi.StringWidth(l) - ansi.StringWidth(g); room >= 2 {
 			l += strings.Repeat(" ", room) + g
 		}
@@ -492,7 +501,13 @@ func (m *Model) body(w, h int) (string, []string) {
 			return sTitle.Render(m.t.T("Run")) + sText.Render("("+m.t.runShort(m.runInfo.id)+")"), m.runInfoView(w, h)
 		}
 		l := m.runList()
-		return m.title(viewNames[vRuns], len(l), true), m.runsView(l, w, h)
+		return m.title(viewNames[vRuns], len(l), true), m.historyView(w, h)
+	case vLens:
+		n := 0
+		if m.lensData != nil {
+			n = len(m.lensData.Rows)
+		}
+		return m.title(viewNames[vServers], n, true), m.lensView(w, h)
 	}
 	return m.title(viewNames[vScans], len(m.jobs.Jobs), false), m.scansView(w, h)
 }
@@ -693,7 +708,9 @@ func (m *Model) formView(h int) []string {
 }
 
 var helpRows = [][2]string{
-	{"1-9, 0, S, tab", "views: servers, ToDo, packages, changes, access, network, health, exceptions, runs, scans"},
+	{"1, 2, 3, tab", "Servers, ToDo, History"},
+	{"w", "Servers: what to show (priorities, logins, network, health)"},
+	{"n, S", "History: what changed; the scans started here"},
 	{"O, E", "organization, environment (popup lists; type to narrow them)"},
 	{":, ctrl+k", "jump to a fix, a CVE, a host or a view"},
 	{"up/down, j/k, pgup/pgdn, g/G", "move (ToDo: home/end, G)"},

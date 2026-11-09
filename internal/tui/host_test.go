@@ -126,9 +126,9 @@ func TestOtherLayout(t *testing.T) {
 	if h.m.view != vActions {
 		t.Fatalf("é is not 2: view %d", h.m.view)
 	}
-	runes("à")
-	if h.m.view != vScans {
-		t.Fatalf("à is not 0: view %d", h.m.view)
+	runes("\"") // 3 on AZERTY: History
+	if h.m.view != vRuns {
+		t.Fatalf("\" is not 3: view %d", h.m.view)
 	}
 	_, cmd := h.m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("й")}) // q
 	if _, ok := cmd().(tea.QuitMsg); !ok {
@@ -140,7 +140,8 @@ func TestOtherLayout(t *testing.T) {
 func card(h *harness) {
 	host := "web-01"
 	h.t.Helper()
-	h.key("5", "/")
+	h.show(vAccess)
+	h.key("/")
 	h.typeText(host)
 	h.key("enter", "enter")
 }

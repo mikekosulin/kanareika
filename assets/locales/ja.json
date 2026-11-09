@@ -813,6 +813,15 @@
     "no fix released yet": "修正はまだ公開されていない",
     "only with Ubuntu Pro (ESM)": "Ubuntu Pro (ESM) のみ",
     "released, not in this host's repositories": "公開済み、このホストのリポジトリには未収録",
-    "won't be fixed": "修正されない"
+    "won't be fixed": "修正されない",
+    "Check connection": "接続を確認",
+    "Connect": "接続",
+    "Connecting": "接続中",
+    "History": "履歴",
+    "History: what changed; the scans started here": "履歴：何が変わったか、ここで開始したスキャン",
+    "Servers, ToDo, History": "サーバー、やること、履歴",
+    "Servers: what to show (priorities, logins, network, health)": "サーバー：表示する内容（優先度、ログイン、ネットワーク、ヘルス）",
+    "accepted risks": "受容したリスク",
+    "show": "表示"
   }
 }

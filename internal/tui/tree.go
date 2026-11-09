@@ -165,6 +165,7 @@ var (
 		{key: "nofix", label: "no fix yet"},
 		{key: "overdue", label: "overdue"},
 		{key: "backported", label: "fixed by a backport too"},
+		{key: "accepted", label: "accepted risks"},
 	}
 )
 
@@ -189,7 +190,7 @@ func (m *Model) treeQuery() string {
 	}
 	var f []string
 	for _, x := range treeFilters {
-		if m.flt[x.key] && x.key != "backported" {
+		if m.flt[x.key] && x.key != "backported" && x.key != "accepted" {
 			f = append(f, x.key)
 		}
 	}
@@ -209,6 +210,11 @@ func (m *Model) wantTree() string { return m.wantKey() + "?" + m.treeQuery() }
 
 // sync: fetch what the screen needs and doesn't have yet: the tree, the details of the node under the cursor.
 func (m *Model) sync() tea.Cmd {
+	if place(m.view) == vServers && m.runKey == m.wantKey() {
+		if c := m.fetchLens(); c != nil {
+			return c
+		}
+	}
 	if m.setup != nil {
 		if c := tea.Batch(m.fetchDBSize(), m.fetchFound()); c != nil {
 			return c
@@ -1024,6 +1030,10 @@ func (m *Model) todoMain(h int) []string {
 		lines := m.detailView(w-2, true)
 		m.detOff = min(m.detOff, max(len(lines)-(h-2), 0))
 		return panel(title, lines[m.detOff:], w, h)
+	}
+	if m.view == vActions && m.flt["accepted"] { // ToDo's accepted risks: until when, whose, why
+		l := m.exceptions()
+		return panel(m.todoTitle(), m.exceptionsView(l, w-2, h-2), w, h)
 	}
 	if w < wideDetails || m.rund == nil {
 		return panel(m.todoTitle(), m.treeView(w-2, h-2), w, h)

@@ -813,6 +813,15 @@
     "no fix released yet": "ainda sem correção publicada",
     "only with Ubuntu Pro (ESM)": "só com Ubuntu Pro (ESM)",
     "released, not in this host's repositories": "publicado, não nos repositórios deste host",
-    "won't be fixed": "não será corrigido"
+    "won't be fixed": "não será corrigido",
+    "Check connection": "Verificar conexão",
+    "Connect": "Conectar",
+    "Connecting": "Conectando",
+    "History": "Histórico",
+    "History: what changed; the scans started here": "Histórico: o que mudou; as varreduras iniciadas aqui",
+    "Servers, ToDo, History": "Servidores, A fazer, Histórico",
+    "Servers: what to show (priorities, logins, network, health)": "Servidores: o que mostrar (prioridades, logins, rede, saúde)",
+    "accepted risks": "riscos aceitos",
+    "show": "mostrar"
   }
 }

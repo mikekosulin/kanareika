@@ -112,10 +112,10 @@ func TestSetup(t *testing.T) {
 	t.Setenv("KANAREIKA_FEEDS_DIR", filepath.Join(home, "no-feeds"))
 	h := newHarnessAt(t, config.PathsAt(home), Options{}, true)
 	h.size(120, 40)
-	h.has("~ kanareika setup", " Servers  › Access › First scan", "vulnerability list 68 MB  ↓ d download",
+	h.has("~ kanareika setup", " Servers  › Connect › First scan", "vulnerability list 68 MB  ↓ d download",
 		"Whose servers?   (•) Personal  ( ) Client  ( ) Company", "One per line: user@host, an ssh command, ssh config, CSV",
 		"admin@192.0.2.10", "ssh -p 2222 deploy@203.0.113.7", "ctrl+o + ~/.ssh/config (5)", "Login  no SSH key found · user demo   c change",
-		"[ ] I’m allowed to audit these servers", "⏎ Check access", "setup │ ssh-agent none", "tab next")
+		"[ ] I’m allowed to audit these servers", "⏎ Check connection", "setup │ ssh-agent none", "tab next")
 	h.hasNot("Add to", "esc close") // nothing to add to, nothing to go back to
 	h.key("i")                      // what the list is made of
 	h.has("Linux packages", "139 MB", "IP locations", "65 MB", "Java libraries", "~1.0 GB", "only if a scan finds .jar files")
@@ -145,7 +145,7 @@ func TestSetup(t *testing.T) {
 	h.hasNot("passwordless sudo")
 	h.focus("confirmed")
 	h.key("space", "tab", "enter")
-	h.has("✓ Servers", "Access", "Checking access", "One login per server, uname -sr, log out. Nothing is changed.",
+	h.has("✓ Servers", "Connect", "Connecting", "One login per server, uname -sr, log out. Nothing is changed.",
 		"✗ no SSH key to log in with", "admin@192.0.2.10", "deploy@203.0.113.7:2222", "deploy@10.0.0.5", "! 1 skipped",
 		"Saved in servers.yml", "r Check again", "esc Back", "Personal · production")
 	h.hasNot("Scan the", "answered")
@@ -177,7 +177,7 @@ func TestSetup(t *testing.T) {
 	h.has("vulnerability list ✓ ready")
 	h.hasNot("downloads the vuln list")
 	h.key("enter")
-	h.has("✓ Servers › ✓ Access ›", "First scan", "A few minutes.")
+	h.has("✓ Servers › ✓ Connect ›", "First scan", "A few minutes.")
 	r := h.scan.requests() // the scan waits for the download, then starts
 	if len(r) != 1 || len(r[0].Hosts) != 1 || r[0].Hosts[0] != w.hosts[0].name {
 		t.Fatalf("%+v", r)
@@ -197,7 +197,7 @@ func TestSetup(t *testing.T) {
 	h.typeText("box 192.0.2.77")
 	h.focus("confirmed")
 	h.key("space", "ctrl+s")
-	h.has("Checking access", "192.0.2.77")
+	h.has("Connecting", "192.0.2.77")
 	if len(h.m.setup.hosts) != 1 {
 		t.Fatal("only the added host is checked", h.m.setup.hosts)
 	}
@@ -231,7 +231,7 @@ func TestSetupClientCompany(t *testing.T) {
 	h.typeText("Contract 42")
 	h.focus("confirmed")
 	h.key("x", "ctrl+s")
-	h.has("Checking access", "Globex Corp · production")
+	h.has("Connecting", "Globex Corp · production")
 	h.key("esc", "esc")
 	// a company: its environment and jump host
 	h.key("N", "left", "left") // company
@@ -262,7 +262,7 @@ func TestFirstScanOfEnv(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "staging"}, true)
 	h.has("No runs yet", "<enter> checks SSH access to every host", "enter check access, first scan")
 	h.key("enter")
-	h.has("Checking access", " · staging")
+	h.has("Connecting", " · staging")
 	h.key("esc") // no form to go back to: closed
 	if h.m.setup != nil || h.m.view != vServers {
 		t.Fatal("esc: back to ToDo")

@@ -286,14 +286,14 @@ func TestBrowse(t *testing.T) {
 		"node: pkg:os:openssl:3.0.1", "esc back")
 	h.key("esc", "1")
 	h.has("Servers(acme/production)", "web-01")
-	h.key("3")
+	h.show(vPackages)
 	h.has("Packages(acme/production)", "nginx", "1.25.5")
-	h.key("9")
-	h.has("Runs(acme/production)[5]", "2026-11-02 11:00", "partial")
+	h.key("3")
+	h.has("History(acme/production)[5]", "2026-11-02 11:00", "partial")
 	// open an older run, then back to the current state
 	h.key("G", "enter")
 	h.has("ToDo(acme/production@2026-11-01 10:00)", "run 2026-11-01 10:00")
-	h.key("9", "c")
+	h.key("3", "c")
 	h.has("ToDo(acme/production)[")
 	// the environments: another one, no runs yet, with the hints
 	h.key("E")
@@ -301,11 +301,11 @@ func TestBrowse(t *testing.T) {
 	h.key("down", "enter")
 	h.has(" acme  staging ", "kanareika scan acme --env staging", "or press <s>", "<enter> checks SSH access", "enter check access, first scan")
 	h.key("tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab") // around all views and one more
-	h.has(" 3 Packages ", " acme  staging ")
+	h.has(" 1 Servers ", " acme  staging ")
 	h.key("?")
 	h.has("Hotkeys", "OSC 52", "list_fixes · get_fix")
 	h.key("x")
-	h.has("Packages(acme/staging)")
+	h.has("Servers(acme/staging)")
 }
 
 // TestTree: open and close, the cursor to the parent, grouping, a node's selection covering what is under it.
@@ -538,8 +538,8 @@ func TestSizes(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	for _, sz := range [][2]int{{60, 15}, {90, 24}, {120, 30}, {200, 60}} {
 		h.m.Update(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
-		for _, v := range viewHotkeys {
-			h.key(v)
+		for v := range nViews {
+			h.show(v)
 			h.screen()
 		}
 		h.key("2", "pgdown", "G", "g")

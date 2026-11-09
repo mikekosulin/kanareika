@@ -13,7 +13,7 @@ func TestJump(t *testing.T) {
 	h.key("3", ".", "2", ".", "7")
 	h.has("rsync 3.2.3 → 3.2.7", "P2 fix")
 	h.key("enter")
-	if n := h.m.curNode(); n == nil || n.ID != "pkg:os:rsync:3.2.3" {
+	if n := h.m.curNode(); n == nil || !strings.HasPrefix(n.ID, "pkg:os:rsync:3.2.3") {
 		t.Fatal("not on the fix", n)
 	}
 	// a CVE: grouped by CVE, the cursor on it (the filters cleared)
@@ -24,8 +24,8 @@ func TestJump(t *testing.T) {
 	}
 	h.key(":", "w", "e", "b", "-", "0", "1", "enter")
 	h.has("Host(web-01)")
-	h.key(":", "R", "u", "n", "s", "enter")
-	h.has("Runs(acme/production)")
+	h.key(":", "H", "i", "s", "t", "o", "r", "y", "enter")
+	h.has("History(acme/production)")
 	// typing, then erasing, moving; nothing found; esc closes
 	h.key(":", "z", "z", "backspace", "backspace", "down", "up", "pgdown", "pgup", "tab", "esc")
 	if h.m.menu != nil {

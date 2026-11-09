@@ -22,3 +22,9 @@ func (s *scanner) requests() []server.ScanRequest {
 	defer s.mu.Unlock()
 	return slices.Clone(s.reqs)
 }
+
+// show: a view directly (the lenses of Servers, ToDo's and History's sub-views).
+func (h *harness) show(v view) {
+	h.m.setView(v)
+	h.run(h.m.sync())
+}

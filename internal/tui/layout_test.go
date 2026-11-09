@@ -35,7 +35,7 @@ func TestNarrow(t *testing.T) {
 	h.has(" acme  production ", "? all keys", "openssl")
 	h.hasNot("DUE BY", "HOSTS")
 
-	h.key("3")
+	h.show(vPackages)
 	h.has("PACKAGE", "FIXED IN", "nginx")
 	h.hasNot("WHERE", "INSTALLED")
 
@@ -65,13 +65,13 @@ func TestHelpScrolls(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(60, 12)
 	h.key("?")
-	h.has("1-9, 0, S, tab", "runs, scans")
+	h.has("1, 2, 3, tab", "Servers, ToDo, History")
 	h.hasNot("any key closes this")
 	for i := 0; i < 100; i++ {
 		h.key("down")
 	}
 	h.has("any key closes this")
-	h.hasNot("1-9, 0, S, tab")
+	h.hasNot("1, 2, 3, tab")
 	h.key("up", "k", "j", "x")
 	h.hasNot("any key closes this")
 	h.has("ToDo(")
@@ -81,7 +81,8 @@ func TestHelpScrolls(t *testing.T) {
 func TestPanels(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "conf", "tui.json")
 	h := newHarness(t, Options{Org: "acme", Env: "production", Settings: path}, true)
-	h.key("3", "o")
+	h.show(vPackages)
+	h.key("o")
 	h.has("Panels(Packages)", "[x] view tabs", "[ ] show P4 too", "[x] mouse (shift+drag still selects text)", "time zone: < system >",
 		"[x] where", "[x] installed")
 	h.hasNot("[x] package", "header:") // never switched off; the header is gone
@@ -104,13 +105,14 @@ func TestPanels(t *testing.T) {
 
 	// the next session starts with them; P4 shows in the lists
 	h2 := newHarness(t, Options{Org: "acme", Env: "production", Settings: path}, true)
-	h2.key("3")
+	h2.show(vPackages)
 	h2.hasNot("WHERE")
 	h2.key("2")
 	h2.has("P4 os")
 
 	// switched back on, the column returns and the view's entry leaves the file
-	h2.key("3", "o", "down", "down", "down", "down", "down", "space", "down", "space", "q")
+	h2.show(vPackages)
+	h2.key("o", "down", "down", "down", "down", "down", "space", "down", "space", "q")
 	h2.has("WHERE", "INSTALLED")
 	h2.key("p") // P4 off from Packages too
 	b, _ = os.ReadFile(path)
@@ -170,11 +172,10 @@ func TestTabsAndZone(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tui.json")
 	h := newHarness(t, Options{Org: "acme", Env: "production", Settings: path, Zone: time.FixedZone("MSK", 3*3600)}, true)
 	h.size(120, 30)
-	h.key("9")
-	h.has("1 Servers", " 2 ToDo ", " 9 Runs ", "2026-11-02 14:00") // the run of 11:00 UTC, in MSK
+	h.key("3")
+	h.has("1 Servers", " 2 ToDo ", " 3 History ", "2026-11-02 14:00") // the run of 11:00 UTC, in MSK
 	h.size(44, 20)
-	h.has(" 9 Runs ", " 1  2 ")
-	h.hasNot("Servers ")
+	h.has(" 3 History ")
 	h.size(120, 30)
 
 	h.key("z")
@@ -205,7 +206,7 @@ func TestLiveProgress(t *testing.T) {
 	h.size(140, 30)
 	h.key("S")
 	// web-01 1 + app-01 1 + db-01 (2-0.5)/4 of 4 hosts: 59%; 10 min spent
-	h.has("Scan running acme/production", " 59% ", "✓1", "✗1", "▸1", "2/4 hosts", "10m0s", "~6m51s left", " 0 Scans ● ",
+	h.has("Scan running acme/production", " 59% ", "✓1", "✗1", "▸1", "2/4 hosts", "10m0s", "~6m51s left", " 3 History ● ",
 		"os_packages", "2/4", "117 packages", "unreachable")
 	s := h.screen()
 	if strings.Index(s, "db-01") > strings.Index(s, "new-01") || strings.Index(s, "new-01") > strings.Index(s, "app-01") {

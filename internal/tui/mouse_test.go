@@ -206,10 +206,10 @@ func TestMouseSetup(t *testing.T) {
 	h.has("[x] I’m allowed")
 	h.click("↓ d download")
 	h.has("vulnerability list ")
-	h.click("⏎ Check access")
-	h.has("Checking access")
+	h.click("⏎ Check connection")
+	h.has("Connecting")
 	h.click("r Check again")
-	h.has("Checking access")
+	h.has("Connecting")
 	h.click("esc Back")
 	if h.m.setup.step != 1 {
 		t.Fatal("back")

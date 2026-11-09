@@ -27,16 +27,14 @@ const (
 	vExceptions
 	vRuns
 	vScans
+	vLens // a lens of Servers the server draws (GET /api/lens)
 	nViews
 )
 
 // viewNames: tab titles (English keys of the web page's translations where it has them). Organizations and
 // environments are chosen with O and E.
 var viewNames = [nViews]string{"Servers", "ToDo", "Packages", "Changes", "Access", "Network", "Health",
-	"Exceptions", "Runs", "Scans"}
-
-// viewHotkeys: the key of each view: 1-9, 0 (S opens Scans too).
-var viewHotkeys = [nViews]string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}
+	"Exceptions", "History", "Scans", "Servers"}
 
 // Options of a TUI session.
 type Options struct {
@@ -118,6 +116,11 @@ type Model struct {
 	dlStart      time.Time // when the download asked for here started
 	dbPolled     time.Time
 	spinning     bool                            // a spinner frame is due
+	lens         string                          // what Servers shows (w): priorities (the tree), logins, network, health, ...
+	lensData     *lensResp                       // the server's lenses, the rows of the one on screen
+	lensFor      string                          // what the rows are for
+	lensAPI      bool                            // the server draws lenses
+	lensNone     bool                            // it does not (yet): the views that showed them
 	setupCurLine int                             // the line of the setup form the cursor is on (kept in view)
 	handlers     map[string]func(dx int) tea.Cmd // what a click on a zone does (drawn this frame)
 	zones        []hitZone                       // where the zones are on screen
@@ -143,7 +146,7 @@ func New(o Options) *Model {
 	}
 	m := &Model{c: o.Client, now: o.Now, every: o.Tick, clip: o.Clip, org: o.Org, env: o.Env, view: vServers, sel: map[string]bool{},
 		t: &tr{lang: "en", ui: i18n.UI()}, set: loadSettings(o.Settings), setPath: o.Settings, sysZone: o.Zone,
-		by: [nViews]string{vServers: "host", vActions: "fix"}, flt: map[string]bool{}, nodes: map[string]*nodeDetail{}, pending: map[string]string{}, opened: map[string]bool{}}
+		lens: "priorities", by: [nViews]string{vServers: "host", vActions: "fix"}, flt: map[string]bool{}, nodes: map[string]*nodeDetail{}, pending: map[string]string{}, opened: map[string]bool{}}
 	m.applyZone()
 	if o.Lang != "" && (o.Lang == "en" || m.t.ui[o.Lang] != nil) {
 		m.t.lang = o.Lang
@@ -337,6 +340,8 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		}
 	case treeMsg:
 		m.onTree(msg)
+	case lensMsg:
+		m.onLens(msg)
 	case nodeMsg:
 		delete(m.pending, msg.key)
 		if strings.HasPrefix(msg.key, m.treeKey+"#") {
@@ -589,13 +594,17 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "?":
 		m.help = true
 	case "tab", "right", "l":
-		m.setView((m.view + 1) % nViews)
+		m.goPlace(1)
 	case "shift+tab", "left", "h":
-		m.setView((m.view + nViews - 1) % nViews)
-	case "1", "2", "3", "4", "5", "6", "7", "8", "9", "0":
-		m.setView(view(slices.Index(viewHotkeys[:], s)))
+		m.goPlace(-1)
+	case "1", "2", "3":
+		m.toPlace(places[s[0]-'1'])
 	case "S":
 		m.setView(vScans)
+	case "w":
+		if place(m.view) == vServers {
+			m.nextLens()
+		}
 	case "r", "ctrl+r":
 		m.runKey, m.treeKey = "", "" // reload the run and the tree too
 		m.nodes, m.pending = map[string]*nodeDetail{}, map[string]string{}
@@ -620,6 +629,9 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "/":
 		m.typing = true
 	case "esc":
+		if m.filter == "" && (m.view == vScans || m.view == vChanges) { // back to History
+			m.setView(vRuns)
+		}
 		m.filter = ""
 	case "s":
 		return m, m.openForm()
@@ -715,6 +727,10 @@ func (m *Model) rows() int {
 		return len(m.runList())
 	case vScans:
 		return len(m.jobs.Jobs)
+	case vLens:
+		if m.lensData != nil {
+			return len(m.lensData.Rows)
+		}
 	}
 	return 0
 }
@@ -750,8 +766,14 @@ func (m *Model) viewKey(s string) tea.Cmd {
 		if s == "p" {
 			m.toggleP4()
 		}
+	case vLens:
+		if c := m.cur[vLens]; s == "enter" && m.lensData != nil && c < len(m.lensData.Rows) { // the host's card
+			m.view, m.host, m.hostOff = vServers, m.lensData.Rows[c].Host, 0
+		}
 	case vRuns:
 		switch s {
+		case "n": // what changed
+			m.setView(vChanges)
 		case "i":
 			if l := m.runList(); m.cur[vRuns] < len(l) {
 				return m.openRunInfo(l[m.cur[vRuns]].RunID)
