@@ -6,13 +6,9 @@ Only the latest release gets fixes. Kanareika is pre-1.0: upgrade to the newest 
 
 ## Reporting a vulnerability
 
-Please **do not open a public issue**. Report privately via
-[GitHub private vulnerability reporting](https://github.com/mikekosulin/kanareika/security/advisories/new)
-(Security tab → *Report a vulnerability*).
+Please **do not open a public issue**. Report privately via [GitHub private vulnerability reporting](https://github.com/mikekosulin/kanareika/security/advisories/new) (Security tab → *Report a vulnerability*).
 
-Include what you need to reproduce it: version (`kanareika --version`), OS, the command or org file (with your
-addresses and names removed), and what an attacker gains. Reproduce it against a real kanareika build first:
-speculative or unverified reports, AI-generated or not, are closed ([AI_POLICY.md](AI_POLICY.md#security-reports)).
+Include what you need to reproduce it: version (`kanareika --version`), OS, the command or org file (with your addresses and names removed), and what an attacker gains. Reproduce it against a real kanareika build first: speculative or unverified reports, AI-generated or not, are closed ([AI_POLICY.md](AI_POLICY.md#security-reports)).
 
 What to expect:
 
@@ -22,10 +18,7 @@ What to expect:
 
 ## Published vulnerabilities
 
-Kanareika's vulnerabilities are published only as
-[GitHub Security Advisories of this repository](https://github.com/mikekosulin/kanareika/security/advisories), with
-the CVE id when one is assigned. Pages elsewhere that name Kanareika next to a CVE without such an advisory are not
-ours: some sites generate them from public repositories. If one worries you, ask in a private report.
+Kanareika's vulnerabilities are published only as [GitHub Security Advisories of this repository](https://github.com/mikekosulin/kanareika/security/advisories), with the CVE id when one is assigned. Pages elsewhere that name Kanareika next to a CVE without such an advisory are not ours: some sites generate them from public repositories. If one worries you, ask in a private report.
 
 ## Scope
 
@@ -33,14 +26,11 @@ In scope — anything where Kanareika itself weakens the hosts it audits or the 
 
 - a scan that changes state on a host (it must stay read-only), or runs commands beyond what the docs describe;
 - SSH host key checking bypassed, credentials or keys leaked into reports, logs or the web interface;
-- the web interface (`kanareika web`) or the MCP server reachable beyond localhost without `--token`, or exploitable from a page in the
-  browser (for example starting a scan from another site: scans need the page's CSRF token, and on localhost only
-  requests addressed to a loopback name are answered);
+- the web interface (`kanareika web`) or the MCP server reachable beyond localhost without `--token`, or exploitable from a page in the browser (for example starting a scan from another site: scans need the page's CSRF token, and on localhost only requests addressed to a loopback name are answered);
 - data from one organization showing up in another's reports;
 - a malicious host or container image making Kanareika execute code on the auditor's machine.
 
-Out of scope: vulnerabilities Kanareika *finds* on your servers (that is its job), issues in third-party tools it
-calls (report those upstream: trivy, OpenSSH, …), and findings that need an already compromised auditor machine.
+Out of scope: vulnerabilities Kanareika *finds* on your servers (that is its job), issues in third-party tools it calls (report those upstream: trivy, OpenSSH, …), and findings that need an already compromised auditor machine.
 
 ## Verifying releases
 

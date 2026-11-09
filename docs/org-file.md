@@ -1,7 +1,6 @@
 # Organization file: `orgs/<id>.yml`
 
-Schema: `assets/schemas/org.schema.json`. Template with comments: `assets/templates/org.yml` (`kanareika org new <id>` writes it as `orgs/<id>.yml`). Example: `orgs/_example.yml`.
-Files starting with `_` are not loaded.
+Schema: `assets/schemas/org.schema.json`. Template with comments: `assets/templates/org.yml` (`kanareika org new <id>` writes it as `orgs/<id>.yml`). Example: `orgs/_example.yml`. Files starting with `_` are not loaded.
 
 ## Sections
 
@@ -29,18 +28,13 @@ Files starting with `_` are not loaded.
 | `exceptions[]` | no | `id`, `hosts`, `package`, `reason`, `owner`, `review_by`, `until_available` |
 | `due` | no | how due dates are counted, per org and per environment (see [Due dates](#due-dates)) |
 
-SSH port of a host: its `port`, else the one in its `address` (`192.0.2.10:2222`, `[2001:db8::10]:2222`), else the
-group's `port`, else `access.port`, else 22. Jump hosts likewise, without the group. A `port` that disagrees with
-the address is an error.
+SSH port of a host: its `port`, else the one in its `address` (`192.0.2.10:2222`, `[2001:db8::10]:2222`), else the group's `port`, else `access.port`, else 22. Jump hosts likewise, without the group. A `port` that disagrees with the address is an error.
 
-Roles (`role`, defaults to the group name): `front`, `app`, `swarm_manager`, `swarm_worker`, `k8s_node`, `mongo`, `internal`.
-`exposure`: 1 — perimeter (reachable from the internet), 2 — neighbours, 3 — internal only.
+Roles (`role`, defaults to the group name): `front`, `app`, `swarm_manager`, `swarm_worker`, `k8s_node`, `mongo`, `internal`. `exposure`: 1 — perimeter (reachable from the internet), 2 — neighbours, 3 — internal only.
 
 ## Environments (`env`)
 
-If an organization has production and staging, set `env` on **every** group. Then `scan`, `history` and `diff`
-require `--env`, `--all` makes one run per org and environment, and reports live in `reports/<org>/<env>/`.
-`external` and `k8s` are bound to an environment too:
+If an organization has production and staging, set `env` on **every** group. Then `scan`, `history` and `diff` require `--env`, `--all` makes one run per org and environment, and reports live in `reports/<org>/<env>/`. `external` and `k8s` are bound to an environment too:
 
 ```yaml
 external:
@@ -58,9 +52,7 @@ external:
 4. `groups.<g>.checks`
 5. `groups.<g>.hosts.<h>.checks`
 
-`module: true|false` is short for `enabled`. A mapping without `enabled` only tunes settings. Mappings merge
-recursively, **lists are replaced**. `k8s` and `network_external` are allowed only in the org `checks`.
-Check the result with `kanareika validate <id>` and `kanareika show <id>`.
+`module: true|false` is short for `enabled`. A mapping without `enabled` only tunes settings. Mappings merge recursively, **lists are replaced**. `k8s` and `network_external` are allowed only in the org `checks`. Check the result with `kanareika validate <id>` and `kanareika show <id>`.
 
 ## Module settings and defaults
 
@@ -82,14 +74,11 @@ Check the result with `kanareika validate <id>` and `kanareika show <id>`.
 
 ## Priorities and exceptions
 
-`assets/policy/priority.yml` (overridable like the profiles): rules top to bottom, first match wins. Conditions: `kev`, `epss_gte`, `severity`, `exposure`,
-`fixable`, `kind`, `kernel`, `preauth`, `rce`, `id`.
+`assets/policy/priority.yml` (overridable like the profiles): rules top to bottom, first match wins. Conditions: `kev`, `epss_gte`, `severity`, `exposure`, `fixable`, `kind`, `kernel`, `preauth`, `rce`, `id`.
 
 ### Due dates
 
-Due date = start + `sla_days[Pn]`. The start is the first scan that saw the finding on that host (`first_seen`), so
-a finding that stays open becomes overdue instead of moving forward with every scan. Each finding keeps
-`first_seen`, `clock_start` and `due_why` (what set the date), and the interfaces show them.
+Due date = start + `sla_days[Pn]`. The start is the first scan that saw the finding on that host (`first_seen`), so a finding that stays open becomes overdue instead of moving forward with every scan. Each finding keeps `first_seen`, `clock_start` and `due_why` (what set the date), and the interfaces show them.
 
 | key | values (default first) | meaning |
 |---|---|---|
@@ -99,8 +88,7 @@ a finding that stays open becomes overdue instead of moving forward with every s
 | `after_exception` | `restart`, `keep` | an accepted risk expired: the clock starts again that day |
 | `sla_days` | `{P1: 7, P2: 30, P3: 90, P4: 180}` | days per priority |
 
-The defaults are in `assets/policy/priority.yml` (`due:` and `sla_days:`). An org overrides any of them, and one
-environment on top of that:
+The defaults are in `assets/policy/priority.yml` (`due:` and `sla_days:`). An org overrides any of them, and one environment on top of that:
 
 ```yaml
 due:
@@ -111,12 +99,6 @@ due:
       kev: off
 ```
 
-Findings from before 0.5 have no `first_seen`: the first scan after the upgrade takes the oldest kept run that had
-them, so long-open findings show up as overdue.
+Findings from before 0.5 have no `first_seen`: the first scan after the upgrade takes the oldest kept run that had them, so long-open findings show up as overdue.
 
-An exception applies when `id`, the host (if `hosts` is set) and a substring of the package (if `package` is set)
-match. After `review_by` it stops applying and the finding returns to the plan, marked as expired.
-With `until_available: true` it also stops as soon as the host's repositories offer an update for the package — use
-it for "the vendor has not shipped the fix yet": the finding comes back by itself when there is something to install.
-`id: "*"` together with `package` covers every CVE of that package (the fix plan for "no fix in the repositories yet"
-generates such entries: one per package and host, with `until_available` and a short `review_by`).
+An exception applies when `id`, the host (if `hosts` is set) and a substring of the package (if `package` is set) match. After `review_by` it stops applying and the finding returns to the plan, marked as expired. With `until_available: true` it also stops as soon as the host's repositories offer an update for the package — use it for "the vendor has not shipped the fix yet": the finding comes back by itself when there is something to install. `id: "*"` together with `package` covers every CVE of that package (the fix plan for "no fix in the repositories yet" generates such entries: one per package and host, with `until_available` and a short `review_by`).
