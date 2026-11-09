@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/mikekosulin/kanareika/internal/i18n"
+	"github.com/mikekosulin/kanareika/tools/internal/webp"
 )
 
 // fakeChrome: writes the picture Chrome was asked for and remembers what it was asked.
@@ -25,6 +26,9 @@ func fakeChrome(t *testing.T) *[][]string {
 		calls = append(calls, []string{bin, url, png, fmt.Sprintf("%dx%d", w, h)})
 		return os.WriteFile(png, []byte("png"), 0o644)
 	}
+	oldW := webp.Encode // no cwebp needed: the "WebP" is a copy
+	t.Cleanup(func() { webp.Encode = oldW })
+	webp.Encode = func(png, out string) error { return os.WriteFile(out, []byte("webp"), 0o644) }
 	return &calls
 }
 
@@ -49,7 +53,11 @@ func TestRun(t *testing.T) {
 		names = append(names, "banner-"+l.Code, "banner-"+l.Code+"-light")
 	}
 	for _, n := range names {
-		for _, ext := range []string{".html", ".png"} {
+		pic := ".webp" // the README's banners are WebP; the social preview stays PNG
+		if n == "og" {
+			pic = ".png"
+		}
+		for _, ext := range []string{".html", pic} {
 			if _, err := os.Stat(filepath.Join(out, n+ext)); err != nil {
 				t.Error(err)
 			}
@@ -84,10 +92,10 @@ func TestPictures(t *testing.T) {
 		}
 	}
 	for name, want := range map[string][]string{
-		"og":        {"What to patch first.", "Access", "■ 2 P1", "■ 3 P3", "■ 2 P4", "openssl 3.0.13 → 3.0.15", "kernel 5.14.0-427"},
+		"og":        {"What to patch first.", "History", "■ 2 P1", "■ 3 P3", "■ 2 P4", "openssl 3.0.13 → 3.0.15", "kernel 5.14.0-427"},
 		"banner-en": {`lang="en"`, "What to patch first.", "ToDo"},
-		"banner-ru": {`lang="ru"`, "Начните с главного.", "Что делать", "Здоровье"},
-		"banner-zh": {`lang="zh"`, "从最重要的开始", "待办", "健康"},
+		"banner-ru": {`lang="ru"`, "Начните с главного.", "Что делать", "Серверы", "История"},
+		"banner-zh": {`lang="zh"`, "从最重要的开始", "待办", "服务器", "历史"},
 	} {
 		for _, w := range want {
 			if !strings.Contains(page[name], w) {

@@ -1,4 +1,4 @@
-<h1><picture><source media="(prefers-color-scheme: dark)" srcset="../brand/banner-ko.png"><img alt="Kanareika: SSH를 통한 서버 보안 감사" src="../brand/banner-ko-light.png"></picture></h1>
+<h1><picture><source media="(prefers-color-scheme: dark)" srcset="../brand/banner-ko.webp"><img alt="Kanareika: SSH를 통한 서버 보안 감사" src="../brand/banner-ko-light.webp"></picture></h1>
 
 [![CI](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml/badge.svg)](https://github.com/mikekosulin/kanareika/actions/workflows/ci.yml) [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/mikekosulin/kanareika/badges/coverage.json)](https://github.com/mikekosulin/kanareika/actions/workflows/coverage.yml) [![Release](https://img.shields.io/github/v/release/mikekosulin/kanareika)](https://github.com/mikekosulin/kanareika/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE) [![Stars](https://img.shields.io/github/stars/mikekosulin/kanareika?style=social)](https://github.com/mikekosulin/kanareika)
 
