@@ -51,11 +51,12 @@ func localeNames(t *testing.T) (langs []string, names map[string]string) {
 	return langs, names
 }
 
-// TestReadmes: a README per interface language, each with a switcher to all the others, its banner and
-// screenshots in its own language, and relative links that lead somewhere.
+// TestReadmes: a README per interface language, each with a switcher to all the others, its banner (dark or
+// light by the reader's theme) and screenshots in its own language, and relative links, srcset too, that lead
+// somewhere.
 func TestReadmes(t *testing.T) {
 	langs, names := localeNames(t)
-	link := regexp.MustCompile(`\]\(([^)#\s]+)(?:#[^)]*)?\)|src="([^"]+)"`)
+	link := regexp.MustCompile(`\]\(([^)#\s]+)(?:#[^)]*)?\)|\bsrc="([^"]+)"|\bsrcset="([^"]+)"`)
 	for _, lang := range langs {
 		path := readme(lang)
 		b, err := os.ReadFile(filepath.Join(root, path))
@@ -78,7 +79,15 @@ func TestReadmes(t *testing.T) {
 			t.Errorf("%s: no language switcher %q", path, want)
 		}
 
-		for _, pic := range []string{"brand/banner-" + lang + ".png", "screenshots/tui-" + lang + ".png", "screenshots/web-" + lang + ".png"} {
+		rel, _ := filepath.Rel(filepath.Dir(path), "docs/brand/banner-"+lang)
+		brand := regexp.QuoteMeta(filepath.ToSlash(rel))
+		banner := regexp.MustCompile(`<picture><source media="\(prefers-color-scheme: dark\)" srcset="` + brand +
+			`\.png"><img alt="[^"]+" src="` + brand + `-light\.png"></picture>`)
+		if !banner.MatchString(text) {
+			t.Errorf("%s: no banner picture (dark srcset, light src, alt)", path)
+		}
+
+		for _, pic := range []string{"brand/banner-" + lang + ".png", "brand/banner-" + lang + "-light.png", "screenshots/tui-" + lang + ".png", "screenshots/web-" + lang + ".png"} {
 			if !strings.Contains(text, pic) {
 				t.Errorf("%s: does not show %s", path, pic)
 			}
@@ -86,6 +95,9 @@ func TestReadmes(t *testing.T) {
 
 		for _, m := range link.FindAllStringSubmatch(text, -1) {
 			target := m[1] + m[2]
+			if m[3] != "" { // srcset: the first candidate's URL
+				target = strings.Fields(strings.Split(m[3], ",")[0])[0]
+			}
 			if strings.Contains(target, "://") || strings.HasPrefix(target, "mailto:") {
 				continue
 			}

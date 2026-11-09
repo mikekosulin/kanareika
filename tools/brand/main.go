@@ -205,7 +205,8 @@ func run(out, logoPath, pagesDir, bin string) error {
 	return nil
 }
 
-// pictures: the social preview (English: GitHub shows one for every language) and a banner per language.
+// pictures: the social preview (English: GitHub shows one for every language; dark only, a preview has no theme)
+// and a banner per language, dark and light (-light: the README picks by the reader's theme).
 func pictures(logo string, src sources) ([]picture, error) {
 	og, err := template.New("og").Parse(src.og)
 	if err != nil {
@@ -235,11 +236,19 @@ func pictures(logo string, src sources) ([]picture, error) {
 	}
 	pics := []picture{{"og", 1280, 640, bytes.Clone(b.Bytes())}}
 	for _, l := range langs {
-		b.Reset()
-		if err := banner.Execute(&b, data(l, l.Rows[:min(bannerRows, len(l.Rows))])); err != nil {
-			return nil, err
+		for _, light := range []bool{false, true} {
+			d := data(l, l.Rows[:min(bannerRows, len(l.Rows))])
+			d["Light"] = light
+			name := "banner-" + l.Code
+			if light {
+				name += "-light"
+			}
+			b.Reset()
+			if err := banner.Execute(&b, d); err != nil {
+				return nil, err
+			}
+			pics = append(pics, picture{name, 1280, 360, bytes.Clone(b.Bytes())})
 		}
-		pics = append(pics, picture{"banner-" + l.Code, 1280, 360, bytes.Clone(b.Bytes())})
 	}
 	return pics, nil
 }
