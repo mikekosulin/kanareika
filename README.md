@@ -14,13 +14,13 @@ Agentless, read-only security audit of Linux servers over SSH. It ranks what to 
 
 Run `kanareika`. It opens on ToDo: what to fix first, most urgent at the top.
 
-![Demo data, made up.](docs/screenshots/tui-en.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/tui-en.webp"><img alt="Demo data, made up." src="docs/screenshots/tui-en-light.webp"></picture>
 
 ### Web interface
 
 Run `kanareika web` for the same data in a browser, with the trend of the last 30 runs.
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web-en.png"><img alt="Demo data, made up." src="docs/screenshots/web-en-light.png"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web-en.webp"><img alt="Demo data, made up." src="docs/screenshots/web-en-light.webp"></picture>
 
 <sub>Demo data, made up.</sub>
 

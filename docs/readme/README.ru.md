@@ -16,13 +16,13 @@ Kanareika проверяет безопасность Linux-серверов п�
 
 Запустите `kanareika` — откроется список задач, самое срочное сверху.
 
-![Терминальный интерфейс на вымышленных данных](../screenshots/tui-ru.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-ru.webp"><img alt="Терминальный интерфейс на вымышленных данных" src="../screenshots/tui-ru-light.webp"></picture>
 
 ### Веб-интерфейс
 
 `kanareika web` показывает те же данные в браузере, плюс динамику за последние 30 сканирований.
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-ru.png"><img alt="Веб-интерфейс на вымышленных данных" src="../screenshots/web-ru-light.png"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-ru.webp"><img alt="Веб-интерфейс на вымышленных данных" src="../screenshots/web-ru-light.webp"></picture>
 
 <sub>На скриншотах вымышленные данные.</sub>
 

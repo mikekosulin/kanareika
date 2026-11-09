@@ -14,13 +14,13 @@
 
 运行 `kanareika`。默认打开“待办”：最紧急的排在最前面。
 
-![演示数据，均为虚构。](../screenshots/tui-zh.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-zh.webp"><img alt="演示数据，均为虚构。" src="../screenshots/tui-zh-light.webp"></picture>
 
 ### Web 界面
 
 运行 `kanareika web`：在浏览器中查看相同的数据，以及最近 30 次运行的趋势。
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-zh.png"><img alt="演示数据，均为虚构。" src="../screenshots/web-zh-light.png"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-zh.webp"><img alt="演示数据，均为虚构。" src="../screenshots/web-zh-light.webp"></picture>
 
 <sub>演示数据，均为虚构。</sub>
 

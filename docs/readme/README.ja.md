@@ -14,13 +14,13 @@
 
 `kanareika` を実行すると「やること」画面が開きます。最初に直すべきものが、緊急度の高い順に並びます。
 
-![デモデータ (架空のもの)。](../screenshots/tui-ja.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-ja.webp"><img alt="デモデータ (架空のもの)。" src="../screenshots/tui-ja-light.webp"></picture>
 
 ### Web UI
 
 `kanareika web` を実行すると、同じデータをブラウザで確認できます。直近 30 回の実行の推移も表示されます。
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-ja.png"><img alt="デモデータ (架空のもの)。" src="../screenshots/web-ja-light.png"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-ja.webp"><img alt="デモデータ (架空のもの)。" src="../screenshots/web-ja-light.webp"></picture>
 
 <sub>デモデータ (架空のもの)。</sub>
 

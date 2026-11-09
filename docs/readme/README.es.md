@@ -14,13 +14,13 @@ Auditoría de seguridad de servidores Linux por SSH, sin agentes y de solo lectu
 
 Ejecute `kanareika`. Se abre en «Por hacer»: lo que hay que corregir primero, lo más urgente arriba.
 
-![Datos de demostración, inventados.](../screenshots/tui-es.png)
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-es.webp"><img alt="Datos de demostración, inventados." src="../screenshots/tui-es-light.webp"></picture>
 
 ### Interfaz web
 
 Ejecute `kanareika web` para ver los mismos datos en el navegador, con la tendencia de las últimas 30 ejecuciones.
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-es.png"><img alt="Datos de demostración, inventados." src="../screenshots/web-es-light.png"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/web-es.webp"><img alt="Datos de demostración, inventados." src="../screenshots/web-es-light.webp"></picture>
 
 <sub>Datos de demostración, inventados.</sub>
 
