@@ -26,3 +26,16 @@ func TestStaleWizardAnswers(t *testing.T) {
 	m.setup = nil
 	m.Update(checkedMsg{gen: 1, host: "web-1"}) // no wizard at all
 }
+
+// TestSetupOrgWithoutEnvs: adding servers to an organization with no environments yet goes to production.
+func TestSetupOrgWithoutEnvs(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, false)
+	m := h.m
+	m.orgs.Orgs = append([]orgRow{{ID: "servers", Name: "Personal"}}, m.orgs.Orgs...)
+	m.setup = m.newWizard()
+	m.setup.field("hosts").val = []rune("web-1")
+	m.setup.field("confirmed").on = true
+	if m.submit() == nil || m.setup.errs != nil {
+		t.Fatal(m.setup.errs)
+	}
+}

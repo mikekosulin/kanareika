@@ -615,7 +615,10 @@ func (m *Model) submit() tea.Cmd {
 	}
 	switch {
 	case target != nil:
-		path, org, env = "/api/setup/add", target.ID, target.Envs[0].Env
+		path, org = "/api/setup/add", target.ID // env: the first one, production when the org has none yet
+		if len(target.Envs) > 0 {
+			env = target.Envs[0].Env
+		}
 		if w.kind == "add" && slices.ContainsFunc(target.Envs, func(e envRow) bool { return e.Env == m.env }) {
 			env = m.env
 		}
