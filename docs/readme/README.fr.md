@@ -74,7 +74,7 @@ ou dans le navigateur, sur http://127.0.0.1:8088 (il n'écoute que sur localhost
 kanareika web
 ```
 
-Au premier lancement, il vous guide pour ajouter vos serveurs (utilisateur et clé SSH, hôtes, consentement au scan) et lance le premier scan ; les bases de vulnérabilités se téléchargent toutes seules.
+Au premier lancement, il vous guide pour ajouter vos serveurs (utilisateur et clé SSH, hôtes, consentement au scan) et lance le premier scan ; il demande avant de télécharger la liste des vulnérabilités (environ 210 Mo).
 
 ### Pour les scripts et cron
 

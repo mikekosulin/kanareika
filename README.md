@@ -74,7 +74,7 @@ or in the browser, at http://127.0.0.1:8088 (it listens on localhost only):
 kanareika web
 ```
 
-On first start it walks you through adding your servers (SSH user and key, hosts, consent to scan) and runs the first scan; the vulnerability databases download by themselves.
+On first start it walks you through adding your servers (SSH user and key, hosts, consent to scan) and runs the first scan. It asks before downloading the vulnerability list (about 210 MB).
 
 ### For scripts and cron
 
