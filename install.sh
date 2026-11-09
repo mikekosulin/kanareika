@@ -67,9 +67,13 @@ main() {
   [ -n "$want" ] && [ "$want" = "$have" ] || die "checksum mismatch for $file: not installing"
   say "checksum: ok"
   if command -v gh >/dev/null 2>&1; then
-    gh attestation verify "$tmp/$file" --repo "$repo" >/dev/null 2>&1 ||
+    if ! gh auth status >/dev/null 2>&1; then
+      say "build attestation: not checked, the GitHub CLI is not logged in (gh auth login); the checksum was"
+    elif gh attestation verify "$tmp/$file" --repo "$repo" >/dev/null 2>&1; then
+      say "build attestation: ok (built by $repo's release workflow)"
+    else
       die "the build attestation of $file does not verify: not installing"
-    say "build attestation: ok (built by $repo's release workflow)"
+    fi
   fi
 
   tar -xJf "$tmp/$file" -C "$tmp" kanareika || die "could not unpack $file (is xz installed?)"
