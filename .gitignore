@@ -45,3 +45,9 @@ __pycache__/
 # tools/brand and tools/screenshots write their pages next to the pictures; the pictures are what is published
 docs/brand/*.html
 docs/screenshots/*.html
+
+# binaries from `go build ./tools/<name>` in the repository root
+/brand
+/demo
+/screenshots
+/e2e
