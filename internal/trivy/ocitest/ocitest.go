@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -65,6 +66,8 @@ type Registry struct {
 	Fail int
 	// Corrupt: blobs are served with their first byte changed
 	Corrupt bool
+	// Pad: blobs are served with this many zero bytes more than the manifest says
+	Pad int
 	// NoChallenge: a 401 without a WWW-Authenticate (a private repository)
 	NoChallenge bool
 	// Requests: method, path and the request headers' names, for checking what is sent
@@ -127,7 +130,7 @@ func (r *Registry) serve(w http.ResponseWriter, q *http.Request) {
 	sort.Strings(names)
 	r.mu.Lock()
 	r.Requests = append(r.Requests, Request{q.URL.Path, names, q.UserAgent()})
-	fail, corrupt, noChallenge := r.Fail, r.Corrupt, r.NoChallenge
+	fail, corrupt, noChallenge, pad := r.Fail, r.Corrupt, r.NoChallenge, r.Pad
 	r.mu.Unlock()
 	if fail != 0 {
 		w.WriteHeader(fail)
@@ -171,6 +174,9 @@ func (r *Registry) serve(w http.ResponseWriter, q *http.Request) {
 		}
 		if corrupt {
 			b = append([]byte{b[0] ^ 0xff}, b[1:]...)
+		}
+		if pad > 0 {
+			b = append(slices.Clip(b), make([]byte, pad)...)
 		}
 		w.Header().Set("Content-Length", fmt.Sprint(len(b)))
 		_, _ = w.Write(b)
