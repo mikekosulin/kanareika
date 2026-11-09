@@ -547,6 +547,10 @@ func (m *Model) detailKey(s string) tea.Cmd {
 			return nil
 		}
 		cmd := d.Apply[min(m.cmdCur, len(d.Apply)-1)].Command
+		if cmd == "" { // only package names no package manager has
+			m.say(m.t.T("No command to copy for this node"))
+			return nil
+		}
 		return func() tea.Msg { return m.copyText(cmd, m.t.T("Command copied to the clipboard")) }
 	}
 	return nil

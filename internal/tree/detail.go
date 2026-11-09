@@ -60,6 +60,7 @@ type Step struct {
 	Hosts   []string `json:"hosts"`
 	Command string   `json:"command"`
 	Reboot  bool     `json:"reboot,omitempty"`
+	Unsafe  []string `json:"unsafe,omitempty"` // package names the hosts reported that no package manager has: left out of Command
 }
 
 type Detail struct {
@@ -95,6 +96,20 @@ func family(os string) string {
 		return ""
 	}
 	return "dnf" // RHEL, Rocky, Alma, CentOS, Oracle, Fedora, Amazon
+}
+
+// pkgName: a name a package manager could have (Debian, RPM, Alpine, SUSE): letters, digits and .+_:@~-, not starting
+// with a dash. Anything else came from a host and is not put into a shell command.
+func pkgName(s string) bool {
+	if s == "" || s[0] == '-' {
+		return false
+	}
+	for _, r := range s {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune(".+_:@~-", r)) {
+			return false
+		}
+	}
+	return true
 }
 
 func command(fam, pkg string) string {
@@ -252,7 +267,12 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 			if !slices.Contains(s.Hosts, f.Host) {
 				s.Hosts = append(s.Hosts, f.Host)
 			}
-			if !slices.Contains(pkgs[fam], f.Pkg) {
+			switch {
+			case !pkgName(f.Pkg):
+				if !slices.Contains(s.Unsafe, f.Pkg) {
+					s.Unsafe = append(s.Unsafe, f.Pkg)
+				}
+			case !slices.Contains(pkgs[fam], f.Pkg):
 				pkgs[fam] = append(pkgs[fam], f.Pkg)
 			}
 		}
@@ -260,7 +280,10 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 			s := steps[fam]
 			slices.Sort(s.Hosts)
 			slices.Sort(pkgs[fam])
-			s.Command = command(fam, strings.Join(pkgs[fam], " ")) // every binary package of the source
+			slices.Sort(s.Unsafe)
+			if len(pkgs[fam]) > 0 {
+				s.Command = command(fam, strings.Join(pkgs[fam], " ")) // every binary package of the source
+			}
 			d.Apply = append(d.Apply, *s)
 		}
 	}
