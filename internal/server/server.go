@@ -70,12 +70,14 @@ type Server struct {
 	state   atomic.Pointer[orgState]
 	page    []byte // index.html with the UI strings and the CSRF token filled in
 	classic []byte // classic.html, the same way
-	logo    []byte
-	token   string
-	csrf    string
-	jobs    *jobs       // nil: scans disabled
-	db      *dbUpdater  // nil: DB updates disabled
-	local   atomic.Bool // bound to loopback: only loopback Host headers are served
+	logo    []byte // logo.png: the favicon
+	// logoWebP: logo.webp, the page's images (lossless, less than half the PNG)
+	logoWebP []byte
+	token    string
+	csrf     string
+	jobs     *jobs       // nil: scans disabled
+	db       *dbUpdater  // nil: DB updates disabled
+	local    atomic.Bool // bound to loopback: only loopback Host headers are served
 
 	orgFiles sync.Map // org id -> *sync.Mutex: one setup write (create, add hosts) per org file at a time
 
@@ -123,6 +125,9 @@ func New(o Options) (*Server, error) {
 	}
 	s.classic = bytes.Replace(s.classic, []byte(`/*CSRF*/""`), []byte(`"`+s.csrf+`"`), 1)
 	if s.logo, err = fs.ReadFile(webFS(), "logo.png"); err != nil {
+		return nil, err
+	}
+	if s.logoWebP, err = fs.ReadFile(webFS(), "logo.webp"); err != nil {
 		return nil, err
 	}
 	s.reload()
@@ -200,6 +205,7 @@ func (s *Server) Handler() http.Handler {
 	r.Use(middleware.Recoverer, headers, s.errorLog, s.guard, methods)
 	r.NotFound(func(w http.ResponseWriter, _ *http.Request) { send(w, 404, "text/plain", []byte("not found")) })
 	r.Get("/logo.png", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "image/png", s.logo) })
+	r.Get("/logo.webp", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "image/webp", s.logoWebP) })
 	index := func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "text/html; charset=utf-8", s.page) }
 	r.Get("/", index)
 	// no .html in addresses: the old one goes to /; the setup steps are addresses of the same page

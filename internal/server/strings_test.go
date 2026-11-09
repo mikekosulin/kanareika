@@ -75,7 +75,30 @@ func TestPageShape(t *testing.T) {
 	}
 }
 
-// TestPageEscapesData: the page writes what the server sends (vulnerability DB texts, what the scanned hosts
+// TestLogos: the page's images are the lossless WebP (/logo.webp); the favicon stays PNG (/logo.png).
+func TestLogos(t *testing.T) {
+	_, h := newTest(t, Options{})
+	png, webp := do(h, "GET", "/logo.png", nil, nil), do(h, "GET", "/logo.webp", nil, nil)
+	if png.code != 200 || png.h.Get("Content-Type") != "image/png" || !strings.HasPrefix(png.body, "\x89PNG") {
+		t.Errorf("png: %d %s", png.code, png.h.Get("Content-Type"))
+	}
+	if webp.code != 200 || webp.h.Get("Content-Type") != "image/webp" || webp.body[:4] != "RIFF" || webp.body[8:12] != "WEBP" ||
+		len(webp.body) >= len(png.body) {
+		t.Errorf("webp: %d %s %d bytes", webp.code, webp.h.Get("Content-Type"), len(webp.body))
+	}
+	for _, name := range []string{"index.html", "classic.html"} {
+		b, err := fs.ReadFile(assets.Web(), name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(b), `<img src="/logo.png"`) || !strings.Contains(string(b), `<img src="/logo.webp"`) ||
+			!strings.Contains(string(b), `<link rel="icon" type="image/png" href="/logo.png">`) {
+			t.Errorf("%s: images from logo.webp, the favicon from logo.png", name)
+		}
+	}
+}
+
+// TestPageEscapesData:the page writes what the server sends (vulnerability DB texts, what the scanned hosts
 // reported, the org files) through esc(). The tests do not run the page's JavaScript, so this looks for the
 // shapes that let such text through as HTML: a field interpolated straight into an element or an attribute, a
 // field passed raw into t()'s {args}, a link not limited to http(s), and the CVSS vector's parts written unescaped.
