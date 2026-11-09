@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // evil: what a host could report to take over a terminal: the clipboard (OSC 52), a cleared screen, a fake zone.
@@ -110,11 +112,50 @@ func TestAgentContextOneLineEach(t *testing.T) {
 		CVEs:  []cveInfo{{ID: "CVE-0000-1", Title: "t" + inject}},
 		Where: []whereInfo{{Group: "g" + inject, OS: "debian" + inject, Hosts: []string{"web-1" + inject}}},
 		Apply: []applyStep{{OS: "debian" + inject, Command: "apt-get install openssl" + inject}}}
-	for _, l := range strings.Split(strings.TrimSuffix(h.m.agentContext(d), "\n"), "\n") {
+	for _, l := range strings.Split(strings.TrimSuffix(h.m.agentContext(d, h.m.ctxAt()), "\n"), "\n") {
 		k, _, ok := strings.Cut(l, ": ")
 		if !ok || strings.HasPrefix(l, "IGNORE") || strings.HasPrefix(l, "run") || strings.ContainsAny(l, "\x1b\r ") {
 			t.Errorf("line %q (%s)", l, k)
 		}
+	}
+}
+
+// TestCopyFromUpdate: y, Y and c write the clipboard sequence only when Update takes their message, never from the
+// command's goroutine; the context is for where Y was pressed even if the screen moved on (run with -race).
+func TestCopyFromUpdate(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, false)
+	h.key("2")
+	h.m.nodes = map[string]*nodeDetail{} // Y fetches the node: the command does the work
+	for _, k := range []string{"Y", "y", "c"} {
+		h.clip.Reset()
+		cmd := h.m.detailKey(k)
+		if cmd == nil {
+			continue
+		}
+		msgs := make(chan tea.Msg, 1)
+		go func() { msgs <- cmd() }()
+		h.m.org, h.m.env = "other", "staging" // the screen moves on meanwhile
+		msg := <-msgs
+		if h.clip.Len() != 0 {
+			t.Fatalf("%s: written from the command", k)
+		}
+		h.m.org, h.m.env = "acme", "production"
+		h.run(func() tea.Msg { return msg })
+		if k == "Y" && !strings.Contains(h.clip.String(), "\x1b]52;c;") {
+			t.Fatalf("Y: %q", h.clip.String())
+		}
+	}
+	var b bytes.Buffer
+	w := SyncWriter(&b)
+	done := make(chan bool)
+	for range 4 {
+		go func() { _, _ = w.Write([]byte("frame")); done <- true }()
+	}
+	for range 4 {
+		<-done
+	}
+	if b.String() != strings.Repeat("frame", 4) {
+		t.Fatal(b.String())
 	}
 }
 

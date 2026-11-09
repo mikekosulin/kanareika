@@ -58,9 +58,10 @@ func (a *app) tuiRun(cmd *cobra.Command, f tuiFlags) error {
 	if f.lang == "" {
 		f.lang = langFromEnv()
 	}
-	m := tui.New(tui.Options{Client: c, Lang: f.lang, Org: f.org, Env: f.env, Clip: cmd.OutOrStdout(),
+	out := tui.SyncWriter(cmd.OutOrStdout()) // the frames and the clipboard sequence, never one inside the other
+	m := tui.New(tui.Options{Client: c, Lang: f.lang, Org: f.org, Env: f.env, Clip: out,
 		Settings: tui.DefaultSettingsPath()})
-	return runTUI(m, cmd.InOrStdin(), cmd.OutOrStdout())
+	return runTUI(m, cmd.InOrStdin(), out)
 }
 
 func (a *app) tuiCmd() *cobra.Command {

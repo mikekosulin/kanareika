@@ -532,9 +532,8 @@ func (m *Model) detailKey(s string) tea.Cmd {
 		if n == nil || n.Kind == "section" {
 			return nil
 		}
-		return m.fetchNode(n.ID, func(d *nodeDetail) tea.Msg {
-			return m.copyText(m.agentContext(d), m.t.T("Context copied to the clipboard"))
-		})
+		at, done := m.ctxAt(), m.t.T("Context copied to the clipboard") // read here, not in the command's goroutine
+		return m.fetchNode(n.ID, func(d *nodeDetail) tea.Msg { return copyMsg{detail: d, at: at, done: done} })
 	case "[", "]":
 		if d := m.curDetail(); d != nil && len(d.Apply) > 0 {
 			step := map[string]int{"[": -1, "]": 1}[s]
@@ -551,7 +550,8 @@ func (m *Model) detailKey(s string) tea.Cmd {
 			m.say(m.t.T("No command to copy for this node"))
 			return nil
 		}
-		return func() tea.Msg { return m.copyText(cmd, m.t.T("Command copied to the clipboard")) }
+		done := m.t.T("Command copied to the clipboard")
+		return func() tea.Msg { return copyMsg{text: cmd, done: done} }
 	}
 	return nil
 }
@@ -563,13 +563,31 @@ func (m *Model) curDetail() *nodeDetail {
 	return nil
 }
 
-// copyText: text to the terminal clipboard (OSC 52, also over SSH); the message to show.
-func (m *Model) copyText(text, done string) tea.Msg {
+// copyMsg: text for the clipboard, written by Update (never from a command's goroutine: the frames go to the same
+// terminal); with detail, the agent context of that node as it was asked for (at).
+type copyMsg struct {
+	text, done string
+	detail     *nodeDetail
+	at         ctxAt
+}
+
+// ctxAt: where the agent context was asked for.
+type ctxAt struct{ org, env, run, by string }
+
+func (m *Model) ctxAt() ctxAt { return ctxAt{m.org, m.env, m.run, m.grouping()} }
+
+// copyText: text to the terminal clipboard (OSC 52, also over SSH); what it says.
+func (m *Model) copyText(msg copyMsg) {
 	if m.clip == nil {
-		return toastMsg(m.t.T("This terminal session can't copy"))
+		m.say(m.t.T("This terminal session can't copy"))
+		return
+	}
+	text := msg.text
+	if msg.detail != nil {
+		text = m.agentContext(msg.detail, msg.at)
 	}
 	_, _ = fmt.Fprintf(m.clip, "\x1b]52;c;%s\a", b64(text))
-	return toastMsg(done)
+	m.say(msg.done)
 }
 
 // copyTask: the agent task for the selected nodes (or the one under the cursor), built by the server from the
@@ -594,12 +612,12 @@ func (m *Model) copyTask() tea.Cmd {
 	var out struct {
 		Text string `json:"text"`
 	}
-	return m.get(q, func(any) tea.Msg { return m.copyText(out.Text, done) }, &out)
+	return m.get(q, func(any) tea.Msg { return copyMsg{text: out.Text, done: done} }, &out)
 }
 
 // agentContext: the node under the cursor in a few lines for an AI agent's chat: what, where, why, due, how, and
 // how to ask kanareika's MCP server for more. English: what agents read best, whatever the interface's language.
-func (m *Model) agentContext(d *nodeDetail) string {
+func (m *Model) agentContext(d *nodeDetail, at ctxAt) string {
 	n := d.Node
 	var b strings.Builder
 	line := func(k, v string) { // one line each: what a host reported cannot add lines of its own (prompt's data())
@@ -607,7 +625,7 @@ func (m *Model) agentContext(d *nodeDetail) string {
 			fmt.Fprintf(&b, "%s: %s\n", oneLine(k), v)
 		}
 	}
-	line("kanareika finding", m.org+"/"+m.env+" (run "+m.run+")")
+	line("kanareika finding", at.org+"/"+at.env+" (run "+at.run+")")
 	line("node", n.ID)
 	line("what", ansi.Strip(m.nodeText(n, true, false)))
 	facts := []string{n.Priority, plural(n.Hosts, "host"), plural(n.CVEs, "CVE")}
@@ -654,7 +672,7 @@ func (m *Model) agentContext(d *nodeDetail) string {
 		line("action ids", strings.Join(d.Actions, ", "))
 	}
 	fmt.Fprintf(&b, "more: kanareika MCP get_fix org=%s env=%s by=%s id=%q; fix_prompt / fix_plan take the action ids\n",
-		oneLine(m.org), oneLine(m.env), m.grouping(), oneLine(n.ID))
+		oneLine(at.org), oneLine(at.env), at.by, oneLine(n.ID))
 	return b.String()
 }
 

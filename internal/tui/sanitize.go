@@ -1,8 +1,10 @@
 package tui
 
 import (
+	"io"
 	"reflect"
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
 )
@@ -136,4 +138,19 @@ func oneLine(s string) string {
 	return strings.Join(strings.FieldsFunc(s, func(r rune) bool {
 		return unicode.IsControl(r) || r == '\u2028' || r == '\u2029'
 	}), " ")
+}
+
+// SyncWriter: w for the program's frames and the clipboard sequence alike, one write at a time: a copy never lands
+// inside a frame.
+func SyncWriter(w io.Writer) io.Writer { return &syncWriter{w: w} }
+
+type syncWriter struct {
+	mu sync.Mutex
+	w  io.Writer
+}
+
+func (s *syncWriter) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.w.Write(p)
 }

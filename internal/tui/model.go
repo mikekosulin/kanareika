@@ -367,6 +367,8 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		}
 	case toastMsg:
 		m.say(string(msg))
+	case copyMsg:
+		m.copyText(msg)
 	case optsMsg:
 		m.form = newForm(m.org, m.env, scanOptions(msg))
 	case runInfoMsg:
