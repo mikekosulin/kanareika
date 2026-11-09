@@ -224,7 +224,7 @@ func (s *Server) Handler() http.Handler {
 	for path, fn := range map[string]func(query) (any, error){
 		"/api/orgs": s.apiOrgs, "/api/env": s.apiEnv, "/api/run": s.apiRun, "/api/log": s.apiLog,
 		"/api/hostfile": s.apiHostfile, "/api/ipinfo": s.apiIPInfo, "/api/prompt": s.apiPrompt,
-		"/api/i18n": s.apiI18n, "/api/tree": s.apiTree, "/api/node": s.apiNode,
+		"/api/i18n": s.apiI18n, "/api/tree": s.apiTree, "/api/node": s.apiNode, "/api/lens": s.apiLens, "/api/history": s.apiHistory,
 	} {
 		r.Get(path, s.api(fn))
 	}

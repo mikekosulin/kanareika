@@ -5,9 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/mikekosulin/kanareika/internal/finding"
+	"github.com/mikekosulin/kanareika/internal/lens"
 	"github.com/mikekosulin/kanareika/internal/report"
 	"github.com/mikekosulin/kanareika/internal/tree"
 )
@@ -124,4 +126,24 @@ func (s *Server) nodeActions(q query, ids []string) ([]string, error) {
 		}
 	}
 	return out, nil
+}
+
+// apiLens: the server view's per-host columns (?id=priorities|logins|network|health, ?run=, ?lang=): the lens list,
+// the lens's columns and one row per host in the order and with the states of /api/tree?by=host&all=1.
+func (s *Server) apiLens(q query) (any, error) {
+	l := lens.Get(q.get("id"))
+	if l == nil {
+		return nil, notFound("unknown lens: " + strings.Join(lens.IDs(), ", "))
+	}
+	in, err := s.treeInput(q)
+	if err != nil {
+		return nil, err
+	}
+	org, env, err := s.orgEnv(q)
+	if err != nil {
+		return nil, err
+	}
+	o := tree.Opts{By: tree.ByHost, All: true, Inventory: tree.Servers(org, env, in.view, in.findings), Today: today()}
+	return lens.Build(l, lens.Input{Servers: tree.Build(in.findings, tree.Hosts(in.view.Facts), o), View: in.view,
+		Findings: in.findings, Lang: q.get("lang")}), nil
 }
