@@ -72,6 +72,9 @@ func Add(p config.Paths, orgID string, r Request) ([]string, []string, error) {
 
 // AddWithSkipped: Add, and the host lines it skipped (unusable lines, hosts already in the org).
 func AddWithSkipped(p config.Paths, orgID string, r Request) ([]string, []string, []string, error) {
+	if errs := r.controlChars(); len(errs) > 0 {
+		return nil, nil, errs, nil
+	}
 	hosts, skipped := ParseHosts(r.Hosts)
 	path := filepath.Join(p.Orgs, orgID+".yml")
 	b, err := os.ReadFile(path)
