@@ -141,8 +141,21 @@ func oneLine(s string) string {
 }
 
 // SyncWriter: w for the program's frames and the clipboard sequence alike, one write at a time: a copy never lands
-// inside a frame.
-func SyncWriter(w io.Writer) io.Writer { return &syncWriter{w: w} }
+// inside a frame. A terminal stays a terminal (Fd, Read, Close): bubbletea learns the window's size only from one,
+// without it the screen stays blank.
+func SyncWriter(w io.Writer) io.Writer {
+	s := &syncWriter{w: w}
+	if f, ok := w.(ttyFile); ok {
+		return &syncFile{syncWriter: s, f: f}
+	}
+	return s
+}
+
+// ttyFile: what bubbletea takes for a terminal (charmbracelet/x/term.File).
+type ttyFile interface {
+	io.ReadWriteCloser
+	Fd() uintptr
+}
 
 type syncWriter struct {
 	mu sync.Mutex
@@ -154,3 +167,12 @@ func (s *syncWriter) Write(p []byte) (int, error) {
 	defer s.mu.Unlock()
 	return s.w.Write(p)
 }
+
+type syncFile struct {
+	*syncWriter
+	f ttyFile
+}
+
+func (s *syncFile) Read(p []byte) (int, error) { return s.f.Read(p) }
+func (s *syncFile) Close() error               { return s.f.Close() }
+func (s *syncFile) Fd() uintptr                { return s.f.Fd() }

@@ -225,7 +225,7 @@ func (m *Model) rowClick(i, dx int) tea.Cmd {
 		case dx <= 1: // ○ ●
 			m.toggleSel(n)
 			return nil
-		case dx <= 3 && len(n.Kids) > 0: // ▸ ▾
+		case dx <= 3 && n.hasKids(): // ▸ ▾
 			if m.opened[n.ID] {
 				delete(m.opened, n.ID)
 			} else {

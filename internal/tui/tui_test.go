@@ -368,6 +368,33 @@ func TestTree(t *testing.T) {
 	}
 }
 
+// TestKidsOnOpen: the tree comes with its top rows only; a row's kids come when it is opened, selected if it is.
+func TestKidsOnOpen(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
+	h.key("g") // by CVE
+	if !strings.Contains(h.m.treeKey, "levels=0") {
+		t.Fatal(h.m.treeKey)
+	}
+	n := h.m.curNode()
+	if n == nil || n.Kind != "cve" || n.More == 0 || len(n.Kids) != 0 {
+		t.Fatalf("a CVE row without its kids: %+v", n)
+	}
+	h.has("○ ▸ "+n.Priority, n.Label)
+	h.key("space") // selects it
+	if h.m.curNode() != n {
+		h.key("up") // the cursor went on to the next row
+	}
+	h.key("l")
+	if n.More != 0 || len(n.Kids) == 0 || !h.m.sel[n.Kids[0].ID] {
+		t.Fatalf("opened: kids fetched and selected with it: %+v", n)
+	}
+	h.has("● ▾ "+n.Priority, n.Kids[0].Label)
+	h.key("h")
+	if slices.ContainsFunc(h.m.treeRows(), func(r trow) bool { return r.depth > 0 }) {
+		t.Fatal("closed: its kids are not rows")
+	}
+}
+
 // TestFilters: the filter menu (f) and the text filter (/) go to the server; the title says which are on.
 func TestFilters(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)

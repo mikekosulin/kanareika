@@ -108,6 +108,7 @@ type Node struct {
 	Overdue     bool           `json:"overdue,omitempty"`      // its earliest due date has passed
 
 	Kids []*Node `json:"kids,omitempty"`
+	More int     `json:"more,omitempty"` // kids left out of this answer (Shallow): ask for them with the node's id
 	fs   []*finding.Finding
 }
 
@@ -559,6 +560,38 @@ func disambiguate(nodes []*Node, hosts Hosts) {
 			}
 		}
 	}
+}
+
+// Shallow: the tree with levels kids under the top rows (0: the top rows only); deeper kids are left out and
+// counted in More. An image keeps its own kids, the parts its row names. t itself is not changed (it is cached).
+func (t *Tree) Shallow(levels int) *Tree {
+	c := *t
+	c.Nodes = shallow(t.Nodes, levels)
+	return &c
+}
+
+// Under: the kids of node id, with levels kids under them, as Shallow; nil when there is no such node.
+func (t *Tree) Under(id string, levels int) []*Node {
+	n := t.Find(id)
+	if n == nil {
+		return nil
+	}
+	return shallow(n.Kids, levels)
+}
+
+func shallow(ns []*Node, levels int) []*Node {
+	out := make([]*Node, len(ns))
+	for i, n := range ns {
+		c := *n
+		switch {
+		case levels > 0 || n.Kind == KindImage && levels == 0:
+			c.Kids = shallow(n.Kids, levels-1)
+		default:
+			c.Kids, c.More = nil, len(n.Kids)
+		}
+		out[i] = &c
+	}
+	return out
 }
 
 // Find: the node with id anywhere in the tree, nil if none.

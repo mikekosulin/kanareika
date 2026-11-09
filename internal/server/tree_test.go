@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -51,6 +52,22 @@ func TestTreeAPI(t *testing.T) {
 	r = do(h, "GET", "/api/prompt?org=acme&env=production&run=2026-11-02_100000&nodes="+id, nil, nil)
 	if r.code != 200 || len(asked) == 0 || len(d.Actions) == 0 || asked[0] != d.Actions[0] {
 		t.Fatal(r.code, r.body, asked, d.Actions)
+	}
+	// ?levels=0: the top rows, their kids counted; ?under=: one row's kids
+	r = do(h, "GET", base+"&by=cve&levels=0", nil, nil)
+	var sh, under tree.Tree // fresh: decoding into a used tree would keep its old kids
+	must(t, json.Unmarshal([]byte(r.body), &sh))
+	top := sh.Nodes[0]
+	if r.code != 200 || top.Kids != nil || top.More == 0 {
+		t.Fatal(r.code, r.body[:min(300, len(r.body))])
+	}
+	r = do(h, "GET", base+"&by=cve&levels=0&under="+url.QueryEscape(top.ID), nil, nil)
+	must(t, json.Unmarshal([]byte(r.body), &under))
+	if r.code != 200 || len(under.Nodes) != top.More {
+		t.Fatal(r.code, r.body)
+	}
+	if r := do(h, "GET", base+"&under=nope", nil, nil); r.code != 404 {
+		t.Fatal(r.code)
 	}
 	// filters narrow it down; nothing matching is an empty tree, not an error
 	r = do(h, "GET", base+"&q=no-such-thing-anywhere", nil, nil)
