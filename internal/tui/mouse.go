@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"slices"
 	"strings"
@@ -15,9 +17,11 @@ import (
 // so the hit areas come from the very layout on screen. A click runs the zone's handler with the column it fell on
 // within the zone; the wheel scrolls what is under it.
 
-const (
-	zoneOpen  = "\x1b]8999;" // zoneOpen + id + "\a" ... zoneClose: never sent to the terminal
-	zoneClose = "\x1b]8998\a"
+// The markers carry a random tag of this process: text from a host cannot make a zone (nor can it hold an ESC).
+var (
+	zoneTag   = func() string { b := make([]byte, 8); _, _ = rand.Read(b); return hex.EncodeToString(b) }()
+	zoneOpen  = "\x1b]8999;" + zoneTag + ";" // zoneOpen + id + "\a" ... zoneClose: never sent to the terminal
+	zoneClose = "\x1b]8998;" + zoneTag + "\a"
 )
 
 // hitZone: a clickable span of one screen line.

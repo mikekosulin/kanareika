@@ -75,6 +75,7 @@ func fit(s string, w int, right bool) string {
 	if w <= 0 {
 		return ""
 	}
+	s = tame(s)
 	if ansi.StringWidth(s) > w {
 		s = ansi.Truncate(s, w, ellipsis)
 	}
@@ -389,6 +390,9 @@ func (m *Model) View() string {
 		lines[i] = fit(l, m.w, false)
 	}
 	lines = m.scanZones(lines)
+	for i, l := range lines {
+		lines[i] = safeFrame(l)
+	}
 	return strings.Join(lines, "\n")
 }
 
