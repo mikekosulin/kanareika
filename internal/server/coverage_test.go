@@ -169,6 +169,28 @@ func TestViewCache(t *testing.T) {
 	}
 }
 
+// TestHistoryLeavesViewCache: History reads stored views directly: same answer the second time, and the views
+// people have open stay in the cache (only a run without a usable view.json is built, once, through it).
+func TestHistoryLeavesViewCache(t *testing.T) {
+	p, _ := fixtureHome(t)
+	s, h := newTest(t, Options{Paths: p})
+	// the first look builds the views of old runs once (and adds their totals to run.json)
+	if r := do(h, "GET", "/api/history?org=acme&env=production", nil, nil); r.code != 200 {
+		t.Fatal(r.code, r.body)
+	}
+	first := do(h, "GET", "/api/history?org=acme&env=production", nil, nil)
+	if first.code != 200 || !strings.Contains(first.body, `"new":2,"resolved":2`) {
+		t.Fatal(first.code, first.body)
+	}
+	s.views = nil // every run has its view.json now: History reads them without the cache
+	if r := do(h, "GET", "/api/history?org=acme&env=production", nil, nil); r.code != 200 || r.body != first.body {
+		t.Fatal("history changed:", r.body)
+	}
+	if len(s.views) != 0 {
+		t.Fatalf("History went through the view cache: %d views", len(s.views))
+	}
+}
+
 func TestViewErrors(t *testing.T) {
 	p, env := fixtureHome(t)
 	var logged bytes.Buffer
