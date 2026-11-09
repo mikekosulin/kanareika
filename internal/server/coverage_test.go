@@ -272,7 +272,7 @@ func (f globErrFS) Glob(string) ([]string, error) {
 
 func TestPageAssetErrors(t *testing.T) {
 	page := &fstest.MapFile{Data: []byte("<html>/*I18N_UI*/{}</html>")}
-	web := fstest.MapFS{"index.html": page, "classic.html": page, "logo.png": {Data: []byte("png")}}
+	web := fstest.MapFS{"index.html": page, "classic.html": page, "logo.png": {Data: []byte("png")}, "logo.webp": {Data: []byte("webp")}}
 	t.Cleanup(func() { webFS, localesFS = assets.Web, assets.Locales })
 	for _, c := range []struct {
 		name    string
@@ -280,9 +280,10 @@ func TestPageAssetErrors(t *testing.T) {
 		locales fs.FS
 		want    string
 	}{
-		{"no page", fstest.MapFS{"logo.png": web["logo.png"], "classic.html": page}, assets.Locales(), "index.html"},
-		{"no classic page", fstest.MapFS{"logo.png": web["logo.png"], "index.html": page}, assets.Locales(), "classic.html"},
-		{"no logo", fstest.MapFS{"index.html": page, "classic.html": page}, assets.Locales(), "logo.png"},
+		{"no page", fstest.MapFS{"logo.png": web["logo.png"], "logo.webp": web["logo.webp"], "classic.html": page}, assets.Locales(), "index.html"},
+		{"no classic page", fstest.MapFS{"logo.png": web["logo.png"], "logo.webp": web["logo.webp"], "index.html": page}, assets.Locales(), "classic.html"},
+		{"no logo", fstest.MapFS{"index.html": page, "classic.html": page, "logo.webp": web["logo.webp"]}, assets.Locales(), "logo.png"},
+		{"no webp logo", fstest.MapFS{"index.html": page, "classic.html": page, "logo.png": web["logo.png"]}, assets.Locales(), "logo.webp"},
 		{"glob", web, globErrFS{glob: true}, "glob failed"},
 		{"read", web, globErrFS{}, "permission denied"},
 		{"bad json", web, fstest.MapFS{"en.json": {Data: []byte("{")}}, "locales/en.json"},

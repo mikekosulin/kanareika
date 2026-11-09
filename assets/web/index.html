@@ -870,7 +870,7 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
 <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"/></symbol></svg>
 <div class="app">
   <aside class="side" id="side" aria-label="Navigation">
-    <div class="brand"><img src="/logo.png" alt=""> kanareika<button class="btn ghost" id="cmdk" style="margin-left:auto;height:26px;padding:0 6px" aria-label="Command palette"><kbd>⌘K</kbd></button></div>
+    <div class="brand"><img src="/logo.webp" alt=""> kanareika<button class="btn ghost" id="cmdk" style="margin-left:auto;height:26px;padding:0 6px" aria-label="Command palette"><kbd>⌘K</kbd></button></div>
     <div class="scope2" id="scope"></div>
     <nav class="nav" id="nav"></nav>
     <div class="status" id="status"></div>
@@ -979,7 +979,7 @@ function renderSide() {
   const dbAt = db && (db.dbs || []).map((d) => d.updated).filter(Boolean).sort()[0];
   $("#status").innerHTML = (e ? `<div class="row"><span class="dot ${e.last ? "" : "warn"}"></span><span>${t("Data")} <b>${e.last ? ago(e.last.finished) : t("none yet")}</b>${e.last ? ` · ${e.last.hosts_total - (e.last.hosts_failed || 0)}/${e.last.hosts_total} ${t("hosts")}` : ""}</span></div>` : "") +
     (db ? `<div class="row"><span class="dot ${dbOld || feedsOld ? "warn" : ""}"></span><span>${t("Vulnerability list")} <b>${db.updating ? t("downloading…") : dbAt ? ago(dbAt) : t("not downloaded")}</b>${feedsOld && dbAt ? " · " + t("exploit data old") : ""}</span></div>` : "") +
-    (S.scans && e && S.view !== "setup" ? `<button class="btn" id="scanbtn">${icon("scan")}${t("Scan {env}…", { env: S.env })}</button>` : "") +
+    (S.scans && e && S.view !== "setup" ? `<button class="btn" id="scanbtn">${icon("scan")}${t("Scan {env}…", { env: esc(S.env) })}</button>` : "") +
     `<div class="foot2"><label class="langw" title="${t("Language")}"><select id="lang" aria-label="${t("Language")}">${Object.entries(LANG_NAMES).map(([k, n]) => `<option value="${k}" ${k === LANG ? "selected" : ""}>${esc(n)}</option>`).join("")}</select><span class="lv">${LANG.toUpperCase()}</span>${icon("chev")}</label>
       <div class="seg3" role="radiogroup" aria-label="${t("Theme")}">${[["light", "sun", "Light"], ["system", "monitor", "System"], ["dark", "moon", "Dark"]].map(([v, i, l]) => `<button role="radio" data-theme-set="${v}" aria-checked="${S.theme === v}" title="${t(l)}" aria-label="${t(l)}">${icon(i)}</button>`).join("")}</div></div>`;
 }
@@ -1014,9 +1014,9 @@ function hostsCell(n) {
 }
 function stCell(st) {
   const ks = Object.keys(st || {}).filter((k) => k !== "other"); if (!ks.length) return "";
-  if (ks.length === 1) return `<span class="st ${ks[0]}">${t(ST[ks[0]])}</span>`;
+  if (ks.length === 1) return `<span class="st ${esc(ks[0])}">${esc(t(ST[ks[0]]))}</span>`;
   ks.sort((a, b) => st[b] - st[a]);
-  return `<span class="st mixed" title="${ks.map((k) => `${st[k]} ${t(ST[k])}`).join(", ")}">${ks.map((k) => `${st[k]} ${t(ST[k])}`).join(" · ")}</span>`;
+  return `<span class="st mixed" title="${esc(ks.map((k) => `${st[k]} ${t(ST[k])}`).join(", "))}">${esc(ks.map((k) => `${st[k]} ${t(ST[k])}`).join(" · "))}</span>`;
 }
 const flags = (n) => (n.kev ? `<span class="fl kev">KEV</span>` : "") + (n.rce ? `<span class="fl rce">RCE</span>` : n.preauth ? `<span class="fl pre">pre-auth</span>` : "");
 const epssCell = (e) => (e ? `<span class="epss ${e >= 0.1 ? "hi" : ""}"><i><b style="width:${Math.max(4, e * 100)}%"></b></i><span>${pct(e)}</span></span>` : "");
@@ -1029,7 +1029,7 @@ function rows(nodes, depth = 0, out = []) {
     out.push(`<div class="node ${depth ? "kid" : ""}" role="treeitem" aria-level="${depth + 1}" ${kids.length ? `aria-expanded="${open}"` : ""} aria-selected="${S.cur === n.id}" data-n="${esc(n.id)}">
       ${kids.length ? `<button class="tw" data-tw="${esc(n.id)}" aria-expanded="${open}" aria-label="${open ? t("Collapse") : t("Expand")}">${icon("chev")}</button>` : "<span></span>"}
       <input type="checkbox" class="cb2" data-sel="${esc(n.id)}" ${S.sel.has(n.id) ? "checked" : ""} aria-label="${t("Select")}">
-      <span class="pb ${n.priority}">${n.priority}</span>
+      <span class="pb ${esc(n.priority)}">${esc(n.priority)}</span>
       <span class="main" style="padding-left:${depth * 20}px">${kindSlot(n)}${mainText(n)}</span>
       <span class="hcell c-h">${depth && n.kind === "host" ? "" : hostsCell(n)}</span>
       <span class="num c-cve">${n.cves || ""}</span><span class="c-ep">${epssCell(n.epss)}</span>
@@ -1040,7 +1040,7 @@ function rows(nodes, depth = 0, out = []) {
         kids.forEach((k) => FLAT.push(k));
         out.push(`<div class="node cloud"><span></span><span></span><span></span><span class="main" style="padding-left:${(depth + 1) * 20 + 60}px">${kids.map((k) => {
           const st = Object.keys(k.states || {})[0] || "available";
-          return `<button class="hc ${st}" data-n="${esc(k.id)}" aria-pressed="${S.cur === k.id}" title="${esc(k.os)}">${esc(k.label)}${st !== "available" && st !== "other" ? `<small>${t(ST[st])}</small>` : ""}</button>`; }).join("")}</span></div>`);
+          return `<button class="hc ${esc(st)}" data-n="${esc(k.id)}" aria-pressed="${S.cur === k.id}" title="${esc(k.os)}">${esc(k.label)}${st !== "available" && st !== "other" ? `<small>${t(ST[st])}</small>` : ""}</button>`; }).join("")}</span></div>`);
       } else rows(kids, depth + 1, out);
     }
   }
@@ -1149,12 +1149,22 @@ function dueBlock(d) {
   return `<div class="duebox"><div><span class="big">${fmtDay(d.date)}</span> ${late}</div><div class="note">${esc(from)}${d.first_seen && d.why !== "first_seen" ? " · " + t("first seen {d}", { d: fmtDay(d.first_seen) }) : ""}</div></div>`;
 }
 const AV = { N: "Network", A: "Adjacent", L: "Local", P: "Physical" }, LV = { L: "Low", H: "High", N: "None", R: "Required" };
+// CVSS 3 metrics and the letters each may take: anything else (from the vulnerability DB) is shown as the raw, escaped vector
+const CVSS3 = { AV: "NALP", AC: "LH", PR: "NLH", UI: "NR", S: "UC", C: "NLH", I: "NLH", A: "NLH" };
 function vector(v) {
-  if (!v || !v.startsWith("CVSS:3")) return v ? `<code class="note">${esc(v)}</code>` : "";
-  const m = Object.fromEntries(v.split("/").slice(1).map((x) => x.split(":")));
-  const c = (lab, val, bad) => `<div class="${bad ? "bad" : ""}">${t(lab)}<b>${t(val)}</b></div>`;
+  if (!v) return "";
+  const m = {}, ok = /^CVSS:3\.[01]$/.test(v.split("/")[0]) && v.split("/").slice(1).every((x) => {
+    const [k, l, ...rest] = x.split(":");
+    if (rest.length || !l || l.length !== 1) return false;
+    if (CVSS3[k]) { if (!CVSS3[k].includes(l)) return false; m[k] = l; }
+    return true;
+  }) && Object.keys(CVSS3).every((k) => m[k]);
+  if (!ok) return `<code class="note">${esc(v)}</code>`;
+  const c = (lab, val, bad) => `<div class="${bad ? "bad" : ""}">${esc(t(lab))}<b>${esc(t(val))}</b></div>`;
   return `<div class="vec">${c("Attack from", AV[m.AV], m.AV === "N")}${c("Complexity", LV[m.AC], m.AC === "L")}${c("Privileges", LV[m.PR], m.PR === "N")}${c("User action", LV[m.UI], m.UI === "N")}${c("Scope", m.S === "C" ? "Changed" : "Unchanged", m.S === "C")}${c("Impact C/I/A", [m.C, m.I, m.A].join(" / "), [m.C, m.I, m.A].includes("H"))}</div><div class="note" style="margin-top:6px"><code>${esc(v)}</code></div>`;
 }
+// a link from the vulnerability DB: http(s) only, so no javascript: or data: URL becomes clickable
+const webURL = (u) => (/^https?:\/\//i.test(String(u || "")) ? String(u) : "");
 function detailHTML(d) {
   const n = d.node, crumb = S.stack.length ? `<div class="crumb"><button data-back>${icon("left")} ${esc(S.stack[S.stack.length - 1].label)}</button></div>` : "";
   const cves = d.cves.length ? `<div class="sec"><h4>${n.kind === "cve" ? t("Vulnerability") : t("Closes")}</h4>${n.kind === "cve" && d.cves[0] ? cveFull(d.cves[0]) : `<table class="tbl"><tbody>${d.cves.map((c) =>
@@ -1168,18 +1178,18 @@ function detailHTML(d) {
   const head = n.kind === "cve" ? esc(n.label) : n.kind === "pkg" || n.kind === "part" ? esc(n.label) : esc(n.label);
   const sub = n.kind === "pkg" || n.kind === "part" ? `<div class="vers">${esc(n.installed)} → ${n.fixed ? `<b>${esc(n.fixed)}</b>` : esc(noFixTxt(n.no_fix))}</div>${n.pkgs?.length ? `<div class="note" style="margin-top:4px">${t("binary packages")}: <code>${esc(n.pkgs.join(", "))}</code></div>` : ""}` : n.title && n.kind === "cve" ? `<div>${esc(n.title)}</div>` : "";
   return `<div class="dh"><button class="btn ghost back" data-close>${icon("left")}${t("Back")}</button>${crumb}
-      <div class="meta"><span class="pb ${n.priority}">${n.priority}</span>${n.runtime ? `<span class="imgb">${esc(n.runtime)}</span>` : ""}${flags(n)}</div>
+      <div class="meta"><span class="pb ${esc(n.priority)}">${esc(n.priority)}</span>${n.runtime ? `<span class="imgb">${esc(n.runtime)}</span>` : ""}${flags(n)}</div>
       <div class="bigmono" style="word-break:break-all">${head}</div>${sub}
       <div class="kpis2"><div><b>${n.cves}</b>CVE</div><div><b>${n.hosts}</b>${t("hosts")}</div><div><b>${(n.groups || []).length}</b>${t("groups")}</div>${n.epss ? `<div><b>${pct(n.epss)}</b>${t("max EPSS")}</div>` : ""}</div></div>
-    <div class="sec"><h4>${t("Why {p}", { p: n.priority })}</h4><ul class="why">${d.why.map((r) => `<li class="${["kev", "rce", "epss"].includes(r.code) ? "hot" : ""}">${icon(WHY_ICON[r.code] || "shield")}<span>${esc(whyText(r))}</span></li>`).join("")}</ul></div>
+    <div class="sec"><h4>${t("Why {p}", { p: esc(n.priority) })}</h4><ul class="why">${d.why.map((r) => `<li class="${["kev", "rce", "epss"].includes(r.code) ? "hot" : ""}">${icon(WHY_ICON[r.code] || "shield")}<span>${esc(whyText(r))}</span></li>`).join("")}</ul></div>
     <div class="sec"><h4>${t("Due")}</h4>${dueBlock(d.due)}</div>${parts}${cves}${where}${apply}
     <div class="dfoot"><button class="btn primary" data-addsel="${esc(n.id)}">${S.sel.has(n.id) ? icon("check") + t("In the task") : t("Add to task")}</button>
       <button class="btn" data-copyctx="${esc(n.id)}" title="${t("What, where, why and how, to paste into an agent chat")}">${icon("copy")}${t("Copy context")}</button></div>`;
 }
 function cveFull(c) {
   return `<p class="desc">${esc(c.description || "")}</p>
-    <div class="kpis2"><div><b>${c.cvss ?? "—"}</b>CVSS</div><div><b>${pct(c.epss || 0) || "—"}</b>EPSS</div><div><b>${c.kev ? "KEV" : "—"}</b>${t("exploited")}</div><div><b>${c.published ? fmtDay(c.published) : "—"}</b>${t("published")}</div></div>
-    <h4 style="margin-top:14px">${t("What an attacker needs")}</h4>${vector(c.vector)}${c.url ? `<div class="dlinks"><a href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">${t("Advisory")}</a></div>` : ""}`;
+    <div class="kpis2"><div><b>${esc(c.cvss ?? "—")}</b>CVSS</div><div><b>${pct(c.epss || 0) || "—"}</b>EPSS</div><div><b>${c.kev ? "KEV" : "—"}</b>${t("exploited")}</div><div><b>${c.published ? fmtDay(c.published) : "—"}</b>${t("published")}</div></div>
+    <h4 style="margin-top:14px">${t("What an attacker needs")}</h4>${vector(c.vector)}${webURL(c.url) ? `<div class="dlinks"><a href="${esc(webURL(c.url))}" target="_blank" rel="noopener noreferrer">${t("Advisory")}</a></div>` : ""}`;
 }
 let DETAIL = null;
 async function show(id, push, quiet) {
@@ -1280,7 +1290,7 @@ function setupView() {
   const body = s.step === 1 ? serversForm(s) : s.step === 2 ? checkView(s) : scanView(s);
   return `<div class="setup">
     <section class="sbrand">
-      <img src="/logo.png" alt="" width="40" height="40">
+      <img src="/logo.webp" alt="" width="40" height="40">
       <h1>kanareika</h1>
       <p>${t("Security audit of your servers over SSH.")}<em>${t("What to patch first.")}</em></p>
       <p class="facts">${[t("read-only"), t("agentless"), t("local")].map((x) => `<span>${x}</span>`).join(`<i aria-hidden="true">·</i>`)}</p>
@@ -1458,7 +1468,7 @@ function scanView(s) {
   const lines = (job?.output || []).slice(-16);
   return `<div class="q"><h3>${t("First scan")}</h3><p class="qn">${t("A few minutes. You can close the page; the scan goes on.")}</p></div>
     <pre class="term">${lines.length ? esc(lines.join("\n")) : `<i class="spin"></i>`}</pre>
-    <div class="go">${job && job.state !== "running" ? `<button class="btn primary" data-setup-done>${t("See the results")}</button>${job.code ? `<span class="bad">${t("finished with errors")}</span>` : ""}` : `<span class="mut"><i class="spin"></i> ${t(job ? job.state : "starting")}</span>`}</div>`;
+    <div class="go">${job && job.state !== "running" ? `<button class="btn primary" data-setup-done>${t("See the results")}</button>${job.code ? `<span class="bad">${t("finished with errors")}</span>` : ""}` : `<span class="mut"><i class="spin"></i> ${esc(t(job ? job.state : "starting"))}</span>`}</div>`;
 }
 let checkTick;
 async function checkAccess(onlyFailed) {
@@ -1509,7 +1519,7 @@ async function pollJobs() {
 function banner() {
   const j = S.jobs.find((x) => x.state === "running" && x.request.org === S.org && x.request.env === S.env);
   const el = $("#banner"); if (!el) return;
-  el.innerHTML = j ? `<div class="banner">${icon("scan")}<span><b>${t("Scanning {env}", { env: esc(S.env) })}</b> · ${esc((j.output || []).slice(-1)[0] || "")}</span><button class="btn ghost" data-cancel="${j.id}">${t("Cancel")}</button></div>` : "";
+  el.innerHTML = j ? `<div class="banner">${icon("scan")}<span><b>${t("Scanning {env}", { env: esc(S.env) })}</b> · ${esc((j.output || []).slice(-1)[0] || "")}</span><button class="btn ghost" data-cancel="${esc(j.id)}">${t("Cancel")}</button></div>` : "";
 }
 
 /* ---------- data views: Hosts, Changes, Access, Network, Health, Exceptions, Runs and log. One run's data
@@ -1724,12 +1734,12 @@ function hostDetail(rd, n) {
   const rest = [...other.filter((o) => !["access", "exposure", "health"].includes(o.module)), ...(rd.inventory || []).filter((o) => o.host === n && o.module !== "access")];
   const ex = (rd.exceptions || []).filter((x) => x.host === n);
   const mk = (cls, ch) => `<span class="mk ${cls}">${ch}</span>`, MK = { ok: mk("ok", "✓"), wn: mk("wn", "!"), bad: mk("bad", "!"), mut: mk("mut", "–") };
-  const pb = (p) => (p ? `<span class="pb ${p}">${p}</span>` : MK.wn);
+  const pb = (p) => (p ? `<span class="pb ${esc(p)}">${esc(p)}</span>` : MK.wn);
   const li = (mark, text, right = "", title = "") => `<div class="li"${title ? ` title="${esc(title)}"` : ""}>${mark}<span>${text}</span><span>${right}</span></div>`;
   const due = (d, p) => (d ? `<span class="${days(d) < 0 && p !== "P4" ? "late" : ""}">${esc(dueText(d))}</span>` : "");
   const lis = (rows) => (rows.filter(Boolean).length ? `<div class="lis">${rows.filter(Boolean).join("")}</div>` : "");
   const denied = (x) => (x?.denied?.length ? li(MK.mut, `<span class="z">${t("no access to {what}", { what: esc(x.denied.map((d) => catMsg(deniedKey(d), d)).join(", ")) })}</span>`) : "");
-  const pcs = ["P1", "P2", "P3", "P4"].filter((p) => c[p]).map((p) => `<span class="c${p}">${p} ${c[p]}</span>`).join(" <span class=\"z\">•</span> ");
+  const pcs = ["P1", "P2", "P3", "P4"].filter((p) => c[p]).map((p) => `<span class="c${p}">${p} ${esc(c[p])}</span>`).join(" <span class=\"z\">•</span> ");
   const meta = [eh.address, f.os, eh.group && t("group {g}", { g: eh.group }), (eh.exposure === 1 || eh.public) && t("Public")].filter(Boolean);
   const reboot = pk.some((p) => p.fix_state === "reboot");
   const sn = SRV.byName?.[n], probl = sn && ["failed", "partial", "not_scanned"].includes(sn.state) ? problemText(sn) : "";
@@ -1749,7 +1759,7 @@ function hostDetail(rd, n) {
   let access = "";
   if (A) {
     const lg = A.logins || {}, keys = A.keys || [], acc = lg.accepted || [], la = lastAttack(lg);
-    access = lis([...mod("access").map((o) => li(pb(o.priority), esc(L(o)), o.priority || "")),
+    access = lis([...mod("access").map((o) => li(pb(o.priority), esc(L(o)), esc(o.priority))),
       A.password_auth == null ? li(MK.mut, t("password login: unknown")) : A.password_auth ? (mod("access").length ? "" : li(A.users_with_password?.length ? MK.bad : MK.wn, t("sshd: password login enabled"))) : li(MK.ok, t("password login off")),
       A.sshd?.permitrootlogin === "yes" ? li(MK.bad, t("sshd: root login allowed")) : "",
       A.users_with_password?.length ? li(MK.bad, t("password set for {users}", { users: `<code>${esc(A.users_with_password.join(", "))}</code>` })) : "",
@@ -1763,7 +1773,7 @@ function hostDetail(rd, n) {
     const fw = fwState(E.firewall), pub = [...new Set((E.listen || []).filter((y) => y.public).map((y) => y.port))].sort((a, b) => a - b);
     const fwTxt = `${t("firewall")} ${esc(fw[1])}`;
     net = lis([...mod("exposure").map((o) => li(pb(o.priority), esc(L(o)), due(o.due, o.priority), o.target)),
-      li(fw[0] === "bad" ? MK.bad : pub.length ? MK.ok : MK.ok, pub.length ? `<code>${pub.map((p) => ":" + p).join(" ")}</code> ${t("open")} · ${fwTxt}` : `${t("nothing open to the outside")} · ${fwTxt}`, E.firewall?.readable ? `<button class="lnk" data-fwrules="${esc(n)}">${t("rules")}</button>` : "", fw[2]),
+      li(fw[0] === "bad" ? MK.bad : pub.length ? MK.ok : MK.ok, pub.length ? `<code>${esc(pub.map((p) => ":" + p).join(" "))}</code> ${t("open")} · ${fwTxt}` : `${t("nothing open to the outside")} · ${fwTxt}`, E.firewall?.readable ? `<button class="lnk" data-fwrules="${esc(n)}">${t("rules")}</button>` : "", fw[2]),
       E.public?.length ? li(E.unlisted_public?.length ? MK.bad : MK.mut, `${t("public IP")} <code>${esc(E.public.join(" "))}</code>`, "", E.unlisted_public?.length ? t("not in the organization config") : "") : "",
       li(MK.mut, t("{n} listening inside", { n: (E.listen || []).filter((y) => !y.public).length }), "", (E.listen || []).filter((y) => !y.public).map((y) => `${y.port}/${y.proto} ${y.process || "?"} ${y.addr}`).join("\n")),
       denied(E)]) + `<pre class="term" id="fwraw" hidden></pre>`;
@@ -1771,15 +1781,15 @@ function hostDetail(rd, n) {
   let hl = "";
   if (H) {
     const d = maxUse(H.disks), tm = timeState(H), memFree = H.mem ? Math.round((100 * H.mem.available_mb) / H.mem.total_mb) : null;
-    const sum = [d && `${t("disk")} ${esc(d.mount)} ${d.use}%`, memFree != null && t("mem {n}% free", { n: memFree }), H.load && `load ${H.load.load15}/${H.load.cpus}`].filter(Boolean).join(" · ");
+    const sum = esc([d && `${t("disk")} ${d.mount} ${d.use}%`, memFree != null && t("mem {n}% free", { n: memFree }), H.load && `load ${H.load.load15}/${H.load.cpus}`].filter(Boolean).join(" · "));
     hl = lis([...mod("health").map((o) => li(pb(o.priority), esc(L(o)), due(o.due, o.priority), o.target)),
       li(d && d.use >= 95 ? MK.bad : d && d.use >= 85 ? MK.wn : MK.ok, sum, "", (H.disks || []).map((r) => `${r.mount} ${r.use}%`).join("\n")),
-      ...(H.disks || []).filter((r) => r !== d && r.use >= 85).map((r) => li(MK.wn, `${t("disk")} ${esc(r.mount)} ${r.use}%`)),
-      ...(H.inodes || []).filter((r) => r.use >= 85).map((r) => li(MK.wn, `inodes ${esc(r.mount)} ${r.use}%`)),
+      ...(H.disks || []).filter((r) => r !== d && r.use >= 85).map((r) => li(MK.wn, esc(`${t("disk")} ${r.mount} ${r.use}%`))),
+      ...(H.inodes || []).filter((r) => r.use >= 85).map((r) => li(MK.wn, esc(`inodes ${r.mount} ${r.use}%`))),
       H.failed_units?.length ? li(MK.wn, `${t("failed units")} <code>${esc(H.failed_units.join(", "))}</code>`) : "",
       H.readonly_mounts?.length ? li(MK.bad, `${t("read-only")} <code>${esc(H.readonly_mounts.join(", "))}</code>`) : "",
       li(MK[tm[0]] || MK.mut, `${t("time")} ${esc(tm[1])}${H.time ? ` <span class="z">· ${esc([H.time.service, H.time.timezone].filter(Boolean).join(" · "))}</span>` : ""}`, "", tm[2]),
-      ...Object.values(H.dmesg?.classes || {}).map((k) => li(MK.wn, `${t("kernel")}: ${esc(catMsg(k.key, k.title))}`, String(k.count), k.last)),
+      ...Object.values(H.dmesg?.classes || {}).map((k) => li(MK.wn, `${t("kernel")}: ${esc(catMsg(k.key, k.title))}`, esc(k.count), k.last)),
       H.journal?.errors_7d ? li(MK.mut, t("{n} journal errors, 7 d", { n: fmtN(H.journal.errors_7d) })) : "",
       denied(H)]) + ((H.dmesg?.tail || []).length ? `<pre class="term">${esc(H.dmesg.tail.slice(-20).join("\n"))}</pre>` : "");
   }
@@ -1813,7 +1823,7 @@ function runDetail(x) {
     c ? `<div class="kpis2">${["P1", "P2", "P3", "P4"].map((p) => `<div><b class="${c[p] ? "c" + p : "z"}">${fmtN(c[p])}</b>${p}</div>`).join("")}<div><b>${fmtN(c.cves)}</b>CVE</div></div>` : "")
     + sec(t("Run"), kv(t("Started"), `<code>${esc(tsShort(x.started))}</code>`) + kv(t("Finished"), x.finished ? `<code>${esc(tsShort(x.finished))}</code> <span class="z">· ${esc(took(x.started, x.finished))}</span>` : "")
       + kv(t("Hosts"), x.hosts_total ? `${x.hosts_total - (x.hosts_failed || 0)} / ${x.hosts_total}${x.hosts_failed ? ` <span class="bad">· ${t("{n} unreachable", { n: x.hosts_failed })}</span>` : ""}` : "")
-      + (job && x.code ? kv(t("Exit code"), `<code class="bad">${x.code}</code>`) : ""))
+      + (job && x.code ? kv(t("Exit code"), `<code class="bad">${esc(x.code)}</code>`) : ""))
     + (job ? sec(t("Output"), `<pre class="term">${(x.dropped ? `… ${x.dropped}\n` : "") + esc((x.output || []).join("\n")) || "&nbsp;"}</pre>`)
       : (x.state === "done" && !x.partial ? sec(t("Changes"), `<div id="runchg"><i class="spin"></i></div>`) : "") + sec(t("Log"), `<pre class="term" id="runlog">${x.state === "running" ? t("The scan is running.") : `<i class="spin"></i>`}</pre>`))
     + (!job && x.state === "done" && x.run_id !== S.run ? `<div class="dfoot"><button class="btn primary" data-showrun="${esc(x.run_id)}">${t("Show this run's data")}</button></div>` : "");
@@ -1823,9 +1833,9 @@ async function loadRunChanges(run) {
   let d; try { d = await api("/api/run?" + qs({ org: S.org, env: S.env, run })); } catch (e) { d = { error: e.message }; }
   const el = $("#runchg"); if (!el || VS.item?.run_id !== run) return;
   if (!d.new) { el.innerHTML = `<div class="dnote">${esc(d.error || t("No previous full run."))}</div>`; return; }
-  const row = (r, plus) => `<div class="li" title="${esc((r.ids || []).join(", "))}"><span class="mk ${plus ? "bad" : "ok"}">${plus ? "+" : "−"}</span><span>${r.priority ? `<span class="pb ${r.priority}">${r.priority}</span> ` : ""}<code>${esc(r.pkg)}</code> <span class="z">${esc(r.host)}</span></span><span>${r.count ? fmtN(r.count) + " CVE" : ""}</span></div>`;
+  const row = (r, plus) => `<div class="li" title="${esc((r.ids || []).join(", "))}"><span class="mk ${plus ? "bad" : "ok"}">${plus ? "+" : "−"}</span><span>${r.priority ? `<span class="pb ${esc(r.priority)}">${esc(r.priority)}</span> ` : ""}<code>${esc(r.pkg)}</code> <span class="z">${esc(r.host)}</span></span><span>${r.count ? fmtN(r.count) + " CVE" : ""}</span></div>`;
   const part = (rows, plus) => `<div class="lis">${rows.slice(0, 20).map((r) => row(r, plus)).join("")}</div>${rows.length > 20 ? `<div class="dnote">${t("+{n} more", { n: rows.length - 20 })}</div>` : ""}`;
-  el.innerHTML = `<div class="dnote" style="margin:0 0 6px">${t("vs. the full run {run}", { run: runLabel(d.prev) })} · <span class="bad">+${d.new.rows.length}</span> · <span class="ok">−${d.resolved?.rows.length || 0}</span></div>`
+  el.innerHTML = `<div class="dnote" style="margin:0 0 6px">${t("vs. the full run {run}", { run: esc(runLabel(d.prev)) })} · <span class="bad">+${d.new.rows.length}</span> · <span class="ok">−${d.resolved?.rows.length || 0}</span></div>`
     + (d.new.rows.length ? part(d.new.rows, true) : "") + (d.resolved?.rows.length ? part(d.resolved.rows, false) : "")
     + (!d.new.rows.length && !d.resolved?.rows.length ? `<div class="dnote">${t("Nothing changed")}</div>` : "");
 }
@@ -1987,7 +1997,7 @@ function srvMark(n) {
   const why = problemText(n);
   const m = { clean: ["ok", "✓", t("nothing to fix")], failed: ["bad", "✗", why || t("unreachable")], partial: ["wn", "◐", why || t("partly checked")],
     not_scanned: ["mut", "–", why || t("not scanned yet")] }[n.state];
-  if (!m) return n.priority ? `<span class="pb ${n.priority}">${n.priority}</span>` : "<span></span>";
+  if (!m) return n.priority ? `<span class="pb ${esc(n.priority)}">${esc(n.priority)}</span>` : "<span></span>";
   return `<span class="mk ${m[0]}" title="${esc(m[2])}" aria-label="${esc(m[2])}">${m[1]}</span>`;
 }
 function srvRows(n, depth, out) {
@@ -2009,7 +2019,7 @@ function srvRows(n, depth, out) {
     pri = [n.cves ? `${n.cves} CVE` : "", n.kev ? "KEV" : "", n.kind === "cve" && n.epss ? "EPSS " + pct(n.epss) : ""].filter(Boolean).join(" · ");
     sc = n.due ? `<span class="${days(n.due) < 0 ? "late" : ""}" title="${esc(n.due)}">${esc(dueText(n.due))}</span>` : "";
   }
-  out.push(`<div class="sv ${cls}" role="treeitem" aria-level="${depth + 1}" ${kids.length ? `aria-expanded="${open}"` : ""} aria-selected="${S.cur === n.id}" data-n="${esc(n.id)}">${tw}${n.kind === "host" ? srvMark(n) : n.priority ? `<span class="pb ${n.priority}">${n.priority}</span>` : "<span></span>"}<span class="nm">${name}</span><span class="pcs">${pri}</span><span class="r c-fx">${fx}</span><span class="r c-sc">${sc}</span></div>`);
+  out.push(`<div class="sv ${esc(cls)}" role="treeitem" aria-level="${depth + 1}" ${kids.length ? `aria-expanded="${open}"` : ""} aria-selected="${S.cur === n.id}" data-n="${esc(n.id)}">${tw}${n.kind === "host" ? srvMark(n) : n.priority ? `<span class="pb ${esc(n.priority)}">${esc(n.priority)}</span>` : "<span></span>"}<span class="nm">${name}</span><span class="pcs">${pri}</span><span class="r c-fx">${fx}</span><span class="r c-sc">${sc}</span></div>`);
   if (open) kids.forEach((k) => srvRows(k, depth + 1, out));
   return out;
 }
@@ -2031,7 +2041,7 @@ function lensCols(lens) {
   const LV = { warn: "wn", bad: "bad" };
   const cell = (c) => (r) => { const x = r.cells?.[c.key]; if (!x) return `<span class="z">—</span>`; const txt = x.s ?? (x.v == null ? "—" : x.v + (c.unit || "")); return `<span class="${LV[x.level] || ""}" ${x.note ? `title="${esc(x.note)}"` : ""}>${esc(txt)}</span>`; };
   return [
-    { l: "", w: "28px", v: (r) => { const n = SRV.byName[r.host]; return n && n.state !== "todo" ? srvMark(n) : n?.priority ? `<span class="pb ${n.priority}">${n.priority}</span>` : ""; } },
+    { l: "", w: "28px", v: (r) => { const n = SRV.byName[r.host]; return n && n.state !== "todo" ? srvMark(n) : n?.priority ? `<span class="pb ${esc(n.priority)}">${esc(n.priority)}</span>` : ""; } },
     { l: t("Server"), w: "minmax(96px, 1fr)", v: (r) => hcell(r.host), s: (r) => r.host },
     ...(lens.columns || []).map((c) => ({ l: t(c.title), w: c.width_hint ? (typeof c.width_hint === "number" ? c.width_hint + "px" : c.width_hint) : c.kind === "text" ? "minmax(0, 1fr)" : "80px",
       k: c.drop >= 2 ? 3 : c.drop === 1 ? 2 : 1, c: c.align === "right" ? "r" : c.kind === "text" ? "d" : "", v: cell(c),

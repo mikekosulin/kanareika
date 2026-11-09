@@ -172,6 +172,38 @@ func TestLoginsAndNetwork(t *testing.T) {
 	}
 }
 
+// TestFailed24hOldDay: the newest day of failed logins counts only when it is the scan's day or the one before; a
+// host whose last failures are a week old shows 0.
+func TestFailed24hOldDay(t *testing.T) {
+	v := &report.View{Access: map[string]any{
+		"a": decode(t, `{"logins":{"failed_daily":{"2026-11-01":900}},"denied":[]}`),
+		"b": decode(t, `{"logins":{"failed_daily":{"2026-11-07":30}},"denied":[]}`),
+		"c": decode(t, `{"logins":{"failed_daily":{"2026-11-08":40}},"denied":[]}`),
+	}, Facts: map[string]report.Fact{}, Meta: &report.Meta{Sources: map[string]map[string]string{
+		"a": {"access": "2026-11-08_100000"}, "b": {"access": "2026-11-08_100000"}}}}
+	inv := []tree.HostInfo{{Name: "a", Group: "g"}, {Name: "b", Group: "g"}, {Name: "c", Group: "g", LastScan: "2026-11-08T09:00:00Z"}}
+	tr := tree.Build(nil, tree.Hosts(v.Facts), tree.Opts{By: tree.ByHost, All: true, Inventory: inv})
+	res := Build(Get("logins"), Input{Servers: tr, View: v})
+	got := map[string]Cell{}
+	for _, r := range res.Rows {
+		got[r.Host] = r.Cells["failed_24h"]
+	}
+	if got["a"].V != 0 || got["a"].Level != OK || got["b"].V != 30 || got["c"].V != 40 {
+		t.Fatalf("%+v", got)
+	}
+}
+
+// TestMemFreeUnrounded: 4.6% free is below 5% (bad, as the health module says), though it shows as 5%.
+func TestMemFreeUnrounded(t *testing.T) {
+	got := rows(t, "health", map[string]string{"a": `{"mem":{"total_mb":1000,"available_mb":46}}`,
+		"b": `{"mem":{"total_mb":1000,"available_mb":104}}`}, nil, nil, nil)
+	level(t, got, "a", "mem_free", Bad)
+	if got["a"]["mem_free"].S != "5%" {
+		t.Errorf("shown %q", got["a"]["mem_free"].S)
+	}
+	level(t, got, "b", "mem_free", OK) // 10.4%: above the 10% warning
+}
+
 func TestLocalized(t *testing.T) {
 	res := Build(Get("network"), Input{Lang: "ru"})
 	if res.Lens.Title != "Сеть" || res.Lens.Columns[2].Title != "Firewall" || res.Lenses[0].Title != "Приоритеты" ||

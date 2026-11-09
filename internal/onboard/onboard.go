@@ -17,6 +17,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/mikekosulin/kanareika/internal/config"
 )
@@ -93,6 +96,8 @@ func ParseHosts(text string) ([]Host, []string) {
 		switch {
 		case h.Name == "":
 			errs = append(errs, fmt.Sprintf("Host %q: not a usable host name, skipped", c.Alias))
+		case h.Jump != "" && !jumpRE.MatchString(h.Jump):
+			errs = append(errs, fmt.Sprintf("Host %q: jump host %q: [user@]host[:port], skipped", c.Alias, h.Jump))
 		case seen[h.Name]:
 			errs = append(errs, fmt.Sprintf("Host %q twice, the second skipped", c.Alias))
 		default:
@@ -196,6 +201,10 @@ func ParseHosts(text string) ([]Host, []string) {
 		}
 		if h.Group != "" && !slugRE.MatchString(h.Group) {
 			errs = append(errs, fmt.Sprintf("line %d: group %q: a-z, 0-9, '-', '_'", i+1, h.Group))
+			continue
+		}
+		if h.Jump != "" && !jumpRE.MatchString(h.Jump) {
+			errs = append(errs, fmt.Sprintf("line %d: jump host %q: [user@]host[:port]", i+1, h.Jump))
 			continue
 		}
 		if h.Env != "" && !slugRE.MatchString(h.Env) {
@@ -333,6 +342,16 @@ func hostOnly(s string) string {
 
 func quote(s string) string { return strconv.Quote(s) }
 
+// ys: s as one YAML scalar: plain when YAML reads it back as the same string, else quoted ("[2001:db8::1]:2222"
+// plain is a flow sequence, "yes" a bool, "a: b" a mapping).
+func ys(s string) string {
+	b, err := yaml.Marshal(s)
+	if out := strings.TrimSuffix(string(b), "\n"); err == nil && !strings.ContainsAny(out, "\n\r") {
+		return out
+	}
+	return strconv.Quote(s)
+}
+
 // Render: the org file for r, commented like the template. keyRef: the key under secrets/ ("" = ssh-agent).
 func Render(r Request, hosts []Host, keyRef string, today time.Time) []byte {
 	env := r.Env
@@ -360,10 +379,10 @@ consent:                         # no scan without a valid consent
 access:
   user: %s
   privilege: %s                   # none: read what the user can | sudo: root-only reads with sudo -n
-`, today.Format(time.DateOnly), r.ID, quote(r.Name), quote(r.Consent), today.Format(time.DateOnly),
-		today.AddDate(1, 0, 0).Format(time.DateOnly), r.User, priv)
+`, today.Format(time.DateOnly), ys(r.ID), quote(r.Name), quote(r.Consent), today.Format(time.DateOnly),
+		today.AddDate(1, 0, 0).Format(time.DateOnly), ys(r.User), ys(priv))
 	if keyRef != "" {
-		fmt.Fprintf(&b, "  key: %s\n", keyRef)
+		fmt.Fprintf(&b, "  key: %s\n", ys(keyRef))
 	} else {
 		b.WriteString("  # key: <ORG_ID>/id_ed25519   # a key in secrets/; without it the ssh-agent is used\n")
 	}
@@ -377,9 +396,9 @@ access:
 			ju, jh = "", r.Jump
 		}
 		b.WriteString("  jumps:                         # reached first, the servers through it\n    bastion:\n")
-		fmt.Fprintf(&b, "      address: %s\n", jh)
+		fmt.Fprintf(&b, "      address: %s\n", ys(jh))
 		if ju != "" {
-			fmt.Fprintf(&b, "      user: %s\n", ju)
+			fmt.Fprintf(&b, "      user: %s\n", ys(ju))
 		}
 	}
 	// jump hosts named by hosts: another pasted host (by name) or an address of their own
@@ -411,9 +430,9 @@ access:
 			} else if u, a, ok := strings.Cut(raw, "@"); ok {
 				user, addr = u, a
 			}
-			fmt.Fprintf(&b, "    %s:\n      address: %s\n", jumpName[raw], addr)
+			fmt.Fprintf(&b, "    %s:\n      address: %s\n", ys(jumpName[raw]), ys(addr))
 			if user != "" {
-				fmt.Fprintf(&b, "      user: %s\n", user)
+				fmt.Fprintf(&b, "      user: %s\n", ys(user))
 			}
 		}
 	}
@@ -447,18 +466,18 @@ access:
 		if r.Internet && len(r.Front) == 0 || slices.Contains(r.Front, k.group) {
 			role, exposure = "front", 1
 		}
-		fmt.Fprintf(&b, "  %s:\n    role: %s\n    env: %s\n    exposure: %d                  # 1 internet-facing, 2 neighbours, 3 internal\n", name, role, k.env, exposure)
+		fmt.Fprintf(&b, "  %s:\n    role: %s\n    env: %s\n    exposure: %d                  # 1 internet-facing, 2 neighbours, 3 internal\n", ys(name), role, ys(k.env), exposure)
 		if r.Jump != "" {
 			b.WriteString("    jump: bastion\n")
 		}
 		b.WriteString("    hosts:\n")
 		for _, h := range byGroup[k] {
-			fmt.Fprintf(&b, "      %s:\n        address: %s\n", h.Name, h.Address)
+			fmt.Fprintf(&b, "      %s:\n        address: %s\n", ys(h.Name), ys(h.Address))
 			if h.User != "" && h.User != r.User {
-				fmt.Fprintf(&b, "        user: %s\n", h.User)
+				fmt.Fprintf(&b, "        user: %s\n", ys(h.User))
 			}
 			if h.Jump != "" {
-				fmt.Fprintf(&b, "        jump: %s\n", jumpName[h.Jump])
+				fmt.Fprintf(&b, "        jump: %s\n", ys(jumpName[h.Jump]))
 			}
 		}
 	}
@@ -489,10 +508,84 @@ func (r Request) check() []string {
 	if strings.TrimSpace(r.Consent) == "" {
 		errs = append(errs, "say where the permission to audit is documented (a contract, a ticket, an e-mail)")
 	}
+	if r.Jump != "" && !jumpRE.MatchString(r.Jump) {
+		errs = append(errs, "jump host: [user@]host[:port]")
+	}
 	if !r.Confirmed {
 		errs = append(errs, "confirm that you are allowed to audit these servers")
 	}
+	return append(errs, r.controlChars()...)
+}
+
+// jumpRE: a jump host as the form takes it, [user@]host[:port] (an IPv6 address in brackets).
+var jumpRE = regexp.MustCompile(`^([a-z_][a-z0-9_.-]*@)?[A-Za-z0-9.\-:\[\]]+$`)
+
+// controlChars: the fields with control characters (a newline in a name would start a new YAML key); the hosts
+// list may have line breaks and tabs, nothing else.
+func (r Request) controlChars() []string {
+	bad := func(s string, allow string) bool {
+		return strings.IndexFunc(s, func(c rune) bool { return unicode.IsControl(c) && !strings.ContainsRune(allow, c) }) >= 0
+	}
+	var errs []string
+	for _, f := range []struct{ name, v string }{{"organization id", r.ID}, {"organization name", r.Name}, {"SSH user", r.User},
+		{"privilege", r.Privilege}, {"key", r.Key}, {"environment", r.Env}, {"jump host", r.Jump}, {"permission", r.Consent},
+		{"front groups", strings.Join(r.Front, " ")}} {
+		if bad(f.v, "") {
+			errs = append(errs, f.name+": control characters")
+		}
+	}
+	if bad(r.Hosts, "\n\r\t") {
+		errs = append(errs, "hosts: control characters")
+	}
 	return errs
+}
+
+// keyFile: the private key file r.Key names, read only from ~/.ssh or the secrets directory. Every refusal reads the
+// same, so the form cannot tell a missing file from one that is not a key (no probing of the machine's files).
+func keyFile(p config.Paths, key string) (string, []byte, error) {
+	refused := fmt.Errorf("key %s: not a private key file in ~/.ssh or %s", key, p.Secrets)
+	k := key
+	if strings.HasPrefix(k, "~/") {
+		home, err := homeDir()
+		if err != nil {
+			return "", nil, refused
+		}
+		k = filepath.Join(home, k[2:])
+	}
+	k, err := filepath.EvalSymlinks(k)
+	if err != nil {
+		return "", nil, refused
+	}
+	if k, err = filepath.Abs(k); err != nil {
+		return "", nil, refused
+	}
+	var roots []string
+	if home, err := homeDir(); err == nil {
+		roots = append(roots, filepath.Join(home, ".ssh"))
+	}
+	if p.Secrets != "" {
+		roots = append(roots, p.Secrets)
+	}
+	inside := false
+	for _, root := range roots {
+		if r, err := filepath.EvalSymlinks(root); err == nil {
+			root = r
+		}
+		if r, err := filepath.Abs(root); err == nil {
+			root = r
+		}
+		if rel, err := filepath.Rel(root, k); err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+			inside = true
+		}
+	}
+	if !inside {
+		return "", nil, refused
+	}
+	b, err := os.ReadFile(k)
+	if err != nil || !strings.Contains(string(b), "PRIVATE KEY") {
+		return "", nil, refused
+	}
+	return k, b, nil
 }
 
 // ErrExists: an org with this id is already there.
@@ -517,19 +610,9 @@ func CreateWithSkipped(p config.Paths, r Request, today time.Time) (string, []st
 	}
 	var key []byte
 	if r.Key != "" {
-		k := r.Key
-		if strings.HasPrefix(k, "~/") {
-			if home, err := os.UserHomeDir(); err == nil {
-				k = filepath.Join(home, k[2:])
-			}
-		}
-		b, err := os.ReadFile(k)
-		switch {
-		case err != nil:
-			errs = append(errs, fmt.Sprintf("key %s: %v", r.Key, err))
-		case !strings.Contains(string(b), "PRIVATE KEY"):
-			errs = append(errs, fmt.Sprintf("key %s: not a private key file", r.Key))
-		default:
+		if k, b, err := keyFile(p, r.Key); err != nil {
+			errs = append(errs, err.Error())
+		} else {
 			key, r.Key = b, k
 		}
 	}

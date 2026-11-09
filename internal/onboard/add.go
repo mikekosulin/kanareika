@@ -42,6 +42,25 @@ func set(m *yaml.Node, key string, v *yaml.Node) {
 
 func mapping() *yaml.Node { return &yaml.Node{Kind: yaml.MappingNode} }
 
+// freeJump: the name for a jump host at addr as user under jumps: base when that entry is this same jump (or there
+// is none), else base-2, base-3, … (an entry with the same name may be another machine: never reuse it blindly).
+func freeJump(jumps *yaml.Node, base, addr, user string) string {
+	for i := 1; ; i++ {
+		name := base
+		if i > 1 {
+			name = fmt.Sprintf("%s-%d", base, i)
+		}
+		j := get(jumps, name)
+		if j == nil {
+			return name
+		}
+		a, u := get(j, "address"), get(j, "user")
+		if a != nil && a.Value == addr && (u == nil && user == "" || u != nil && u.Value == user) {
+			return name
+		}
+	}
+}
+
 // Add puts the hosts of r into an existing org file (group: the line's, else ungrouped; environment: the line's,
 // else r.Env, else the org's only one, else production), with their jump hosts. Comments and key order stay. The
 // result is checked by the loader before the file is replaced; the old file is kept as <file>.bak. Hosts already in
@@ -53,6 +72,9 @@ func Add(p config.Paths, orgID string, r Request) ([]string, []string, error) {
 
 // AddWithSkipped: Add, and the host lines it skipped (unusable lines, hosts already in the org).
 func AddWithSkipped(p config.Paths, orgID string, r Request) ([]string, []string, []string, error) {
+	if errs := r.controlChars(); len(errs) > 0 {
+		return nil, nil, errs, nil
+	}
 	hosts, skipped := ParseHosts(r.Hosts)
 	path := filepath.Join(p.Orgs, orgID+".yml")
 	b, err := os.ReadFile(path)
@@ -134,11 +156,12 @@ func AddWithSkipped(p config.Paths, orgID string, r Request) ([]string, []string
 		} else if u, a, ok := strings.Cut(h.Jump, "@"); ok {
 			user, addr = u, a
 		}
-		jumpName[h.Jump] = name
 		if jumps == nil {
 			jumps = mapping()
 			set(access, "jumps", jumps)
 		}
+		name = freeJump(jumps, name, addr, user)
+		jumpName[h.Jump] = name
 		if get(jumps, name) == nil {
 			j := mapping()
 			set(j, "address", scalar(addr))
@@ -224,9 +247,29 @@ func AddWithSkipped(p config.Paths, orgID string, r Request) ([]string, []string
 	if err := os.WriteFile(path+".bak", b, 0o600); err != nil {
 		return nil, nil, nil, err
 	}
-	tmpFile := path + ".tmp"
-	if err := os.WriteFile(tmpFile, out.Bytes(), 0o600); err != nil {
-		return nil, nil, nil, err
+	return added, skipped, nil, replaceFile(path, out.Bytes())
+}
+
+// replaceFile: path gets b in one rename, through a temporary file of its own in the same directory (two writers
+// never share one).
+func replaceFile(path string, b []byte) error {
+	f, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*.tmp")
+	if err != nil {
+		return err
 	}
-	return added, skipped, nil, os.Rename(tmpFile, path)
+	tmp := f.Name()
+	_, err = f.Write(b)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Chmod(tmp, 0o600)
+	}
+	if err == nil {
+		err = os.Rename(tmp, path)
+	}
+	if err != nil {
+		_ = os.Remove(tmp)
+	}
+	return err
 }

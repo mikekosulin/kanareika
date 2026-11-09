@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mikekosulin/kanareika/internal/finding"
 	"github.com/mikekosulin/kanareika/internal/i18n"
@@ -372,7 +373,7 @@ func logins(c *ctx, h *host) map[string]Cell {
 		lastDay = max(lastDay, d)
 	}
 	n := 0
-	if lastDay != "" {
+	if lastDay != "" && c.recentDay(h, lastDay) {
 		n = int(number(daily[lastDay]))
 	}
 	lv := OK
@@ -396,6 +397,29 @@ func logins(c *ctx, h *host) map[string]Cell {
 		out["last_attack"] = none()
 	}
 	return out
+}
+
+// recentDay: day (YYYY-MM-DD) is within 24 h of when the host's logins were read: that day or the one before (the
+// access module's own run, else the host's last scan). An older day is not "the last 24 h". Unknown scan time: true.
+func (c *ctx) recentDay(h *host, day string) bool {
+	at := time.Time{}
+	if v := c.in.View; v != nil && v.Meta != nil {
+		if run := v.Meta.Sources[h.node.Label]["access"]; run != "" {
+			at, _ = time.Parse("2006-01-02_150405", run)
+		}
+	}
+	if at.IsZero() {
+		at, _ = time.Parse(time.RFC3339, h.node.LastScan)
+	}
+	if at.IsZero() {
+		return true
+	}
+	d, err := time.Parse(time.DateOnly, day)
+	if err != nil {
+		return false
+	}
+	scanDay := at.UTC().Truncate(24 * time.Hour)
+	return !d.Before(scanDay.AddDate(0, 0, -1))
 }
 
 func network(c *ctx, h *host) map[string]Cell {
@@ -533,11 +557,12 @@ func health(c *ctx, h *host) map[string]Cell {
 		out[key] = Cell{V: use, S: s, Level: usedLevel(use), Note: all}
 	}
 	if total := number(get(x, "mem", "total_mb")); total > 0 {
-		free := math.Round(100 * number(get(x, "mem", "available_mb")) / total)
+		exact := 100 * number(get(x, "mem", "available_mb")) / total // compared unrounded, as the health module does
+		free := math.Round(exact)
 		lv := OK
-		if free < MemBad {
+		if exact < MemBad {
 			lv = Bad
-		} else if free <= MemWarn {
+		} else if exact <= MemWarn {
 			lv = Warn
 		}
 		out["mem_free"] = Cell{V: free, S: fmt.Sprintf("%.0f%%", free), Level: lv,

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"net/http/httptest"
 	"os"
 	"slices"
 	"strings"
@@ -43,7 +44,39 @@ func TestServe(t *testing.T) {
 	}
 }
 
-// TestServeEnvAndPort: KANAREIKA_HOST / KANAREIKA_PORT give the defaults, flags win over them, bad ports are
+// TestServeNoScans: --no-scans is read-only for the vulnerability DB too: no update, no size lookup.
+func TestServeNoScans(t *testing.T) {
+	sandbox(t)
+	fixtureOrg(t)
+	oldServe := serveFunc
+	t.Cleanup(func() { serveFunc = oldServe })
+	var srv *server.Server
+	serveFunc = func(_ context.Context, s *server.Server, _ string, _ int, _ io.Writer) error { srv = s; return nil }
+	get := func(method, path string) (int, string) {
+		r := httptest.NewRequest(method, path, nil)
+		r.Host = "127.0.0.1:8088"
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		return w.Code, w.Body.String()
+	}
+	if code, _, errs := cli(t, "web", "--no-scans"); code != 0 {
+		t.Fatal(code, errs)
+	}
+	if c, _ := get("GET", "/api/db/size"); c != 403 {
+		t.Errorf("size lookup: %d, want 403", c)
+	}
+	if _, body := get("GET", "/api/db"); !strings.Contains(body, `"enabled":false`) {
+		t.Errorf("/api/db: %s", body)
+	}
+	if code, _, errs := cli(t, "web"); code != 0 {
+		t.Fatal(code, errs)
+	}
+	if _, body := get("GET", "/api/db"); !strings.Contains(body, `"enabled":true`) {
+		t.Errorf("without --no-scans, updates are on: %s", body)
+	}
+}
+
+// TestServeEnvAndPort:KANAREIKA_HOST / KANAREIKA_PORT give the defaults, flags win over them, bad ports are
 // refused before listening, and a busy port says what to do.
 func TestServeEnvAndPort(t *testing.T) {
 	sandbox(t)
