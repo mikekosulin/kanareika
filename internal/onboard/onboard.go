@@ -18,6 +18,8 @@ import (
 	"sync"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/mikekosulin/kanareika/internal/config"
 )
 
@@ -333,6 +335,16 @@ func hostOnly(s string) string {
 
 func quote(s string) string { return strconv.Quote(s) }
 
+// ys: s as one YAML scalar: plain when YAML reads it back as the same string, else quoted ("[2001:db8::1]:2222"
+// plain is a flow sequence, "yes" a bool, "a: b" a mapping).
+func ys(s string) string {
+	b, err := yaml.Marshal(s)
+	if out := strings.TrimSuffix(string(b), "\n"); err == nil && !strings.ContainsAny(out, "\n\r") {
+		return out
+	}
+	return strconv.Quote(s)
+}
+
 // Render: the org file for r, commented like the template. keyRef: the key under secrets/ ("" = ssh-agent).
 func Render(r Request, hosts []Host, keyRef string, today time.Time) []byte {
 	env := r.Env
@@ -360,10 +372,10 @@ consent:                         # no scan without a valid consent
 access:
   user: %s
   privilege: %s                   # none: read what the user can | sudo: root-only reads with sudo -n
-`, today.Format(time.DateOnly), r.ID, quote(r.Name), quote(r.Consent), today.Format(time.DateOnly),
-		today.AddDate(1, 0, 0).Format(time.DateOnly), r.User, priv)
+`, today.Format(time.DateOnly), ys(r.ID), quote(r.Name), quote(r.Consent), today.Format(time.DateOnly),
+		today.AddDate(1, 0, 0).Format(time.DateOnly), ys(r.User), ys(priv))
 	if keyRef != "" {
-		fmt.Fprintf(&b, "  key: %s\n", keyRef)
+		fmt.Fprintf(&b, "  key: %s\n", ys(keyRef))
 	} else {
 		b.WriteString("  # key: <ORG_ID>/id_ed25519   # a key in secrets/; without it the ssh-agent is used\n")
 	}
@@ -377,9 +389,9 @@ access:
 			ju, jh = "", r.Jump
 		}
 		b.WriteString("  jumps:                         # reached first, the servers through it\n    bastion:\n")
-		fmt.Fprintf(&b, "      address: %s\n", jh)
+		fmt.Fprintf(&b, "      address: %s\n", ys(jh))
 		if ju != "" {
-			fmt.Fprintf(&b, "      user: %s\n", ju)
+			fmt.Fprintf(&b, "      user: %s\n", ys(ju))
 		}
 	}
 	// jump hosts named by hosts: another pasted host (by name) or an address of their own
@@ -411,9 +423,9 @@ access:
 			} else if u, a, ok := strings.Cut(raw, "@"); ok {
 				user, addr = u, a
 			}
-			fmt.Fprintf(&b, "    %s:\n      address: %s\n", jumpName[raw], addr)
+			fmt.Fprintf(&b, "    %s:\n      address: %s\n", ys(jumpName[raw]), ys(addr))
 			if user != "" {
-				fmt.Fprintf(&b, "      user: %s\n", user)
+				fmt.Fprintf(&b, "      user: %s\n", ys(user))
 			}
 		}
 	}
@@ -447,18 +459,18 @@ access:
 		if r.Internet && len(r.Front) == 0 || slices.Contains(r.Front, k.group) {
 			role, exposure = "front", 1
 		}
-		fmt.Fprintf(&b, "  %s:\n    role: %s\n    env: %s\n    exposure: %d                  # 1 internet-facing, 2 neighbours, 3 internal\n", name, role, k.env, exposure)
+		fmt.Fprintf(&b, "  %s:\n    role: %s\n    env: %s\n    exposure: %d                  # 1 internet-facing, 2 neighbours, 3 internal\n", ys(name), role, ys(k.env), exposure)
 		if r.Jump != "" {
 			b.WriteString("    jump: bastion\n")
 		}
 		b.WriteString("    hosts:\n")
 		for _, h := range byGroup[k] {
-			fmt.Fprintf(&b, "      %s:\n        address: %s\n", h.Name, h.Address)
+			fmt.Fprintf(&b, "      %s:\n        address: %s\n", ys(h.Name), ys(h.Address))
 			if h.User != "" && h.User != r.User {
-				fmt.Fprintf(&b, "        user: %s\n", h.User)
+				fmt.Fprintf(&b, "        user: %s\n", ys(h.User))
 			}
 			if h.Jump != "" {
-				fmt.Fprintf(&b, "        jump: %s\n", jumpName[h.Jump])
+				fmt.Fprintf(&b, "        jump: %s\n", ys(jumpName[h.Jump]))
 			}
 		}
 	}

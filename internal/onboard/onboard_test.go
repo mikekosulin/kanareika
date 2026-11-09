@@ -3,6 +3,7 @@ package onboard
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -287,6 +288,42 @@ func TestAddJumpNameTaken(t *testing.T) {
 	by, js = load()
 	if by["10-0-0-10"].Jump != "bastion-2" || js["bastion-4"] != nil || len(js) != 3 {
 		t.Fatalf("the same jump reused: %+v %v", by["10-0-0-10"], js)
+	}
+}
+
+// TestIPv6WithPort: "[v6]:port" is a YAML flow sequence when written plain; Create and Add quote it, whichever way
+// it was pasted (name address, user@host, an ssh command, CSV, an Ansible line).
+func TestIPv6WithPort(t *testing.T) {
+	p := config.PathsAt(t.TempDir())
+	r := req()
+	r.Hosts = "web-01 [2001:db8::1]:2222\nssh -p 2223 admin@2001:db8::2\ndb-01,[2001:db8::3]:2224,db\n" +
+		"app-01 ansible_host=2001:db8::4 ansible_port=2225\nops@[2001:db8::5]:2226"
+	r.Jump = "jumper@[2001:db8::99]:2200"
+	path, errs, err := Create(p, r, time.Now())
+	if err != nil || len(errs) > 0 {
+		t.Fatal(errs, err)
+	}
+	if _, _, err := Add(p, "acme", Request{Hosts: "ssh -p 2227 -J ops@[2001:db8::98]:22 admin@2001:db8::7\nmail,[2001:db8::8]:2228"}); err != nil {
+		t.Fatal(err)
+	}
+	l, _ := config.NewLoader(p)
+	o, lerrs := l.LoadOrg(path)
+	if len(lerrs) > 0 {
+		b, _ := os.ReadFile(path)
+		t.Fatal(lerrs, "\n"+string(b))
+	}
+	want := map[string]int{"web-01": 2222, "2001-db8-2": 2223, "db-01": 2224, "app-01": 2225, "2001-db8-5": 2226, "2001-db8-7": 2227, "mail": 2228}
+	for _, h := range o.Hosts {
+		if want[h.Name] == 0 || h.Port != want[h.Name] || !strings.HasPrefix(h.Address, "2001:db8::") {
+			t.Errorf("%s: %q port %d", h.Name, h.Address, h.Port)
+		}
+		delete(want, h.Name)
+	}
+	if len(want) > 0 {
+		t.Errorf("missing %v", want)
+	}
+	if j := o.Jumps()["bastion"]; j == nil || j["user"] != "jumper" || !strings.Contains(fmt.Sprint(j["address"]), "2001:db8::99") {
+		t.Errorf("jump: %v", o.Jumps())
 	}
 }
 
