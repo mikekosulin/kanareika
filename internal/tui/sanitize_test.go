@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -156,6 +157,9 @@ func TestCopyFromUpdate(t *testing.T) {
 	}
 	if b.String() != strings.Repeat("frame", 4) {
 		t.Fatal(b.String())
+	}
+	if f, ok := SyncWriter(os.Stdout).(interface{ Fd() uintptr }); !ok || f.Fd() != os.Stdout.Fd() {
+		t.Fatal("the terminal lost its Fd: bubbletea gets no window size and draws nothing")
 	}
 }
 
