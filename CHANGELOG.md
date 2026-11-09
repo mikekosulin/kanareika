@@ -2,7 +2,7 @@
 
 Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor version may break things; each break is listed under **Breaking** with what to do instead.
 
-## 0.5.0 — 2026-11-XX
+## 0.5.0 — 2026-11-09
 
 Three places instead of ten pages: Servers, ToDo, History. What to fix, grouped the way it gets fixed; setup for a homelab, a client or a fleet; a web page and a TUI that work the same.
 
