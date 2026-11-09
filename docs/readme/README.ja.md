@@ -45,6 +45,7 @@ sh install.sh
 または手動で (Linux、macOS):
 
 ```bash
+cd "$(mktemp -d)"
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')                 # linux, darwin
 ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')  # amd64, arm64
 FILE=kanareika-$OS-$ARCH.tar.xz
@@ -55,9 +56,8 @@ curl -fsSLO "$URL/SHA256SUMS"
 sha256sum -c --ignore-missing SHA256SUMS  # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
 gh attestation verify "$FILE" --repo mikekosulin/kanareika  # 省略可、GitHub CLI が必要
 tar -xJf "$FILE" kanareika
+sudo install kanareika /usr/local/bin/  # sudo なしなら: install kanareika ~/.local/bin/
 ```
-
-`tar` は `kanareika` を現在のディレクトリに展開します。
 
 Windows (PowerShell):
 
