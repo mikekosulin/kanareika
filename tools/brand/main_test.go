@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html/template"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -36,7 +37,7 @@ func logo(t *testing.T) string {
 	return p
 }
 
-// TestRun: the social preview and a banner per language, each a page and a picture rendered from it.
+// TestRun: the social preview and a banner per language, dark and light, each a page and a picture rendered from it.
 func TestRun(t *testing.T) {
 	calls := fakeChrome(t)
 	out := filepath.Join(t.TempDir(), "brand")
@@ -45,7 +46,7 @@ func TestRun(t *testing.T) {
 	}
 	names := []string{"og"}
 	for _, l := range langs {
-		names = append(names, "banner-"+l.Code)
+		names = append(names, "banner-"+l.Code, "banner-"+l.Code+"-light")
 	}
 	for _, n := range names {
 		for _, ext := range []string{".html", ".png"} {
@@ -93,6 +94,19 @@ func TestPictures(t *testing.T) {
 				t.Errorf("%s: no %q", name, w)
 			}
 		}
+	}
+	// the light banner: the same words on a light page; the dark ones and the preview stay dark
+	for _, l := range langs {
+		dark, light := page["banner-"+l.Code], page["banner-"+l.Code+"-light"]
+		if !strings.Contains(light, `<body class="light">`) || !strings.Contains(light, template.HTMLEscapeString(l.Accent)) {
+			t.Errorf("banner-%s-light: not light or not %s", l.Code, l.Code)
+		}
+		if strings.Contains(dark, `<body class="light">`) {
+			t.Errorf("banner-%s: light", l.Code)
+		}
+	}
+	if strings.Contains(page["og"], `class="light"`) {
+		t.Error("og: light")
 	}
 	if strings.Contains(page["banner-en"], "CVE-0000-90210") {
 		t.Error("banner shows more than its rows")
@@ -224,7 +238,7 @@ func TestMain_(t *testing.T) {
 	out := t.TempDir()
 	os.Args = []string{"brand", "-out", out, "-logo", logo(t), "-pages", ".", "-chrome", "chrome"}
 	main()
-	if died != nil || len(*calls) != 1+len(langs) {
+	if died != nil || len(*calls) != 1+2*len(langs) {
 		t.Fatal(died, len(*calls))
 	}
 
