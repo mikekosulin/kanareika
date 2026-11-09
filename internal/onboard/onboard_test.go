@@ -244,6 +244,52 @@ func TestDiscover(t *testing.T) {
 	}
 }
 
+// TestAddJumpNameTaken: a jump host whose name is taken by another machine (address or user differ) gets a name of
+// its own; the same machine again is reused.
+func TestAddJumpNameTaken(t *testing.T) {
+	p := config.PathsAt(t.TempDir())
+	r := req()
+	r.Jump = "jumper@203.0.113.10"
+	if _, errs, err := Create(p, r, time.Now()); err != nil || len(errs) > 0 {
+		t.Fatal(errs, err)
+	}
+	add := Request{Hosts: "ssh -J ops@bastion.example.org admin@10.0.0.7\nssh -J other@bastion.example.net admin@10.0.0.9"}
+	if _, errs, err := Add(p, "acme", add); err != nil || len(errs) > 0 {
+		t.Fatal(errs, err)
+	}
+	load := func() (map[string]config.Host, map[string]map[string]any) {
+		t.Helper()
+		l, _ := config.NewLoader(p)
+		o, lerrs := l.LoadOrg(filepath.Join(p.Orgs, "acme.yml"))
+		if len(lerrs) > 0 {
+			t.Fatal(lerrs)
+		}
+		by := map[string]config.Host{}
+		for _, h := range o.Hosts {
+			by[h.Name] = h
+		}
+		return by, o.Jumps()
+	}
+	by, js := load()
+	if by["10-0-0-7"].Jump != "bastion-2" || js["bastion-2"]["address"] != "bastion.example.org" || js["bastion-2"]["user"] != "ops" {
+		t.Fatalf("another machine named bastion: %+v %v", by["10-0-0-7"], js)
+	}
+	if by["10-0-0-9"].Jump != "bastion-3" || js["bastion-3"]["address"] != "bastion.example.net" {
+		t.Fatalf("a third: %+v %v", by["10-0-0-9"], js)
+	}
+	if js["bastion"]["address"] != "203.0.113.10" || js["bastion"]["user"] != "jumper" || by["web-01"].Jump != "bastion" {
+		t.Fatalf("the first bastion untouched: %v", js)
+	}
+	// the same machine again: reused, not added twice
+	if _, errs, err := Add(p, "acme", Request{Hosts: "ssh -J ops@bastion.example.org admin@10.0.0.10"}); err != nil || len(errs) > 0 {
+		t.Fatal(errs, err)
+	}
+	by, js = load()
+	if by["10-0-0-10"].Jump != "bastion-2" || js["bastion-4"] != nil || len(js) != 3 {
+		t.Fatalf("the same jump reused: %+v %v", by["10-0-0-10"], js)
+	}
+}
+
 func req() Request {
 	return Request{ID: "acme", Name: "ACME Corp", User: "audit", Hosts: "web-01 192.0.2.11\n192.0.2.12", Consent: "Contract 42",
 		Confirmed: true}
