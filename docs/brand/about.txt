@@ -1,1 +1,0 @@
-Agentless, read-only security audit of Linux servers over SSH. Ranks what to patch first: CVEs with KEV and EPSS, SSH access, exposed ports, host health, with rollback-ready fixes. Terminal UI, web UI and an MCP server in one Go binary. No telemetry.
