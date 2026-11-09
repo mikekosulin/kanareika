@@ -88,7 +88,9 @@ func scrub(v reflect.Value) {
 // tame: a line about to be fitted with its line breaks and tabs as spaces, other control characters but ESC and BEL (the
 // styles' and the zones' own sequences) dropped.
 func tame(s string) string {
-	if !strings.ContainsFunc(s, func(r rune) bool { return r != '\x1b' && r != '\a' && (r < 0x20 || r == 0x7f || r >= 0x80 && r <= 0x9f) }) {
+	if !strings.ContainsFunc(s, func(r rune) bool {
+		return r != '\x1b' && r != '\a' && (r < 0x20 || r == 0x7f || r >= 0x80 && r <= 0x9f)
+	}) {
 		return s
 	}
 	var b strings.Builder
