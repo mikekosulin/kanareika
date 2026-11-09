@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -109,12 +110,17 @@ func (c *client) roundTrip(r *http.Request, out any) error {
 		if e.Error == "" && resp.StatusCode == http.StatusUnauthorized {
 			e.Error = "access token required or wrong (--token)"
 		}
+		scrub(reflect.ValueOf(&e))
 		return &APIError{Status: resp.StatusCode, Msg: e.Error, Errors: e.Errors}
 	}
 	if out == nil {
 		return nil
 	}
-	return json.Unmarshal(b, out)
+	if err := json.Unmarshal(b, out); err != nil {
+		return err
+	}
+	scrub(reflect.ValueOf(out)) // what hosts reported, drawn: no control characters
+	return nil
 }
 
 func (c *client) Get(ctx context.Context, path string, out any) error {

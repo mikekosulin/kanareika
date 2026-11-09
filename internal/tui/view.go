@@ -75,6 +75,7 @@ func fit(s string, w int, right bool) string {
 	if w <= 0 {
 		return ""
 	}
+	s = tame(s)
 	if ansi.StringWidth(s) > w {
 		s = ansi.Truncate(s, w, ellipsis)
 	}
@@ -389,6 +390,9 @@ func (m *Model) View() string {
 		lines[i] = fit(l, m.w, false)
 	}
 	lines = m.scanZones(lines)
+	for i, l := range lines {
+		lines[i] = safeFrame(l)
+	}
 	return strings.Join(lines, "\n")
 }
 
@@ -810,7 +814,7 @@ func (m *Model) panelsView(h int) []string {
 		lines = append(lines, l)
 	}
 	h = max(h-2, 3)
-	if off := m.panels.cur - h + 1; off > 0 {
+	if off := min(m.panels.cur, len(lines)-1) - h + 1; off > 0 {
 		lines = lines[off:]
 	}
 	if len(lines) > h {

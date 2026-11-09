@@ -111,6 +111,7 @@ type Model struct {
 
 	menu         *menuDlg // filters (f), organizations (O), environments (E), jump (:)
 	setup        *wizard  // first-run setup (no organization yet, N) and the first scan of an env
+	wizGen       int      // the last wizard's gen
 	setupSeen    bool     // the setup opened on its own once
 	found        *foundResp
 	dbSize       *dbSizeResp
@@ -122,6 +123,7 @@ type Model struct {
 	lensFor      string                          // what the rows are for
 	lensAPI      bool                            // the server draws lenses
 	lensNone     bool                            // it does not (yet): the views that showed them
+	lensFail     string                          // the lens key whose fetch failed: not asked again until r
 	setupCurLine int                             // the line of the setup form the cursor is on (kept in view)
 	handlers     map[string]func(dx int) tea.Cmd // what a click on a zone does (drawn this frame)
 	zones        []hitZone                       // where the zones are on screen
@@ -366,6 +368,8 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		}
 	case toastMsg:
 		m.say(string(msg))
+	case copyMsg:
+		m.copyText(msg)
 	case optsMsg:
 		m.form = newForm(m.org, m.env, scanOptions(msg))
 	case runInfoMsg:
@@ -611,6 +615,7 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "r", "ctrl+r":
 		m.runKey, m.treeKey = "", "" // reload the run and the tree too
+		m.lensNone, m.lensFail = false, ""
 		m.nodes, m.pending = map[string]*nodeDetail{}, map[string]string{}
 		return m, m.refresh()
 	case "L":
@@ -743,7 +748,7 @@ func (m *Model) viewKey(s string) tea.Cmd {
 	switch m.view {
 	case vServers, vActions:
 		if s == "enter" && m.run == "" && m.org != "" { // no runs yet: check the access, then the first scan
-			m.setup = checkWizard(m.org, m.env)
+			m.setup = m.checkWizard(m.org, m.env)
 			return m.fetchHosts()
 		}
 	case vAccess, vNetwork, vHealth:
@@ -928,6 +933,11 @@ func (m *Model) panelItems() []formItem {
 func (m *Model) panelsKey(s string) tea.Cmd {
 	items := m.panelItems()
 	d := m.panels
+	if len(items) == 0 {
+		m.panels = nil
+		return nil
+	}
+	d.cur = min(max(d.cur, 0), len(items)-1) // the list may have changed under it
 	step := func(dir int) {
 		for i := d.cur + dir; i >= 0 && i < len(items); i += dir {
 			if items[i].kind != itemHead {

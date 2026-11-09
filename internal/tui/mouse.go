@@ -1,7 +1,10 @@
 package tui
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -14,9 +17,11 @@ import (
 // so the hit areas come from the very layout on screen. A click runs the zone's handler with the column it fell on
 // within the zone; the wheel scrolls what is under it.
 
-const (
-	zoneOpen  = "\x1b]8999;" // zoneOpen + id + "\a" ... zoneClose: never sent to the terminal
-	zoneClose = "\x1b]8998\a"
+// The markers carry a random tag of this process: text from a host cannot make a zone (nor can it hold an ESC).
+var (
+	zoneTag   = func() string { b := make([]byte, 8); _, _ = rand.Read(b); return hex.EncodeToString(b) }()
+	zoneOpen  = "\x1b]8999;" + zoneTag + ";" // zoneOpen + id + "\a" ... zoneClose: never sent to the terminal
+	zoneClose = "\x1b]8998;" + zoneTag + "\a"
 )
 
 // hitZone: a clickable span of one screen line.
@@ -130,6 +135,9 @@ func (m *Model) zoneAt(x, y int) (hitZone, bool) {
 
 // mouse: a click on a zone; the wheel as up/down (or the details pane's scroll); a click outside an open list
 // closes it.
+// setupZones: what can be clicked while the setup is open.
+var setupZones = []string{"field:", "check:", "kind:", "btn:", "opt:", "edit:", "pick:", "login:", "dl", "key:"}
+
 func (m *Model) mouse(msg tea.MouseMsg) tea.Cmd {
 	if m.set.NoMouse || msg.Action != tea.MouseActionPress {
 		return nil
@@ -164,8 +172,11 @@ func (m *Model) mouse(msg tea.MouseMsg) tea.Cmd {
 		w.pick = nil
 		return nil
 	}
-	if !ok {
+	if !ok || m.panels != nil || m.help || m.langs != nil || m.form != nil { // the dialogs take keys only
 		return nil
+	}
+	if m.setup != nil && !slices.ContainsFunc(setupZones, func(p string) bool { return strings.HasPrefix(z.id, p) }) {
+		return nil // nothing behind the setup
 	}
 	h := m.handlers[z.id]
 	if h == nil {
