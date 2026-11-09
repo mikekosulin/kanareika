@@ -24,6 +24,7 @@ import (
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/finding"
 	"github.com/mikekosulin/kanareika/internal/i18n"
+	"github.com/mikekosulin/kanareika/internal/priority"
 	"github.com/mikekosulin/kanareika/internal/report"
 )
 
@@ -153,10 +154,11 @@ func newEnv(t *testing.T) *env {
 // stub: fake trivy DB preparation (err: refused).
 func stub(t *testing.T, onlineErr, offlineErr error) {
 	t.Helper()
-	p, po := prepare, prepareOffline
+	p, po, rs := prepare, prepareOffline, refreshScores
 	prepare = func(context.Context, func(string, ...any)) error { return onlineErr }
 	prepareOffline = func(func(string, ...any)) error { return offlineErr }
-	t.Cleanup(func() { prepare, prepareOffline = p, po })
+	refreshScores = func(context.Context, *priority.Policy, time.Duration) (bool, error) { return false, nil }
+	t.Cleanup(func() { prepare, prepareOffline, refreshScores = p, po, rs })
 }
 
 func (e *env) org(consent map[string]any, hosts map[string]any) *config.Org {
@@ -248,7 +250,7 @@ func TestScan(t *testing.T) {
 		t.Fatalf("rc %d\n%s", rc, e.out)
 	}
 	for _, want := range []string{"== t1 / default: Test", "web-01", "Debian GNU/Linux 12 (bookworm) (fake-01)",
-		"health: boom", "hosts done 1/1: web-01 ok (1 module errors)", "done: P1=", "report:"} {
+		"health: boom", "hosts done 1/1: web-01 ok (1 module errors)", "done: ", "report:"} {
 		if !strings.Contains(e.out.String(), want) {
 			t.Fatalf("%q not in\n%s", want, e.out)
 		}

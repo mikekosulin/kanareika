@@ -44,6 +44,7 @@ func main() {
 	at := flag.String("now", "", "the time it is, RFC 3339 (default: now)")
 	out := flag.String("out", "", "write tui-<lang>.png and web-<lang>.png for every language here (the TUI at -size after -keys)")
 	bin := flag.String("chrome", "", "Chrome or Chromium for -out (default: found on its own)")
+	flag.StringVar(&frameTheme, "theme", "dark", "the TUI's palette for one frame: dark or light")
 	flag.Parse()
 	var err error
 	if *out != "" {
@@ -55,6 +56,9 @@ func main() {
 		fatal(err)
 	}
 }
+
+// frameTheme: the palette run draws with (dark, light).
+var frameTheme = "dark"
 
 func run(out io.Writer, home, lang, org, env, size, keys, at string) error {
 	var w, h int
@@ -74,7 +78,7 @@ func run(out io.Writer, home, lang, org, env, size, keys, at string) error {
 	if err != nil {
 		return err
 	}
-	m := tui.New(tui.Options{Client: tui.Local(s.Handler()), Lang: lang, Org: org, Env: env, Zone: time.UTC,
+	m := tui.New(tui.Options{Client: tui.Local(s.Handler()), Lang: lang, Org: org, Env: env, Zone: time.UTC, Theme: frameTheme,
 		Now: func() time.Time { return now }, Tick: func(time.Duration) tea.Cmd { return nil }})
 	m.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	drive(m, m.Init())

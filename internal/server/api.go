@@ -142,7 +142,7 @@ func (s *Server) apiEnv(q query) (any, error) {
 			continue
 		}
 		hosts = append(hosts, map[string]any{"name": h.Name, "group": h.Group, "role": h.Role,
-			"exposure": h.Exposure, "address": h.Address, "jump": nullable(h.Jump), "public": isPublic(h.Address),
+			"exposure": h.Exposure, "address": h.Address, "port": h.Port, "user": h.User, "jump": nullable(h.Jump), "public": isPublic(h.Address),
 			"modules": modules(h.Checks)})
 	}
 	rs := runs(s.envDir(o.ID, env))
@@ -234,6 +234,7 @@ func (s *Server) view(dir string) ([]byte, error) {
 		}
 		v := report.BuildView(dir, meta, findings, prev)
 		meta.PlanCounts = &v.PlanCounts
+		meta.Totals = &v.Totals
 		v.Meta = meta
 		if body, err = marshalView(v); err != nil {
 			return nil, err
@@ -329,7 +330,19 @@ func (s *Server) apiPrompt(q query) (any, error) {
 	if lang == "" {
 		lang = "en"
 	}
-	return map[string]string{"text": s.prompt(o, env, &v, q.list("ids", 200), lang)}, nil
+	ids := q.list("ids", 200)
+	if nodes := q.list("nodes", 200); len(nodes) > 0 { // tree nodes: the actions under them
+		more, err := s.nodeActions(q, nodes)
+		if err != nil {
+			return nil, err
+		}
+		for _, id := range more {
+			if !slices.Contains(ids, id) {
+				ids = append(ids, id)
+			}
+		}
+	}
+	return map[string]string{"text": s.prompt(o, env, &v, ids, lang)}, nil
 }
 
 var errNoPrompt = errors.New("prompt builder not configured")

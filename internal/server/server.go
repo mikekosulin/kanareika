@@ -64,20 +64,26 @@ type Options struct {
 
 // Server holds the API state: org configs (reloaded by /api/orgs) and the last few views.
 type Server struct {
-	paths  config.Paths
-	prompt PromptFunc
-	log    *log.Logger
-	state  atomic.Pointer[orgState]
-	page   []byte // index.html with the UI strings and the CSRF token filled in
-	logo   []byte
-	token  string
-	csrf   string
-	jobs   *jobs       // nil: scans disabled
-	db     *dbUpdater  // nil: DB updates disabled
-	local  atomic.Bool // bound to loopback: only loopback Host headers are served
+	paths   config.Paths
+	prompt  PromptFunc
+	log     *log.Logger
+	state   atomic.Pointer[orgState]
+	page    []byte // index.html with the UI strings and the CSRF token filled in
+	classic []byte // classic.html, the same way
+	logo    []byte // logo.png: the favicon
+	// logoWebP: logo.webp, the page's images (lossless, less than half the PNG)
+	logoWebP []byte
+	token    string
+	csrf     string
+	jobs     *jobs       // nil: scans disabled
+	db       *dbUpdater  // nil: DB updates disabled
+	local    atomic.Bool // bound to loopback: only loopback Host headers are served
+
+	orgFiles sync.Map // org id -> *sync.Mutex: one setup write (create, add hosts) per org file at a time
 
 	mu    sync.Mutex // view builds and current/ updates, one at a time (each can take seconds on big runs)
 	views []cachedView
+	trees *treeInput // the last tree input (findings + view), by view mtime
 }
 
 type cachedView struct {
@@ -96,13 +102,32 @@ func New(o Options) (*Server, error) {
 	}
 	if o.UpdateDB != nil {
 		s.db = &dbUpdater{fn: o.UpdateDB, now: time.Now}
+		if s.jobs != nil {
+			db := s.db
+			s.jobs.before = func(ctx context.Context, out io.Writer) {
+				db.mu.Lock()
+				running := db.running
+				db.mu.Unlock()
+				if running {
+					fmt.Fprintln(out, "waiting for the vulnerability DB download started from the page to finish ...")
+					db.wait(ctx)
+				}
+			}
+		}
 	}
 	var err error
-	if s.page, err = page(); err != nil {
+	if s.page, err = page("index.html"); err != nil {
 		return nil, err
 	}
 	s.page = bytes.Replace(s.page, []byte(`/*CSRF*/""`), []byte(`"`+s.csrf+`"`), 1)
+	if s.classic, err = page("classic.html"); err != nil {
+		return nil, err
+	}
+	s.classic = bytes.Replace(s.classic, []byte(`/*CSRF*/""`), []byte(`"`+s.csrf+`"`), 1)
 	if s.logo, err = fs.ReadFile(webFS(), "logo.png"); err != nil {
+		return nil, err
+	}
+	if s.logoWebP, err = fs.ReadFile(webFS(), "logo.webp"); err != nil {
 		return nil, err
 	}
 	s.reload()
@@ -112,10 +137,21 @@ func New(o Options) (*Server, error) {
 // webFS and localesFS: where the page and the UI strings come from (variables so tests can break them).
 var webFS, localesFS = assets.Web, assets.Locales
 
+// views: the page's three places, each at its own address (/servers?org=…&env=…), all the same page; / lands on
+// Servers.
+var views = []string{"servers", "todo", "history"}
+
+// moved: where the earlier addresses went (their query is kept, after the target's own).
+var moved = map[string]string{
+	"/hosts": "/servers", "/packages": "/todo", "/access": "/servers?show=logins", "/network": "/servers?show=network",
+	"/health": "/servers?show=health", "/exceptions": "/todo?f=accepted", "/changes": "/history", "/runs": "/history",
+	"/setup/access": "/setup/connect",
+}
+
 // page: index.html with the /*I18N_UI*/{} placeholder replaced by the UI strings of every language, encoded
 // as Python's json.dumps did ("</" escaped so a string cannot close the script tag).
-func page() ([]byte, error) {
-	html, err := fs.ReadFile(webFS(), "index.html")
+func page(name string) ([]byte, error) {
+	html, err := fs.ReadFile(webFS(), name)
 	if err != nil {
 		return nil, err
 	}
@@ -169,13 +205,34 @@ func (s *Server) Handler() http.Handler {
 	r.Use(middleware.Recoverer, headers, s.errorLog, s.guard, methods)
 	r.NotFound(func(w http.ResponseWriter, _ *http.Request) { send(w, 404, "text/plain", []byte("not found")) })
 	r.Get("/logo.png", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "image/png", s.logo) })
+	r.Get("/logo.webp", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "image/webp", s.logoWebP) })
 	index := func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "text/html; charset=utf-8", s.page) }
 	r.Get("/", index)
-	r.Get("/index.html", index)
+	// no .html in addresses: the old one goes to /; the setup steps are addresses of the same page
+	r.Get("/index.html", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/", http.StatusMovedPermanently) })
+	r.Get("/setup", index)
+	r.Get("/setup/{step}", index)
+	for _, v := range views {
+		r.Get("/"+v, index)
+	}
+	for from, to := range moved {
+		r.Get(from, func(w http.ResponseWriter, r *http.Request) {
+			u := to
+			if q := r.URL.RawQuery; q != "" {
+				if strings.Contains(u, "?") {
+					u += "&" + q
+				} else {
+					u += "?" + q
+				}
+			}
+			http.Redirect(w, r, u, http.StatusMovedPermanently)
+		})
+	}
+	r.Get("/classic", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "text/html; charset=utf-8", s.classic) })
 	for path, fn := range map[string]func(query) (any, error){
 		"/api/orgs": s.apiOrgs, "/api/env": s.apiEnv, "/api/run": s.apiRun, "/api/log": s.apiLog,
 		"/api/hostfile": s.apiHostfile, "/api/ipinfo": s.apiIPInfo, "/api/prompt": s.apiPrompt,
-		"/api/i18n": s.apiI18n,
+		"/api/i18n": s.apiI18n, "/api/tree": s.apiTree, "/api/node": s.apiNode, "/api/lens": s.apiLens, "/api/history": s.apiHistory,
 	} {
 		r.Get(path, s.api(fn))
 	}
@@ -183,8 +240,14 @@ func (s *Server) Handler() http.Handler {
 	r.Get("/api/session", s.apiSession)
 	r.Get("/api/jobs", s.apiJobs)
 	r.Get("/api/db", s.apiDB)
+	r.Get("/api/db/size", s.apiDBSize)
+	r.Get("/api/setup/discover", s.apiSetupDiscover)
 	r.With(s.csrfCheck).Post("/api/db/update", s.apiDBUpdate)
 	r.With(s.csrfCheck).Post("/api/scan", s.apiScan)
+	r.With(s.csrfCheck).Post("/api/setup", s.apiSetup)
+	r.With(s.csrfCheck).Post("/api/setup/check", s.apiSetupCheck)
+	r.With(s.csrfCheck).Post("/api/setup/parse", s.apiSetupParse)
+	r.With(s.csrfCheck).Post("/api/setup/add", s.apiSetupAdd)
 	r.With(s.csrfCheck).Post("/api/jobs/{id}/cancel", s.apiCancel)
 	return r
 }
@@ -238,6 +301,7 @@ func headers(next http.Handler) http.Handler {
 func methods(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		post := r.Method == http.MethodPost && (r.URL.Path == "/api/scan" || r.URL.Path == "/api/db/update" ||
+			r.URL.Path == "/api/setup" || r.URL.Path == "/api/setup/check" || r.URL.Path == "/api/setup/parse" || r.URL.Path == "/api/setup/add" ||
 			strings.HasPrefix(r.URL.Path, "/api/jobs/") && strings.HasSuffix(r.URL.Path, "/cancel"))
 		if r.Method != http.MethodGet && !post {
 			send(w, 501, "text/plain", []byte("unsupported method"))

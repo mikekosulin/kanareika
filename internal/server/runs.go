@@ -56,6 +56,7 @@ type runInfo struct {
 	Finished    any    `json:"finished"`
 	Counts      any    `json:"counts"`
 	PlanCounts  any    `json:"plan_counts"`
+	Totals      any    `json:"totals,omitempty"` // fixes to apply and unique CVEs (report.Totals); runs before 0.5 have none
 	HostsTotal  int    `json:"hosts_total"`
 	HostsFailed int    `json:"hosts_failed"`
 	Selection   any    `json:"selection"`
@@ -100,6 +101,7 @@ func runs(envDir string) []runInfo {
 			RunID: e.Name(), State: state, Started: src["started"], Finished: src["finished"],
 			Counts:      pyfmt.Or(meta["counts"], st["counts"]),
 			PlanCounts:  meta["plan_counts"],
+			Totals:      pyfmt.Or(meta["totals"], st["totals"]),
 			HostsTotal:  pyfmt.Len(pyfmt.Or(meta["hosts_scanned"], st["hosts"], nil)),
 			HostsFailed: pyfmt.Len(meta["hosts_failed"]),
 			Selection:   meta["selection"],

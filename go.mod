@@ -5,6 +5,8 @@ go 1.27.3
 require (
 	github.com/Microsoft/go-winio v0.6.4
 	github.com/aquasecurity/trivy v0.76.2
+	github.com/aquasecurity/trivy-db v0.0.0-20261012084708-cbebf2ecd6df
+	github.com/aquasecurity/trivy-java-db v0.0.0-20240109071736-184bd7481d48
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/x/ansi v0.10.1
@@ -13,6 +15,7 @@ require (
 	github.com/oschwald/maxminddb-golang/v2 v2.9.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/spf13/cobra v1.10.2
+	go.etcd.io/bbolt v1.5.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/sys v0.49.0
 	golang.org/x/term v0.47.0
@@ -71,8 +74,6 @@ require (
 	github.com/aquasecurity/table v1.11.0 // indirect
 	github.com/aquasecurity/tml v0.6.1 // indirect
 	github.com/aquasecurity/trivy-checks v1.12.2-0.20261012053351-ac85645895ed // indirect
-	github.com/aquasecurity/trivy-db v0.0.0-20261012084708-cbebf2ecd6df // indirect
-	github.com/aquasecurity/trivy-java-db v0.0.0-20240109071736-184bd7481d48 // indirect
 	github.com/aquasecurity/trivy-kubernetes v0.9.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.47.3 // indirect
@@ -355,7 +356,6 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/zclconf/go-cty v1.19.0 // indirect
 	github.com/zclconf/go-cty-yaml v1.2.0 // indirect
-	go.etcd.io/bbolt v1.5.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/detectors/gcp v1.44.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.71.0 // indirect

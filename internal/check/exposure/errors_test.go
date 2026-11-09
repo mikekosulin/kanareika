@@ -93,7 +93,7 @@ func TestAnalyzeOwnAddressWildcardFirewalldDown(t *testing.T) {
 	want := []string{
 		"public-ip-unlisted HIGH present on eth1 but missing in orgs/ — the external scan does not check it",
 		"listen-public-3306 HIGH tcp *:3306 mysqld",
-		"exposure-limited INFO ",
+		"exposure-limited INFO  is not root and kanareika does not use sudo on this host (privilege: none)", // the why; the test host has no user
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("findings\n got %q\nwant %q", got, want)

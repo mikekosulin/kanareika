@@ -4,11 +4,9 @@ import (
 	"cmp"
 	"context"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"net/url"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -19,9 +17,8 @@ import (
 type view int
 
 const (
-	vOrgs view = iota
+	vServers view = iota
 	vActions
-	vHosts
 	vPackages
 	vChanges
 	vAccess
@@ -30,15 +27,14 @@ const (
 	vExceptions
 	vRuns
 	vScans
+	vLens // a lens of Servers the server draws (GET /api/lens)
 	nViews
 )
 
-// viewNames: tab titles (English keys of the web page's translations where it has them).
-var viewNames = [nViews]string{"Organizations", "ToDo", "Hosts", "Packages", "Changes", "Access", "Network", "Health",
-	"Exceptions", "Runs", "Scans"}
-
-// viewHotkeys: the key of each view: 1-9, 0, then S.
-var viewHotkeys = [nViews]string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "S"}
+// viewNames: tab titles (English keys of the web page's translations where it has them). Organizations and
+// environments are chosen with O and E.
+var viewNames = [nViews]string{"Servers", "ToDo", "Packages", "Changes", "Access", "Network", "Health",
+	"Exceptions", "History", "Scans", "Servers"}
 
 // Options of a TUI session.
 type Options struct {
@@ -52,6 +48,7 @@ type Options struct {
 	// Settings: the file the panel layout is kept in (DefaultSettingsPath); "": not kept.
 	Settings string
 	Zone     *time.Location // the system's time zone; nil: time.Local (tests fix it)
+	Theme    string         // dark, light: over the setting and KANAREIKA_THEME (the screenshots); "": as set
 }
 
 // Model: the bubbletea model of the whole interface.
@@ -84,9 +81,6 @@ type Model struct {
 	set     Settings
 	setPath string
 	sysZone *time.Location
-	sel     map[string]bool // selected action ids
-	onlySel bool            // ToDo lists only the selected actions (v)
-	detail  bool
 	help    bool
 	helpOff int
 	host    string // the host whose card the Hosts view shows ("" = the list)
@@ -98,6 +92,45 @@ type Model struct {
 	langs       *panelsDlg // the language list (L)
 	form        *scanForm
 	open        string // job whose output the Scans view shows
+
+	// ToDo: the tree
+	by      [nViews]string         // the trees' groupings: fix, cve, host (g); Servers by host, ToDo by fix
+	flt     map[string]bool        // filters on (f)
+	tree    *treeResp              // nil until it comes
+	treeKey string                 // what the tree on screen is for (wantTree)
+	nodes   map[string]*nodeDetail // details by treeKey#node id
+	pending map[string]string      // requests on the way: "tree" -> its key, a node's key -> itself
+	opened  map[string]bool        // expanded nodes
+	sel     map[string]bool        // selected nodes (a node selects everything under it)
+	onlySel bool                   // only the selected (v)
+	curID   string                 // the node under the cursor, kept when the tree is rebuilt
+	jumpTo  string                 // the node to put the cursor on when the next tree comes (:)
+	full    bool                   // the details full screen (enter)
+	detOff  int
+	cmdCur  int // the command of the details c copies ([ ])
+
+	menu         *menuDlg // filters (f), organizations (O), environments (E), jump (:)
+	setup        *wizard  // first-run setup (no organization yet, N) and the first scan of an env
+	wizGen       int      // the last wizard's gen
+	setupSeen    bool     // the setup opened on its own once
+	found        *foundResp
+	dbSize       *dbSizeResp
+	dlStart      time.Time // when the download asked for here started
+	dbPolled     time.Time
+	spinning     bool                            // a spinner frame is due
+	lens         string                          // what Servers shows (w): priorities (the tree), logins, network, health, ...
+	lensData     *lensResp                       // the server's lenses, the rows of the one on screen
+	lensFor      string                          // what the rows are for
+	lensAPI      bool                            // the server draws lenses
+	lensNone     bool                            // it does not (yet): the views that showed them
+	lensFail     string                          // the lens key whose fetch failed: not asked again until r
+	setupCurLine int                             // the line of the setup form the cursor is on (kept in view)
+	handlers     map[string]func(dx int) tea.Cmd // what a click on a zone does (drawn this frame)
+	zones        []hitZone                       // where the zones are on screen
+	zoneSeq      int
+	theme        string // Options.Theme
+	hostW, osW   int    // Servers: the widths of the servers' names and OS, so their rows line up
+	faceW        int
 
 	toast   string
 	toastAt time.Time
@@ -115,14 +148,14 @@ func New(o Options) *Model {
 	if o.Zone == nil {
 		o.Zone = time.Local
 	}
-	m := &Model{c: o.Client, now: o.Now, every: o.Tick, clip: o.Clip, org: o.Org, env: o.Env, view: vActions, sel: map[string]bool{},
-		t: &tr{lang: "en", ui: i18n.UI()}, set: loadSettings(o.Settings), setPath: o.Settings, sysZone: o.Zone}
+	m := &Model{c: o.Client, now: o.Now, every: o.Tick, clip: o.Clip, org: o.Org, env: o.Env, view: vServers, sel: map[string]bool{},
+		t: &tr{lang: "en", ui: i18n.UI()}, set: loadSettings(o.Settings), setPath: o.Settings, sysZone: o.Zone,
+		lens: "priorities", by: [nViews]string{vServers: "host", vActions: "fix"}, flt: map[string]bool{}, nodes: map[string]*nodeDetail{}, pending: map[string]string{}, opened: map[string]bool{}}
 	m.applyZone()
+	m.theme = o.Theme
+	m.applyTheme()
 	if o.Lang != "" && (o.Lang == "en" || m.t.ui[o.Lang] != nil) {
 		m.t.lang = o.Lang
-	}
-	if o.Org == "" {
-		m.view = vOrgs
 	}
 	return m
 }
@@ -222,6 +255,7 @@ func (m *Model) onDB(d dbResp) tea.Cmd {
 	case was && !d.Updating && d.Error != "":
 		m.err = m.t.T("DB update failed") + ": " + d.Error
 	case was && !d.Updating:
+		m.dbSize = nil // what is still needed: asked again
 		m.say(m.t.T("Vulnerability DBs updated"))
 		m.runKey = "" // the current state is rebuilt with them on the next look
 		return m.refresh()
@@ -265,47 +299,77 @@ func (m *Model) tick() tea.Cmd {
 }
 
 func (m *Model) Init() tea.Cmd {
-	return tea.Batch(m.fetchI18n(), m.refresh(), m.tick())
+	return tea.Batch(m.fetchI18n(), m.refresh(), m.tick(), m.mouseCmd())
 }
 
 func (m *Model) say(s string) { m.toast, m.toastAt = s, m.now() }
 
 // --- update -------------------------------------------------------------------------------------------------------
 
+// Update: the message, then whatever the screen now needs fetched.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	cmd := m.update(msg)
+	if c := m.sync(); c != nil {
+		cmd = tea.Batch(cmd, c)
+	}
+	return m, cmd
+}
+
+func (m *Model) update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
 	case i18nMsg:
 		m.t.catalog = msg.Messages
 	case orgsMsg:
-		return m, m.onOrgs(orgsResp(msg))
+		return m.onOrgs(orgsResp(msg))
 	case envMsg:
 		if msg.org != m.org || msg.env != m.env {
-			return m, nil // an answer for a selection left meanwhile
+			return nil // an answer for a selection left meanwhile
 		}
-		return m, m.onEnv(msg.d)
+		return m.onEnv(msg.d)
 	case runMsg:
 		if msg.key == m.wantKey() {
 			m.rund, m.runKey, m.err = msg.d, msg.key, ""
 		}
 	case dbMsg:
-		return m, m.onDB(dbResp(msg))
+		return m.onDB(dbResp(msg))
 	case jobsMsg:
 		was := m.busy()
 		m.jobs, m.scanOK = jobsResp(msg), msg.Enabled
 		if m.open == "" && len(m.jobs.Jobs) > 0 {
 			m.open = m.jobs.Jobs[0].ID
 		}
+		m.autoSetup()
 		if was && !m.busy() {
-			return m, m.refresh() // a scan just ended: its results
+			return m.refresh() // a scan just ended: its results
 		}
+	case treeMsg:
+		m.onTree(msg)
+	case lensMsg:
+		m.onLens(msg)
+	case nodeMsg:
+		delete(m.pending, msg.key)
+		if strings.HasPrefix(msg.key, m.treeKey+"#") {
+			m.nodes[msg.key] = msg.d
+		}
+	case jumpTreeMsg:
+		if m.menu != nil && m.menu.kind == "jump" {
+			m.menu.trees[msg.by] = msg.d
+		}
+	case setupMsg, foundMsg, parsedMsg, parseDueMsg, hostsMsg, checkedMsg, dbSizeMsg, spinMsg, dlStartedMsg:
+		return m.setupUpdate(msg)
 	case tickMsg:
-		return m, tea.Batch(m.refresh(), m.tick())
+		return tea.Batch(m.refresh(), m.tick())
 	case errMsg:
 		m.err = msg.err.Error()
+		if m.setup != nil {
+			m.setup.busy = false
+		}
 	case toastMsg:
 		m.say(string(msg))
+	case copyMsg:
+		m.copyText(msg)
 	case optsMsg:
 		m.form = newForm(m.org, m.env, scanOptions(msg))
 	case runInfoMsg:
@@ -313,13 +377,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.runInfo.meta, m.runInfo.log = msg.meta, msg.log
 		}
 	case startedMsg:
+		if w := m.setup; w != nil && w.step == 2 { // the first scan: its output in the setup
+			w.step, w.job, w.busy, w.off = 3, msg.id, false, 0
+			return m.fetchJobs()
+		}
 		m.form, m.open, m.view = nil, msg.id, vScans
 		m.say(m.t.T("Scan started"))
-		return m, m.fetchJobs()
+		return m.fetchJobs()
 	case tea.KeyMsg:
-		return m.key(msg)
+		_, cmd := m.key(msg)
+		return cmd
+	case tea.MouseMsg:
+		return m.mouse(msg)
 	}
-	return m, nil
+	return nil
 }
 
 func (m *Model) onOrgs(o orgsResp) tea.Cmd {
@@ -336,10 +407,28 @@ func (m *Model) onOrgs(o orgsResp) tea.Cmd {
 			m.env = o.Envs[0].Env
 		}
 	}
+	m.autoSetup()
 	if m.envd.Runs == nil {
 		return m.fetchEnv()
 	}
 	return nil
+}
+
+// autoSetup: no organization yet, and one can be set up here: the setup, once (esc leaves it, N brings it back).
+func (m *Model) autoSetup() {
+	if m.loaded && len(m.orgs.Orgs) == 0 && m.scanOK && m.setup == nil && !m.setupSeen {
+		m.setupSeen = true
+		m.setup = m.newWizard()
+	}
+}
+
+// newOrg: the setup of a new organization (where it writes org files: as scans, not on a read-only dashboard).
+func (m *Model) newOrg() {
+	if !m.scanOK {
+		m.say(m.t.T("Scans can't be started here (read-only)"))
+		return
+	}
+	m.setup = m.newWizard()
 }
 
 func (m *Model) orgRow() *orgRow {
@@ -390,7 +479,8 @@ func (m *Model) selectEnv(org, env string) tea.Cmd {
 	}
 	m.org, m.env, m.run = org, env, ""
 	m.envd, m.rund, m.runKey = envResp{}, nil, ""
-	m.sel = map[string]bool{}
+	m.tree, m.treeKey, m.nodes, m.pending = nil, "", map[string]*nodeDetail{}, map[string]string{}
+	m.sel, m.opened, m.curID, m.full = map[string]bool{}, map[string]bool{}, "", false
 	m.cur, m.off = [nViews]int{}, [nViews]int{}
 	return m.fetchEnv()
 }
@@ -417,7 +507,8 @@ var latin = func() map[rune]rune {
 }()
 
 func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if !m.typing && k.Type == tea.KeyRunes && len(k.Runes) == 1 {
+	texting := m.typing || m.setup != nil && m.setup.texting() || m.menu != nil && m.menu.kind != "filters"
+	if !texting && k.Type == tea.KeyRunes && len(k.Runes) == 1 {
 		if r, ok := latin[k.Runes[0]]; ok {
 			k.Runes = []rune{r}
 		}
@@ -426,12 +517,17 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if s == "ctrl+c" {
 		return m, tea.Quit
 	}
+	if m.setup != nil {
+		return m, m.setupKey(k)
+	}
 	if m.form != nil {
 		return m, m.formKey(s)
 	}
+	if m.menu != nil {
+		return m, m.menuKey(k)
+	}
 	if m.panels != nil {
-		m.panelsKey(s)
-		return m, nil
+		return m, m.panelsKey(s)
 	}
 	if m.langs != nil {
 		m.langKey(s)
@@ -459,7 +555,7 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.cur[m.view], m.off[m.view] = 0, 0
 		return m, nil
 	}
-	if m.host != "" && m.view == vHosts && !m.typing && m.form == nil && m.panels == nil && !m.help {
+	if m.host != "" && m.view == vServers && !m.help {
 		switch s {
 		case "up", "k":
 			m.hostOff = max(m.hostOff-1, 0)
@@ -495,24 +591,46 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
+	if m.isTree() && m.host == "" {
+		if cmd, ok := m.todoKey(s); ok {
+			return m, cmd
+		}
+	}
 	switch s {
 	case "q":
 		return m, tea.Quit
 	case "?":
 		m.help = true
 	case "tab", "right", "l":
-		m.setView((m.view + 1) % nViews)
+		m.goPlace(1)
 	case "shift+tab", "left", "h":
-		m.setView((m.view + nViews - 1) % nViews)
-	case "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "S":
-		m.setView(view(slices.Index(viewHotkeys[:], s)))
+		m.goPlace(-1)
+	case "1", "2", "3":
+		m.toPlace(places[s[0]-'1'])
+	case "S":
+		m.setView(vScans)
+	case "w":
+		if place(m.view) == vServers {
+			m.nextLens()
+		}
 	case "r", "ctrl+r":
-		m.runKey = "" // reload the run too
+		m.runKey, m.treeKey = "", "" // reload the run and the tree too
+		m.lensNone, m.lensFail = false, ""
+		m.nodes, m.pending = map[string]*nodeDetail{}, map[string]string{}
 		return m, m.refresh()
 	case "L":
 		m.langs = &panelsDlg{cur: max(slices.Index(m.languages(), m.t.lang), 0)}
 	case "o":
 		m.panels = &panelsDlg{cur: 1}
+	case "O":
+		m.menu = m.newMenu("orgs")
+	case "E":
+		m.menu = m.newMenu("envs")
+	case ":", "ctrl+k":
+		m.menu = m.newMenu("jump")
+		return m, m.fetchJumpTrees()
+	case "N":
+		m.newOrg()
 	case "z":
 		m.toggleZone()
 	case "U":
@@ -520,7 +638,10 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "/":
 		m.typing = true
 	case "esc":
-		m.filter, m.detail = "", false
+		if m.filter == "" && (m.view == vScans || m.view == vChanges) { // back to History
+			m.setView(vRuns)
+		}
+		m.filter = ""
 	case "s":
 		return m, m.openForm()
 	case "up", "k":
@@ -542,7 +663,7 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) setView(v view) {
-	m.view, m.filter, m.detail = v, "", false
+	m.view, m.filter, m.full = v, "", false
 	m.host, m.hostOff, m.runInfo = "", 0, nil
 }
 
@@ -584,6 +705,12 @@ func (m *Model) move(d int) {
 	n := m.rows()
 	c := min(max(m.cur[m.view]+d, 0), max(n-1, 0))
 	m.cur[m.view] = c
+	if m.isTree() {
+		if rows := m.treeRows(); c < len(rows) {
+			m.curID = rows[c].n.ID
+		}
+		m.cmdCur, m.detOff = 0, 0
+	}
 }
 
 func (m *Model) page() int { return max(m.bodyHeight()-2, 1) }
@@ -591,12 +718,8 @@ func (m *Model) page() int { return max(m.bodyHeight()-2, 1) }
 // rows: how many rows the current view lists.
 func (m *Model) rows() int {
 	switch m.view {
-	case vOrgs:
-		return len(m.envList())
-	case vActions:
-		return len(m.actions())
-	case vHosts:
-		return len(m.hostList())
+	case vServers, vActions:
+		return len(m.treeRows())
 	case vPackages:
 		return len(m.packages())
 	case vChanges:
@@ -613,54 +736,20 @@ func (m *Model) rows() int {
 		return len(m.runList())
 	case vScans:
 		return len(m.jobs.Jobs)
+	case vLens:
+		if m.lensData != nil {
+			return len(m.lensData.Rows)
+		}
 	}
 	return 0
 }
 
 func (m *Model) viewKey(s string) tea.Cmd {
 	switch m.view {
-	case vOrgs:
-		if s == "enter" {
-			if l := m.envList(); m.cur[vOrgs] < len(l) {
-				e := l[m.cur[vOrgs]]
-				cmd := m.selectEnv(e.org, e.env)
-				m.view = vActions
-				return cmd
-			}
-		}
-	case vActions:
-		list := m.actions()
-		switch s {
-		case " ", "space":
-			if c := m.cur[vActions]; c < len(list) {
-				id := list[c].ID
-				m.sel[id] = !m.sel[id]
-				if !m.sel[id] {
-					delete(m.sel, id)
-				}
-				m.move(1)
-			}
-		case "a":
-			all := len(list) > 0 && !slices.ContainsFunc(list, func(a action) bool { return !m.sel[a.ID] })
-			for _, a := range list {
-				if all {
-					delete(m.sel, a.ID)
-				} else {
-					m.sel[a.ID] = true
-				}
-			}
-		case "p":
-			m.toggleP4()
-		case "v":
-			m.onlySel = !m.onlySel
-			m.cur[vActions], m.off[vActions] = 0, 0
-			if m.onlySel && len(m.sel) == 0 {
-				m.say(m.t.T("Nothing selected yet: space selects an action"))
-			}
-		case "enter":
-			m.detail = !m.detail
-		case "y":
-			return m.copyPrompt(list)
+	case vServers, vActions:
+		if s == "enter" && m.run == "" && m.org != "" { // no runs yet: check the access, then the first scan
+			m.setup = m.checkWizard(m.org, m.env)
+			return m.fetchHosts()
 		}
 	case vAccess, vNetwork, vHealth:
 		var hosts []string
@@ -675,28 +764,25 @@ func (m *Model) viewKey(s string) tea.Cmd {
 		switch s {
 		case "enter": // the host's card
 			if c := m.cur[m.view]; c < len(hosts) {
-				m.view, m.host, m.hostOff, m.filter = vHosts, hosts[c], 0, ""
+				m.view, m.host, m.hostOff, m.filter = vServers, hosts[c], 0, ""
 			}
 		case "f":
 			if m.view == vNetwork {
 				m.outsideOnly = !m.outsideOnly
 			}
 		}
-	case vHosts:
-		switch s {
-		case "p":
-			m.toggleP4()
-		case "enter":
-			if l := m.hostList(); m.cur[vHosts] < len(l) {
-				m.host, m.hostOff = l[m.cur[vHosts]].name, 0
-			}
-		}
 	case vPackages:
 		if s == "p" {
 			m.toggleP4()
 		}
+	case vLens:
+		if c := m.cur[vLens]; s == "enter" && m.lensData != nil && c < len(m.lensData.Rows) { // the host's card
+			m.view, m.host, m.hostOff = vServers, m.lensData.Rows[c].Host, 0
+		}
 	case vRuns:
 		switch s {
+		case "n": // what changed
+			m.setView(vChanges)
 		case "i":
 			if l := m.runList(); m.cur[vRuns] < len(l) {
 				return m.openRunInfo(l[m.cur[vRuns]].RunID)
@@ -745,35 +831,7 @@ func (m *Model) post(path string, body any, ok func(any) tea.Msg) tea.Cmd {
 	}
 }
 
-// copyPrompt: the agent task for the selected actions (or the one under the cursor) to the terminal clipboard.
-func (m *Model) copyPrompt(list []action) tea.Cmd {
-	ids := make([]string, 0, len(m.sel))
-	for id := range m.sel {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	if len(ids) == 0 && m.cur[vActions] < len(list) {
-		ids = []string{list[m.cur[vActions]].ID}
-	}
-	if len(ids) == 0 || m.run == "" {
-		return nil
-	}
-	if m.clip == nil {
-		m.say(m.t.T("This terminal session can't copy"))
-		return nil
-	}
-	q := fmt.Sprintf("/api/prompt?org=%s&env=%s&run=%s&lang=%s&ids=%s", url.QueryEscape(m.org), url.QueryEscape(m.env),
-		url.QueryEscape(m.run), url.QueryEscape(m.t.lang), url.QueryEscape(strings.Join(ids, ",")))
-	clip, n, done := m.clip, len(ids), m.t.T("Task copied to the clipboard")
-	var out struct {
-		Text string `json:"text"`
-	}
-	return m.get(q, func(any) tea.Msg {
-		// OSC 52: the terminal puts it on the clipboard (also over SSH)
-		_, _ = fmt.Fprintf(clip, "\x1b]52;c;%s\a", base64.StdEncoding.EncodeToString([]byte(out.Text)))
-		return toastMsg(fmt.Sprintf("%s (%d)", done, n))
-	}, &out)
-}
+func b64(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) }
 
 func (m *Model) openForm() tea.Cmd {
 	if !m.scanOK {
@@ -850,28 +908,36 @@ func (m *Model) saveSettings() {
 // zoneNames: the time zone setting as the panel settings show it.
 var zoneNames = map[bool]string{false: "system", true: "UTC"}
 
-var headerNames = map[string]string{headerAuto: "auto", headerFull: "six lines", headerCompact: "one line", headerOff: "hidden"}
-
 // panelItems: the settings dialog's lines (value of a column item: its title, the setting key).
 func (m *Model) panelItems() []formItem {
 	zone := zoneNames[m.set.UTC]
 	items := []formItem{{kind: itemHead, label: "Layout"},
-		{kind: itemChoice, label: "header", value: headerNames[m.set.Header]},
 		{kind: itemFlag, label: "view tabs", value: "tabs", on: !m.set.NoTabs},
 		{kind: itemFlag, label: "show P4 too", value: "p4", on: m.set.ShowP4},
+		{kind: itemFlag, label: "mouse (shift+drag still selects text)", value: "mouse", on: !m.set.NoMouse},
 		{kind: itemChoice, label: "time zone", value: zone},
+		{kind: itemChoice, label: "theme", value: themeNames[m.set.Theme]},
 		{kind: itemHead, label: "Columns"}}
-	for _, c := range viewCols[m.view] {
-		if c.drop > 0 {
+	cols := viewCols[m.view]
+	if m.isTree() {
+		cols = m.treeCols()
+	}
+	for _, c := range cols {
+		if c.drop > 0 && c.title != "" {
 			items = append(items, formItem{kind: itemColumn, label: c.title, on: !m.set.hidden(m.view, c.key())})
 		}
 	}
 	return items
 }
 
-func (m *Model) panelsKey(s string) {
+func (m *Model) panelsKey(s string) tea.Cmd {
 	items := m.panelItems()
 	d := m.panels
+	if len(items) == 0 {
+		m.panels = nil
+		return nil
+	}
+	d.cur = min(max(d.cur, 0), len(items)-1) // the list may have changed under it
 	step := func(dir int) {
 		for i := d.cur + dir; i >= 0 && i < len(items); i += dir {
 			if items[i].kind != itemHead {
@@ -891,19 +957,22 @@ func (m *Model) panelsKey(s string) {
 		it := items[d.cur]
 		switch it.kind {
 		case itemChoice:
-			if it.label == "time zone" {
-				m.toggleZone()
-				return
+			if it.label == "theme" {
+				m.set.Theme = themes[(slices.Index(themes, m.set.Theme)+1)%len(themes)]
+				m.applyTheme()
+				break
 			}
-			dir := 1
-			if s == "left" || s == "h" {
-				dir = len(headerModes) - 1
-			}
-			m.set.Header = headerModes[(slices.Index(headerModes, m.set.Header)+dir)%len(headerModes)]
+			m.toggleZone()
+			return nil
 		case itemFlag:
-			if it.value == "tabs" {
+			switch it.value {
+			case "tabs":
 				m.set.NoTabs = !m.set.NoTabs
-			} else {
+			case "mouse":
+				m.set.NoMouse = !m.set.NoMouse
+				m.saveSettings()
+				return m.mouseCmd()
+			default:
 				m.set.ShowP4 = !m.set.ShowP4
 				m.move(0)
 			}
@@ -912,6 +981,7 @@ func (m *Model) panelsKey(s string) {
 		}
 		m.saveSettings()
 	}
+	return nil
 }
 
 // --- scan form ----------------------------------------------------------------------------------------------------
@@ -987,24 +1057,6 @@ func (f *scanForm) request() scanRequest {
 
 // --- lists of the views ---------------------------------------------------------------------------------------------
 
-type envItem struct {
-	org, name, env string
-	e              envRow
-}
-
-func (m *Model) envList() []envItem {
-	var out []envItem
-	for _, o := range m.orgs.Orgs {
-		for _, e := range o.Envs {
-			it := envItem{o.ID, o.Name, e.Env, e}
-			if m.match(o.ID, o.Name, e.Env) {
-				out = append(out, it)
-			}
-		}
-	}
-	return out
-}
-
 func (m *Model) match(fields ...string) bool {
 	if m.filter == "" {
 		return true
@@ -1016,54 +1068,6 @@ func (m *Model) match(fields ...string) bool {
 		}
 	}
 	return false
-}
-
-func (m *Model) actions() []action {
-	if m.rund == nil {
-		return nil
-	}
-	var out []action
-	for _, a := range m.rund.Actions {
-		if m.onlySel && !m.sel[a.ID] {
-			continue
-		}
-		if !m.set.ShowP4 && !m.onlySel && (a.Priority == "P4" || a.Priority == "") {
-			continue
-		}
-		if m.match(append([]string{m.t.title(a), a.Detail, a.Cat, a.Priority}, a.Hosts...)...) {
-			out = append(out, a)
-		}
-	}
-	return out
-}
-
-type hostItem struct {
-	name   string
-	os     string
-	counts map[string]int
-}
-
-func (m *Model) hostList() []hostItem {
-	if m.rund == nil {
-		return nil
-	}
-	var out []hostItem
-	for name, c := range m.rund.Hosts {
-		os := m.rund.Facts[name].OS
-		if m.match(name, os) {
-			out = append(out, hostItem{name, os, c})
-		}
-	}
-	sort.Slice(out, func(i, j int) bool {
-		a, b := out[i].counts, out[j].counts
-		for _, p := range []string{"P1", "P2", "P3", "P4"} {
-			if a[p] != b[p] {
-				return a[p] > b[p]
-			}
-		}
-		return out[i].name < out[j].name
-	})
-	return out
 }
 
 func (m *Model) packages() []planRow {

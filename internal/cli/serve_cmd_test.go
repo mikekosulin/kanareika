@@ -3,9 +3,14 @@ package cli
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
+	"net"
+	"net/http/httptest"
+	"os"
 	"slices"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/mikekosulin/kanareika/internal/config"
@@ -36,6 +41,83 @@ func TestServe(t *testing.T) {
 	}
 	if code, _, _ := cli(t, "web", "extra"); code != 1 {
 		t.Fatal("arguments are refused")
+	}
+}
+
+// TestServeNoScans: --no-scans is read-only for the vulnerability DB too: no update, no size lookup.
+func TestServeNoScans(t *testing.T) {
+	sandbox(t)
+	fixtureOrg(t)
+	oldServe := serveFunc
+	t.Cleanup(func() { serveFunc = oldServe })
+	var srv *server.Server
+	serveFunc = func(_ context.Context, s *server.Server, _ string, _ int, _ io.Writer) error { srv = s; return nil }
+	get := func(method, path string) (int, string) {
+		r := httptest.NewRequest(method, path, nil)
+		r.Host = "127.0.0.1:8088"
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		return w.Code, w.Body.String()
+	}
+	if code, _, errs := cli(t, "web", "--no-scans"); code != 0 {
+		t.Fatal(code, errs)
+	}
+	if c, _ := get("GET", "/api/db/size"); c != 403 {
+		t.Errorf("size lookup: %d, want 403", c)
+	}
+	if _, body := get("GET", "/api/db"); !strings.Contains(body, `"enabled":false`) {
+		t.Errorf("/api/db: %s", body)
+	}
+	if code, _, errs := cli(t, "web"); code != 0 {
+		t.Fatal(code, errs)
+	}
+	if _, body := get("GET", "/api/db"); !strings.Contains(body, `"enabled":true`) {
+		t.Errorf("without --no-scans, updates are on: %s", body)
+	}
+}
+
+// TestServeEnvAndPort:KANAREIKA_HOST / KANAREIKA_PORT give the defaults, flags win over them, bad ports are
+// refused before listening, and a busy port says what to do.
+func TestServeEnvAndPort(t *testing.T) {
+	sandbox(t)
+	fixtureOrg(t)
+	oldServe := serveFunc
+	t.Cleanup(func() { serveFunc = oldServe })
+	var host string
+	var port int
+	var fail error
+	serveFunc = func(_ context.Context, _ *server.Server, h string, p int, _ io.Writer) error {
+		host, port = h, p
+		return fail
+	}
+	t.Setenv("KANAREIKA_HOST", "::1")
+	t.Setenv("KANAREIKA_PORT", "9123")
+	if code, _, errs := cli(t, "web"); code != 0 || host != "::1" || port != 9123 {
+		t.Fatal(code, host, port, errs)
+	}
+	if code, _, _ := cli(t, "web", "--port", "0", "--host", "127.0.0.1"); code != 0 || host != "127.0.0.1" || port != 0 {
+		t.Fatal("flags win over the environment:", code, host, port)
+	}
+	t.Setenv("KANAREIKA_PORT", "http")
+	if code, _, errs := cli(t, "web"); code != 1 || !strings.Contains(errs, "KANAREIKA_PORT") {
+		t.Fatal(code, errs)
+	}
+	t.Setenv("KANAREIKA_PORT", "")
+	if code, _, errs := cli(t, "web", "--port", "70000"); code != 1 || !strings.Contains(errs, "0-65535") {
+		t.Fatal(code, errs)
+	}
+	fail = &net.OpError{Op: "listen", Net: "tcp", Err: os.NewSyscallError("bind", syscall.EADDRINUSE)}
+	if code, _, errs := cli(t, "web", "--port", "8791"); code != 1 || !strings.Contains(errs, "port 8791 is busy") ||
+		!strings.Contains(errs, "--port 0") {
+		t.Fatal(code, errs)
+	}
+	fail = errors.New("listen tcp: Only one usage of each socket address (protocol/network address/port) is normally permitted.")
+	if code, _, errs := cli(t, "web"); code != 1 || !strings.Contains(errs, "is busy") {
+		t.Fatal("the Windows wording too:", code, errs)
+	}
+	fail = errors.New("listen tcp: permission denied")
+	if code, _, errs := cli(t, "web"); code != 1 || strings.Contains(errs, "is busy") {
+		t.Fatal("other errors pass through:", code, errs)
 	}
 }
 

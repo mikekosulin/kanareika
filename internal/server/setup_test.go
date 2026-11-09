@@ -1,0 +1,172 @@
+package server
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/mikekosulin/kanareika/internal/config"
+	"github.com/mikekosulin/kanareika/internal/onboard"
+)
+
+type fakeRunner struct{}
+
+func (fakeRunner) Run(_ context.Context, h config.Host, _ string, _ time.Duration, _ bool) (string, error) {
+	if h.Name == "web-02" {
+		return "", errors.New("ssh: unable to authenticate")
+	}
+	return "Linux 6.1", nil
+}
+func (fakeRunner) Close() error { return nil }
+
+// TestSetupAddConcurrent: adds to one org at the same time all land in its file (each is a read-modify-write of it).
+func TestSetupAddConcurrent(t *testing.T) {
+	p := testHome(t)
+	f := &fakeScan{}
+	s, h := newTest(t, Options{Paths: p, Scan: f.run})
+	form := map[string]any{"id": "neworg", "name": "New Org", "user": "audit", "hosts": "web-01 192.0.2.11", "consent": "Ticket 7",
+		"confirmed": true}
+	if r := do(h, "POST", "/api/setup", form, s.postHdr()); r.code != 201 {
+		t.Fatal(r.code, r.body)
+	}
+	const n = 8
+	codes := make(chan int, n)
+	var wg sync.WaitGroup
+	for i := range n {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			codes <- do(h, "POST", "/api/setup/add", map[string]any{"org": "neworg", "hosts": fmt.Sprintf("admin@192.0.2.%d", 100+i)}, s.postHdr()).code
+		}()
+	}
+	wg.Wait()
+	close(codes)
+	for c := range codes {
+		if c != 200 {
+			t.Errorf("add: %d", c)
+		}
+	}
+	l, err := config.NewLoader(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	o, errs := l.LoadOrg(filepath.Join(p.Orgs, "neworg.yml"))
+	if len(errs) > 0 || len(o.Hosts) != n+1 {
+		t.Fatalf("%d hosts, want %d: %v", len(o.Hosts), n+1, errs)
+	}
+	ents, _ := os.ReadDir(p.Orgs)
+	for _, e := range ents {
+		if strings.HasSuffix(e.Name(), ".tmp") {
+			t.Errorf("left behind: %s", e.Name())
+		}
+	}
+}
+
+// TestSetup: the first-run form creates an org (refusing bad answers with a list, never overwriting), the access
+// check logs in to its hosts; both only where scans are allowed, with the CSRF header.
+func TestSetup(t *testing.T) {
+	p := testHome(t)
+	f := &fakeScan{}
+	s, h := newTest(t, Options{Paths: p, Scan: f.run})
+	oldConn, oldNow := newConn, setupNow
+	t.Cleanup(func() { newConn, setupNow = oldConn, oldNow })
+	newConn = func(*config.Org, config.Paths) (onboard.Runner, error) { return fakeRunner{}, nil }
+	setupNow = func() time.Time { return time.Date(2026, 11, 8, 0, 0, 0, 0, time.UTC) }
+	form := map[string]any{"id": "neworg", "name": "New Org", "user": "audit", "hosts": "web-01 192.0.2.11\nweb-02 192.0.2.12",
+		"consent": "Ticket 7", "confirmed": true}
+	if r := do(h, "POST", "/api/setup", form, map[string]string{"Content-Type": "application/json"}); r.code != 403 {
+		t.Fatal("no CSRF header:", r.code)
+	}
+	bad := map[string]any{"id": "Bad Id", "name": "", "user": "audit", "hosts": "", "consent": "", "confirmed": false}
+	r := do(h, "POST", "/api/setup", bad, s.postHdr())
+	var e struct{ Errors []string }
+	if r.code != 400 || json.Unmarshal([]byte(r.body), &e) != nil || len(e.Errors) < 4 {
+		t.Fatal(r.code, r.body)
+	}
+	if r := do(h, "POST", "/api/setup", map[string]any{"nope": 1}, s.postHdr()); r.code != 400 {
+		t.Fatal("unknown fields:", r.code)
+	}
+	r = do(h, "POST", "/api/setup", form, s.postHdr())
+	if r.code != 201 || !strings.Contains(r.body, `"org":"neworg"`) {
+		t.Fatal(r.code, r.body)
+	}
+	b, err := os.ReadFile(filepath.Join(p.Orgs, "neworg.yml"))
+	if err != nil || !strings.Contains(string(b), "signed: 2026-11-08") {
+		t.Fatal(err, string(b))
+	}
+	if r := do(h, "POST", "/api/setup", form, s.postHdr()); r.code != 409 {
+		t.Fatal("exists:", r.code)
+	}
+	if r := do(h, "GET", "/api/orgs", nil, nil); !strings.Contains(r.body, `"neworg"`) {
+		t.Fatal("the new org is listed right away:", r.body)
+	}
+	r = do(h, "POST", "/api/setup/check", map[string]string{"org": "neworg", "env": "production"}, s.postHdr())
+	var c struct{ Results []onboard.Result }
+	if r.code != 200 || json.Unmarshal([]byte(r.body), &c) != nil || len(c.Results) != 2 || !c.Results[0].OK || c.Results[1].OK ||
+		c.Results[1].Hint == "" {
+		t.Fatal(r.code, r.body)
+	}
+	if r := do(h, "POST", "/api/setup/check", map[string]string{"org": "neworg", "env": "nope"}, s.postHdr()); r.code != 404 {
+		t.Fatal(r.code)
+	}
+	// no way to log in at all: every host fails the same way, with the advice
+	newConn = func(*config.Org, config.Paths) (onboard.Runner, error) {
+		return nil, errors.New("neworg: no access.key and no ssh-agent (SSH_AUTH_SOCK)")
+	}
+	r = do(h, "POST", "/api/setup/check", map[string]string{"org": "neworg", "env": "production"}, s.postHdr())
+	if r.code != 200 || json.Unmarshal([]byte(r.body), &c) != nil || len(c.Results) != 2 || c.Results[0].OK ||
+		!strings.Contains(c.Results[0].Hint, "ssh-add") {
+		t.Fatal(r.code, r.body)
+	}
+	r = do(h, "POST", "/api/setup/parse", map[string]string{"text": "admin@192.0.2.40\nssh -p 2222 root@192.0.2.41\nbad host name x"}, s.postHdr())
+	var parsed struct {
+		Hosts  []onboard.Host
+		Errors []string
+	}
+	if r.code != 200 || json.Unmarshal([]byte(r.body), &parsed) != nil || len(parsed.Hosts) != 2 || len(parsed.Errors) != 1 ||
+		parsed.Hosts[1].Address != "192.0.2.41:2222" {
+		t.Fatal(r.code, r.body)
+	}
+	r = do(h, "POST", "/api/setup/add", map[string]any{"org": "neworg", "hosts": "admin@192.0.2.60"}, s.postHdr())
+	if r.code != 200 || !strings.Contains(r.body, `"added":["192-0-2-60"]`) {
+		t.Fatal(r.code, r.body)
+	}
+	if r := do(h, "POST", "/api/setup/add", map[string]any{"org": "neworg", "hosts": "admin@192.0.2.60"}, s.postHdr()); r.code != 400 {
+		t.Fatal("added twice:", r.code)
+	}
+	if r := do(h, "POST", "/api/setup/add", map[string]any{"org": "nope", "hosts": "192.0.2.1"}, s.postHdr()); r.code != 404 {
+		t.Fatal(r.code)
+	}
+	newConn = func(*config.Org, config.Paths) (onboard.Runner, error) { return fakeRunner{}, nil }
+	r = do(h, "POST", "/api/setup/check", map[string]any{"org": "neworg", "env": "production", "hosts": []string{"192-0-2-60"}}, s.postHdr())
+	if r.code != 200 || strings.Count(r.body, `"host"`) != 1 {
+		t.Fatal("only the new host is checked:", r.body)
+	}
+	oldDiscover := discover
+	t.Cleanup(func() { discover = oldDiscover })
+	discover = func() onboard.Found {
+		return onboard.Found{User: "me", Hosts: []onboard.SSHHost{{Alias: "nas", HostName: "192.0.2.40"}}}
+	}
+	if r := do(h, "GET", "/api/setup/discover", nil, nil); r.code != 200 || !strings.Contains(r.body, `"alias":"nas"`) {
+		t.Fatal(r.code, r.body)
+	}
+	// read-only dashboards neither write org files nor connect
+	ro, hro := newTest(t, Options{Paths: p})
+	for _, path := range []string{"/api/setup", "/api/setup/check"} {
+		if r := do(hro, "POST", path, map[string]any{}, ro.postHdr()); r.code != 403 {
+			t.Fatal(path, r.code)
+		}
+	}
+	if r := do(hro, "GET", "/api/setup/discover", nil, nil); r.code != 403 {
+		t.Fatal("discover on a read-only dashboard:", r.code)
+	}
+	_ = io.Discard
+}

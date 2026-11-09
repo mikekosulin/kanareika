@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mikekosulin/kanareika/internal/dbget"
+	"github.com/mikekosulin/kanareika/internal/dbsize"
 	"github.com/mikekosulin/kanareika/internal/priority"
 	"github.com/mikekosulin/kanareika/internal/trivy"
 )
@@ -28,6 +30,8 @@ type dbUpdater struct {
 	err      string
 	cancel   context.CancelFunc
 	done     chan struct{}
+	// progress of the running (or last) update, per download: what /api/db shows as "progress"
+	tracker *dbget.Tracker
 }
 
 type dbLines struct{ u *dbUpdater }
@@ -51,6 +55,8 @@ func (u *dbUpdater) start() bool {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	u.running, u.started, u.finished, u.out, u.err, u.cancel, u.done = true, u.now(), time.Time{}, nil, "", cancel, make(chan struct{})
+	u.tracker = dbget.NewTracker()
+	ctx = dbget.WithTracker(ctx, u.tracker)
 	go func() {
 		defer close(u.done)
 		err := u.fn(ctx, dbLines{u})
@@ -62,6 +68,21 @@ func (u *dbUpdater) start() bool {
 		}
 		cancel()
 	}()
+	return true
+}
+
+// wait: blocks while an update runs (false when none was running); ctx ends the wait, not the update.
+func (u *dbUpdater) wait(ctx context.Context) bool {
+	u.mu.Lock()
+	running, done := u.running, u.done
+	u.mu.Unlock()
+	if !running {
+		return false
+	}
+	select {
+	case <-done:
+	case <-ctx.Done():
+	}
 	return true
 }
 
@@ -94,14 +115,27 @@ func (s *Server) apiDB(w http.ResponseWriter, _ *http.Request) {
 		dbs = append(dbs, e)
 	}
 	feeds, _ := priority.LoadFeeds()
-	out := map[string]any{"dbs": dbs, "feeds_updated": feeds.Updated, "enabled": s.db != nil, "trivy": embeddedTrivy()}
+	// KEV / EPSS: missing, or older than a scan would accept without refreshing them
+	feedsOld := feeds.Updated == ""
+	if at, err := priority.FeedsTime(feeds.Updated); err == nil {
+		feedsOld = now.Sub(at) > priority.FeedsMaxAge
+	}
+	out := map[string]any{"dbs": dbs, "feeds_updated": feeds.Updated, "feeds_outdated": feedsOld, "enabled": s.db != nil,
+		"trivy": embeddedTrivy()}
 	if u := s.db; u != nil {
 		u.mu.Lock()
 		out["updating"], out["output"], out["error"] = u.running, append([]string{}, u.out...), u.err
 		if !u.finished.IsZero() {
 			out["finished"] = u.finished.UTC().Format(time.RFC3339)
 		}
+		t := u.tracker
 		u.mu.Unlock()
+		out["progress"] = nil
+		if t != nil {
+			if p := t.Snapshot(); len(p.Items) > 0 {
+				out["progress"] = p
+			}
+		}
 	}
 	sendJSON(w, http.StatusOK, out)
 }
@@ -116,4 +150,17 @@ func (s *Server) apiDBUpdate(w http.ResponseWriter, _ *http.Request) {
 	default:
 		sendJSON(w, http.StatusAccepted, map[string]any{"started": true})
 	}
+}
+
+// apiDBSize: what the next DB update downloads and how big it is (dbsize.Check): a page asks before downloading.
+func (s *Server) apiDBSize(w http.ResponseWriter, r *http.Request) {
+	if s.db == nil {
+		sendJSON(w, http.StatusForbidden, map[string]string{"error": "DB updates are off here (read-only)"})
+		return
+	}
+	pol := priority.Policy{}
+	if p, err := priority.LoadPolicy(s.paths); err == nil {
+		pol = *p
+	}
+	sendJSON(w, http.StatusOK, dbsize.Check(r.Context(), pol, time.Now(), false))
 }

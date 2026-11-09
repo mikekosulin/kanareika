@@ -592,3 +592,25 @@ func TestBuildViewEdgeCases(t *testing.T) {
 		t.Errorf("no changes: empty lists, not null: %+v %+v", v.New, v.Resolved)
 	}
 }
+
+// TestHistoryTableFixes: a 0.5 run shows fixes per priority (its totals), as the scan's last line does; a run from
+// before keeps its finding rows.
+func TestHistoryTableFixes(t *testing.T) {
+	p := config.PathsAt(t.TempDir())
+	env := EnvDir(p, "acme", "production")
+	writeText(t, filepath.Join(env, "2026-11-01_100000", "run.json"),
+		`{"run_id":"2026-11-01_100000","counts":{"P1":0,"P2":0,"P3":56,"P4":291,"accepted":0}}`)
+	writeText(t, filepath.Join(env, "2026-11-02_100000", "run.json"),
+		`{"run_id":"2026-11-02_100000","counts":{"P1":0,"P2":1,"P3":56,"P4":291,"accepted":0},"totals":{"fixes":37,"P1":0,"P2":1,"P3":11,"P4":25}}`)
+	h, err := HistoryTable(p, "acme", "production")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(h, "2026-11-01_100000         0     0     0     0    56   291") ||
+		!strings.Contains(h, "2026-11-02_100000         0     0     0     1    11    25") {
+		t.Fatalf("history:\n%s", h)
+	}
+	if l := (Totals{Fixes: 1, P1: 1, CVEs: 1, Hosts: 1}).Line(); !strings.HasSuffix(l, "; 1 unique CVE; 1 host with something to do") {
+		t.Error(l)
+	}
+}

@@ -61,6 +61,17 @@ func exposure(m map[string]any) int {
 	return 2
 }
 
+// imageOf: the image a resource runs, from its OS result's target ("registry/app:1.2 (ubuntu 22.04)"); "" when no
+// result names one (language results are "Java", "Python", ...).
+func imageOf(results []trivy.Result) string {
+	for _, r := range results {
+		if img, _, ok := strings.Cut(r.Target, " ("); ok && img != "" && strings.ContainsAny(img, ":/@") {
+			return img
+		}
+	}
+	return ""
+}
+
 // Args: the trivy command line for one cluster (the kubeconfig path resolved).
 func Args(cl map[string]any, kubeconfig string) []string {
 	args := []string{"k8s", "--kubeconfig", kubeconfig, "--scanners", "vuln", "--report", "all",
@@ -121,7 +132,8 @@ func Run(ctx *check.Ctx, cfg map[string]any, env string) ([]finding.Finding, err
 				}
 			}
 			base := finding.Finding{Org: ctx.Org.ID, Host: "k8s:" + name, Group: "k8s:" + name, Exposure: exposure(cl),
-				Module: "k8s", Target: res.field("Namespace", "") + "/" + res.field("Kind", "None") + "/" + res.field("Name", "None")}
+				Module: "k8s", Target: res.field("Namespace", "") + "/" + res.field("Kind", "None") + "/" + res.field("Name", "None"),
+				Image: imageOf(results)}
 			findings = append(findings, trivy.VulnFindings(&trivy.Report{Results: results}, base)...)
 		}
 		ctx.Log("k8s %s: %d resources", name, len(r.Resources))

@@ -282,9 +282,34 @@ func sinceGo(got []byte) []byte {
 			}
 		}
 	}
+	if hs, ok := m["hosts"].([]any); ok { // /api/env: the login user and port, added for the setup's access check
+		for _, h := range hs {
+			if h, ok := h.(map[string]any); ok {
+				delete(h, "user")
+				delete(h, "port")
+			}
+		}
+	}
+	dropTotals(m)
 	b, err := json.Marshal(m)
 	if err != nil {
 		return got
 	}
 	return b
+}
+
+// dropTotals removes "totals" at any depth (0.5: fixes to apply and unique CVEs in view.json, run.json and the run
+// lists; Python had no such key anywhere, and report.TestTotalsAgree checks the numbers).
+func dropTotals(v any) {
+	switch t := v.(type) {
+	case map[string]any:
+		delete(t, "totals")
+		for _, x := range t {
+			dropTotals(x)
+		}
+	case []any:
+		for _, x := range t {
+			dropTotals(x)
+		}
+	}
 }

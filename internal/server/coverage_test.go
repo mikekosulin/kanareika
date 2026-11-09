@@ -169,6 +169,28 @@ func TestViewCache(t *testing.T) {
 	}
 }
 
+// TestHistoryLeavesViewCache: History reads stored views directly: same answer the second time, and the views
+// people have open stay in the cache (only a run without a usable view.json is built, once, through it).
+func TestHistoryLeavesViewCache(t *testing.T) {
+	p, _ := fixtureHome(t)
+	s, h := newTest(t, Options{Paths: p})
+	// the first look builds the views of old runs once (and adds their totals to run.json)
+	if r := do(h, "GET", "/api/history?org=acme&env=production", nil, nil); r.code != 200 {
+		t.Fatal(r.code, r.body)
+	}
+	first := do(h, "GET", "/api/history?org=acme&env=production", nil, nil)
+	if first.code != 200 || !strings.Contains(first.body, `"new":2,"resolved":2`) {
+		t.Fatal(first.code, first.body)
+	}
+	s.views = nil // every run has its view.json now: History reads them without the cache
+	if r := do(h, "GET", "/api/history?org=acme&env=production", nil, nil); r.code != 200 || r.body != first.body {
+		t.Fatal("history changed:", r.body)
+	}
+	if len(s.views) != 0 {
+		t.Fatalf("History went through the view cache: %d views", len(s.views))
+	}
+}
+
 func TestViewErrors(t *testing.T) {
 	p, env := fixtureHome(t)
 	var logged bytes.Buffer
@@ -271,7 +293,8 @@ func (f globErrFS) Glob(string) ([]string, error) {
 }
 
 func TestPageAssetErrors(t *testing.T) {
-	web := fstest.MapFS{"index.html": {Data: []byte("<html>/*I18N_UI*/{}</html>")}, "logo.png": {Data: []byte("png")}}
+	page := &fstest.MapFile{Data: []byte("<html>/*I18N_UI*/{}</html>")}
+	web := fstest.MapFS{"index.html": page, "classic.html": page, "logo.png": {Data: []byte("png")}, "logo.webp": {Data: []byte("webp")}}
 	t.Cleanup(func() { webFS, localesFS = assets.Web, assets.Locales })
 	for _, c := range []struct {
 		name    string
@@ -279,8 +302,10 @@ func TestPageAssetErrors(t *testing.T) {
 		locales fs.FS
 		want    string
 	}{
-		{"no page", fstest.MapFS{"logo.png": web["logo.png"]}, assets.Locales(), "index.html"},
-		{"no logo", fstest.MapFS{"index.html": web["index.html"]}, assets.Locales(), "logo.png"},
+		{"no page", fstest.MapFS{"logo.png": web["logo.png"], "logo.webp": web["logo.webp"], "classic.html": page}, assets.Locales(), "index.html"},
+		{"no classic page", fstest.MapFS{"logo.png": web["logo.png"], "logo.webp": web["logo.webp"], "index.html": page}, assets.Locales(), "classic.html"},
+		{"no logo", fstest.MapFS{"index.html": page, "classic.html": page, "logo.webp": web["logo.webp"]}, assets.Locales(), "logo.png"},
+		{"no webp logo", fstest.MapFS{"index.html": page, "classic.html": page, "logo.png": web["logo.png"]}, assets.Locales(), "logo.webp"},
 		{"glob", web, globErrFS{glob: true}, "glob failed"},
 		{"read", web, globErrFS{}, "permission denied"},
 		{"bad json", web, fstest.MapFS{"en.json": {Data: []byte("{")}}, "locales/en.json"},

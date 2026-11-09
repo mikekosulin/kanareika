@@ -90,6 +90,7 @@ type Run struct {
 	Finished    any    `json:"finished"`
 	Counts      any    `json:"counts"`
 	PlanCounts  any    `json:"plan_counts"`
+	Totals      any    `json:"totals,omitempty"` // fixes to apply and unique CVEs (report.Totals); runs before 0.5 have none
 	HostsTotal  int    `json:"hosts_total"`
 	HostsFailed int    `json:"hosts_failed"`
 	Selection   any    `json:"selection"`
@@ -163,7 +164,7 @@ func (s *Store) Runs(org, env string) []Run {
 		failed, _ := meta["hosts_failed"].(map[string]any)
 		sel, _ := meta["selection"].(map[string]any)
 		out = append(out, Run{RunID: e.Name(), State: state, Started: src["started"], Finished: src["finished"],
-			Counts: counts, PlanCounts: meta["plan_counts"], HostsTotal: len(hl), HostsFailed: len(failed),
+			Counts: counts, PlanCounts: meta["plan_counts"], Totals: pyfmt.Or(meta["totals"], st["totals"]), HostsTotal: len(hl), HostsFailed: len(failed),
 			Selection: meta["selection"], Partial: pyfmt.Truthy(sel["hosts"]) || pyfmt.Truthy(sel["groups"]) || pyfmt.Truthy(sel["modules"])})
 	}
 	return out

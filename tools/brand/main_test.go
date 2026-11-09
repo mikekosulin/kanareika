@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html/template"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -12,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/mikekosulin/kanareika/internal/i18n"
+	"github.com/mikekosulin/kanareika/tools/internal/webp"
 )
 
 // fakeChrome: writes the picture Chrome was asked for and remembers what it was asked.
@@ -24,6 +26,9 @@ func fakeChrome(t *testing.T) *[][]string {
 		calls = append(calls, []string{bin, url, png, fmt.Sprintf("%dx%d", w, h)})
 		return os.WriteFile(png, []byte("png"), 0o644)
 	}
+	oldW := webp.Encode // no cwebp needed: the "WebP" is a copy
+	t.Cleanup(func() { webp.Encode = oldW })
+	webp.Encode = func(png, out string) error { return os.WriteFile(out, []byte("webp"), 0o644) }
 	return &calls
 }
 
@@ -36,7 +41,7 @@ func logo(t *testing.T) string {
 	return p
 }
 
-// TestRun: the social preview and a banner per language, each a page and a picture rendered from it.
+// TestRun: the social preview and a banner per language, dark and light, each a page and a picture rendered from it.
 func TestRun(t *testing.T) {
 	calls := fakeChrome(t)
 	out := filepath.Join(t.TempDir(), "brand")
@@ -45,10 +50,14 @@ func TestRun(t *testing.T) {
 	}
 	names := []string{"og"}
 	for _, l := range langs {
-		names = append(names, "banner-"+l.Code)
+		names = append(names, "banner-"+l.Code, "banner-"+l.Code+"-light")
 	}
 	for _, n := range names {
-		for _, ext := range []string{".html", ".png"} {
+		pic := ".webp" // the README's banners are WebP; the social preview stays PNG
+		if n == "og" {
+			pic = ".png"
+		}
+		for _, ext := range []string{".html", pic} {
 			if _, err := os.Stat(filepath.Join(out, n+ext)); err != nil {
 				t.Error(err)
 			}
@@ -83,10 +92,10 @@ func TestPictures(t *testing.T) {
 		}
 	}
 	for name, want := range map[string][]string{
-		"og":        {"What to patch first.", "Network", "■ 2 P1", "■ 3 P3", "■ 2 P4", "CVE-0000-90210", "stage-web-01"},
+		"og":        {"What to patch first.", "History", "■ 2 P1", "■ 3 P3", "■ 2 P4", "openssl 3.0.13 → 3.0.15", "kernel 5.14.0-427"},
 		"banner-en": {`lang="en"`, "What to patch first.", "ToDo"},
-		"banner-ru": {`lang="ru"`, "Начните с главного.", "Что делать", "Здоровье"},
-		"banner-zh": {`lang="zh"`, "从最重要的开始", "待办", "健康"},
+		"banner-ru": {`lang="ru"`, "Начните с главного.", "Что делать", "Серверы", "История"},
+		"banner-zh": {`lang="zh"`, "从最重要的开始", "待办", "服务器", "历史"},
 	} {
 		for _, w := range want {
 			if !strings.Contains(page[name], w) {
@@ -94,8 +103,27 @@ func TestPictures(t *testing.T) {
 			}
 		}
 	}
+	// the light banner: the same words on a light page; the dark ones and the preview stay dark
+	for _, l := range langs {
+		dark, light := page["banner-"+l.Code], page["banner-"+l.Code+"-light"]
+		if !strings.Contains(light, `<body class="light">`) || !strings.Contains(light, template.HTMLEscapeString(l.Accent)) {
+			t.Errorf("banner-%s-light: not light or not %s", l.Code, l.Code)
+		}
+		if strings.Contains(dark, `<body class="light">`) {
+			t.Errorf("banner-%s: light", l.Code)
+		}
+	}
+	if strings.Contains(page["og"], `class="light"`) {
+		t.Error("og: light")
+	}
 	if strings.Contains(page["banner-en"], "CVE-0000-90210") {
 		t.Error("banner shows more than its rows")
+	}
+	// the social preview is read at ~450px wide: few tabs, few rows, no CVE column
+	for _, w := range []string{"Network", "NTP drift", "CVE-0000-90017"} {
+		if strings.Contains(page["og"], w) {
+			t.Errorf("og shows more than it can at preview size: %q", w)
+		}
 	}
 }
 
@@ -218,7 +246,7 @@ func TestMain_(t *testing.T) {
 	out := t.TempDir()
 	os.Args = []string{"brand", "-out", out, "-logo", logo(t), "-pages", ".", "-chrome", "chrome"}
 	main()
-	if died != nil || len(*calls) != 1+len(langs) {
+	if died != nil || len(*calls) != 1+2*len(langs) {
 		t.Fatal(died, len(*calls))
 	}
 

@@ -71,9 +71,12 @@ type job struct {
 type jobs struct {
 	mu   sync.Mutex
 	scan ScanFunc
-	list []*job
-	wg   sync.WaitGroup
-	now  func() time.Time
+	// before: what a scan waits for first (a DB update started from the page: two trivy downloads at once break
+	// each other); nil: nothing
+	before func(ctx context.Context, out io.Writer)
+	list   []*job
+	wg     sync.WaitGroup
+	now    func() time.Time
 }
 
 // write: a job's output; complete lines are kept, the last maxLines of them.
@@ -156,6 +159,12 @@ func (js *jobs) run(ctx context.Context, o *config.Org, req ScanRequest, j *job)
 			code = 70
 		}
 	}()
+	if js.before != nil {
+		js.before(ctx, out)
+		if ctx.Err() != nil {
+			return 130
+		}
+	}
 	return js.scan(ctx, o, req, out)
 }
 

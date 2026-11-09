@@ -21,6 +21,7 @@ import (
 
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/finding"
+	"github.com/mikekosulin/kanareika/internal/i18n"
 	"github.com/mikekosulin/kanareika/internal/pyfmt"
 )
 
@@ -108,7 +109,30 @@ func LoadFindings(dir string) ([]finding.Finding, error) {
 	if err := json.NewDecoder(r).Decode(&out); err != nil {
 		return nil, fmt.Errorf("%s: %w", dir, err)
 	}
+	for i := range out {
+		upgradeDenied(&out[i])
+	}
 	return out, nil
+}
+
+// upgradeDenied: runs before 0.5 stored what a module could not read as raw keys in one text ("cannot read:
+// denied.shadow, denied.keys (needs root or sudo)"); they read in plain words now, as new runs write them.
+func upgradeDenied(f *finding.Finding) {
+	what, ok := f.Args["what"].(string)
+	if f.Msg != "health.limited" || !ok {
+		return
+	}
+	var keys []string
+	for _, k := range strings.Split(what, ", ") {
+		if strings.HasPrefix(k, "denied.") {
+			keys = append(keys, k)
+		}
+	}
+	if len(keys) == 0 {
+		return
+	}
+	t := i18n.Msg("denied.title", map[string]any{"what_keys": keys})
+	f.Title, f.Msg, f.Args = t.Text, t.Key, t.Args
 }
 
 func LoadMeta(dir string) (*Meta, error) {
@@ -197,6 +221,7 @@ func SaveRun(runDir string, meta *Meta, findings []finding.Finding) error {
 	}
 	view := BuildView(runDir, meta, findings, prev)
 	meta.PlanCounts = &view.PlanCounts
+	meta.Totals = &view.Totals
 	if err := writeMeta(runDir, meta); err != nil {
 		return err
 	}
@@ -270,7 +295,8 @@ func writeAtomic(path string, write func(io.Writer) error) error {
 	return err
 }
 
-// HistoryTable: the runs of an environment, one line each (CLI `history`).
+// HistoryTable: the runs of an environment, one line each (CLI `history`); P1–P4 are fixes (runs before 0.5:
+// finding rows).
 func HistoryTable(p config.Paths, org, env string) (string, error) {
 	rows := []string{"run                   hosts  fail   P1    P2    P3    P4  accepted  scope", strings.Repeat("-", 90)}
 	for _, r := range Runs(p, org, env) {
@@ -285,8 +311,14 @@ func HistoryTable(p config.Paths, org, env string) (string, error) {
 		}
 		row := fmt.Sprintf("%-20s %6d %5d ", m.RunID, m.HostsOK, m.HostsFailed.Len())
 		var ps []string
-		for _, pr := range Prios {
-			ps = append(ps, fmt.Sprintf("%5d", c[pr]))
+		if t := m.Totals; t != nil { // fixes per priority, as the scan's last line and every interface count them
+			for _, n := range []int{t.P1, t.P2, t.P3, t.P4} {
+				ps = append(ps, fmt.Sprintf("%5d", n))
+			}
+		} else { // a run from before 0.5: its finding rows, the only count it has
+			for _, pr := range Prios {
+				ps = append(ps, fmt.Sprintf("%5d", c[pr]))
+			}
 		}
 		rows = append(rows, row+strings.Join(ps, " ")+fmt.Sprintf(" %9d  %s", c["accepted"], pyfmt.Head(scope, 30)))
 	}
@@ -376,3 +408,54 @@ func Prune(p config.Paths, env string, keepFull, keepPartial int, dryRun bool) (
 }
 
 func exists(path string) bool { _, err := os.Stat(path); return err == nil }
+
+// PrevIndex: the env's current state (reports/<org>/<env>/current) by finding key, for the due date's clock
+// (priority.Prev). Findings saved before 0.5 have no first_seen: they get the date of the oldest kept run that
+// has them (and fix_since of the oldest that had an installable fix), so upgrading does not restart every clock.
+func PrevIndex(env string) (func(*finding.Finding) *finding.Finding, error) {
+	cur := filepath.Join(env, Current)
+	idx := map[Key]*finding.Finding{}
+	if exists(filepath.Join(cur, "findings.json.gz")) {
+		fs, err := LoadFindings(cur)
+		if err != nil {
+			return nil, err
+		}
+		for i := range fs {
+			idx[KeyOf(&fs[i])] = &fs[i]
+		}
+	}
+	missing := 0
+	for _, f := range idx {
+		if f.FirstSeen == "" {
+			missing++
+		}
+	}
+	if missing > 0 {
+		for _, run := range runDirs(env) { // oldest first
+			day := filepath.Base(run)
+			if len(day) < 10 {
+				continue
+			}
+			day = day[:10]
+			fs, err := LoadFindings(run)
+			if err != nil {
+				continue // a damaged old run: the clock starts later, nothing else depends on it
+			}
+			for i := range fs {
+				f := idx[KeyOf(&fs[i])]
+				if f == nil {
+					continue
+				}
+				if f.FirstSeen == "" || day < f.FirstSeen {
+					f.FirstSeen = day
+				}
+				installable := fs[i].FixState == finding.FixAvailable || fs[i].FixState == finding.FixReboot ||
+					(fs[i].FixState == "" && fs[i].Fixed != "")
+				if installable && (f.FixSince == "" || day < f.FixSince) {
+					f.FixSince = day
+				}
+			}
+		}
+	}
+	return func(f *finding.Finding) *finding.Finding { return idx[KeyOf(f)] }, nil
+}

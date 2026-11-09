@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -44,6 +45,9 @@ func workspace(p config.Paths) error {
 	return nil
 }
 
+// orgNow: the date `org new` puts in the consent; tests replace it.
+var orgNow = time.Now
+
 func (a *app) initCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "init [dir]",
@@ -71,7 +75,7 @@ leave this machine (and are git-ignored in the kanareika repository).`,
 			if p.Home != a.paths.Home {
 				home = " --home " + p.Home
 			}
-			fmt.Fprintf(out, "  kanareika%s org new <id>     # an org file to describe hosts, access and consent\n", home)
+			fmt.Fprintf(out, "  kanareika%s org new <ORG_ID> # an org file to describe hosts, access and consent\n", home)
 			fmt.Fprintf(out, "  kanareika%s db update        # vulnerability DBs and feeds\n", home)
 			return nil
 		},
@@ -89,8 +93,8 @@ func (a *app) orgCmd() *cobra.Command {
 
 func (a *app) orgNewCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "new <id>",
-		Short: "create orgs/<id>.yml from the template, and secrets/<id>/",
+		Use:   "new <ORG_ID>",
+		Short: "create orgs/<ORG_ID>.yml from the template, and secrets/<ORG_ID>/",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id := args[0]
@@ -102,6 +106,11 @@ func (a *app) orgNewCmd() *cobra.Command {
 			}
 			path := filepath.Join(a.paths.Orgs, id+".yml")
 			body := bytes.ReplaceAll(assets.OrgTemplate(), []byte(assets.OrgTemplateID), []byte(id))
+			// consent dated today for a year: the template's placeholder dates would expire on everyone at once
+			day := orgNow().UTC()
+			body = bytes.Replace(body, []byte("signed: "+assets.OrgTemplateSigned), []byte("signed: "+day.Format(time.DateOnly)), 1)
+			body = bytes.Replace(body, []byte("valid_until: "+assets.OrgTemplateUntil),
+				[]byte("valid_until: "+day.AddDate(1, 0, 0).Format(time.DateOnly)), 1)
 			f, err := openFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 			if errors.Is(err, fs.ErrExist) {
 				return fail(1, "%s already exists", path)

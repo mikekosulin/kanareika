@@ -381,13 +381,13 @@ func (m *Model) healthView(hosts []string, w, h int) []string {
 	}
 	pct := func(v float64) string {
 		s := fmt.Sprintf("%.0f%%", v)
-		switch {
+		switch { // only what needs attention is coloured
 		case v >= 95:
 			return sErr.Render(s)
 		case v >= 85:
 			return lipgloss.NewStyle().Foreground(cP["P3"]).Render(s)
 		}
-		return sText.Render(s)
+		return s
 	}
 	maxOf := func(l []any) map[string]any {
 		var best map[string]any
@@ -413,7 +413,7 @@ func (m *Model) healthView(hosts []string, w, h int) []string {
 	rows := make([][]string, 0, len(hosts))
 	for _, name := range hosts {
 		x := H[name]
-		disk, inode, mem, load, units, kern, journal, tz, tm := "—", "—", "—", "—", "", "", "", "", ""
+		disk, inode, mem, load, units, kern, journal, tz, tm := "", "", "", "", "", "", "", "", ""
 		disks := arr(x["disks"])
 		if disks == nil { // older runs: disk, used as a share
 			for _, d := range arr(x["disk"]) {
@@ -421,18 +421,22 @@ func (m *Model) healthView(hosts []string, w, h int) []string {
 			}
 		}
 		if d := maxOf(disks); d != nil {
-			disk = pct(num(d["use"])) + sMuted.Render(" "+str(d["mount"]))
+			disk = pct(num(d["use"])) + sDim.Render(" "+str(d["mount"]))
 		}
 		if d := maxOf(arr(x["inodes"])); d != nil {
 			inode = pct(num(d["use"]))
 		}
 		if mm := obj(x["mem"]); mm != nil && num(mm["total_mb"]) > 0 {
-			mem = sText.Render(m.t.F("{pct}% free", "pct", fmt.Sprintf("%.0f", 100*num(mm["available_mb"])/num(mm["total_mb"]))))
+			free := 100 * num(mm["available_mb"]) / num(mm["total_mb"])
+			mem = fmt.Sprintf("%.0f%%", free)
+			if free <= 10 {
+				mem = lipgloss.NewStyle().Foreground(cP["P3"]).Render(mem)
+			}
 		}
 		if ld := obj(x["load"]); ld != nil {
-			load = sText.Render(str(ld["load15"])) + sMuted.Render("/"+str(ld["cpus"]))
+			load = str(ld["load15"]) + sDim.Render("/"+str(ld["cpus"]))
 		} else if v, ok := x["load"].(float64); ok {
-			load = sText.Render(str(v))
+			load = str(v)
 		}
 		if u := arr(x["failed_units"]); len(u) > 0 {
 			units = lipgloss.NewStyle().Foreground(cP["P3"]).Render(fmt.Sprint(len(u)))
@@ -449,7 +453,7 @@ func (m *Model) healthView(hosts []string, w, h int) []string {
 		}
 		t := obj(x["time"])
 		if z := str(t["timezone"]); z != "" {
-			tz = sText.Render(z)
+			tz = z
 			if z != tzMain {
 				tz = lipgloss.NewStyle().Foreground(cP["P3"]).Render(z + "!")
 			}
@@ -468,7 +472,7 @@ func (m *Model) healthView(hosts []string, w, h int) []string {
 			case abs(num(t["offset_s"])) > 1 || abs(num(t["skew_s"])) > 2:
 				tm = lipgloss.NewStyle().Foreground(cP["P3"]).Render("! " + off)
 			default:
-				tm = sOK.Render("✓ ") + sMuted.Render(off)
+				tm = sMuted.Render(off)
 			}
 		} else if s := str(x["ntp_synced"]); s != "" {
 			tm = sMuted.Render(s)

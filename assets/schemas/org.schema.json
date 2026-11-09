@@ -141,6 +141,15 @@
         {"type": "object", "propertyNames": {"$ref": "#/$defs/slug"}, "additionalProperties": {"$ref": "#/$defs/targets"}}
       ]
     },
+    "due": {
+      "description": "how due dates are counted for this org (on top of policy/priority.yml); envs.<env> overrides it for one environment",
+      "allOf": [{"$ref": "#/$defs/due"}],
+      "properties": {
+        "sla_days": true, "start": true, "kev": true, "escalation": true, "after_exception": true,
+        "envs": {"type": "object", "propertyNames": {"$ref": "#/$defs/slug"}, "additionalProperties": {"$ref": "#/$defs/due"}}
+      },
+      "additionalProperties": false
+    },
     "exceptions": {
       "type": "array",
       "items": {
@@ -160,6 +169,16 @@
     }
   },
   "$defs": {
+    "due": {
+      "type": "object",
+      "properties": {
+        "sla_days": {"type": "object", "description": "priority -> days to fix", "propertyNames": {"pattern": "^P[1-9]$"}, "additionalProperties": {"type": "number", "minimum": 0}},
+        "start": {"enum": ["first_seen", "fix_available", "published", "scan"], "description": "what the SLA days count from (default first_seen)"},
+        "kev": {"enum": ["cisa", "off"], "description": "cisa: never later than CISA's KEV due date (default)"},
+        "escalation": {"enum": ["restart", "keep"], "description": "priority went up: restart = the new SLA from that day, never later than before (default)"},
+        "after_exception": {"enum": ["restart", "keep"], "description": "an accepted risk expired: restart = the clock starts again that day (default)"}
+      }
+    },
     "targets": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "slug": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
     "date": {"type": "string", "format": "date", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},

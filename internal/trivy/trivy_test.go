@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/mikekosulin/kanareika/internal/finding"
 )
@@ -72,10 +74,41 @@ func TestMatchesPython(t *testing.T) {
 			t.Fatalf("%s: %d findings, want %d", name, len(got), len(c.want))
 		}
 		for i := range got {
-			if !reflect.DeepEqual(got[i], c.want[i]) {
-				t.Errorf("%s: %+v\nwant %+v", name, got[i], c.want[i])
+			// the frozen fixture predates the advisory facts (TestAdvisoryFacts covers them)
+			g := got[i]
+			g.Published, g.CVSSScore, g.Description = "", nil, ""
+			if !reflect.DeepEqual(g, c.want[i]) {
+				t.Errorf("%s: %+v\nwant %+v", name, g, c.want[i])
 			}
 		}
+	}
+}
+
+// TestAdvisoryFacts: the publication date, the base score of the vector Classify reads, and the description,
+// whitespace collapsed and cut at maxDescription runes with an ellipsis.
+func TestAdvisoryFacts(t *testing.T) {
+	r := &Report{Results: []Result{{Target: "os", Vulnerabilities: []Vulnerability{
+		{VulnerabilityID: "CVE-0000-1", PublishedDate: "2024-03-11T15:15:00Z", Description: "Line one.\n\n  Line   two.",
+			CVSS: CVSS{Sources: []string{"ghsa", "nvd"}, Vectors: map[string]Vectors{
+				"ghsa": {V3Vector: "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H", V3Score: 7.8},
+				"nvd":  {V3Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", V3Score: 9.8}}}},
+		{VulnerabilityID: "CVE-0000-2", PublishedDate: "bad", Description: strings.Repeat("ü", 700),
+			CVSS: CVSS{Sources: []string{"x"}, Vectors: map[string]Vectors{"x": {V40Vector: "CVSS:4.0/AV:N", V40Score: 6.1}}}},
+		{VulnerabilityID: "CVE-0000-3", CVSS: CVSS{Sources: []string{"nvd"}, Vectors: map[string]Vectors{
+			"nvd": {V3Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}}}},
+		{VulnerabilityID: "CVE-0000-4"},
+	}}}}
+	fs := VulnFindings(r, finding.Finding{Target: "os"})
+	if fs[0].Published != "2024-03-11" || fs[0].CVSSScore == nil || *fs[0].CVSSScore != 9.8 ||
+		fs[0].Description != "Line one. Line two." {
+		t.Errorf("nvd first, date only, whitespace collapsed: %+v", fs[0])
+	}
+	if fs[1].Published != "bad"[:0] || fs[1].CVSSScore == nil || *fs[1].CVSSScore != 6.1 ||
+		utf8.RuneCountInString(fs[1].Description) != maxDescription || !strings.HasSuffix(fs[1].Description, "…") {
+		t.Errorf("CVSS 4 score, a short date is dropped, long text cut: %q %v", fs[1].Published, fs[1].CVSSScore)
+	}
+	if fs[2].CVSSScore != nil || fs[3].CVSSScore != nil || fs[3].Description != "" || fs[3].Published != "" {
+		t.Errorf("no score without one for the chosen vector, nothing invented: %+v %+v", fs[2], fs[3])
 	}
 }
 
@@ -100,6 +133,27 @@ func fake(t *testing.T, script string) {
 	p := filepath.Join(t.TempDir(), "trivy")
 	must(t, os.WriteFile(p, []byte("#!/bin/sh\n"+script), 0o755))
 	t.Setenv("KANAREIKA_TRIVY", p)
+}
+
+// TestNoTelemetry: every trivy process runs with telemetry and the version check off, whatever the subcommand.
+func TestNoTelemetry(t *testing.T) {
+	env := filepath.Join(t.TempDir(), "env")
+	fake(t, `env > `+env+`; while [ $# -gt 0 ]; do [ "$1" = --output ] && out=$2; shift; done; echo '{}' > "$out"`)
+	t.Setenv("TRIVY_DISABLE_TELEMETRY", "false") // a user's setting does not turn it back on
+	if _, err := Run(context.Background(), []string{"k8s", "x"}, filepath.Join(t.TempDir(), "o.json"), time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(env)
+	must(t, err)
+	got := map[string]string{}
+	for _, l := range strings.Split(string(b), "\n") {
+		if k, v, ok := strings.Cut(l, "="); ok {
+			got[k] = v // the last one wins, as in a process environment
+		}
+	}
+	if got["TRIVY_DISABLE_TELEMETRY"] != "true" || got["TRIVY_SKIP_VERSION_CHECK"] != "true" {
+		t.Fatalf("telemetry %q, version check %q", got["TRIVY_DISABLE_TELEMETRY"], got["TRIVY_SKIP_VERSION_CHECK"])
+	}
 }
 
 func TestRun(t *testing.T) {
@@ -156,6 +210,9 @@ func TestPrepare(t *testing.T) {
 echo "$repo" >> "$CALLS"; case $repo in ghcr.io/*) echo "FATAL stream error" >&2; exit 1;; esac; exit 0`)
 	var logs []string
 	logf := func(f string, a ...any) { logs = append(logs, f) }
+	// a Java DB downloaded before is refreshed; a missing one waits for a scan that needs it (TestJavaDBOnDemand)
+	must(t, os.MkdirAll(filepath.Join(os.Getenv("TRIVY_CACHE_DIR"), "java-db"), 0o755))
+	must(t, os.WriteFile(filepath.Join(os.Getenv("TRIVY_CACHE_DIR"), "java-db", "metadata.json"), []byte(`{"DownloadedAt":"2026-11-02T00:00:00Z"}`), 0o644))
 
 	must(t, Prepare(ctx, logf))
 	got, _ := os.ReadFile(calls)
@@ -192,8 +249,64 @@ echo "$repo" >> "$CALLS"; case $repo in ghcr.io/*) echo "FATAL stream error" >&2
 		must(t, os.WriteFile(filepath.Join(p, "metadata.json"), []byte(`{"UpdatedAt":"2026-11-01T19:08:08Z"}`), 0o644))
 	}
 	logs = nil
+	old := retryAfter
+	retryAfter = 0 // every attempt again (the memo is TestFailureMemo's)
+	t.Cleanup(func() { retryAfter = old })
 	must(t, Prepare(ctx, logf))
 	if len(logs) != 8 || !strings.HasPrefix(logs[3], "WARNING") || !strings.HasPrefix(logs[7], "WARNING") {
 		t.Fatal(logs)
+	}
+}
+
+// TestJavaDBOnDemand: Prepare leaves the missing Java DB alone; the first run that meets .jar files downloads it
+// once and runs again; runs without jars never need it.
+func TestJavaDBOnDemand(t *testing.T) {
+	ctx := context.Background()
+	cache := t.TempDir()
+	t.Setenv("TRIVY_CACHE_DIR", cache)
+	t.Setenv("TRIVY_DB_REPOSITORY", "")
+	t.Setenv("TRIVY_JAVA_DB_REPOSITORY", "")
+	calls := filepath.Join(t.TempDir(), "calls")
+	t.Setenv("CALLS", calls)
+	prepared.Store(false)
+	t.Cleanup(func() { prepared.Store(false) })
+	// download flags write the DB's metadata; a scan of "jars" fails like trivy without the Java DB
+	fake(t, `echo "$@" >> "$CALLS"
+for a in "$@"; do case $a in
+  --download-db-only) mkdir -p "$TRIVY_CACHE_DIR/db"; echo '{"UpdatedAt":"2026-11-01T00:00:00Z"}' > "$TRIVY_CACHE_DIR/db/metadata.json"; exit 0;;
+  --download-java-db-only) mkdir -p "$TRIVY_CACHE_DIR/java-db"; echo '{"DownloadedAt":"2026-11-01T00:00:00Z"}' > "$TRIVY_CACHE_DIR/java-db/metadata.json"; exit 0;;
+esac; done
+while [ $# -gt 0 ]; do case $1 in --output) out=$2;; jars) jars=1;; esac; shift; done
+if [ -n "$jars" ] && [ ! -f "$TRIVY_CACHE_DIR/java-db/metadata.json" ]; then echo "FATAL Unable to initialize the Java DB: '--skip-java-db-update' cannot be specified on the first run" >&2; exit 1; fi
+echo '{}' > "$out"`)
+	var logs []string
+	must(t, Prepare(ctx, func(f string, a ...any) { logs = append(logs, fmt.Sprintf(f, a...)) }))
+	if b, _ := os.ReadFile(calls); strings.Contains(string(b), "java") {
+		t.Fatalf("Prepare downloaded the Java DB:\n%s", b)
+	}
+	for _, d := range DBStatus() {
+		if d.Outdated(time.Now()) && d.Name == "java-db" {
+			t.Fatal("a missing on-demand DB counts as outdated")
+		}
+	}
+	out := filepath.Join(t.TempDir(), "o.json")
+	_, err := Run(ctx, []string{"fs", "nojars"}, out, time.Minute)
+	must(t, err)
+	if b, _ := os.ReadFile(calls); strings.Contains(string(b), "java-db-only") {
+		t.Fatal("a run without jars downloaded the Java DB")
+	}
+	_, err = Run(ctx, []string{"fs", "jars"}, out, time.Minute)
+	must(t, err)
+	b, _ := os.ReadFile(calls)
+	if n := strings.Count(string(b), "--download-java-db-only"); n != 1 {
+		t.Fatalf("Java DB downloads: %d\n%s", n, b)
+	}
+	if !strings.Contains(strings.Join(logs, "\n"), "found .jar files") {
+		t.Fatal(logs)
+	}
+	_, err = Run(ctx, []string{"fs", "jars"}, out, time.Minute)
+	must(t, err)
+	if b, _ := os.ReadFile(calls); strings.Count(string(b), "--download-java-db-only") != 1 {
+		t.Fatal("downloaded again")
 	}
 }

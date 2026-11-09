@@ -336,7 +336,7 @@ func RunReplay(t testing.TB, c *Replay, org *config.Org, setTrivy func(TrivyFunc
 		got, err := call(ctx, r, out)
 		want := c.Results[i]
 		if want.Error != nil || err != nil {
-			if want.Error == nil || err == nil || n.S(err.Error()) != *want.Error {
+			if want.Error == nil || err == nil || n.S(err.Error()) != UpgradeError(HostOf(r.Host), *want.Error) {
 				t.Errorf("%s[%d]: error %v, want %v", c.Name, i, err, strOr(want.Error))
 			}
 			continue
@@ -351,7 +351,14 @@ func RunReplay(t testing.TB, c *Replay, org *config.Org, setTrivy func(TrivyFunc
 		}
 		bad := 0
 		for j := range min(len(gotN), len(want.Findings)) {
-			if g, w := asJSON(t, gotN[j]), asJSON(t, want.Findings[j]); !reflect.DeepEqual(g, w) && bad < 5 {
+			g, w := asJSON(t, gotN[j]), asJSON(t, want.Findings[j])
+			if gm, ok := g.(map[string]any); ok {
+				if wm, ok := w.(map[string]any); ok {
+					UpgradeFinding(HostOf(r.Host), wm)
+					DropAdvisory(gm, wm)
+				}
+			}
+			if !reflect.DeepEqual(g, w) && bad < 5 {
 				bad++
 				gb, _ := json.Marshal(g)
 				wb, _ := json.Marshal(w)
@@ -369,7 +376,11 @@ func RunReplay(t testing.TB, c *Replay, org *config.Org, setTrivy func(TrivyFunc
 		}
 		return out
 	}
-	if g, w := norml(logs), norml(c.Logs); !slices.Equal(g, w) && !(len(g) == 0 && len(w) == 0) {
+	upgraded := make([]string, len(c.Logs))
+	for i, l := range c.Logs {
+		upgraded[i] = UpgradeLog(l)
+	}
+	if g, w := norml(logs), norml(upgraded); !slices.Equal(g, w) && !(len(g) == 0 && len(w) == 0) {
 		t.Errorf("%s: logs\n got %q\nwant %q", c.Name, g, w)
 	}
 	for i := range ssh.calls {

@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 
 	"github.com/mikekosulin/kanareika/tools/internal/chrome"
+	"github.com/mikekosulin/kanareika/tools/internal/webp"
 )
 
 // sources: the pages to fill in and the style they share. Read from files, not embedded: what goes into a binary
@@ -63,7 +64,7 @@ type lang struct {
 var langs = []lang{
 	{Code: "en", Tag: "Security audit of your servers over SSH.", Accent: "What to patch first.",
 		Sub: "agentless · read-only · TUI + web · MCP", DB: "db ok", Keys: "↑↓ move · space select · f fix plan · / search",
-		Tabs: []string{"ToDo", "Hosts", "Packages", "Access", "Network", "Health"},
+		Tabs: []string{"Servers", "ToDo", "History"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -77,7 +78,7 @@ var langs = []lang{
 		}},
 	{Code: "ru", Tag: "Аудит безопасности серверов по SSH.", Accent: "Начните с главного.",
 		Sub:  "без агента · только чтение · TUI + веб · MCP",
-		Tabs: []string{"Что делать", "Хосты", "Пакеты", "Доступ", "Сеть", "Здоровье"},
+		Tabs: []string{"Серверы", "Что делать", "История"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -87,7 +88,7 @@ var langs = []lang{
 		}},
 	{Code: "zh", Tag: "通过 SSH 审计服务器安全。", Accent: "从最重要的开始。",
 		Sub:  "无代理 · 只读 · TUI + Web · MCP",
-		Tabs: []string{"待办", "主机", "软件包", "访问", "网络", "健康"},
+		Tabs: []string{"服务器", "待办", "历史"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -97,7 +98,7 @@ var langs = []lang{
 		}},
 	{Code: "es", Tag: "Auditoría de seguridad de servidores por SSH.", Accent: "Empiece por lo importante.",
 		Sub:  "sin agente · solo lectura · TUI + web · MCP",
-		Tabs: []string{"Por hacer", "Hosts", "Paquetes", "Acceso", "Red", "Salud"},
+		Tabs: []string{"Servidores", "Por hacer", "Historial"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -107,7 +108,7 @@ var langs = []lang{
 		}},
 	{Code: "fr", Tag: "Audit de sécurité des serveurs via SSH.", Accent: "Commencez par l'essentiel.",
 		Sub:  "sans agent · lecture seule · TUI + web · MCP",
-		Tabs: []string{"À faire", "Hôtes", "Paquets", "Accès", "Réseau", "Santé"},
+		Tabs: []string{"Serveurs", "À faire", "Historique"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -117,7 +118,7 @@ var langs = []lang{
 		}},
 	{Code: "pt", Tag: "Auditoria de segurança de servidores via SSH.", Accent: "Comece pelo que importa.",
 		Sub:  "sem agente · somente leitura · TUI + web · MCP",
-		Tabs: []string{"A fazer", "Hosts", "Pacotes", "Acesso", "Rede", "Saúde"},
+		Tabs: []string{"Servidores", "A fazer", "Histórico"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -127,7 +128,7 @@ var langs = []lang{
 		}},
 	{Code: "ja", Tag: "SSH によるサーバーのセキュリティ監査。", Accent: "まずは重要なものから。",
 		Sub:  "エージェント不要 · 読み取り専用 · TUI + Web · MCP",
-		Tabs: []string{"やること", "ホスト", "パッケージ", "アクセス", "ネット", "ヘルス"},
+		Tabs: []string{"サーバー", "やること", "履歴"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -137,7 +138,7 @@ var langs = []lang{
 		}},
 	{Code: "ko", Tag: "SSH를 통한 서버 보안 감사.", Accent: "중요한 것부터 시작하세요.",
 		Sub:  "에이전트 불필요 · 읽기 전용 · TUI + 웹 · MCP",
-		Tabs: []string{"할 일", "호스트", "패키지", "접근", "네트워크", "상태"},
+		Tabs: []string{"서버", "할 일", "기록"},
 		Rows: []row{
 			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
 			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
@@ -198,6 +199,11 @@ func run(out, logoPath, pagesDir, bin string) error {
 		if err := render(bin, page, filepath.Join(out, p.name+".png"), p.w, p.h); err != nil {
 			return err
 		}
+		if p.name != "og" { // the README's banners as lossless WebP; the social preview stays PNG
+			if _, err := webp.FromPNG(filepath.Join(out, p.name+".png")); err != nil {
+				return err
+			}
+		}
 	}
 	if bin == "" {
 		log.Printf("no Chrome found (-chrome): wrote the pages to %s, not the pictures", out)
@@ -205,7 +211,8 @@ func run(out, logoPath, pagesDir, bin string) error {
 	return nil
 }
 
-// pictures: the social preview (English: GitHub shows one for every language) and a banner per language.
+// pictures: the social preview (English: GitHub shows one for every language; dark only, a preview has no theme)
+// and a banner per language, dark and light (-light: the README picks by the reader's theme).
 func pictures(logo string, src sources) ([]picture, error) {
 	og, err := template.New("og").Parse(src.og)
 	if err != nil {
@@ -235,11 +242,19 @@ func pictures(logo string, src sources) ([]picture, error) {
 	}
 	pics := []picture{{"og", 1280, 640, bytes.Clone(b.Bytes())}}
 	for _, l := range langs {
-		b.Reset()
-		if err := banner.Execute(&b, data(l, l.Rows[:min(bannerRows, len(l.Rows))])); err != nil {
-			return nil, err
+		for _, light := range []bool{false, true} {
+			d := data(l, l.Rows[:min(bannerRows, len(l.Rows))])
+			d["Light"] = light
+			name := "banner-" + l.Code
+			if light {
+				name += "-light"
+			}
+			b.Reset()
+			if err := banner.Execute(&b, d); err != nil {
+				return nil, err
+			}
+			pics = append(pics, picture{name, 1280, 360, bytes.Clone(b.Bytes())})
 		}
-		pics = append(pics, picture{"banner-" + l.Code, 1280, 360, bytes.Clone(b.Bytes())})
 	}
 	return pics, nil
 }

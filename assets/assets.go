@@ -14,7 +14,7 @@ var defaults embed.FS
 //go:embed locales/*.json
 var locales embed.FS
 
-//go:embed web/index.html web/logo.png
+//go:embed web/index.html web/classic.html web/logo.png web/logo.webp
 var web embed.FS
 
 //go:embed templates/org.yml
@@ -26,11 +26,18 @@ func Defaults() fs.FS { return defaults }
 // Locales: <lang>.json files.
 func Locales() fs.FS { sub, _ := fs.Sub(locales, "locales"); return sub }
 
-// Web: index.html and logo.png of the dashboard.
+// Web: index.html (the dashboard), classic.html (the 0.4 page, while its views move over) and logo.png.
 func Web() fs.FS { sub, _ := fs.Sub(web, "web"); return sub }
 
 // OrgTemplateID: the placeholder OrgTemplate uses for the org id.
 const OrgTemplateID = "__ORG_ID__"
+
+// OrgTemplateSigned, OrgTemplateUntil: the template's consent dates; `org new` replaces them with today and a year
+// from today.
+const (
+	OrgTemplateSigned = "2026-01-01"
+	OrgTemplateUntil  = "2027-01-01"
+)
 
 // OrgTemplate: a commented org file with OrgTemplateID where the org id goes (kanareika org new).
 func OrgTemplate() []byte { return append([]byte(nil), orgTemplate...) }

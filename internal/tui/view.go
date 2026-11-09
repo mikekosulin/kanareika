@@ -8,23 +8,30 @@ import (
 	"strings"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/mikekosulin/kanareika/assets"
 	"github.com/mikekosulin/kanareika/internal/i18n"
 )
 
-// Palette: the web page's priority colors on a dark terminal, k9s-like chrome.
+// Palette: the web page's priority colors, k9s-like chrome; for dark terminals and, darker and stronger, for light
+// ones (text at least WCAG AA on white). Which one: the terminal's background, or the theme set (o, KANAREIKA_THEME).
 var (
-	cP      = map[string]lipgloss.Color{"P1": "#e5484d", "P2": "#f2894f", "P3": "#f5c518", "P4": "#7d7c75"}
-	cBrand  = lipgloss.Color("#f5c518")
-	cAccent = lipgloss.Color("#3b82f6")
-	cCyan   = lipgloss.Color("#22d3ee")
-	cText   = lipgloss.Color("#e6e5e1")
-	cMuted  = lipgloss.Color("#8a8984")
-	cDim    = lipgloss.Color("#4a4945")
-	cOK     = lipgloss.Color("#22c55e")
-	cBad    = lipgloss.Color("#f87171")
+	cP = map[string]lipgloss.AdaptiveColor{"P1": {Dark: "#e5484d", Light: "#c01f26"}, "P2": {Dark: "#f2894f", Light: "#b4430b"},
+		"P3": {Dark: "#f5c518", Light: "#8a5a00"}, "P4": {Dark: "#7d7c75", Light: "#6b6a64"}}
+	cBrand  = lipgloss.AdaptiveColor{Dark: "#f5c518", Light: "#8a5a00"}
+	cAccent = lipgloss.AdaptiveColor{Dark: "#3b82f6", Light: "#1d4ed8"}
+	cCyan   = lipgloss.AdaptiveColor{Dark: "#22d3ee", Light: "#0e6f86"}
+	cText   = lipgloss.AdaptiveColor{Dark: "#e6e5e1", Light: "#1f1f1d"}
+	cMuted  = lipgloss.AdaptiveColor{Dark: "#8a8984", Light: "#5c5b56"}
+	cDim    = lipgloss.AdaptiveColor{Dark: "#4a4945", Light: "#a3a29c"}
+	cOK     = lipgloss.AdaptiveColor{Dark: "#22c55e", Light: "#15803d"}
+	cBad    = lipgloss.AdaptiveColor{Dark: "#f87171", Light: "#b91c1c"}
+	// backgrounds: bright in both themes, with dark ink on them
+	cInk     = lipgloss.Color("#0b0b0b")
+	cBgBrand = lipgloss.AdaptiveColor{Dark: "#f5c518", Light: "#f5c518"}
+	cBgCyan  = lipgloss.AdaptiveColor{Dark: "#22d3ee", Light: "#7fdcef"}
 
 	sBrand  = lipgloss.NewStyle().Foreground(cBrand).Bold(true)
 	sText   = lipgloss.NewStyle().Foreground(cText)
@@ -34,21 +41,15 @@ var (
 	sLabel  = lipgloss.NewStyle().Foreground(cBrand)
 	sKey    = lipgloss.NewStyle().Foreground(cCyan).Bold(true)
 	sHead   = lipgloss.NewStyle().Foreground(cText).Bold(true)
-	sSel    = lipgloss.NewStyle().Foreground(lipgloss.Color("#0b0b0b")).Background(cCyan).Bold(true)
+	sSel    = lipgloss.NewStyle().Foreground(cInk).Background(cBgCyan).Bold(true)
 	sErr    = lipgloss.NewStyle().Foreground(cBad)
 	sOK     = lipgloss.NewStyle().Foreground(cOK)
 	sRun    = lipgloss.NewStyle().Foreground(cAccent).Bold(true)
 	sFrame  = lipgloss.NewStyle().Foreground(cCyan)
 	sTitle  = lipgloss.NewStyle().Foreground(cBrand).Bold(true)
-	sCrumb  = lipgloss.NewStyle().Foreground(lipgloss.Color("#0b0b0b")).Background(cBrand).Bold(true).Padding(0, 1)
-	sCrumb2 = lipgloss.NewStyle().Foreground(lipgloss.Color("#0b0b0b")).Background(cCyan).Padding(0, 1)
+	sCrumb  = lipgloss.NewStyle().Foreground(cInk).Background(cBgBrand).Bold(true).Padding(0, 1)
+	sCrumb2 = lipgloss.NewStyle().Foreground(cInk).Background(cBgCyan).Padding(0, 1)
 )
-
-// logo: KANAREIKA in half blocks, two rows.
-var logo = [2]string{
-	"█▄▀ ▄▀█ █▄ █ ▄▀█ █▀█ █▀▀ █ █▄▀ ▄▀█",
-	"█ █ █▀█ █ ▀█ █▀█ █▀▄ ██▄ █ █ █ █▀█",
-}
 
 const ellipsis = "~" // single cell everywhere (… is double width in some terminals)
 
@@ -74,6 +75,7 @@ func fit(s string, w int, right bool) string {
 	if w <= 0 {
 		return ""
 	}
+	s = tame(s)
 	if ansi.StringWidth(s) > w {
 		s = ansi.Truncate(s, w, ellipsis)
 	}
@@ -84,78 +86,22 @@ func fit(s string, w int, right bool) string {
 	return s + pad
 }
 
-// col: a table column. Columns are as wide as their content (up to width); a narrow terminal drops them by drop.
+// col: a table column. A column is as wide as its widest value (or its header), up to width; a narrow terminal first
+// squeezes the squeezable ones (width 0, or min set) down to their minimum, then drops columns by drop.
 type col struct {
 	title string
-	width int // the widest it gets; 0: flexible, takes the rest
+	width int // the widest it gets; 0: as wide as its content, squeezed first when there is no room
 	right bool
-	min   int                         // flexible: the narrowest it is still of use (default 12)
+	min   int                         // squeezed: the narrowest it is still of use (default 12)
 	drop  int                         // dropped when there is no room, the higher first; 0: never. >0 can be switched off
-	fill  func(row, width int) string // drawn at its final width (bars)
+	fill  func(row, width int) string // drawn at its final width (bars); width is its width
+	tight bool                        // one space after it instead of two (the tree's narrow marks)
+	grow  bool                        // takes the width left over (the tree's text: its numbers at the right edge)
 }
 
 func (c col) key() string { return c.title }
 
-// layout: which columns fit in width and how wide each is.
-func (m *Model) layout(v view, cols []col, rows [][]string, width int) (keep, widths []int) {
-	natural := make([]int, len(cols))
-	for i, c := range cols {
-		if m.set.hidden(v, c.key()) && c.drop > 0 {
-			continue
-		}
-		keep = append(keep, i)
-		n := ansi.StringWidth(m.t.T(c.title))
-		switch {
-		case c.fill != nil:
-			n = max(c.width, c.min)
-		default:
-			for _, r := range rows {
-				n = max(n, ansi.StringWidth(r[i]))
-			}
-		}
-		if c.width > 0 && !c.right { // numbers (right-aligned) are never cut: they take what they need
-			n = min(n, c.width)
-		}
-		if c.width == 0 {
-			n = max(c.minW(), 1)
-		}
-		natural[i] = n
-	}
-	need := func() int {
-		t := 0
-		for _, i := range keep {
-			t += natural[i] + 1
-		}
-		return t
-	}
-	for need() > width {
-		worst := -1
-		for _, i := range keep {
-			if cols[i].drop > 0 && (worst < 0 || cols[i].drop > cols[worst].drop) {
-				worst = i
-			}
-		}
-		if worst < 0 {
-			break
-		}
-		keep = slices.DeleteFunc(keep, func(i int) bool { return i == worst })
-	}
-	flex := 0
-	for _, i := range keep {
-		if cols[i].width == 0 {
-			flex++
-		}
-	}
-	rest := width - need()
-	widths = make([]int, len(cols))
-	for _, i := range keep {
-		widths[i] = natural[i]
-		if cols[i].width == 0 && rest > 0 {
-			widths[i] += rest / flex
-		}
-	}
-	return keep, widths
-}
+func (c col) squeezable() bool { return c.fill == nil && (c.width == 0 || c.min > 0) }
 
 func (c col) minW() int {
 	if c.min > 0 {
@@ -164,18 +110,99 @@ func (c col) minW() int {
 	return 12
 }
 
+// gapAfter: the space after a column: two, so that columns never run together; one for tight ones.
+func (c col) gapAfter() int {
+	if c.tight {
+		return 1
+	}
+	return 2
+}
+
+// layout: which columns fit in width and how wide each is. Columns empty in every row are left out; what does not
+// fit is squeezed, then the least useful columns go. Leftover width stays at the right, never as gaps.
+func (m *Model) layout(v view, cols []col, rows [][]string, width int) (keep, widths []int) {
+	natural := make([]int, len(cols))
+	for i, c := range cols {
+		if m.set.hidden(v, c.key()) && c.drop > 0 {
+			continue
+		}
+		empty := len(rows) > 0 && c.fill == nil
+		n := ansi.StringWidth(m.t.T(c.title))
+		if c.fill != nil {
+			n = max(n, c.width, c.min)
+		}
+		for _, r := range rows {
+			if i < len(r) && c.fill == nil {
+				w := ansi.StringWidth(r[i])
+				n = max(n, w)
+				if strings.TrimSpace(ansi.Strip(r[i])) != "" {
+					empty = false
+				}
+			}
+		}
+		if empty { // nothing to show in any row: no column
+			continue
+		}
+		if c.width > 0 && !c.right && c.fill == nil { // numbers (right-aligned) are never cut: they take what they need
+			n = min(n, c.width)
+		}
+		keep = append(keep, i)
+		natural[i] = max(n, 1)
+	}
+	for {
+		widths = slices.Clone(natural)
+		need := 0
+		for j, i := range keep {
+			need += widths[i]
+			if j < len(keep)-1 {
+				need += cols[i].gapAfter()
+			}
+		}
+		excess := need - width
+		for _, i := range keep { // squeeze the squeezable, the widest first
+			if excess <= 0 {
+				break
+			}
+			if cols[i].squeezable() {
+				r := min(excess, max(widths[i]-cols[i].minW(), 0))
+				widths[i] -= r
+				excess -= r
+			}
+		}
+		if excess <= 0 {
+			for _, i := range keep {
+				if cols[i].grow {
+					widths[i] -= excess // excess <= 0: what is left over
+					break
+				}
+			}
+			return keep, widths
+		}
+		worst := -1
+		for _, i := range keep {
+			if cols[i].drop > 0 && (worst < 0 || cols[i].drop > cols[worst].drop) {
+				worst = i
+			}
+		}
+		if worst < 0 {
+			return keep, widths
+		}
+		keep = slices.DeleteFunc(keep, func(i int) bool { return i == worst })
+	}
+}
+
 // table: rows under headers in width cells and height lines, the cursor row a full-width bar kept in view.
 func (m *Model) table(cols []col, rows [][]string, width, height int) []string {
 	return m.grid(cols, rows, width, height, true)
 }
 
-// grid: a table; without a cursor it shows the first rows that fit.
+// grid: a table; without a cursor it shows the first rows that fit. With one, every row is clickable (rowClick).
 func (m *Model) grid(cols []col, rows [][]string, width, height int, cursor bool) []string {
 	keep, widths := m.layout(m.view, cols, rows, width)
 	// line: a row; the selected one as a bar, its charts (fill columns) keeping their colors on it
 	line := func(r int, cells []string, selected bool) string {
 		var l strings.Builder
-		for _, i := range keep {
+		for j, i := range keep {
 			c := cells[i]
 			chart := cols[i].fill != nil && r >= 0
 			if chart {
@@ -186,10 +213,12 @@ func (m *Model) grid(cols []col, rows [][]string, width, height int, cursor bool
 				c = sSel.Render(ansi.Strip(c))
 			}
 			l.WriteString(c)
-			if selected {
-				l.WriteString(sSel.Render(" "))
-			} else {
-				l.WriteString(" ")
+			if j < len(keep)-1 {
+				gap := strings.Repeat(" ", cols[i].gapAfter())
+				if selected {
+					gap = sSel.Render(gap)
+				}
+				l.WriteString(gap)
 			}
 		}
 		out := l.String()
@@ -217,13 +246,28 @@ func (m *Model) grid(cols []col, rows [][]string, width, height int, cursor bool
 		m.off[m.view] = off
 	}
 	for i := off; i < min(off+h, len(rows)); i++ {
-		out = append(out, line(i, rows[i], i == cur))
+		l := line(i, rows[i], i == cur)
+		if cursor {
+			i := i
+			l = m.zone(fmt.Sprintf("row:%d", i), l, func(dx int) tea.Cmd { return m.rowClick(i, dx) })
+		}
+		out = append(out, l)
 	}
 	return out
 }
 
-// panel: a k9s-style frame with the title set into its top border; content cut to the inside.
+// pad: the cells between a panel's border and its content, on each side (a selected row's bar starts inside).
+const pad = 1
+
+// panel: a k9s-style frame with the title set into its top border; content, w-2-2*pad wide, one cell inside it.
 func panel(title string, content []string, w, h int) []string {
+	return frame(title, content, w, h, pad)
+}
+
+// box: a frame its content fills (the popup lists: their lines carry their own margins).
+func box(title string, content []string, w, h int) []string { return frame(title, content, w, h, 0) }
+
+func frame(title string, content []string, w, h, p int) []string {
 	inner := max(w-2, 1)
 	t := " " + title + " "
 	if ansi.StringWidth(t) > inner-2 {
@@ -238,39 +282,15 @@ func panel(title string, content []string, w, h int) []string {
 		if i < len(content) {
 			c = content[i]
 		}
-		out = append(out, sFrame.Render("│")+fit(c, inner, false)+sFrame.Render("│"))
+		margin := strings.Repeat(" ", p)
+		out = append(out, sFrame.Render("│")+margin+fit(c, max(inner-2*p, 0), false)+margin+sFrame.Render("│"))
 	}
 	return append(out, sFrame.Render("└"+strings.Repeat("─", inner)+"┘"))
 }
 
-const (
-	headerH      = 6 // lines of the full header
-	minW, minH   = 40, 8
-	fullW, fullH = 80, 24 // the auto header is full from this size up
-)
+const minW, minH = 40, 8
 
-// headerMode: the header actually drawn (the setting, or by size when auto).
-func (m *Model) headerMode() string {
-	if m.set.Header != headerAuto {
-		return m.set.Header
-	}
-	if m.w >= fullW && m.h >= fullH {
-		return headerFull
-	}
-	return headerCompact
-}
-
-func (m *Model) headerLines() []string {
-	switch m.headerMode() {
-	case headerFull:
-		return m.header()
-	case headerCompact:
-		return []string{m.compactHeader()}
-	}
-	return nil
-}
-
-func (m *Model) bodyHeight() int { return max(m.h-len(m.headerLines())-len(m.tabLines())-1-2, 3) } // inside the panel
+func (m *Model) bodyHeight() int { return max(m.h-len(m.tabLines())-2-2, 3) } // inside the panel
 
 // tabLines: the view tabs, unless switched off (o) or the terminal is too low for them.
 func (m *Model) tabLines() []string {
@@ -280,16 +300,16 @@ func (m *Model) tabLines() []string {
 	return []string{m.tabs()}
 }
 
-// tabs: 1 Organizations  2 ToDo ... with the open one highlighted; numbers only for the others when the line is
-// narrow. A scan running shows on the Scans tab.
+// tabs: 1 ToDo  2 Hosts ... with the open one highlighted; numbers only for the others when the line is narrow. A
+// scan running shows on the Scans tab; ToDo's grouping (g) at the right.
 func (m *Model) tabs() string {
 	label := func(v view, full bool) string {
-		n := viewHotkeys[v]
+		n := strconv.Itoa(slices.Index(places, v) + 1)
 		name := m.t.T(viewNames[v])
-		if v == vScans && m.busy() {
+		if v == vRuns && m.busy() {
 			name += " ●"
 		}
-		if v == m.view {
+		if v == place(m.view) {
 			return sCrumb.Render(n + " " + name)
 		}
 		if !full {
@@ -302,12 +322,42 @@ func (m *Model) tabs() string {
 		full bool
 		sep  string
 	}{{true, "  "}, {true, " "}, {false, "  "}} {
-		parts := make([]string, nViews)
-		for v := range nViews {
-			parts[v] = label(v, f.full)
+		parts := make([]string, len(places))
+		for i, v := range places {
+			parts[i] = m.zone(fmt.Sprintf("tab:%d", v), label(v, f.full), func(int) tea.Cmd { m.toPlace(v); return nil })
 		}
 		if l = " " + strings.Join(parts, f.sep); ansi.StringWidth(l) <= m.w {
 			break
+		}
+	}
+	if place(m.view) == vServers && m.host == "" && m.run != "" && m.view != vServers { // a lens: what else to show
+		g := m.showSwitch()
+		if room := m.w - ansi.StringWidth(l) - ansi.StringWidth(g); room >= 2 {
+			l += strings.Repeat(" ", room) + g
+		}
+	}
+	if m.isTree() && m.host == "" && m.run != "" {
+		g := sMuted.Render(m.t.T("group by")) + " "
+		for _, by := range groupings {
+			name := m.t.T(groupNames[by])
+			s := sMuted.Render(" " + name + " ")
+			if by == m.grouping() {
+				s = sCrumb2.Render(name)
+			}
+			g += m.zone("by:"+by, s, func(int) tea.Cmd {
+				if m.grouping() != by {
+					m.by[m.view] = by
+					m.cur[m.view], m.off[m.view], m.curID = 0, 0, ""
+				}
+				return nil
+			})
+		}
+		g += " " + sKey.Render("g") + " "
+		if m.view == vServers {
+			g = m.showSwitch() + "  " + g
+		}
+		if room := m.w - ansi.StringWidth(l) - ansi.StringWidth(g); room >= 2 {
+			l += strings.Repeat(" ", room) + g
 		}
 	}
 	return l
@@ -318,13 +368,19 @@ func (m *Model) View() string {
 	if m.w == 0 || m.h == 0 {
 		return ""
 	}
+	m.handlers = map[string]func(int) tea.Cmd{}
+	m.zoneSeq = 0
 	var lines []string
 	if m.w < minW || m.h < minH {
 		lines = m.tooSmall()
 	} else {
-		hd := append(slices.Clip(m.headerLines()), m.tabLines()...)
-		lines = append(slices.Clip(hd), m.main(m.h-len(hd)-1)...)
-		lines = append(lines, m.crumbs())
+		hd := m.tabLines()
+		lines = append(slices.Clip(hd), m.main(m.h-len(hd)-2)...)
+		lines = append(lines, m.hints(), m.statusBar())
+		if m.menu != nil {
+			box := m.menuBox()
+			lines = overlay(lines, box, max((m.w-ansi.StringWidth(box[0]))/2, 0), min(len(hd)+1, max(m.h-len(box), 0)), m.w)
+		}
 	}
 	for len(lines) < m.h {
 		lines = append(lines, "")
@@ -332,6 +388,10 @@ func (m *Model) View() string {
 	lines = lines[:m.h]
 	for i, l := range lines {
 		lines[i] = fit(l, m.w, false)
+	}
+	lines = m.scanZones(lines)
+	for i, l := range lines {
+		lines[i] = safeFrame(l)
 	}
 	return strings.Join(lines, "\n")
 }
@@ -344,190 +404,6 @@ func (m *Model) tooSmall() []string {
 		out = append(out, strings.Repeat(" ", max((m.w-ansi.StringWidth(l))/2, 0))+l)
 	}
 	return out
-}
-
-// --- header: context, priority gauges, keys, logo -------------------------------------------------------------------
-
-func (m *Model) header() []string {
-	info := m.info()
-	showLogo := m.w >= 150
-	logoW := 0
-	if showLogo {
-		logoW = ansi.StringWidth(logo[0]) + 2
-	}
-	infoW, gaugeW := 40, 30
-	switch {
-	case m.w < fullW:
-		infoW, gaugeW = 34, 0
-	case m.w < 100:
-		infoW, gaugeW = 34, 22
-	}
-	keysW := max(m.w-infoW-gaugeW-logoW, 0)
-	if gaugeW > 0 {
-		keysW -= 2
-	}
-	gauges := m.gauges(gaugeW - 12)
-	keys := m.keys(keysW)
-	out := make([]string, headerH)
-	for i := range out {
-		l := fit(get(info, i), infoW-2, false) + "  "
-		if gaugeW > 0 {
-			l += fit(get(gauges, i), gaugeW, false) + "  "
-		}
-		l += fit(get(keys, i), keysW, false)
-		if showLogo {
-			switch i {
-			case 1, 2:
-				l += "  " + sBrand.Render(logo[i-1])
-			case 3:
-				l += "  " + sMuted.Render(fit(m.t.T("read-only security audit"), logoW-2, true))
-			}
-		}
-		out[i] = l
-	}
-	return out
-}
-
-// compactHeader: the header in one line: where, P1..P4, the scan, which data; what doesn't fit is left out
-// (least needed first), the help key at the right.
-func (m *Model) compactHeader() string {
-	type part struct {
-		text string
-		rank int // lower: kept longer
-	}
-	var parts []part
-	parts = append(parts, part{sBrand.Render("Kanareika"), 5})
-	if m.org != "" {
-		env := m.env
-		if env == "default" {
-			env = m.t.T("all")
-		}
-		parts = append(parts, part{sBold.Render(m.org) + sMuted.Render("/") + sBold.Render(env), 0})
-	}
-	if m.run != "" {
-		parts = append(parts, part{sText.Render(m.t.runShort(m.run)), 4})
-	}
-	if m.rund != nil {
-		pc := m.rund.PlanCounts
-		var c []string
-		for _, p := range []string{"P1", "P2", "P3", "P4"} {
-			c = append(c, prio(p)+" "+count(p, pc[p], true))
-		}
-		parts = append(parts, part{strings.Join(c, " "), 1})
-	}
-	if s := m.scanState(); s != "" {
-		parts = append(parts, part{s, 2})
-	}
-	if m.dbAttention() != "" || m.db != nil && m.db.Updating {
-		parts = append(parts, part{m.dbState(), 3})
-	}
-	help := sKey.Render("<?>") + " " + sMuted.Render(m.t.T("help"))
-	join := func(ps []part) string {
-		t := make([]string, len(ps))
-		for i, p := range ps {
-			t[i] = p.text
-		}
-		return " " + strings.Join(t, sDim.Render(" │ "))
-	}
-	for rank := 5; rank > 0; rank-- {
-		if ansi.StringWidth(join(parts))+ansi.StringWidth(help)+3 <= m.w {
-			break
-		}
-		parts = slices.DeleteFunc(parts, func(p part) bool { return p.rank == rank })
-	}
-	l := join(parts)
-	if room := m.w - ansi.StringWidth(help) - 1; ansi.StringWidth(l)+2 <= room {
-		return fit(l, room, false) + help + " "
-	}
-	return l
-}
-
-func get(l []string, i int) string {
-	if i < len(l) {
-		return l[i]
-	}
-	return ""
-}
-
-func (m *Model) info() []string {
-	kv := func(k, v string) string { return sLabel.Render(fit(m.t.T(k)+":", 9, false)) + " " + v }
-	org, env, data, scan := sDim.Render("-"), sDim.Render("-"), sDim.Render("-"), sMuted.Render(m.t.T("no scans"))
-	if o := m.orgRow(); o != nil {
-		org = sBold.Render(o.ID)
-		if o.Name != "" {
-			org += " " + sMuted.Render(o.Name)
-		}
-		for _, e := range o.Envs {
-			if e.Env == m.env {
-				name := e.Env
-				if name == "default" {
-					name = m.t.T("all")
-				}
-				env = sBold.Render(name) + sMuted.Render(fmt.Sprintf(" · %s: %d", m.t.T("hosts"), e.Hosts))
-			}
-		}
-	}
-	if m.run != "" {
-		data = sText.Render(m.t.runShort(m.run))
-		if m.run != "current" {
-			data += sMuted.Render(" " + m.t.zoneName(m.now()))
-		}
-	}
-	if st := m.scanState(); st != "" {
-		scan = st
-	}
-	// trivy: the one built into the server; the run's own when it was scanned with another (or the server's is unknown)
-	trivy, built, ran := sDim.Render("-"), "", ""
-	if m.db != nil {
-		built = m.db.Trivy
-	}
-	if m.rund != nil {
-		ran = m.rund.Meta.TrivyVersion
-	}
-	switch {
-	case built != "":
-		trivy = sText.Render(built) + sMuted.Render(" "+m.t.T("built in"))
-		if ran != "" && ran != built { // the column is narrow: the run's version instead of "built in"
-			trivy = sText.Render(built) + sMuted.Render(" · "+m.t.F("run: {version}", "version", ran))
-		}
-	case ran != "":
-		trivy = sText.Render(ran)
-	}
-	if ran != "" && m.rund.Meta.FeedsUpdated == nil {
-		trivy += sMuted.Render(" · KEV/EPSS " + m.t.T("not loaded"))
-	}
-
-	db := m.dbState()
-	if db == "" {
-		db = sDim.Render("-")
-	}
-	return []string{kv("Org", org), kv("Env", env), kv("Data", data), kv("Scan", scan), kv("Trivy", trivy), kv("DB", db)}
-}
-
-// dbState: the vulnerability DB in a few words: updating, missing, a newer one out, or its age.
-func (m *Model) dbState() string {
-	if m.db == nil {
-		return ""
-	}
-	warn := lipgloss.NewStyle().Foreground(cP["P3"])
-	switch {
-	case m.db.Updating:
-		return sRun.Render(m.t.T("DB updating…"))
-	case m.dbAttention() == "missing":
-		return sErr.Render(m.t.T("no DB")) + " " + sKey.Render("<U>")
-	case m.dbAttention() == "outdated":
-		return warn.Render(m.t.T("newer DB out")) + " " + sKey.Render("<U>")
-	}
-	for _, d := range m.db.DBs {
-		if at, err := time.Parse(time.RFC3339, d.Updated); err == nil && d.Name == "db" {
-			age := max(m.now().Sub(at), 0) // a clock behind the DB's build time: not a negative age
-			if d.Next == "" {
-				return sMuted.Render(agoShort(age))
-			}
-			return sMuted.Render(agoShort(age)+" · ") + sOK.Render(m.t.T("up to date")) // not outdated: checked above
-		}
-	}
-	return ""
 }
 
 // agoShort: a duration as 5m, 3h, 2d.
@@ -566,89 +442,31 @@ func (m *Model) runningJobs() int {
 	return n
 }
 
-// gauges: P1..P4 of the data on screen as bars, btop style.
-func (m *Model) gauges(barW int) []string {
-	if m.rund == nil || barW <= 0 {
-		return nil
-	}
-	pc := m.rund.PlanCounts
-	top := 1
-	for _, p := range []string{"P1", "P2", "P3", "P4"} {
-		top = max(top, pc[p])
-	}
-	var out []string
-	for _, p := range []string{"P1", "P2", "P3", "P4"} {
-		n := pc[p]
-		fill := (n*barW + top - 1) / top
-		bar := lipgloss.NewStyle().Foreground(cP[p]).Render(strings.Repeat("■", fill)) + sDim.Render(strings.Repeat("■", barW-fill))
-		out = append(out, prio(p)+" "+bar+" "+fit(count(p, n, true), 4, true))
-	}
-	return append(out, sMuted.Render(fmt.Sprintf("   %d CVE", pc["cves"])))
-}
-
-// keys: k9s-style hints in columns, for the view on screen; what doesn't fit in width ends with <?> help.
-func (m *Model) keys(width int) []string {
-	type k struct{ key, what string }
-	global := []k{{"1-0,S", "views"}, {"/", "filter"}, {"U", "update DBs"}, {"o", "panels"}, {"r", "refresh"}, {"L", "language"},
-		{"q", "quit"}}
-	local := map[view][]k{
-		vOrgs:       {{"enter", "open"}},
-		vActions:    {{"space", "select"}, {"a", "select all"}, {"v", "selected only"}, {"y", "copy task"}, {"enter", "details"}, {"p", "P4"}},
-		vHosts:      {{"enter", "host card"}, {"p", "P4"}},
-		vPackages:   {{"p", "P4"}},
-		vChanges:    {{"/", "filter"}},
-		vAccess:     {{"enter", "host card"}},
-		vNetwork:    {{"enter", "host card"}, {"f", "outside only"}},
-		vHealth:     {{"enter", "host card"}},
-		vExceptions: {{"/", "filter"}},
-		vRuns:       {{"enter", "open"}, {"i", "errors and log"}, {"c", "current state"}},
-		vScans:      {{"enter", "output"}, {"x", "stop"}},
-	}[m.view]
-	if m.scanOK {
-		local = append(local, k{"s", "scan"})
-	}
-	all := append(slices.Clip(local), global...)
-	const colW = 19
-	rows := headerH
-	if fit := rows * max(width/colW, 0); fit < len(all)+1 {
-		all = all[:max(fit-1, 0)]
-	}
-	if width >= colW {
-		all = append(all, k{"?", "help"})
-	}
-	var out []string
-	for r := 0; r < rows; r++ {
-		var l strings.Builder
-		for c := 0; c*rows+r < len(all); c++ {
-			x := all[c*rows+r]
-			l.WriteString(fit(sKey.Render("<"+x.key+">")+" "+sMuted.Render(m.t.T(x.what)), colW, false))
-		}
-		out = append(out, l.String())
-	}
-	return out
-}
-
 // --- main panel -------------------------------------------------------------------------------------------------------
 
 func (m *Model) main(h int) []string {
 	w := m.w
 	switch {
 	case m.help:
-		return panel(sTitle.Render(m.t.T("Hotkeys")), m.helpView(w-2, h-2), w, h)
+		return panel(sTitle.Render(m.t.T("Hotkeys")), m.helpView(w-2-2*pad, h-2), w, h)
 	case m.langs != nil:
 		return panel(sTitle.Render(m.t.T("Language")), m.langView(), w, h)
 	case m.panels != nil:
 		return panel(sTitle.Render(m.t.T("Panels"))+sText.Render("("+m.t.T(viewNames[m.view])+")"), m.panelsView(h-2), w, h)
 	case m.form != nil:
 		return panel(sTitle.Render(m.t.T("Scan"))+sText.Render("("+m.form.org+"/"+m.form.env+")"), m.formView(h-2), w, h)
+	case m.setup != nil:
+		return panel(m.setupTitle(), m.setupView(w-2-2*pad, h-2), w, h)
 	case !m.loaded:
 		msg := m.t.T("loading")
 		if m.err != "" {
 			msg = sErr.Render(m.err)
 		}
 		return panel(sTitle.Render("Kanareika"), []string{" " + msg}, w, h)
+	case m.isTree() && m.host == "":
+		return m.todoMain(h)
 	}
-	title, content := m.body(w-2, h-2)
+	title, content := m.body(w-2-2*pad, h-2)
 	return panel(title, content, w, h)
 }
 
@@ -675,27 +493,12 @@ func (m *Model) title(name string, n int, scoped bool) string {
 
 func (m *Model) body(w, h int) (string, []string) {
 	switch m.view {
-	case vOrgs:
-		l := m.envList()
-		return m.title(viewNames[vOrgs], len(l), false), m.orgsView(l, w, h)
-	case vActions:
-		l := m.actions()
-		t := m.title(viewNames[vActions], len(l), true)
-		if len(m.sel) > 0 || m.onlySel {
-			t += sBrand.Render(fmt.Sprintf(" ●%d", len(m.sel)))
-			if m.onlySel {
-				t += " " + sKey.Render("<v>") + sMuted.Render(" "+m.t.T("selected only"))
-			}
-		}
-		return t, m.actionsView(l, w, h)
-	case vHosts:
+	case vServers:
 		if m.host != "" && m.rund != nil {
 			lines := m.hostCard(m.host, w)
 			m.hostOff = min(m.hostOff, max(len(lines)-h, 0))
 			return sTitle.Render(m.t.T("Host")) + sText.Render("("+m.host+")"), lines[m.hostOff:]
 		}
-		l := m.hostList()
-		return m.title(viewNames[vHosts], len(l), true), m.hostsView(l, w, h)
 	case vPackages:
 		l := m.packages()
 		return m.title(viewNames[vPackages], len(l), true), m.packagesView(l, w, h)
@@ -719,48 +522,50 @@ func (m *Model) body(w, h int) (string, []string) {
 			return sTitle.Render(m.t.T("Run")) + sText.Render("("+m.t.runShort(m.runInfo.id)+")"), m.runInfoView(w, h)
 		}
 		l := m.runList()
-		return m.title(viewNames[vRuns], len(l), true), m.runsView(l, w, h)
+		return m.title(viewNames[vRuns], len(l), true), m.historyView(w, h)
+	case vLens:
+		n := 0
+		if m.lensData != nil {
+			n = len(m.lensData.Rows)
+		}
+		return m.title(viewNames[vServers], n, true), m.lensView(w, h)
 	}
 	return m.title(viewNames[vScans], len(m.jobs.Jobs), false), m.scansView(w, h)
 }
 
 // viewCols: the columns of each view, in the order of its cells. drop: what goes first on a narrow terminal.
 var viewCols = [nViews][]col{
-	vOrgs: {{title: "Organization", width: 20}, {title: "environment", width: 16}, {title: "hosts", width: 6, right: true, drop: 3},
-		{title: "P1", width: 4, right: true}, {title: "P2", width: 4, right: true, drop: 2}, {title: "P3", width: 4, right: true, drop: 2},
-		{title: "last run", width: 17, drop: 4}, {title: "state", width: 10, drop: 5}, {title: "name", min: 10, drop: 6}},
-	vActions: {{width: 1}, {width: 2}, {title: "due by", width: 10, drop: 2}, {title: "action", min: 20},
-		{title: "hosts", width: 26, drop: 3}, {title: "CVE", width: 4, right: true, drop: 1}},
-	vHosts: {{title: "host", width: 26}, {title: "OS", width: 32, drop: 3}, {title: "P1", width: 4, right: true},
-		{title: "P2", width: 4, right: true}, {title: "P3", width: 4, right: true, drop: 1}, {title: "P4", width: 4, right: true, drop: 1},
-		{title: "CVE", width: 5, right: true, drop: 2}, {title: "chart", min: 8, drop: 4}},
-	vPackages: {{width: 2}, {title: "host", width: 20, drop: 3}, {title: "where", width: 28, drop: 4}, {title: "package", min: 12},
-		{title: "installed", width: 20, drop: 5}, {title: "fixed in", width: 20}, {title: "CVE", width: 4, right: true, drop: 2},
-		{title: "KEV", width: 3, drop: 1}, {title: "due by", width: 10, drop: 6}},
-	vChanges: {{width: 1}, {width: 2}, {title: "host", width: 20}, {title: "package / check", width: 40},
-		{title: "where", min: 12, drop: 2}, {title: "CVE", width: 5, right: true, drop: 1}},
+	vPackages: {{width: 2}, {title: "host", width: 20, drop: 3}, {title: "where", width: 24, min: 8, drop: 4},
+		{title: "package", width: 32, min: 14}, {title: "installed", width: 28, right: true, drop: 5}, {title: "fixed in", width: 28},
+		{title: "CVE", right: true, drop: 2}, {title: "KEV", drop: 1}, {title: "due by", width: 10, drop: 6}},
+	vChanges: {{width: 1, tight: true}, {width: 2}, {title: "host", width: 20}, {title: "package / check", width: 40, min: 16},
+		{title: "where", width: 32, min: 12, drop: 2}, {title: "CVE", right: true, drop: 1}},
 	vAccess: {{title: "host", width: 22}, {title: "password", width: 10}, {title: "root", width: 12, drop: 4},
-		{title: "with password", width: 20, drop: 3}, {title: "keys", width: 5, right: true, drop: 2},
-		{title: "logins", width: 6, right: true, drop: 1}, {title: "IPs", width: 4, right: true, drop: 1},
-		{title: "failed", width: 8, right: true}, {title: "failed IPs", width: 6, right: true, drop: 2}},
-	vNetwork: {{title: "host", width: 22}, {title: "public IP", width: 34, drop: 2}, {title: "open to the outside", width: 30},
-		{title: "firewall", min: 12, drop: 1}},
-	vHealth: {{title: "host", width: 22}, {title: "disk", width: 16}, {title: "inode", width: 5, right: true, drop: 3},
-		{title: "memory", width: 10, drop: 2}, {title: "load", width: 8, drop: 2}, {title: "units", width: 5, right: true, drop: 4},
-		{title: "kernel", width: 30, drop: 5}, {title: "journal", width: 7, right: true, drop: 4}, {title: "time zone", width: 16, drop: 6},
-		{title: "time", width: 12, drop: 1}},
-	vExceptions: {{width: 1}, {title: "host", width: 20}, {title: "id", width: 20}, {title: "package", width: 20, drop: 2},
-		{title: "until", width: 10, drop: 3}, {title: "who", width: 12, drop: 4}, {title: "reason", min: 12, drop: 1}},
-	vRuns: {{title: "run", width: 18}, {title: "state", width: 14}, {title: "kind", width: 10, drop: 3},
-		{title: "hosts ok", width: 9, right: true, drop: 2}, {title: "P1", width: 4, right: true}, {title: "P2", width: 4, right: true, drop: 1},
-		{title: "P3", width: 4, right: true, drop: 1}},
+		{title: "with password", width: 24, min: 10, drop: 3}, {title: "keys", right: true, drop: 2},
+		{title: "logins", right: true, drop: 1}, {title: "IPs", right: true, drop: 1},
+		{title: "failed", right: true}, {title: "failed IPs", right: true, drop: 2}},
+	vNetwork: {{title: "host", width: 22}, {title: "public IP", width: 34, min: 15, drop: 2}, {title: "open to the outside", width: 30, min: 12},
+		{title: "firewall", width: 48, min: 12, drop: 1}},
+	vHealth: {{title: "host", width: 22}, {title: "disk", width: 18}, {title: "inode", right: true, drop: 3},
+		{title: "mem free", right: true, drop: 2}, {title: "load /cpu", right: true, drop: 2}, {title: "failed units", right: true, drop: 4},
+		{title: "kernel", width: 30, min: 12, drop: 5}, {title: "journal /7d", right: true, drop: 4}, {title: "time zone", width: 18, drop: 6},
+		{title: "clock offset", width: 12, drop: 1}},
+	vExceptions: {{width: 1, tight: true}, {title: "host", width: 20}, {title: "id", width: 20}, {title: "package", width: 24, drop: 2},
+		{title: "until", width: 10, drop: 3}, {title: "who", width: 16, drop: 4}, {title: "reason", width: 60, min: 12, drop: 1}},
+	vRuns: {{title: "run", width: 18}, {title: "state", width: 22}, {title: "kind", width: 10, drop: 3},
+		{title: "hosts ok", right: true, drop: 2}, {title: "P1", right: true}, {title: "P2", right: true, drop: 1},
+		{title: "P3", right: true, drop: 1}},
 	vScans: {{title: "environment", width: 24}, {title: "state", width: 22}, {title: "started", width: 12, drop: 1},
-		{title: "scope", min: 10, drop: 2}},
+		{title: "scope", width: 60, min: 10, drop: 2}},
 }
 
 func (m *Model) noData() []string {
 	if m.org == "" {
-		return []string{"", " " + sMuted.Render(m.t.T("no organizations")+": ") + sKey.Render("kanareika org new <id>")}
+		l := []string{"", " " + sMuted.Render(m.t.T("no organizations")+": ") + sKey.Render("kanareika org new <id>")}
+		if m.scanOK {
+			l = append(l, " "+m.t.FS("or press {key} to set one up here", sMuted, "key", sKey.Render("<N>")))
+		}
+		return l
 	}
 	if m.run == "" {
 		cmd := "kanareika scan " + m.org
@@ -769,134 +574,15 @@ func (m *Model) noData() []string {
 		}
 		l := []string{"", " " + sMuted.Render(m.t.T("No runs yet. Run")+": ") + sKey.Render(cmd)}
 		if m.scanOK {
-			l = append(l, " "+m.t.FS("or press {key}", sMuted, "key", sKey.Render("<s>")))
+			l = append(l, " "+m.t.FS("or press {key}", sMuted, "key", sKey.Render("<s>")),
+				" "+m.t.FS("{key} checks SSH access to every host, then starts the first scan", sMuted, "key", sKey.Render("<enter>")))
 		}
 		return l
 	}
 	return []string{" " + sMuted.Render(m.t.T("loading"))}
 }
 
-func (m *Model) orgsView(list []envItem, w, h int) []string {
-	var rows [][]string
-	for _, it := range list {
-		env := it.env
-		if env == "default" {
-			env = m.t.T("all")
-		}
-		pc, known := map[string]int{}, false
-		last := sDim.Render(m.t.T("no runs"))
-		if it.e.Last != nil {
-			last = m.t.runShort(it.e.Last.RunID)
-			if it.e.Last.PlanCounts != nil {
-				pc, known = it.e.Last.PlanCounts, true
-			}
-		}
-		state := sMuted.Render(m.t.T("idle"))
-		if it.e.Running != nil {
-			state = sRun.Render(m.t.T("running"))
-		}
-		name := sBold.Render(it.org)
-		if it.org == m.org && it.env == m.env {
-			name = sBrand.Render(it.org)
-		}
-		rows = append(rows, []string{name, env, fmt.Sprint(it.e.Hosts), count("P1", pc["P1"], known),
-			count("P2", pc["P2"], known), count("P3", pc["P3"], known), last, state, sMuted.Render(it.name)})
-	}
-	return m.table(viewCols[vOrgs], rows, w, h)
-}
-
-func (m *Model) actionsView(list []action, w, h int) []string {
-	if m.rund == nil {
-		return m.noData()
-	}
-	var rows [][]string
-	for _, a := range list {
-		box := sDim.Render("○")
-		if m.sel[a.ID] {
-			box = sBrand.Render("●")
-		}
-		tags := ""
-		if a.KEV {
-			tags += sErr.Render("KEV ")
-		}
-		if a.RCE > 0 {
-			tags += sErr.Render("RCE ")
-		}
-		cves := ""
-		if a.CVEs > 0 {
-			cves = compact(float64(a.CVEs))
-		}
-		rows = append(rows, []string{box, prio(a.Priority), sMuted.Render(a.Due), tags + sText.Render(m.t.title(a)),
-			sText.Render(hostsCell(a.Hosts)), cves})
-	}
-	cols := viewCols[vActions]
-	if !m.detail || len(list) == 0 {
-		return m.table(cols, rows, w, h)
-	}
-	d := m.detailLines(list[min(m.cur[vActions], len(list)-1)], w)
-	dh := min(len(d), h/2)
-	return append(m.table(cols, rows, w, h-dh), d[:dh]...)
-}
-
-func hostsCell(hs []string) string {
-	if len(hs) <= 2 {
-		return strings.Join(hs, ", ")
-	}
-	return fmt.Sprintf("%s, %s +%d", hs[0], hs[1], len(hs)-2)
-}
-
-func (m *Model) detailLines(a action, w int) []string {
-	out := []string{sFrame.Render(strings.Repeat("─", w)), " " + prio(a.Priority) + " " + sBold.Render(m.t.title(a))}
-	if d := m.t.detail(a); d != "" {
-		out = append(out, " "+sText.Render(d))
-	}
-	out = append(out, " "+sLabel.Render(m.t.T("hosts")+": ")+sText.Render(strings.Join(a.Hosts, ", ")))
-	for _, p := range a.Packages {
-		kev := ""
-		if p.KEV {
-			kev = " " + sErr.Render("KEV")
-		}
-		out = append(out, fmt.Sprintf("   %s %s %s %s %s%s", prio(p.Priority), sBold.Render(fit(p.Pkg, 24, false)),
-			sMuted.Render(p.Installed), sMuted.Render("->"), sOK.Render(p.Fixed), sMuted.Render(fmt.Sprintf("  %d CVE", p.CVEs))+kev))
-	}
-	return out
-}
-
 // stack: a host's P1..P4 as one stacked bar of width w (btop style).
-func stack(c map[string]int, top, w int) string {
-	if top == 0 {
-		return ""
-	}
-	var b strings.Builder
-	used := 0
-	for _, p := range []string{"P1", "P2", "P3", "P4"} {
-		n := (c[p]*w + top - 1) / top
-		n = min(n, w-used)
-		b.WriteString(lipgloss.NewStyle().Foreground(cP[p]).Render(strings.Repeat("▇", n)))
-		used += n
-	}
-	return b.String()
-}
-
-func (m *Model) hostsView(list []hostItem, w, h int) []string {
-	if m.rund == nil {
-		return m.noData()
-	}
-	top := 0
-	for _, x := range list {
-		top = max(top, x.counts["P1"]+x.counts["P2"]+x.counts["P3"]+x.counts["P4"])
-	}
-	var rows [][]string
-	for _, x := range list {
-		c := x.counts
-		rows = append(rows, []string{sBold.Render(x.name), sText.Render(x.os), count("P1", c["P1"], true), count("P2", c["P2"], true),
-			count("P3", c["P3"], true), count("P4", c["P4"], true), compact(float64(c["cves"])), ""})
-	}
-	cols := slices.Clone(viewCols[vHosts])
-	cols[len(cols)-1].fill = func(r, w int) string { return stack(list[r].counts, top, w) }
-	return m.table(cols, rows, w, h)
-}
-
 func (m *Model) packagesView(list []planRow, w, h int) []string {
 	if m.rund == nil {
 		return m.noData()
@@ -912,7 +598,7 @@ func (m *Model) packagesView(list []planRow, w, h int) []string {
 			target = m.t.T("OS")
 		}
 		rows = append(rows, []string{prio(p.Priority), sText.Render(p.Host), sMuted.Render(target), sBold.Render(p.Pkg),
-			sMuted.Render(p.Installed), sOK.Render(p.Fixed), compact(float64(p.CVEs)), kev, sMuted.Render(p.Due)})
+			sMuted.Render(p.Installed + " →"), sOK.Render(p.Fixed), compact(float64(p.CVEs)), kev, sMuted.Render(p.Due)})
 	}
 	return m.table(viewCols[vPackages], rows, w, h)
 }
@@ -938,9 +624,9 @@ func (m *Model) runsView(list []runInfo, w, h int) []string {
 		if r.Partial {
 			kind = sMuted.Render(m.t.T("partial"))
 		}
-		known := r.PlanCounts != nil
+		pc, known := r.counts()
 		rows = append(rows, []string{name, state, kind, fmt.Sprintf("%d/%d", r.HostsTotal-r.HostsFailed, r.HostsTotal),
-			count("P1", r.PlanCounts["P1"], known), count("P2", r.PlanCounts["P2"], known), count("P3", r.PlanCounts["P3"], known)})
+			count("P1", pc["P1"], known), count("P2", pc["P2"], known), count("P3", pc["P3"], known)})
 	}
 	return m.table(viewCols[vRuns], rows, w, h)
 }
@@ -1043,24 +729,34 @@ func (m *Model) formView(h int) []string {
 }
 
 var helpRows = [][2]string{
-	{"1-9, 0, S, tab", "views: organizations, ToDo, hosts, packages, changes, access, network, health, exceptions, runs, scans"},
-	{"up/down, j/k, pgup/pgdn, g/G", "move"},
-	{"enter", "open (an environment, a run, details, a scan's output)"},
+	{"1, 2, 3, tab", "Servers, ToDo, History"},
+	{"w", "Servers: what to show (priorities, logins, network, health)"},
+	{"n, S", "History: what changed; the scans started here"},
+	{"O, E", "organization, environment (popup lists; type to narrow them)"},
+	{":, ctrl+k", "jump to a fix, a CVE, a host or a view"},
+	{"up/down, j/k, pgup/pgdn, g/G", "move (ToDo: home/end, G)"},
+	{"right/left, l/h", "ToDo: open and close a node; other views: the next and previous view"},
+	{"enter", "open (details of a node, a run, a host card, a scan's output)"},
 	{"/", "filter the list; esc clears"},
-	{"space, a", "select an action, select all"},
-	{"v", "only the selected actions (ToDo)"},
-	{"y", "copy the fix task for the selected actions (terminal clipboard, OSC 52)"},
+	{"g", "ToDo: group by fix, CVE or host"},
+	{"f", "ToDo: filters (KEV, RCE, EPSS, internet-facing, fix ready, no fix, overdue); Network: only ports open to the outside"},
+	{"space, x, a", "select a node and everything under it, select all"},
+	{"v", "only the selected (ToDo)"},
+	{"y", "copy the fix task for the selected nodes (terminal clipboard, OSC 52): paste it into an AI agent"},
+	{"Y", "copy the context of the node under the cursor (what, where, why, due, commands, its id) for an AI agent's chat"},
+	{"c, [ ]", "copy the chosen command of the details; choose another"},
 	{"p", "show P4 too"},
 	{"s", "start a scan of this environment"},
+	{"N", "set up a new organization (hosts, SSH access check, the first scan)"},
 	{"x", "stop the scan under the cursor (Scans)"},
 	{"c", "back to the current state (Runs)"},
 	{"i", "a run's errors and log (Runs)"},
-	{"f", "only ports open to the outside (Network)"},
-	{"o", "panels: header, columns of this view (kept between sessions)"},
+	{"o", "panels: tabs, columns of this view, time zone (kept between sessions)"},
 	{"z", "times in the system's time zone or in UTC"},
 	{"U", "check for newer vulnerability DBs and download them (kanareika db update)"},
 	{"L", "language"},
 	{"r", "refresh"},
+	{"mouse", "click tabs, rows, the check and caret of a node, commands, hints, the org and env below; the wheel scrolls. Shift+drag selects text; o turns the mouse off"},
 	{"q, ctrl+c", "quit"},
 }
 
@@ -1077,6 +773,14 @@ func (m *Model) helpView(w, h int) []string {
 			}
 			out = append(out, " "+sKey.Render(fit(k, kw, false))+" "+sText.Render(t))
 		}
+	}
+	out = append(out, "",
+		" "+sTitle.Render(m.t.T("AI agent in the next pane")),
+		" "+sText.Render(m.t.T("y copies the task, Y the context of one node. An agent with kanareika's MCP server gets the same data itself:")),
+		" "+sKey.Render("list_fixes")+sMuted.Render(" · ")+sKey.Render("get_fix")+sMuted.Render(" · ")+sKey.Render("fix_prompt")+sMuted.Render(" · ")+
+			sKey.Render("fix_plan")+sMuted.Render("  (kanareika mcp)"))
+	if m.db != nil && m.db.Trivy != "" {
+		out = append(out, " "+sMuted.Render("Trivy "+m.db.Trivy+" · "+m.t.T("built in")))
 	}
 	out = append(out, "",
 		" "+sBrand.Render("★ ")+sText.Render(m.t.T("Like it? Star it on GitHub"))+"  "+sKey.Render(assets.Repo),
@@ -1110,7 +814,7 @@ func (m *Model) panelsView(h int) []string {
 		lines = append(lines, l)
 	}
 	h = max(h-2, 3)
-	if off := m.panels.cur - h + 1; off > 0 {
+	if off := min(m.panels.cur, len(lines)-1) - h + 1; off > 0 {
 		lines = lines[off:]
 	}
 	if len(lines) > h {
@@ -1118,39 +822,6 @@ func (m *Model) panelsView(h int) []string {
 	}
 	return append(lines, "", " "+sKey.Render("<space>")+" "+sMuted.Render(m.t.T("toggle"))+"  "+sKey.Render("<esc>")+" "+
 		sMuted.Render(m.t.T("close")))
-}
-
-// crumbs: the bottom line: where you are, k9s style, and the last message.
-func (m *Model) crumbs() string {
-	var parts []string
-	if m.org != "" {
-		parts = append(parts, sCrumb2.Render(m.org))
-		env := m.env
-		if env == "default" {
-			env = m.t.T("all")
-		}
-		parts = append(parts, sCrumb2.Render(env))
-	}
-	parts = append(parts, sCrumb.Render(strings.ToLower(m.t.T(viewNames[m.view]))))
-	l := strings.Join(parts, " ")
-	switch {
-	case m.err != "":
-		l += "  " + sErr.Render(m.err)
-	case m.toast != "" && m.now().Sub(m.toastAt).Seconds() < 5:
-		l += "  " + sOK.Render(m.toast)
-	case len(m.orgs.Errors) > 0:
-		l += "  " + sErr.Render(fmt.Sprintf("%s: %d (kanareika validate)", m.t.T("Config errors"), len(m.orgs.Errors)))
-	}
-	// the time now at the right, in the zone times are shown in (z switches it); the screen refreshes often enough
-	z := m.t.zone
-	if z == nil {
-		z = time.UTC
-	}
-	clock := sMuted.Render(m.now().In(z).Format("15:04") + " " + m.t.zoneName(m.now()))
-	if room := m.w - ansi.StringWidth(l) - ansi.StringWidth(clock) - 1; room >= 2 {
-		l += strings.Repeat(" ", room) + clock
-	}
-	return l
 }
 
 // --- live scan -----------------------------------------------------------------------------------------------------

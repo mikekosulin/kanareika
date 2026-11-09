@@ -333,7 +333,11 @@ func (m *Model) denied(out *[]string, sec map[string]any) {
 	if d := arr(sec["denied"]); len(d) > 0 {
 		var what []string
 		for _, x := range d {
-			what = append(what, m.t.msg("denied."+str(x), nil, str(x)))
+			key := str(x) // denied.shadow; older runs wrote the bare name
+			if !strings.HasPrefix(key, "denied.") {
+				key = "denied." + key
+			}
+			what = append(what, m.t.msg(key, nil, str(x)))
 		}
 		*out = append(*out, " "+sLabel.Render(fit(m.t.T("no access to"), 20, false))+" "+sMuted.Render(strings.Join(what, ", ")))
 	}

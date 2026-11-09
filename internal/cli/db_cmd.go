@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"io"
@@ -10,14 +11,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mikekosulin/kanareika/internal/dbbundle"
+	"github.com/mikekosulin/kanareika/internal/dbget"
 	"github.com/mikekosulin/kanareika/internal/priority"
 	"github.com/mikekosulin/kanareika/internal/trivy"
-)
-
-// Downloads, replaceable in tests (they need the network).
-var (
-	updateFeeds = priority.UpdateFeeds
-	prepareDB   = trivy.Prepare
 )
 
 // dbParts: what `db export` packs and `db import` restores.
@@ -34,9 +30,10 @@ func (a *app) dbCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "db",
 		Short: "vulnerability DBs and feeds: update, status, export/import for isolated networks",
-		Long: `kanareika needs data it downloads: trivy's vulnerability DBs (OS packages, languages, Java),
-CISA KEV and EPSS (prioritization) and the DB-IP Lite IP database. "db update" downloads all of
-it; a scan also refreshes trivy's DBs by itself unless --offline.
+		Long: `kanareika needs data it downloads: trivy's vulnerability DB (OS packages and languages, about
+140 MB), CISA KEV and EPSS (prioritization) and the DB-IP Lite IP database (about 65 MB). "db update"
+downloads them; a scan also refreshes trivy's DB by itself unless --offline. The Java DB (about 1 GB)
+is downloaded only when a scan first finds .jar files, or with "db update --java".
 
 Isolated network: "db export bundle.tar.gz" on a connected machine, carry the file over,
 "db import bundle.tar.gz" there, then "scan --offline". The bundle holds public data only.`,
@@ -47,7 +44,7 @@ Isolated network: "db export bundle.tar.gz" on a connected machine, carry the fi
 
 // dbUpdateCmd: `db update`, and `feeds` (its old name) when hidden.
 func (a *app) dbUpdateCmd(use string) *cobra.Command {
-	var skipTrivy bool
+	var skipTrivy, java, yes bool
 	c := &cobra.Command{
 		Use:   use,
 		Short: "download trivy's vulnerability DBs, CISA KEV, EPSS and the IP database",
@@ -55,46 +52,68 @@ func (a *app) dbUpdateCmd(use string) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx, stop := interruptible()
 			defer stop()
-			return a.updateDBs(ctx, cmd.OutOrStdout(), cmd.ErrOrStderr(), skipTrivy)
+			switch a.confirmDownload(ctx, yes) {
+			case aborted:
+				return fail(130, "interrupted")
+			case declined:
+				return fail(1, "nothing downloaded")
+			}
+			return a.updateDBs(ctx, cmd.OutOrStdout(), cmd.ErrOrStderr(), skipTrivy, java)
 		},
 	}
 	c.Flags().BoolVar(&skipTrivy, "skip-trivy", false, "feeds only, not trivy's vulnerability DBs")
+	c.Flags().BoolVar(&java, "java", false, "also the Java DB (about 1 GB; otherwise downloaded when a scan first finds .jar files)")
+	c.Flags().BoolVarP(&yes, "yes", "y", false, "don't ask before downloading (also KANAREIKA_YES=1, or without a terminal)")
 	return c
 }
 
-// updateDBs: the feeds (KEV, EPSS, IP database), then trivy's DBs unless skipTrivy; what `db update` does, and what
-// the TUI and the web start with U / the update button.
-func (a *app) updateDBs(ctx context.Context, out, errOut io.Writer, skipTrivy bool) error {
+// updateDBs: everything at once — the IP databases, KEV, EPSS and, unless skipTrivy, trivy's DB (and the Java DB
+// when java, or when it was downloaded before); what `db update` does, and what the TUI and the web start with U /
+// the update button. Progress goes to errOut (redrawn on a terminal), the summary to out. Fails when something
+// needed is missing afterwards; a failed download whose cached copy stays in use is a warning.
+func (a *app) updateDBs(ctx context.Context, out, errOut io.Writer, skipTrivy, java bool) error {
 	pol, err := priority.LoadPolicy(a.paths)
 	if err != nil {
 		return err
 	}
-	st, err := updateFeeds(ctx, pol)
-	if err != nil {
-		return err
+	names := []string{"dbip-city", "dbip-asn", "kev", "epss"}
+	if !skipTrivy {
+		names = append(names, "db")
+		for _, d := range trivy.DBStatus() {
+			if d.Name == "java-db" && (java || !d.Updated.IsZero()) {
+				names = append(names, "java-db")
+			}
+		}
 	}
-	city, asn := st.IPDBCity, st.IPDBASN
-	if city == "" {
-		city = "none"
+	jobs := downloadJobs(pol, names)
+	errs := runDownloads(ctx, errOut, jobs)
+	if errs["kev"] == nil && errs["epss"] == nil {
+		if err := priority.Stamp(); err != nil {
+			return err
+		}
 	}
-	if asn == "" {
-		asn = "none"
-	}
+	f, _ := priority.LoadFeeds()
+	city, asn := cmp.Or(priority.IPDBMonth("city"), "none"), cmp.Or(priority.IPDBMonth("asn"), "none")
 	fmt.Fprintf(out, "KEV: %d CVEs, EPSS: %d scores, IP DB (DB-IP Lite): city %s, asn %s -> %s\n",
-		st.KEV, st.EPSS, city, asn, priority.FeedsDir())
-	if skipTrivy {
-		return nil
+		len(f.KEV), len(f.EPSS), city, asn, priority.FeedsDir())
+	if !skipTrivy {
+		printDBStatus(out, time.Now())
 	}
-	logf := func(f string, a ...any) { fmt.Fprintf(errOut, f+"\n", a...) }
-	if err := prepareDB(ctx, logf); err != nil {
+	if err := dbget.Fatal(jobs, errs); err != nil {
 		return err
 	}
-	printDBStatus(out, time.Now())
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	return nil
 }
 
 func printDBStatus(out io.Writer, now time.Time) {
 	for _, d := range trivy.DBStatus() {
+		if d.Updated.IsZero() && d.OnDemand {
+			fmt.Fprintf(out, "trivy %s: not needed yet (downloaded when a scan first finds .jar files, or db update --java)\n", d.Name)
+			continue
+		}
 		if d.Updated.IsZero() {
 			fmt.Fprintf(out, "trivy %s: not downloaded (%s)\n", d.Name, d.Dir)
 			continue

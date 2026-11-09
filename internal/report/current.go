@@ -214,6 +214,7 @@ func UpdateCurrent(env string, locked, wait bool) (string, error) {
 	}
 	view := BuildView(cur, meta, findings, prev)
 	meta.PlanCounts = &view.PlanCounts
+	meta.Totals = &view.Totals
 	view.Meta = meta
 	if err := writeMeta(cur, meta); err != nil {
 		return "", err

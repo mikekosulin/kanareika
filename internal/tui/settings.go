@@ -21,11 +21,14 @@ var headerModes = []string{headerAuto, headerFull, headerCompact, headerOff}
 
 // Settings: the panel layout the user chose; kept between sessions (Options.Settings).
 type Settings struct {
-	Header string              `json:"header,omitempty"`
-	ShowP4 bool                `json:"show_p4,omitempty"`
-	NoTabs bool                `json:"no_tabs,omitempty"` // the line of view tabs under the header
-	UTC    bool                `json:"utc,omitempty"`     // times in UTC instead of the system's zone
-	Hidden map[string][]string `json:"hidden,omitempty"`  // view -> column keys switched off
+	Header string `json:"header,omitempty"`
+	ShowP4 bool   `json:"show_p4,omitempty"`
+	NoTabs bool   `json:"no_tabs,omitempty"` // the line of view tabs under the header
+	UTC    bool   `json:"utc,omitempty"`     // times in UTC instead of the system's zone
+	// NoMouse: no mouse reporting (clicks and the wheel off; the terminal's own selection works without shift)
+	NoMouse bool                `json:"no_mouse,omitempty"`
+	Theme   string              `json:"theme,omitempty"`  // "" (the terminal's background), dark, light
+	Hidden  map[string][]string `json:"hidden,omitempty"` // view -> column keys switched off
 }
 
 // DefaultSettingsPath: <user config dir>/kanareika/tui.json ("" when there is no such dir).
@@ -83,5 +86,5 @@ func (s *Settings) toggle(v view, key string) {
 }
 
 // viewKeys: stable names of the views in the settings file.
-var viewKeys = [nViews]string{"orgs", "actions", "hosts", "packages", "changes", "access", "network", "health", "exceptions",
-	"runs", "scans"}
+var viewKeys = [nViews]string{"servers", "actions", "packages", "changes", "access", "network", "health", "exceptions",
+	"runs", "scans", "lens"}

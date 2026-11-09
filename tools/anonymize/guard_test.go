@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"encoding/binary"
 	"io"
 	"io/fs"
 	"net/netip"
@@ -114,6 +115,9 @@ func load(p string) ([]byte, error) {
 	b, err := os.ReadFile(p)
 	if err != nil {
 		return nil, err
+	}
+	if strings.EqualFold(filepath.Ext(p), ".png") {
+		return pngText(b), nil // pixels are compressed bytes: a short name "found" there is chance, not data
 	}
 	if strings.HasSuffix(p, ".gz") {
 		if r, err := gzip.NewReader(bytes.NewReader(b)); err == nil {
@@ -405,4 +409,25 @@ func TestGuardCatches(t *testing.T) {
 			t.Errorf("%s: %v", f, !want)
 		}
 	}
+}
+
+// pngText: the text a PNG carries (tEXt, iTXt and zTXt chunks, as written), where a name or address could really be.
+func pngText(b []byte) []byte {
+	var out []byte
+	if len(b) < 8 {
+		return nil
+	}
+	for i := 8; i+8 <= len(b); {
+		n := int(binary.BigEndian.Uint32(b[i:]))
+		typ := string(b[i+4 : i+8])
+		if n < 0 || i+12+n > len(b) {
+			break
+		}
+		if typ == "tEXt" || typ == "iTXt" || typ == "zTXt" {
+			out = append(out, b[i+8:i+8+n]...)
+			out = append(out, '\n')
+		}
+		i += 12 + n
+	}
+	return out
 }

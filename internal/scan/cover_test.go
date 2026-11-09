@@ -205,7 +205,7 @@ func TestSaveRunFails(t *testing.T) {
 	if rc := e.scanner().Org(context.Background(), o, config.DefaultEnv, Options{IgnoreWindow: true}); rc != 1 {
 		t.Fatalf("rc 0\n%s", e.out)
 	}
-	if !strings.Contains(e.out.String(), "findings.json.gz") || strings.Contains(e.out.String(), "done: P1=") {
+	if !strings.Contains(e.out.String(), "findings.json.gz") || strings.Contains(e.out.String(), "done: ") {
 		t.Fatal(e.out)
 	}
 	runs, _ := filepath.Glob(filepath.Join(report.EnvDir(e.paths, "t1", config.DefaultEnv), "20*"))
@@ -228,7 +228,7 @@ func TestCurrentAndPruneErrors(t *testing.T) {
 	if rc != 0 {
 		t.Fatalf("rc %d\n%s", rc, e.out)
 	}
-	for _, want := range []string{"current state: ", "prune: ", "done: P1="} {
+	for _, want := range []string{"current state: ", "prune: ", "done: "} {
 		if !strings.Contains(e.out.String(), want) {
 			t.Fatalf("%q not in\n%s", want, e.out)
 		}

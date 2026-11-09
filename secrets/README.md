@@ -2,8 +2,7 @@
 
 Not committed (see `.gitignore`).
 
-By default the key comes from your ssh-agent (`access.key` not set): kanareika talks to the agent and the key
-itself is never read or copied. Put files here only if there is no agent:
+By default the key comes from your ssh-agent (`access.key` not set): kanareika talks to the agent and the key itself is never read or copied. Put files here only if there is no agent:
 
 ```
 secrets/

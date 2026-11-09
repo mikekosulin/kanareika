@@ -408,8 +408,8 @@ func analyze(h config.Host, org *config.Org, raw string) ([]finding.Finding, pyf
 		denied = append(denied, "denied.procs")
 	}
 	if len(denied) > 0 {
-		f = append(f, fnd(h, finding.Inventory, "exposure-limited", "INFO",
-			i18n.Msg("health.limited", map[string]any{"what": strings.Join(denied, ", ")}), i18n.Plain("")))
+		title, why := check.Denied(h, denied)
+		f = append(f, fnd(h, finding.Inventory, "exposure-limited", "INFO", title, why))
 	}
 
 	addrJS, publicJS, unlistedJS, listenJS := []any{}, []string{}, []string{}, []any{}
@@ -443,7 +443,7 @@ func analyze(h config.Host, org *config.Org, raw string) ([]finding.Finding, pyf
 	}
 	line := fmt.Sprintf("%d listening, %d on public addresses, public IPs: %s", len(socks), len(exposed), pub)
 	if len(denied) > 0 {
-		line += "; no access to " + strings.Join(denied, ", ")
+		line += "; " + check.DeniedLog(denied)
 	}
 	return f, data, line
 }

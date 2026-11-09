@@ -31,7 +31,26 @@ import (
 var (
 	prepare        = trivy.Prepare
 	prepareOffline = trivy.PrepareOffline
+	refreshScores  = priority.RefreshScores
 )
+
+// feedsWarn: what a scan says about KEV / EPSS it could not refresh (or, offline, did not try to).
+func (s *Scanner) feedsWarn(offline bool) {
+	f, _ := priority.LoadFeeds()
+	if f.Updated == "" || len(f.KEV) == 0 {
+		s.log("WARNING: no KEV / EPSS data: priorities ignore known-exploited CVEs and exploit likelihood. " +
+			"Run `kanareika db update` (or `db import` on an isolated network).")
+		return
+	}
+	at, err := priority.FeedsTime(f.Updated)
+	if err != nil {
+		return
+	}
+	if age := time.Since(at); offline && age > 7*24*time.Hour || !offline && age > priority.FeedsMaxAge {
+		s.log("WARNING: KEV / EPSS from %s (%s old): newly exploited CVEs may be missing", at.UTC().Format("2006-01-02"),
+			age.Round(time.Hour))
+	}
+}
 
 // Options of one scan run.
 type Options struct {
@@ -211,11 +230,20 @@ func (s *Scanner) Org(ctx context.Context, o *config.Org, env string, opt Option
 		if err := prepareOffline(s.log); err != nil {
 			return refuse(err)
 		}
+		s.feedsWarn(true)
 	} else {
 		s.log("trivy: updating vulnerability DB ...")
 		if err := prepare(ctx, s.log); err != nil {
 			return refuse(err)
 		}
+		if pol, err := priority.LoadPolicy(s.Paths); err == nil { // a broken policy is reported where it is used
+			if got, err := refreshScores(ctx, pol, priority.FeedsMaxAge); err != nil {
+				s.log("KEV / EPSS: not updated: %v", err)
+			} else if got {
+				s.log("KEV / EPSS: updated")
+			}
+		}
+		s.feedsWarn(false)
 	}
 	conn, err := sshx.New(o, s.Paths)
 	if err != nil {
@@ -331,7 +359,15 @@ func (s *Scanner) run(ctx context.Context, o *config.Org, env string, selected [
 		return 1
 	}
 	feeds, _ := priority.LoadFeeds()
-	findings = priority.Apply(findings, o, pol, feeds, started)
+	prev, err := report.PrevIndex(envDir)
+	if err != nil {
+		s.log("previous state: %v (due dates count from this scan)", err)
+		prev = nil
+	}
+	if findings, err = priority.Apply(findings, o, env, pol, feeds, started, prev); err != nil {
+		fmt.Fprintln(s.Out, "  !", err)
+		return 1
+	}
 
 	tv := trivy.Version(ctx)
 	var fu *string
@@ -363,7 +399,7 @@ func (s *Scanner) run(ctx context.Context, o *config.Org, env string, selected [
 		fmt.Fprintln(s.Out, "  !", err)
 		return 1
 	}
-	prog.Finish("done", map[string]any{"counts": meta.Counts})
+	prog.Finish("done", map[string]any{"counts": meta.Counts, "totals": meta.Totals})
 	finished = true
 	if _, err := report.UpdateCurrent(envDir, true, false); err != nil {
 		s.log("current state: %v", err)
@@ -371,9 +407,7 @@ func (s *Scanner) run(ctx context.Context, o *config.Org, env string, selected [
 	if _, err := report.Prune(s.Paths, envDir, report.KeepDefault, report.KeepDefault, false); err != nil {
 		s.log("prune: %v", err)
 	}
-	c := meta.Counts
-	fmt.Fprintf(s.Out, "  done: P1=%d P2=%d P3=%d P4=%d accepted=%d; failed hosts: %d\n  report: %s/summary.md\n",
-		c["P1"], c["P2"], c["P3"], c["P4"], c["accepted"], failed.Len(), runDir)
+	fmt.Fprintf(s.Out, "  done: %s; failed hosts: %d\n  report: %s/summary.md\n", meta.Totals.Line(), failed.Len(), runDir)
 	if failed.Len() > 0 {
 		return 1
 	}

@@ -60,13 +60,22 @@ func Shot(bin, url, png string, w, h int, extra ...string) error {
 	args := append([]string{"--headless=new", "--disable-gpu", "--hide-scrollbars", "--force-device-scale-factor=2",
 		"--default-background-color=00000000", fmt.Sprintf("--window-size=%d,%d", w, h), "--screenshot=" + shot},
 		extra...)
-	if err := run(ctx, bin, append(args, url)...); err != nil {
-		return err
+	_ = os.Remove(shot) // a picture from before must not pass for this one
+	runErr := run(ctx, bin, append(args, url)...)
+	if wholePNG(shot) {
+		return nil // Chrome sometimes fails on its way out ("Teardown watchdog expired") after the picture is written
 	}
-	if _, err := os.Stat(shot); err != nil {
-		return errors.New("chrome wrote no picture: " + shot)
+	if runErr != nil {
+		return runErr
 	}
-	return nil
+	return errors.New("chrome wrote no picture: " + shot)
+}
+
+// wholePNG: path is a complete PNG: the signature and the closing IEND chunk.
+func wholePNG(path string) bool {
+	b, err := os.ReadFile(path)
+	return err == nil && len(b) > 20 && bytes.HasPrefix(b, []byte("\x89PNG\r\n\x1a\n")) &&
+		bytes.Equal(b[len(b)-8:len(b)-4], []byte("IEND"))
 }
 
 // FileURL: a local file as Chrome opens it: file:///home/x/og.html, file:///C:/x/og.html on Windows.
