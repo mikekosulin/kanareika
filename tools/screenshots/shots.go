@@ -20,14 +20,22 @@ import (
 	"github.com/mikekosulin/kanareika/internal/i18n"
 	"github.com/mikekosulin/kanareika/internal/server"
 	"github.com/mikekosulin/kanareika/tools/internal/chrome"
+	"github.com/mikekosulin/kanareika/tools/internal/webp"
 )
 
 // seams for tests: where Chrome is, the file:// URL of a page, Chrome itself, and the environment
 var (
 	findChrome = chrome.Find
 	fileURL    = chrome.FileURL
-	shot       = chrome.Shot
-	setenv     = os.Setenv
+	capture    = chrome.Shot
+	shot       = func(bin, url, png string, w, h int, extra ...string) error { // Chrome's PNG, kept as lossless WebP
+		if err := capture(bin, url, png, w, h, extra...); err != nil {
+			return err
+		}
+		_, err := webp.FromPNG(png)
+		return err
+	}
+	setenv = os.Setenv
 )
 
 // The web page's size in CSS pixels (rendered at 2x); the TUI's follows its terminal size: a cell of the 13px
@@ -38,8 +46,8 @@ func tuiSize(cols, rows int) (int, int) {
 	return int(float64(cols)*7.83+0.5) + 32, int(float64(rows)*15.86+0.5) + 60
 }
 
-// shots: the README's screenshots in every language: tui-<lang>.png and tui-<lang>-light.png (the frame of size
-// after keys, as run draws it, dark and light), web-<lang>.png and web-<lang>-light.png (ToDo of `kanareika web` grouped by CVE, dark and light), in out.
+// shots: the README's screenshots in every language, lossless WebP: tui-<lang>.webp and tui-<lang>-light.webp (the
+// frame of size after keys, as run draws it, dark and light), web-<lang>.webp and web-<lang>-light.webp (ToDo of `kanareika web` grouped by CVE, dark and light), in out.
 // The directory is demo data (tools/demo): its trivy cache and feeds are used, not this machine's.
 func shots(out, home, bin, org, env, size, keys, at string) error {
 	if bin == "" {

@@ -1038,20 +1038,20 @@ func (m *Model) todoMain(h int) []string {
 		if n != nil {
 			title += sText.Render("(" + ansi.Strip(m.nodeText(n, n.Kind == "host", false)) + ")")
 		}
-		lines := m.detailView(w-2, true)
+		lines := m.detailView(w-2-2*pad, true)
 		m.detOff = min(m.detOff, max(len(lines)-(h-2), 0))
 		return panel(title, lines[m.detOff:], w, h)
 	}
 	if m.view == vActions && m.flt["accepted"] { // ToDo's accepted risks: until when, whose, why
 		l := m.exceptions()
-		return panel(m.todoTitle(), m.exceptionsView(l, w-2, h-2), w, h)
+		return panel(m.todoTitle(), m.exceptionsView(l, w-2-2*pad, h-2), w, h)
 	}
 	if w < wideDetails || m.rund == nil {
-		return panel(m.todoTitle(), m.treeView(w-2, h-2), w, h)
+		return panel(m.todoTitle(), m.treeView(w-2-2*pad, h-2), w, h)
 	}
 	right := min(max(w*2/5, 50), 80)
-	left := panel(m.todoTitle(), m.treeView(w-right-2, h-2), w-right, h)
-	lines := m.detailView(right-2, false)
+	left := panel(m.todoTitle(), m.treeView(w-right-2-2*pad, h-2), w-right, h)
+	lines := m.detailView(right-2-2*pad, false)
 	m.detOff = min(m.detOff, max(len(lines)-(h-2), 0))
 	det := panel(sTitle.Render(m.t.T("Details")), lines[m.detOff:], right, h)
 	for i := range left { // the wheel over the pane scrolls it

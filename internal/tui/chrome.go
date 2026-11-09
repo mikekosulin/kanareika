@@ -308,11 +308,11 @@ func (m *Model) menuBox() []string {
 		hint = sKey.Render("<space>") + " " + sMuted.Render(m.t.T("toggle")) + "  " + sKey.Render("<esc>") + " " + sMuted.Render(m.t.T("close"))
 	}
 	lines = append(lines, "", " "+hint)
-	box := panel(sTitle.Render(m.t.T(title)), lines, w, len(lines)+2)
-	for i, l := range box { // a click inside the list but not on an item keeps it open
-		box[i] = m.zone(fmt.Sprintf("menubox:%d", i), l, func(int) tea.Cmd { return nil })
+	frame := box(sTitle.Render(m.t.T(title)), lines, w, len(lines)+2)
+	for i, l := range frame { // a click inside the list but not on an item keeps it open
+		frame[i] = m.zone(fmt.Sprintf("menubox:%d", i), l, func(int) tea.Cmd { return nil })
 	}
-	return box
+	return frame
 }
 
 // overlay: box drawn over lines at column x, line y.

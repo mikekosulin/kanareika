@@ -1406,7 +1406,7 @@ func (m *Model) pickView(w int) []string {
 	}
 	lines = append(lines, "", " "+sKey.Render("space")+" "+sMuted.Render(m.t.T("toggle"))+"  "+sKey.Render("⏎")+" "+
 		sMuted.Render(m.t.T("Add"))+"  "+sKey.Render("esc")+" "+sMuted.Render(m.t.T("Cancel")))
-	return append(panel(sTitle.Render("~/.ssh/config"), lines, min(w, 74), len(lines)+2), "")
+	return append(box(sTitle.Render("~/.ssh/config"), lines, min(w, 74), len(lines)+2), "")
 }
 
 var authFail = regexp.MustCompile(`(?i)authenticat|permission denied|publickey|refused the login`)
