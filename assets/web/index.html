@@ -74,7 +74,7 @@ nav.nav { padding: 10px 8px; display: grid; gap: 1px; overflow: auto; }
 .nav a .n { margin-left: auto; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .nav a .n.hot { color: var(--p1); font-weight: 600; }
 .nav hr { border: 0; border-top: 1px solid var(--line); margin: 8px 2px; }
-.status { margin-top: auto; padding: 12px; border-top: 1px solid var(--line); display: grid; gap: 8px; font-size: 12.5px; }
+.status { margin-top: auto; padding: 12px; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; font-size: 12.5px; } /* the side's width, not the longest line's */
 .status .row { display: flex; align-items: center; gap: 8px; color: var(--ink-2); }
 .status .row > span:last-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* one line in every language */
 .status .row b { color: var(--ink); font-weight: 550; }
@@ -97,6 +97,7 @@ main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .top .tools { margin-left: auto; display: flex; gap: 6px; align-items: center; }
 .select { height: 32px; padding: 0 10px; border: 1px solid var(--line-2); background: var(--raised); border-radius: var(--r-ctl); }
 .mbar { display: none; }
+.scrim { display: none; }
 
 /* ---------- ToDo ---------- */
 .work { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 420px; }
@@ -282,6 +283,7 @@ dialog footer { padding: 12px 20px; border-top: 1px solid var(--line); display: 
   .app { grid-template-columns: minmax(0, 1fr); }
   .side { position: fixed; inset: 0 auto 0 0; width: 280px; z-index: 35; transform: translateX(-100%); transition: transform .22s var(--ease); }
   .side.open { transform: none; box-shadow: var(--shadow); }
+  .scrim.on { display: block; position: fixed; inset: 0; z-index: 34; background: rgba(5,6,10,.55); }
   .mbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--surface); }
   .mbar .scopebtn { display: flex; flex-direction: column; align-items: flex-start; border: 0; background: none; padding: 0; line-height: 1.2; min-width: 0; }
   .mbar .scopebtn b { font-size: 14px; } .mbar .scopebtn span { font-size: 12px; color: var(--ink-3); }
@@ -875,9 +877,10 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
     <nav class="nav" id="nav"></nav>
     <div class="status" id="status"></div>
   </aside>
+  <div class="scrim" id="scrim"></div>
   <main>
     <div class="mbar">
-      <button class="btn icon ghost" id="menubtn" aria-label="Menu"><svg class="i"><use href="#i-menu"/></svg></button>
+      <button class="btn icon ghost" id="menubtn" aria-label="Menu" aria-controls="side" aria-expanded="false"><svg class="i"><use href="#i-menu"/></svg></button>
       <b>kanareika</b>
     </div>
     <div id="view" style="display:contents"></div>
@@ -1062,18 +1065,26 @@ function todoShell() {
         <label class="search">${icon("search")}<span class="sr">${t("Filter")}</span><input id="q" placeholder="${t("Package, CVE, host or group")}" value="${esc(S.q)}"><kbd>/</kbd></label>
         <div class="chips">${S.accepted ? "" : FILTERS.map(([k, l]) => `<button class="chip" data-flt="${k}" aria-pressed="${S.flt.has(k)}">${t(l)}</button>`).join("")}<button class="chip" data-acc aria-pressed="${!!S.accepted}">${t("accepted")}</button></div>
       </div>
-      <div class="scroll" id="scroll"><div class="thead"><button class="tw" data-${S.open.size ? "collapse" : "expand"} aria-expanded="${S.open.size > 0}" title="${S.open.size ? t("Collapse all") : t("Expand all")}">${icon("chev")}</button><span></span><span>${t("Pri")}</span>
+      <div class="scroll" id="scroll"><div class="thead"><button class="tw" id="allbtn" ${allBtnAttrs()}>${icon("chev")}</button><span></span><span>${t("Pri")}</span>
         <span>${S.by === "fix" ? t("Fix") : S.by === "cve" ? t("Vulnerability") : t("Group / host")}</span><span class="c-h">${t("Hosts")}</span><span class="num c-cve">CVE</span><span class="num c-ep">EPSS</span><span class="c-fl">${t("Flags")}</span><span class="c-st">${t("State")}</span><span class="dd">${t("Due")}</span></div>
         <div role="tree" id="tree"></div><div class="hidden-note" id="hidden"></div><div class="end"></div><div id="selbar"></div></div>
     </div><aside class="detail" id="detail" aria-label="${t("Details")}"></aside></div>`;
 }
+// the header's expand / collapse all: which one by what is open
+const allBtnAttrs = () => `data-${S.open.size ? "collapse" : "expand"} aria-expanded="${S.open.size > 0}" title="${S.open.size ? t("Collapse all") : t("Expand all")}"`;
+function allBtn() {
+  const b = $("#allbtn"); if (!b) return;
+  b.removeAttribute("data-expand"); b.removeAttribute("data-collapse");
+  b.setAttribute(S.open.size ? "data-collapse" : "data-expand", ""); b.setAttribute("aria-expanded", S.open.size > 0); b.title = S.open.size ? t("Collapse all") : t("Expand all");
+}
 function drawTree() {
   const tr = S.tree; if (!tr || !$("#tree")) return;
-  FLAT = [];
+  FLAT = []; $("#tree").style.minHeight = "";
   $("#tree").innerHTML = tr.nodes.length ? rows(tr.nodes).join("") : `<div class="empty"><h3>${S.flt.size || S.q ? t("Nothing matches") : t("Nothing to do")}</h3>${S.flt.size || S.q ? `<button class="btn ghost" data-reset>${t("Clear filters")}</button>` : t("No open findings in this environment.")}</div>`;
   $("#sub").innerHTML = t("{f} fixes · {c} CVE · {h} hosts", { f: tr.fixes, c: tr.cves, h: tr.hosts }) + (tr.no_fix ? " · " + t("{n} with nothing to install yet", { n: tr.no_fix }) : "");
   $("#counts").innerHTML = counts();
   $("#hidden").innerHTML = tr.hidden_backported ? `${t("{n} findings hidden: already fixed by a backport (package changelog).", { n: tr.hidden_backported })} <button data-bp>${t("Show")}</button>` : S.backport ? `<button data-bp>${t("Hide backported")}</button>` : "";
+  allBtn();
   drawSelbar();
   renderSide();
 }
@@ -1886,7 +1897,7 @@ function go(view, push = true, q) {
   if (view !== S.view) { VS.q = ""; VS.flt.clear(); VS.all = false; VS.sel = ""; VS.item = null; VS.stack = []; VS.want = ""; S.cardHost = ""; if (isTree(view) && isTree(S.view)) { S.open.clear(); S.cur = null; S.q = ""; } }
   if (q != null) S.q = q;
   S.view = view; syncURL(push); render();
-  $("#side")?.classList.remove("open");
+  sideOpen(false);
 }
 function vopenRow(i) {
   const x = VLIST[i]; if (!x) return;
@@ -2100,7 +2111,7 @@ function lensStub(id, rd) {
 }
 function drawServers() {
   if (!$("#tree") || S.view !== "servers") return;
-  FLAT = [];
+  FLAT = []; $("#tree").style.minHeight = "";
   const list = SRV.list, c = S.tree?.counts || {}, out = [];
   list.forEach((n) => srvRows(n, 0, out));
   $("#tree").innerHTML = out.length ? out.join("") : `<div class="empty"><h3>${S.flt.size || S.q ? t("Nothing matches") : t("No servers")}</h3>${S.flt.size || S.q ? `<button class="btn ghost" data-reset>${t("Clear filters")}</button>` : t("No server in this environment has been scanned.")}</div>`;
@@ -2186,7 +2197,7 @@ document.addEventListener("click", async (e) => {
   const d = el.dataset;
   if (d.themeSet) { S.theme = d.themeSet; store.set("theme", S.theme); applyTheme(); renderSide(); return; }
   if (d.view) { if (!e.metaKey && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); go(d.view); } return; }
-  if (d.tw) { e.stopPropagation(); S.open.has(d.tw) ? S.open.delete(d.tw) : S.open.add(d.tw); const sc = $("#scroll").scrollTop; redraw(); $("#scroll").scrollTop = sc; return; }
+  if (d.tw) { e.stopPropagation(); keepRow(d.tw, () => { S.open.has(d.tw) ? S.open.delete(d.tw) : S.open.add(d.tw); redraw(); }); return; }
   if (d.sel) { e.stopPropagation(); S.sel.has(d.sel) ? S.sel.delete(d.sel) : S.sel.add(d.sel); drawSelbar(); return; }
   if (el.classList.contains("node") || el.classList.contains("sv") || el.classList.contains("hc")) { if (d.n) show(d.n); return; }
   if (d.goto) { show(d.goto, true); return; }
@@ -2195,8 +2206,10 @@ document.addEventListener("click", async (e) => {
   if (d.flt) { S.flt.has(d.flt) ? S.flt.delete(d.flt) : S.flt.add(d.flt); el.setAttribute("aria-pressed", S.flt.has(d.flt)); S.view === "servers" ? loadServers() : loadTree(); return; }
   if ("acc" in d) { S.accepted = !S.accepted; S.cur = null; VS.item = null; VS.sel = ""; syncURL(); render(); return; }
   if ("bp" in d) { S.backport = !S.backport; loadTree(); return; }
-  if ("expand" in d) { const all = (ns) => ns.forEach((n) => { if ((n.kids || []).length) { S.open.add(n.id); all(n.kids); } }); all(S.tree?.nodes || []); render(); return; }
-  if ("collapse" in d) { S.open.clear(); render(); return; }
+  if ("expand" in d || "collapse" in d) { // the tree only: a full render would blank the list and lose the scroll
+    if ("expand" in d) { const all = (ns) => ns.forEach((n) => { if ((n.kids || []).length) { S.open.add(n.id); all(n.kids); } }); all(S.tree?.nodes || []); } else S.open.clear();
+    const sc = "expand" in d ? $("#scroll").scrollTop : 0; redraw(); $("#scroll").scrollTop = sc; return; // collapsed: from the top
+  }
   if ("clear" in d) { S.sel.clear(); drawTree(); return; }
   if ("reset" in d) { S.flt.clear(); S.q = ""; render(); return; }
   if (d.addsel) { S.sel.has(d.addsel) ? S.sel.delete(d.addsel) : S.sel.add(d.addsel); drawTree(); $("#detail").innerHTML = detailHTML(DETAIL); return; }
@@ -2253,7 +2266,30 @@ document.addEventListener("input", (e) => {
   if (e.target.id === "pastebox") grow(e.target);
   if (e.target.id === "pastebox" || e.target.name === "user") { clearTimeout(previewTimer); previewTimer = setTimeout(preview, 250); }
   if (e.target.id === "q") { S.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(S.view === "servers" ? (S.lens === "priorities" ? loadServers : drawLens) : S.accepted ? drawAccepted : loadTree, 200); } else if (e.target.id === "palq") { PI = 0; palRender(); } });
+// keepRow: the row toggled stays where it was on screen. A collapse near the end would shrink the list under the
+// scroll position and pull everything down, so the list keeps its height until the rows fill the screen again.
+function keepRow(id, fn) {
+  const sc = $("#scroll"), tr = $("#tree"), row = () => document.querySelector(`[data-tw="${CSS.escape(id)}"]`);
+  if (!sc || !tr) { fn(); return; }
+  const y = row()?.getBoundingClientRect().top, h = tr.offsetHeight;
+  fn();
+  tr.style.minHeight = h + "px";
+  const y2 = row()?.getBoundingClientRect().top;
+  if (y != null && y2 != null) sc.scrollTop += y2 - y;
+}
+document.addEventListener("scroll", (e) => { // the kept height goes once real rows reach the bottom of the screen
+  const tr = e.target.id === "scroll" && $("#tree"); if (!tr || !tr.style.minHeight) return;
+  const last = tr.lastElementChild;
+  if (!last || last.getBoundingClientRect().bottom >= e.target.getBoundingClientRect().bottom) tr.style.minHeight = "";
+}, true);
+// the sidebar on a phone: the menu button opens it over the page; a tap beside it, Esc or a view picked closes it
+function sideOpen(on) {
+  $("#side")?.classList.toggle("open", on); $("#scrim")?.classList.toggle("on", on); $("#menubtn")?.setAttribute("aria-expanded", on);
+}
+$("#menubtn").addEventListener("click", () => sideOpen(!$("#side").classList.contains("open")));
+$("#scrim").addEventListener("click", () => sideOpen(false));
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("#side")?.classList.contains("open")) { sideOpen(false); return; }
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); palOpen(); return; }
   if (e.target.id === "palq") {
     if (e.key === "ArrowDown") { PI = Math.min(PI + 1, palRender.xs.length - 1); palRender(); e.preventDefault(); }
