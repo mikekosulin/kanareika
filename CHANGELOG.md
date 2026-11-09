@@ -11,6 +11,10 @@ Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor ve
 - **Web: collapsing in a list no longer jumps.** Collapse all in the header redraws only the list instead of the whole page; a group collapsed near the end stays where it was.
 - **Web: the sidebar's status no longer spills past its edge**; long lines end in "…".
 
+### Changed
+
+- **Grouping by CVE is fast.** The tree comes with its top rows; a row's kids come when it is opened (`/api/tree?levels=0`, `&under=<id>`). On 4 hosts with 17,000 CVEs the answer went from 157 MB to 6 MB, switching to it in the TUI from 2.4 s to 0.4–0.8 s. The server keeps the trees it built, so a node's details no longer rebuild the whole tree (0.7 s → 0.01 s). The web page draws the first 300 rows, then "Show all".
+
 ## 0.5.0 — 2026-11-09
 
 Three places instead of ten pages: Servers, ToDo, History. What to fix, grouped the way it gets fixed; setup for a homelab, a client or a fleet; a web page and a TUI that work the same.
