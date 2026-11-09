@@ -26,7 +26,7 @@ func (s *Server) apiHistory(q query) (any, error) {
 	for i := len(rs) - 1; i >= 0; i-- {
 		h := historyRun{runInfo: rs[i]}
 		if rs[i].State == "done" {
-			if b, err := s.view(filepath.Join(s.envDir(o.ID, env), rs[i].RunID)); err == nil {
+			if b, err := s.historyView(filepath.Join(s.envDir(o.ID, env), rs[i].RunID)); err == nil {
 				var v struct {
 					Prev     *string `json:"prev"`
 					New      *struct{ Total int }
@@ -46,4 +46,14 @@ func (s *Server) apiHistory(q query) (any, error) {
 		out = append(out, h)
 	}
 	return map[string]any{"runs": out}, nil
+}
+
+// historyView: the run's stored view.json, read without the server lock and without the view cache (History reads
+// every run: through s.view it would hold the lock for all of them and push the views people have open out of the
+// cache). Only a run whose view must be rebuilt (an older version, or none) goes through s.view, once.
+func (s *Server) historyView(dir string) ([]byte, error) {
+	if b, ok := storedView(filepath.Join(dir, "view.json"), false); ok {
+		return b, nil
+	}
+	return s.view(dir)
 }
