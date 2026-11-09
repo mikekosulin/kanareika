@@ -94,7 +94,7 @@ func TestQuickWins(t *testing.T) {
 	t.Cleanup(func() { hasDark, detectOnce = oldDark, oldOnce; lipgloss.SetHasDarkBackground(true) })
 	asked := 0
 	hasDark = func() bool { asked++; return true }
-	detectOnce = sync.Once{}
+	detectOnce = &sync.Once{}
 	h := newHarness(t, Options{Org: "acme", Env: "production", Theme: "light"}, false)
 	if asked != 0 {
 		t.Fatal("asked the terminal with the theme forced")

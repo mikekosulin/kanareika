@@ -16,7 +16,7 @@ var themes = []string{"", "dark", "light"}
 var themeNames = map[string]string{"": "auto", "dark": "dark", "light": "light"}
 
 var (
-	detectOnce sync.Once
+	detectOnce = &sync.Once{}
 	detected   bool // the terminal's background is dark (asked once, the first time the theme is auto)
 	hasDark    = lipgloss.HasDarkBackground
 )
