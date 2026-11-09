@@ -1548,7 +1548,7 @@ func (m *Model) checkView(w int) []string {
 		out = append(out, "")
 	}
 	if wz.file != "" {
-		out = append(out, " "+sMuted.Render(m.t.F("Saved in {file}", "file", wz.file[strings.LastIndex(wz.file, "/")+1:])), "")
+		out = append(out, " "+sMuted.Render(m.t.F("Saved in {file}", "file", wz.file[strings.LastIndexAny(wz.file, `/\`)+1:])), "")
 	}
 	var keys []string
 	switch {

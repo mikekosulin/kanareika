@@ -1459,7 +1459,7 @@ function checkView(s) {
     : `<button class="btn primary" data-setup-recheck>${t("Check again")}</button><button class="btn ghost" data-setup-back>${t("Back")}</button>`;
   return `<div class="q"><h3>${t("Connecting")}</h3><p class="qn">${t("One login per server, {cmd}, log out. Nothing is changed.", { cmd: "<code>uname -sr</code>" })}</p></div>
     <div class="groups">${groups.join("")}${skipped}</div>
-    ${s.file ? `<p class="qn">${t("Saved in {file}", { file: `<code class="copyable" data-copy-text="${esc(s.file)}" title="${esc(s.file)}">${esc(s.file.split("/").pop())}</code>` })}</p>` : ""}
+    ${s.file ? `<p class="qn">${t("Saved in {file}", { file: `<code class="copyable" data-copy-text="${esc(s.file)}" title="${esc(s.file)}">${esc(s.file.split(/[\\/]/).pop())}</code>` })}</p>` : ""}
     <div class="go">${actions}</div>`;
 }
 /* step 3: the scan's own output, as a terminal shows it */
