@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -74,8 +75,19 @@ report directory and history. An org with several environments needs --env (or -
 			}
 			ctx, stop := interruptible()
 			defer stop()
-			if !offline && !dryRun && !a.confirmDownload(ctx, yes) {
-				return fail(1, "refusing to scan: the vulnerability DBs are not downloaded (kanareika db update, or db import and --offline)")
+			if !offline && !dryRun {
+				switch a.confirmDownload(ctx, yes) {
+				case aborted:
+					return fail(130, "interrupted")
+				case declined:
+					at := cachedDB()
+					if at.IsZero() {
+						return fail(1, "refusing to scan: the vulnerability DBs are not downloaded (kanareika db update, or db import and --offline)")
+					}
+					offline = true // as --offline: what is cached, however old
+					fmt.Fprintf(cmd.ErrOrStderr(), "Scanning with the cached vulnerability DB from %s (%s old)\n",
+						at.Local().Format("2006-01-02"), age(time.Since(at)))
+				}
 			}
 			if !offline && !dryRun {
 				a.downloadFirst(ctx, cmd.ErrOrStderr())

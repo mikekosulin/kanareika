@@ -5,8 +5,11 @@ import (
 	"context"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/dbsize"
@@ -56,9 +59,9 @@ func TestDownloadQuestion(t *testing.T) {
 	if code, out, _ := cli(t, "db", "update"); code != 0 || !strings.Contains(out, "KEV: 3 CVEs") {
 		t.Fatal(code, out)
 	}
-	// the vulnerability DBs are there now: only the rest is asked about
-	tty = onTTY(t, "y\n")
-	if code, _, _ := cli(t, "db", "update"); code != 0 || tty.String() != "Download the vulnerability list (30 MB)? [Y/n] " {
+	// the vulnerability DBs are there now; the IP database that failed (db-ip.com blocked) is optional: not asked
+	tty = onTTY(t, "n\n")
+	if code, _, _ := cli(t, "db", "update"); code != 0 || tty.Len() != 0 {
 		t.Fatal(code, tty)
 	}
 	// not asked: --yes, KANAREIKA_YES, no terminal, no /dev/tty
@@ -82,6 +85,54 @@ func TestDownloadQuestion(t *testing.T) {
 	openTTY = func() (io.ReadWriteCloser, error) { return nil, errors.New("no tty") }
 	if code, _, _ := cli(t, "db", "update"); code != 0 {
 		t.Fatal(code)
+	}
+}
+
+// TestDownloadNo: Ctrl-D is no, and KANAREIKA_YES=0 does not say yes.
+func TestDownloadNo(t *testing.T) {
+	sandbox(t)
+	fakeDownloads(t, nil, nil)
+	tty := onTTY(t, "") // Ctrl-D: EOF
+	if code, _, errs := cli(t, "db", "update"); code != 1 || !strings.Contains(errs, "nothing downloaded") || !strings.Contains(tty.String(), "[Y/n]") {
+		t.Fatal(code, errs, tty)
+	}
+	for _, v := range []string{"0", "false", "no"} {
+		t.Setenv("KANAREIKA_YES", v)
+		tty = onTTY(t, "n\n")
+		if code, _, _ := cli(t, "db", "update"); code != 1 || !strings.Contains(tty.String(), "[Y/n]") {
+			t.Fatal(v, code, tty)
+		}
+	}
+	for _, v := range []string{"true", "YES", "y"} {
+		t.Setenv("KANAREIKA_YES", v)
+		tty = onTTY(t, "n\n")
+		if code, _, _ := cli(t, "db", "update"); code != 0 || tty.Len() != 0 {
+			t.Fatal(v, code, tty)
+		}
+	}
+}
+
+// TestScanDeclinedWithCache: no to the download with an outdated cached DB scans with it, as --offline.
+func TestScanDeclinedWithCache(t *testing.T) {
+	sandbox(t)
+	fixtureOrg(t)
+	old := runOrg
+	t.Cleanup(func() { runOrg = old })
+	var opts []scan.Options
+	runOrg = func(_ context.Context, _ *scan.Scanner, _ *config.Org, _ string, o scan.Options) int {
+		opts = append(opts, o)
+		return 0
+	}
+	write(t, filepath.Join(os.Getenv("TRIVY_CACHE_DIR"), "db", "metadata.json"),
+		`{"UpdatedAt":"2026-10-01T00:00:00Z","NextUpdate":"2026-10-01T06:00:00Z"}`)
+	tty := onTTY(t, "n\n")
+	code, _, errs := cli(t, "scan", "acme", "--env", "production")
+	if code != 0 || len(opts) != 1 || !opts[0].Offline || !strings.Contains(tty.String(), "[Y/n]") ||
+		!strings.Contains(errs, "Scanning with the cached vulnerability DB from 2026-") {
+		t.Fatal(code, opts, errs, tty)
+	}
+	if age(50*time.Hour) != "2d" || age(5*time.Hour) != "5h" || age(time.Minute) != "under an hour" {
+		t.Fatal(age(50 * time.Hour))
 	}
 }
 
