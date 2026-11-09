@@ -929,6 +929,11 @@ func (m *Model) panelItems() []formItem {
 func (m *Model) panelsKey(s string) tea.Cmd {
 	items := m.panelItems()
 	d := m.panels
+	if len(items) == 0 {
+		m.panels = nil
+		return nil
+	}
+	d.cur = min(max(d.cur, 0), len(items)-1) // the list may have changed under it
 	step := func(dir int) {
 		for i := d.cur + dir; i >= 0 && i < len(items); i += dir {
 			if items[i].kind != itemHead {

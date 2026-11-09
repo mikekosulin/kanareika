@@ -2,6 +2,8 @@ package tui
 
 import (
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // TestStaleWizardAnswers: a check, the hosts or the setup's answer for a wizard closed since (esc, N) is dropped; a
@@ -25,6 +27,33 @@ func TestStaleWizardAnswers(t *testing.T) {
 	}
 	m.setup = nil
 	m.Update(checkedMsg{gen: 1, host: "web-1"}) // no wizard at all
+}
+
+// TestClicksBehindDialogs: with a dialog open a click behind it does nothing; a panels cursor past its list is
+// pulled back instead of indexing out of range.
+func TestClicksBehindDialogs(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, false)
+	x, y := h.where("History")
+	for _, open := range []func(){
+		func() { h.key("o") },
+		func() { h.key("?") },
+		func() { h.m.setup = h.m.checkWizard("acme", "production") },
+	} {
+		open()
+		h.mouse(x, y, tea.MouseButtonLeft)
+		if h.m.view == vRuns {
+			t.Fatal("a click went through a dialog")
+		}
+		h.m.panels, h.m.help, h.m.setup = nil, false, nil
+	}
+	h.key("o")
+	h.m.panels.cur = 999
+	h.screen()
+	h.key("enter")
+	h.key("down")
+	if h.m.panels != nil && h.m.panels.cur >= len(h.m.panelItems()) {
+		t.Fatal(h.m.panels.cur)
+	}
 }
 
 // TestSetupOrgWithoutEnvs: adding servers to an organization with no environments yet goes to production.

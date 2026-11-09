@@ -810,7 +810,7 @@ func (m *Model) panelsView(h int) []string {
 		lines = append(lines, l)
 	}
 	h = max(h-2, 3)
-	if off := m.panels.cur - h + 1; off > 0 {
+	if off := min(m.panels.cur, len(lines)-1) - h + 1; off > 0 {
 		lines = lines[off:]
 	}
 	if len(lines) > h {

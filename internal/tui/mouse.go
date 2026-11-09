@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -130,6 +131,9 @@ func (m *Model) zoneAt(x, y int) (hitZone, bool) {
 
 // mouse: a click on a zone; the wheel as up/down (or the details pane's scroll); a click outside an open list
 // closes it.
+// setupZones: what can be clicked while the setup is open.
+var setupZones = []string{"field:", "check:", "kind:", "btn:", "opt:", "edit:", "pick:", "login:", "dl", "key:"}
+
 func (m *Model) mouse(msg tea.MouseMsg) tea.Cmd {
 	if m.set.NoMouse || msg.Action != tea.MouseActionPress {
 		return nil
@@ -164,8 +168,11 @@ func (m *Model) mouse(msg tea.MouseMsg) tea.Cmd {
 		w.pick = nil
 		return nil
 	}
-	if !ok {
+	if !ok || m.panels != nil || m.help || m.langs != nil || m.form != nil { // the dialogs take keys only
 		return nil
+	}
+	if m.setup != nil && !slices.ContainsFunc(setupZones, func(p string) bool { return strings.HasPrefix(z.id, p) }) {
+		return nil // nothing behind the setup
 	}
 	h := m.handlers[z.id]
 	if h == nil {
