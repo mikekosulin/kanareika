@@ -26,7 +26,9 @@ func TestShotWebP(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "tui-en.png")); err == nil {
 		t.Fatal("the PNG stays")
 	}
-	webp.Encode = func(string, string) error { return errors.New("cwebp not found: brew install webp, or apt install webp") }
+	webp.Encode = func(string, string) error {
+		return errors.New("cwebp not found: brew install webp, or apt install webp")
+	}
 	if err := shot("chrome", "file:///x", filepath.Join(dir, "web-en.png"), 10, 10); err == nil || !strings.Contains(err.Error(), "cwebp") {
 		t.Fatal(err)
 	}
