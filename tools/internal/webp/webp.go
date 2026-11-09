@@ -17,7 +17,7 @@ var Encode = func(png, out string) error {
 		return errors.New("cwebp not found: brew install webp, or apt install webp")
 	}
 	if b, err := exec.Command(bin, "-quiet", "-lossless", "-z", "9", png, "-o", out).CombinedOutput(); err != nil {
-		return fmt.Errorf("cwebp %s: %v %s", png, err, strings.TrimSpace(string(b)))
+		return fmt.Errorf("cwebp %s: %w %s", png, err, strings.TrimSpace(string(b)))
 	}
 	return nil
 }

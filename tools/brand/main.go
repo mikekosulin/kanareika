@@ -12,13 +12,13 @@ import (
 	"bytes"
 	"encoding/base64"
 	"flag"
-	"github.com/mikekosulin/kanareika/tools/internal/webp"
 	"html/template"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/mikekosulin/kanareika/tools/internal/chrome"
+	"github.com/mikekosulin/kanareika/tools/internal/webp"
 )
 
 // sources: the pages to fill in and the style they share. Read from files, not embedded: what goes into a binary
