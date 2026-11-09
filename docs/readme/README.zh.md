@@ -42,15 +42,22 @@ sh install.sh
 
 脚本会选择适合本机的版本，校验校验和（如已安装 GitHub CLI，还会验证构建证明），并在安装到 `/usr/local/bin` 或 `~/.local/bin` 前询问确认；设置 `KANAREIKA_YES=1` 可跳过询问。
 
-或手动安装（Linux、macOS）：从[最新 Release](https://github.com/mikekosulin/kanareika/releases/latest) 下载 `kanareika-<OS>-<ARCH>.tar.xz` 和 `SHA256SUMS`，然后：
+或手动安装（Linux、macOS）：
 
 ```bash
-sha256sum -c --ignore-missing SHA256SUMS
-gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
-tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')                 # linux, darwin
+ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')  # amd64, arm64
+FILE=kanareika-$OS-$ARCH.tar.xz
+URL=https://github.com/mikekosulin/kanareika/releases/latest/download
+
+curl -fsSLO "$URL/$FILE"
+curl -fsSLO "$URL/SHA256SUMS"
+sha256sum -c --ignore-missing SHA256SUMS  # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
+gh attestation verify "$FILE" --repo mikekosulin/kanareika  # 可选，需要 GitHub CLI
+tar -xJf "$FILE" kanareika
 ```
 
-`<OS>` 为 `linux` 或 `darwin`，`<ARCH>` 为 `amd64` 或 `arm64`。在 macOS 上用 `shasum -a 256 -c` 代替 `sha256sum -c`。构建证明的验证需要 GitHub CLI，可选；`tar` 会把 `kanareika` 解压到当前目录。
+`tar` 会把 `kanareika` 解压到当前目录。
 
 Windows（PowerShell）：
 

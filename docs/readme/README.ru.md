@@ -44,15 +44,22 @@ sh install.sh
 
 Скрипт выберет сборку под эту машину, сверит контрольную сумму (и аттестацию сборки, если установлен GitHub CLI) и спросит, прежде чем ставить в `/usr/local/bin` или `~/.local/bin`; с `KANAREIKA_YES=1` вопроса не будет.
 
-Или вручную (Linux, macOS): скачайте `kanareika-<OS>-<ARCH>.tar.xz` и `SHA256SUMS` со [страницы последнего релиза](https://github.com/mikekosulin/kanareika/releases/latest), затем:
+Или вручную (Linux, macOS):
 
 ```bash
-sha256sum -c --ignore-missing SHA256SUMS
-gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
-tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')                 # linux, darwin
+ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')  # amd64, arm64
+FILE=kanareika-$OS-$ARCH.tar.xz
+URL=https://github.com/mikekosulin/kanareika/releases/latest/download
+
+curl -fsSLO "$URL/$FILE"
+curl -fsSLO "$URL/SHA256SUMS"
+sha256sum -c --ignore-missing SHA256SUMS  # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
+gh attestation verify "$FILE" --repo mikekosulin/kanareika  # необязательно, нужен GitHub CLI
+tar -xJf "$FILE" kanareika
 ```
 
-`<OS>` — `linux` или `darwin`, `<ARCH>` — `amd64` или `arm64`. На macOS вместо `sha256sum -c` используйте `shasum -a 256 -c`. Проверка аттестации необязательна и требует GitHub CLI; `tar` распакует `kanareika` в текущую папку.
+`tar` распакует `kanareika` в текущую папку.
 
 Windows (PowerShell):
 

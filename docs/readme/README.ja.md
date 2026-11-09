@@ -42,15 +42,22 @@ sh install.sh
 
 このマシンに合ったビルドを選び、チェックサム (GitHub CLI があればビルドの attestation も) を検証し、`/usr/local/bin` または `~/.local/bin` にインストールする前に確認します。`KANAREIKA_YES=1` で確認を省略できます。
 
-または手動で (Linux、macOS): [最新リリース](https://github.com/mikekosulin/kanareika/releases/latest)から `kanareika-<OS>-<ARCH>.tar.xz` と `SHA256SUMS` をダウンロードし、次を実行します:
+または手動で (Linux、macOS):
 
 ```bash
-sha256sum -c --ignore-missing SHA256SUMS
-gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
-tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')                 # linux, darwin
+ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')  # amd64, arm64
+FILE=kanareika-$OS-$ARCH.tar.xz
+URL=https://github.com/mikekosulin/kanareika/releases/latest/download
+
+curl -fsSLO "$URL/$FILE"
+curl -fsSLO "$URL/SHA256SUMS"
+sha256sum -c --ignore-missing SHA256SUMS  # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
+gh attestation verify "$FILE" --repo mikekosulin/kanareika  # 省略可、GitHub CLI が必要
+tar -xJf "$FILE" kanareika
 ```
 
-`<OS>` は `linux` か `darwin`、`<ARCH>` は `amd64` か `arm64` です。macOS では `sha256sum -c` の代わりに `shasum -a 256 -c` を使います。attestation の検証には GitHub CLI が必要で、省略できます。`tar` は `kanareika` を現在のディレクトリに展開します。
+`tar` は `kanareika` を現在のディレクトリに展開します。
 
 Windows (PowerShell):
 

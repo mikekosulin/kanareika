@@ -42,15 +42,22 @@ sh install.sh
 
 It picks the build for this machine, checks its checksum (and the build attestation, when the GitHub CLI is installed) and asks before installing into `/usr/local/bin` or `~/.local/bin`; `KANAREIKA_YES=1` skips the question.
 
-Or by hand (Linux, macOS): download `kanareika-<OS>-<ARCH>.tar.xz` and `SHA256SUMS` from the [latest release](https://github.com/mikekosulin/kanareika/releases/latest), then:
+Or by hand (Linux, macOS):
 
 ```bash
-sha256sum -c --ignore-missing SHA256SUMS
-gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
-tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')                 # linux, darwin
+ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')  # amd64, arm64
+FILE=kanareika-$OS-$ARCH.tar.xz
+URL=https://github.com/mikekosulin/kanareika/releases/latest/download
+
+curl -fsSLO "$URL/$FILE"
+curl -fsSLO "$URL/SHA256SUMS"
+sha256sum -c --ignore-missing SHA256SUMS  # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
+gh attestation verify "$FILE" --repo mikekosulin/kanareika  # optional, needs the GitHub CLI
+tar -xJf "$FILE" kanareika
 ```
 
-`<OS>` is `linux` or `darwin`, `<ARCH>` is `amd64` or `arm64`. On macOS, use `shasum -a 256 -c` instead of `sha256sum -c`. The attestation check needs the GitHub CLI and is optional; `tar` leaves `kanareika` in the current directory.
+`tar` leaves `kanareika` in the current directory.
 
 Windows (PowerShell):
 
