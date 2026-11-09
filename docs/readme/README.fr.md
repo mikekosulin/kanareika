@@ -4,7 +4,11 @@
 
 [English](../../README.md) · [Español](README.es.md) · **Français** · [Português](README.pt.md) · [Русский](README.ru.md) · [中文](README.zh.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
-Audit de sécurité de vos serveurs via SSH, sans agent et en lecture seule : quoi corriger en premier, qui peut entrer, ce qui est exposé, si les hôtes sont en bonne santé — avec des étapes de correction réversibles. Un seul binaire, un YAML par organisation ; les données restent sur votre machine.
+Audit de sécurité de serveurs Linux via SSH, sans agent et en lecture seule. Il classe ce qu'il faut corriger en premier : CVE avec KEV et EPSS, accès SSH, ports exposés, santé des hôtes, chacun avec des étapes de correction réversibles. Il fonctionne de la même façon dans une interface en terminal, une interface web et via un serveur MCP pour les agents IA. Un seul binaire Go, un YAML par organisation, aucune télémétrie ; les données restent sur votre machine.
+
+- **Homelab** : choisissez vos hôtes dans `~/.ssh/config` ou collez `user@host`.
+- **Freelance** : une organisation par client ; ajoutez-y des serveurs plus tard.
+- **Entreprise** : collez une liste d'hôtes, un CSV ou un inventaire Ansible ; les connexions échouées sont regroupées par cause, avec le correctif.
 
 ### Interface terminal
 
@@ -22,17 +26,31 @@ Lancez `kanareika web` pour retrouver les mêmes données dans un navigateur, av
 
 ### Installation
 
-Linux, macOS : choisit la version pour cette machine, vérifie sa somme de contrôle et l'installe dans `/usr/local/bin` (ou `~/.local/bin`) :
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh | sh
-```
-
-Homebrew (macOS, Linux) :
+Homebrew (macOS, Linux) ; la formule fixe la version et sa somme de contrôle :
 
 ```bash
 brew install mikekosulin/tap/kanareika
 ```
+
+Ou avec le script d'installation — lisez-le, puis lancez-le :
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mikekosulin/kanareika/main/install.sh
+less install.sh
+sh install.sh
+```
+
+Il choisit la version pour cette machine, vérifie sa somme de contrôle (et l'attestation de build si la CLI GitHub est installée) et demande confirmation avant d'installer dans `/usr/local/bin` ou `~/.local/bin` ; `KANAREIKA_YES=1` saute la question.
+
+Ou à la main (Linux, macOS) : téléchargez `kanareika-<OS>-<ARCH>.tar.xz` et `SHA256SUMS` depuis la [dernière release](https://github.com/mikekosulin/kanareika/releases/latest), puis :
+
+```bash
+sha256sum -c --ignore-missing SHA256SUMS
+gh attestation verify kanareika-<OS>-<ARCH>.tar.xz --repo mikekosulin/kanareika
+tar -xJf kanareika-<OS>-<ARCH>.tar.xz kanareika
+```
+
+`<OS>` vaut `linux` ou `darwin`, `<ARCH>` vaut `amd64` ou `arm64`. Sur macOS, utilisez `shasum -a 256 -c` au lieu de `sha256sum -c`. La vérification de l'attestation nécessite la CLI GitHub et reste facultative ; `tar` dépose `kanareika` dans le répertoire courant.
 
 Windows (PowerShell) :
 
@@ -101,9 +119,9 @@ Tout le reste : `kanareika --help`.
 
 **Quatre points d'entrée, mêmes données et mêmes règles :**
 
-- **TUI**, l'interface principale — `kanareika` : `?` pour les raccourcis, `o` pour les panneaux, `L` pour la langue. Peut aussi se connecter à une instance web distante : `kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`.
+- **TUI** — `kanareika` : `?` pour les raccourcis, `o` pour les panneaux, `L` pour la langue. Peut aussi se connecter à une instance web distante.
 - **Web** — `kanareika web` : tableaux de bord, tendances, fiches des hôtes ; les scans se lancent depuis la page.
-- **Commandes** — pour les scripts et le cron : `kanareika --help`.
+- **Commandes** — pour les scripts et le cron.
 - **MCP** — `kanareika mcp` : outils en lecture seule pour les agents IA (Claude Code et autres).
 
 **Ce qu'il vérifie :**
@@ -113,6 +131,7 @@ Tout le reste : `kanareika --help`.
 - **Santé** — erreurs du noyau, disques, mémoire, synchronisation de l'heure, redémarrages en attente.
 - **Correction** — les actions sélectionnées deviennent une tâche prête pour un ingénieur ou un agent IA : appliquer, vérifier, revenir en arrière.
 - **Sûr par conception** — lecture seule, organisations isolées, clés d'hôte modifiées refusées, aucun scan sans consentement, interface web sur localhost uniquement (ou avec un jeton).
+- **Confidentiel** — aucune télémétrie : rien sur vous ni sur vos serveurs n'est envoyé nulle part, et les rapports restent sur votre machine. Il ne télécharge que des données publiques : les bases de vulnérabilités (ghcr.io, avec mirror.gcr.io et public.ecr.aws en secours), CISA KEV (cisa.gov), EPSS (FIRST, empiricalsecurity.com) et les bases IP DB-IP Lite (db-ip.com), sur lesquelles les recherches d'IP se font hors ligne. Même la télémétrie du trivy intégré est désactivée.
 
 **Avertissement.** Kanareika signale ce qu'il trouve ; il ne promet pas de tout trouver. Les priorités et les étapes de correction sont des conseils : relisez-les avant d'exécuter quoi que ce soit sur vos hôtes. N'auditez que les serveurs que vous êtes autorisé à auditer. Fourni tel quel, sans garantie ([MIT](../../LICENSE)).
 

@@ -56,8 +56,14 @@ type liveInfo struct {
 }
 
 type envResp struct {
-	Runs []runInfo `json:"runs"`
-	Live *liveInfo `json:"live"`
+	Runs  []runInfo `json:"runs"`
+	Live  *liveInfo `json:"live"`
+	Hosts []struct {
+		Name     string `json:"name"`
+		Group    string `json:"group"`
+		Exposure int    `json:"exposure"`
+		User     string `json:"user"`
+	} `json:"hosts"`
 }
 
 type pkgRow struct {
@@ -196,13 +202,14 @@ type dbResp struct {
 		Next     string `json:"next_update"`
 		Outdated bool   `json:"outdated"`
 	} `json:"dbs"`
-	Trivy        string   `json:"trivy"` // the server's built-in trivy
-	FeedsUpdated string   `json:"feeds_updated"`
-	Enabled      bool     `json:"enabled"`
-	Updating     bool     `json:"updating"`
-	Output       []string `json:"output"`
-	Error        string   `json:"error"`
-	Finished     string   `json:"finished"`
+	Trivy         string   `json:"trivy"` // the server's built-in trivy
+	FeedsUpdated  string   `json:"feeds_updated"`
+	FeedsOutdated bool     `json:"feeds_outdated"`
+	Enabled       bool     `json:"enabled"`
+	Updating      bool     `json:"updating"`
+	Output        []string `json:"output"`
+	Error         string   `json:"error"`
+	Finished      string   `json:"finished"`
 }
 
 type i18nResp struct {
@@ -282,13 +289,21 @@ func (t *tr) cat(key string) string {
 func (t *tr) title(a action) string  { return t.msg(a.Msg, a.Args, a.Title) }
 func (t *tr) detail(a action) string { return t.msg(a.DetailMsg, a.DetailArgs, a.Detail) }
 
+// parseTime: an ISO time as the API writes it (RFC 3339, or Python's isoformat with microseconds).
+func parseTime(iso string) (time.Time, bool) {
+	for _, layout := range []string{time.RFC3339Nano, "2006-01-02T15:04:05.000000-07:00"} {
+		if at, err := time.Parse(layout, iso); err == nil {
+			return at, true
+		}
+	}
+	return time.Time{}, false
+}
+
 // ago: "5 min ago" for an ISO time; "—" when there is none or it can't be read.
 func (t *tr) ago(iso string, now time.Time) string {
-	at, err := time.Parse(time.RFC3339Nano, iso)
-	if err != nil {
-		if at, err = time.Parse("2006-01-02T15:04:05.000000-07:00", iso); err != nil {
-			return "—"
-		}
+	at, ok := parseTime(iso)
+	if !ok {
+		return "—"
 	}
 	s := now.Sub(at)
 	switch {

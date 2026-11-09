@@ -62,13 +62,28 @@ func treeOpts(q query) tree.Opts {
 		Today: today()}
 }
 
-// apiTree: the env's findings as a tree (?by=fix|cve|host, ?f=kev,rce,epss,front,ready,nofix,overdue, ?q=, ?backported=1).
+// build: the tree of the query's grouping and filters. ?all=1 with by=host: every host of the env (the server
+// view), also the clean, failed and not scanned ones.
+func (s *Server) build(q query, in *treeInput) (*tree.Tree, error) {
+	o := treeOpts(q)
+	if q.get("all") == "1" && o.By == tree.ByHost {
+		org, env, err := s.orgEnv(q)
+		if err != nil {
+			return nil, err
+		}
+		o.All, o.Inventory = true, tree.Servers(org, env, in.view, in.findings)
+	}
+	return tree.Build(in.findings, tree.Hosts(in.view.Facts), o), nil
+}
+
+// apiTree: the env's findings as a tree (?by=fix|cve|host, ?f=kev,rce,epss,front,ready,nofix,overdue, ?q=,
+// ?backported=1, ?all=1 with by=host for every host of the env).
 func (s *Server) apiTree(q query) (any, error) {
 	in, err := s.treeInput(q)
 	if err != nil {
 		return nil, err
 	}
-	return tree.Build(in.findings, tree.Hosts(in.view.Facts), treeOpts(q)), nil
+	return s.build(q, in)
 }
 
 // apiNode: the details of one node (?id=, with the same grouping and filters the tree was built with).
@@ -77,7 +92,10 @@ func (s *Server) apiNode(q query) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := tree.Build(in.findings, tree.Hosts(in.view.Facts), treeOpts(q))
+	t, err := s.build(q, in)
+	if err != nil {
+		return nil, err
+	}
 	n := t.Find(q.get("id"))
 	if n == nil {
 		return nil, notFound("unknown node")
@@ -91,7 +109,10 @@ func (s *Server) nodeActions(q query, ids []string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := tree.Build(in.findings, tree.Hosts(in.view.Facts), treeOpts(q))
+	t, err := s.build(q, in)
+	if err != nil {
+		return nil, err
+	}
 	var out []string
 	for _, id := range ids {
 		if n := t.Find(id); n != nil {

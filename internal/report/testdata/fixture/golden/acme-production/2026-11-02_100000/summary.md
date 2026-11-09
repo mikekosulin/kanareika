@@ -4,12 +4,13 @@
 - Modules: access, docker, health, os_packages, network_external
 - Trivy 0.58.0, KEV/EPSS as of 2026-11-01
 
-| | P1 | P2 | P3 | P4 | accepted |
+| | P1 | P2 | P3 | P4 | total |
 |---|---:|---:|---:|---:|---:|
-| packages to update | 5 | 12 | 18 | 3 | |
-| findings (CVE × package) | 6 | 18 | 23 | 4 | 2 |
+| fixes to apply | 6 | 10 | 10 | 4 | 30 |
 
-Already fixed in the installed build (CVE in the package changelog, not counted above): 2
+- 30 fixes to apply (P1 6, P2 10, P3 10, P4 4), 3 of them with nothing to install yet; 36 unique CVEs; 5 hosts with something to do
+- A fix is one change: one package update on every host that needs it, one image to rebuild, one setting to change.
+- Not counted: 2 accepted risks; 2 already fixed in the installed build (CVE in the package changelog).
 
 - db-01: health: timeout
 

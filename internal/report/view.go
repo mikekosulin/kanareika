@@ -21,8 +21,9 @@ const ViewVersion = 11
 type View struct {
 	Version    int                    `json:"version"`
 	Meta       *Meta                  `json:"meta"`
-	Counts     Counts                 `json:"counts"`
-	PlanCounts PlanCounts             `json:"plan_counts"`
+	Counts     Counts                 `json:"counts"`      // finding rows per priority (internal; Totals is what to show)
+	PlanCounts PlanCounts             `json:"plan_counts"` // package updates per host and priority (the classic plan table)
+	Totals     Totals                 `json:"totals"`      // fixes to apply and unique CVEs: the numbers every interface shows
 	Hosts      map[string]*HostCounts `json:"hosts"`
 	Facts      map[string]Fact        `json:"facts"`
 	Actions    []Action               `json:"actions"`
@@ -339,7 +340,7 @@ func BuildView(runDir string, meta *Meta, findings []finding.Finding, prev *Prev
 		otherSlim = append(otherSlim, slim(f))
 	}
 	v := &View{
-		Version: ViewVersion, Meta: meta, Counts: CountsOf(findings), PlanCounts: PlanCountsOf(plan),
+		Version: ViewVersion, Meta: meta, Counts: CountsOf(findings), PlanCounts: PlanCountsOf(plan), Totals: TotalsOf(findings),
 		Hosts: hosts, Facts: fc, Actions: BuildActions(rows, other, fc),
 		Health: hostJSON(runDir, meta.HostsScanned, "health.json"), Access: access, Exposure: exposure,
 		Plan:       rows,

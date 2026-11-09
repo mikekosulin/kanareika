@@ -46,7 +46,7 @@ func uiStrings(t *testing.T) []string {
 					add(x.Args[0])
 				}
 				// the host card's helpers translate their first argument
-				if id, ok := x.Fun.(*ast.Ident); ok && slices.Contains([]string{"kv", "section", "usage"}, id.Name) && len(x.Args) > 0 {
+				if id, ok := x.Fun.(*ast.Ident); ok && slices.Contains([]string{"kv", "section", "usage", "row"}, id.Name) && len(x.Args) > 0 {
 					add(x.Args[0])
 				}
 			case *ast.AssignStmt: // label = "logged in": a row label translated where it is drawn
@@ -54,14 +54,18 @@ func uiStrings(t *testing.T) []string {
 					if id, ok := l.(*ast.Ident); ok && (id.Name == "label" || id.Name == "l") && i < len(x.Rhs) {
 						add(x.Rhs[i])
 					}
+					if sel, ok := l.(*ast.SelectorExpr); ok && sel.Sel.Name == "label" && i < len(x.Rhs) { // f.label = "Company"
+						add(x.Rhs[i])
+					}
 				}
 			case *ast.KeyValueExpr:
-				if k, ok := x.Key.(*ast.Ident); ok && slices.Contains([]string{"title", "label", "what"}, k.Name) {
+				if k, ok := x.Key.(*ast.Ident); ok && slices.Contains([]string{"title", "label", "what", "hint"}, k.Name) {
 					add(x.Value)
 				}
 			case *ast.ValueSpec:
 				for _, name := range x.Names {
-					if slices.Contains([]string{"viewNames", "helpRows", "headerNames", "zoneNames"}, name.Name) {
+					if slices.Contains([]string{"viewNames", "helpRows", "headerNames", "zoneNames", "whyTexts", "dueWhy", "groupNames",
+						"sectionNames", "menuTitles", "steps"}, name.Name) {
 						ast.Inspect(x, func(n ast.Node) bool {
 							if cl, ok := n.(*ast.CompositeLit); ok {
 								for i, e := range cl.Elts {
@@ -81,6 +85,15 @@ func uiStrings(t *testing.T) []string {
 			case *ast.CompositeLit: // k{"enter", "open"}: the hint, not the key
 				if id, ok := x.Type.(*ast.Ident); ok && id.Name == "k" && len(x.Elts) == 2 {
 					add(x.Elts[1])
+				}
+				if at, ok := x.Type.(*ast.ArrayType); ok { // []k{{"enter", "open"}, ...}
+					if id, ok := at.Elt.(*ast.Ident); ok && id.Name == "k" {
+						for _, e := range x.Elts {
+							if cl, ok := e.(*ast.CompositeLit); ok && len(cl.Elts) == 2 {
+								add(cl.Elts[1])
+							}
+						}
+					}
 				}
 			}
 			return true

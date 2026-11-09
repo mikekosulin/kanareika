@@ -142,7 +142,7 @@ func (s *Server) apiEnv(q query) (any, error) {
 			continue
 		}
 		hosts = append(hosts, map[string]any{"name": h.Name, "group": h.Group, "role": h.Role,
-			"exposure": h.Exposure, "address": h.Address, "user": h.User, "jump": nullable(h.Jump), "public": isPublic(h.Address),
+			"exposure": h.Exposure, "address": h.Address, "port": h.Port, "user": h.User, "jump": nullable(h.Jump), "public": isPublic(h.Address),
 			"modules": modules(h.Checks)})
 	}
 	rs := runs(s.envDir(o.ID, env))
@@ -234,6 +234,7 @@ func (s *Server) view(dir string) ([]byte, error) {
 		}
 		v := report.BuildView(dir, meta, findings, prev)
 		meta.PlanCounts = &v.PlanCounts
+		meta.Totals = &v.Totals
 		v.Meta = meta
 		if body, err = marshalView(v); err != nil {
 			return nil, err

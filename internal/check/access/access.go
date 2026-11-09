@@ -527,8 +527,8 @@ func analyze(h config.Host, raw string, now time.Time) ([]finding.Finding, pyfmt
 	kf.Pkg, kf.Installed = "authorized_keys", fmt.Sprint(len(keys))
 	f = append(f, kf)
 	if len(denied) > 0 {
-		f = append(f, fnd(h, finding.Inventory, "access-limited", "INFO",
-			msg("health.limited", map[string]any{"what": strings.Join(denied, ", ")}), i18n.Plain("")))
+		title, why := check.Denied(h, denied)
+		f = append(f, fnd(h, finding.Inventory, "access-limited", "INFO", title, why))
 	}
 
 	logins := 0
@@ -537,7 +537,7 @@ func analyze(h config.Host, raw string, now time.Time) ([]finding.Finding, pyfmt
 	}
 	summary := fmt.Sprintf("%d keys, %d logins, %d failed", len(keys), logins, failedIP.Total())
 	if len(denied) > 0 {
-		summary += "; no access to " + strings.Join(denied, ", ")
+		summary += "; " + check.DeniedLog(denied)
 	}
 	return f, data, summary, nil
 }

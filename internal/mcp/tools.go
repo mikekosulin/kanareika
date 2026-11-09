@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -30,7 +31,12 @@ const Instructions = "Kanareika: security audit results for our servers, by orga
 
 // instructionsTree: the tree tools (0.5), newer than the recorded sessions.
 const instructionsTree = "list_fixes / get_fix — what to do grouped by fix, CVE or host, with details (the same view " +
-	"the human has open); "
+	"the human has open). get_summary's totals, list_fixes and the human's screens count alike: fixes = one change " +
+	"(one package update — a source package at one version, on every host that has it —, one image to rebuild, one " +
+	"setting to change), cves = unique CVE ids, no_fix = fixes with nothing to install yet (no_fix per node: pending = " +
+	"the vendor has not released a fix, repos = released but not in the host's repositories, esm = only in Ubuntu " +
+	"Pro/ESM, deferred = postponed by the vendor, wontfix = the vendor will not fix it). list_fixes by=host all=true: " +
+	"every server, also clean, failed, not scanned and partly checked ones (state, problem, last_scan); "
 
 // treeTools: how many of the last Tools are the tree tools (0.5).
 const treeTools = 2
@@ -59,7 +65,7 @@ func tool(name, desc string, input pyfmt.Obj) pyfmt.Obj {
 // connect to real servers, so starting one stays a human decision.
 var Tools = []pyfmt.Obj{
 	tool("list_orgs", "Organizations, their environments, host counts and the last full scan summary.", schema(pyfmt.Obj{})),
-	tool("get_summary", "Environment summary: packages to update by priority, hosts with status, top 10 actions.",
+	tool("get_summary", "Environment summary: totals (fixes to apply by priority, unique CVEs), hosts with status and their own totals, top 10 actions.",
 		schema(orgEnv(), "org")),
 	tool("list_actions", "To-do actions (update kernel, OS packages, image, close a port, disable password login…) with hosts, priority, due date, KEV and pre-auth RCE flags.",
 		schema(append(orgEnv(),
@@ -84,12 +90,14 @@ var Tools = []pyfmt.Obj{
 			pyfmt.KV{K: "by", V: pyfmt.O("enum", []string{"fix", "cve", "host"}, "default", "fix")},
 			pyfmt.KV{K: "filters", V: pyfmt.O("type", "array", "items", pyfmt.O("enum", []string{"kev", "rce", "epss", "front", "ready", "nofix", "overdue"}))},
 			pyfmt.KV{K: "query", V: pyfmt.O("type", "string", "description", "substring of host, group, package, image, CVE id or title")},
+			pyfmt.KV{K: "all", V: pyfmt.O("type", "boolean", "description", "with by=host: every server of the environment, one row each, also the clean, failed (not reached), not scanned and partly checked (no root) ones; rows carry state, problem, last_scan, fixes and counts per priority, and filters narrow only what is under the rows")},
 			pyfmt.KV{K: "limit", V: pyfmt.O("type", "integer", "default", 50)}), "org")),
 	tool("get_fix", "One node of list_fixes in detail: why its priority, the due date and where it comes from, every CVE (CVSS vector, EPSS, KEV, description), where it is per host group, the commands to apply, and action ids for fix_prompt / fix_plan.",
 		schema(append(orgEnv(),
 			pyfmt.KV{K: "id", V: pyfmt.O("type", "string", "description", "a node id from list_fixes")},
 			pyfmt.KV{K: "by", V: pyfmt.O("enum", []string{"fix", "cve", "host"}, "default", "fix")},
-			pyfmt.KV{K: "filters", V: pyfmt.O("type", "array", "items", pyfmt.O("type", "string"))}), "org", "id")),
+			pyfmt.KV{K: "filters", V: pyfmt.O("type", "array", "items", pyfmt.O("type", "string"))},
+			pyfmt.KV{K: "all", V: pyfmt.O("type", "boolean", "description", "as list_fixes was called")}), "org", "id")),
 }
 
 // args of a tools/call, as the client sent them.
@@ -197,6 +205,11 @@ func (s *Server) getSummary(a args) (any, error) {
 		return nil, err
 	}
 	m := v.Meta
+	fs, err := report.LoadFindings(filepath.Join(report.EnvDir(s.store.Paths, org.ID, env), report.Current))
+	if err != nil {
+		return nil, err
+	}
+	byHost := report.TotalsByHost(fs)
 	hosts := pyfmt.Obj{}
 	for _, h := range m.HostsScanned {
 		st := "ok"
@@ -210,8 +223,9 @@ func (s *Server) getSummary(a args) (any, error) {
 			osName = f.OS
 		}
 		e := pyfmt.O("status", st, "os", osName)
-		if c := v.Hosts[h]; c != nil {
-			e = append(e, pyfmt.KV{K: "P1", V: c.P1}, pyfmt.KV{K: "P2", V: c.P2}, pyfmt.KV{K: "P3", V: c.P3}, pyfmt.KV{K: "P4", V: c.P4}, pyfmt.KV{K: "cves", V: c.CVEs})
+		if c, ok := byHost[h]; ok {
+			e = append(e, pyfmt.KV{K: "fixes", V: c.Fixes}, pyfmt.KV{K: "P1", V: c.P1}, pyfmt.KV{K: "P2", V: c.P2},
+				pyfmt.KV{K: "P3", V: c.P3}, pyfmt.KV{K: "P4", V: c.P4}, pyfmt.KV{K: "no_fix", V: c.NoFix}, pyfmt.KV{K: "cves", V: c.CVEs})
 		}
 		from := ""
 		for _, r := range m.Sources[h] {
@@ -236,7 +250,10 @@ func (s *Server) getSummary(a args) (any, error) {
 	if m.Finished != "" {
 		updated = m.Finished
 	}
-	return pyfmt.O("org", org.ID, "env", env, "updated", updated, "packages_to_update", v.PlanCounts,
+	t := report.TotalsOf(fs)
+	totals := pyfmt.O("fixes", t.Fixes, "P1", t.P1, "P2", t.P2, "P3", t.P3, "P4", t.P4, "no_fix", t.NoFix, "cves", t.CVEs,
+		"hosts", t.Hosts, "accepted", t.Accepted, "backported", t.Backported)
+	return pyfmt.O("org", org.ID, "env", env, "updated", updated, "totals", totals,
 		"hosts", hosts, "errors", errs, "top_actions", top), nil
 }
 

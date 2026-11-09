@@ -160,14 +160,14 @@ func Check(t testing.TB, c Case, mod Module, inputs ...string) {
 	f, err := mod(ctx, c.ConfigHost(), map[string]any{}, out, check.Facts{})
 
 	if want, e := os.ReadFile(filepath.Join(gold, "error.txt")); e == nil {
-		if err == nil || err.Error() != string(want) {
+		if err == nil || err.Error() != UpgradeError(c.ConfigHost(), string(want)) {
 			t.Fatalf("error: got %v, want %q", err, want)
 		}
 	} else {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		CompareFindings(t, f, Read(t, filepath.Join(gold, "findings.json")))
+		CompareFindings(t, f, upgradeFindings(c.ConfigHost(), Read(t, filepath.Join(gold, "findings.json"))))
 	}
 
 	var calls []Call
@@ -177,7 +177,7 @@ func Check(t testing.TB, c Case, mod Module, inputs ...string) {
 	if !reflect.DeepEqual(r.Calls, calls) {
 		t.Errorf("calls differ:\n got %+v\nwant %+v", r.Calls, calls)
 	}
-	if got, want := strings.Join(logs, "\n"), Read(t, filepath.Join(gold, "log.txt")); got != want {
+	if got, want := strings.Join(logs, "\n"), UpgradeLog(Read(t, filepath.Join(gold, "log.txt"))); got != want {
 		t.Errorf("log:\n got %q\nwant %q", got, want)
 	}
 
@@ -222,10 +222,10 @@ func firstDiff(got, want string) string {
 // goOnly: fields the Go finding always has and the Python module dicts did not (prioritization fills them later).
 var goOnly = []string{"kev", "epss", "priority", "due", "accepted", "exception"}
 
-// advisoryOnly: fields added in 0.5 (advisory facts from trivy.VulnFindings, the k8s workload's image); fixtures
-// recorded before them have none. A fixture
-// that has one of them is compared on it as usual.
-var advisoryOnly = []string{"published", "cvss_score", "description", "image"}
+// advisoryOnly: fields added in 0.5 (advisory facts from trivy.VulnFindings, the k8s workload's image, an OS
+// package's source package); fixtures recorded before them have none. A fixture that has one of them is compared
+// on it as usual.
+var advisoryOnly = []string{"published", "cvss_score", "description", "image", "src_pkg"}
 
 // DropAdvisory removes from got the advisory facts that want does not have.
 func DropAdvisory(got, want map[string]any) {

@@ -318,7 +318,7 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 	denied := data.Get("denied").([]string)
 	line := fmt.Sprintf("%s: health: %d issues", h.Name, n)
 	if len(denied) > 0 {
-		line += ", no access to " + strings.Join(denied, ", ")
+		line += ", " + check.DeniedLog(denied)
 	}
 	ctx.Log("%s", line)
 	return f, nil
@@ -515,8 +515,8 @@ func analyze(h config.Host, raw string, scannerTS float64) ([]finding.Finding, p
 
 	data.Set("denied", denied)
 	if len(denied) > 0 {
-		x := fnd(h, "health-limited", "INFO", i18n.Msg("health.limited", map[string]any{"what": strings.Join(denied, ", ")}),
-			i18n.Plain(""))
+		title, why := check.Denied(h, denied)
+		x := fnd(h, "health-limited", "INFO", title, why)
 		x.Kind = finding.Inventory
 		f = append(f, x)
 	}

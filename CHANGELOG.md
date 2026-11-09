@@ -3,6 +3,75 @@
 Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor version may break things; each
 break is listed under **Breaking** with what to do instead.
 
+## 0.5.0 — 2026-11-XX
+
+What to fix, grouped the way it gets fixed; a new web page and TUI; setup for a homelab, a client or a fleet.
+
+### Breaking
+
+- **Due dates count from the first scan that saw a finding** (`first_seen`), not from every scan, and are never
+  later than CISA's KEV due date. Long-open findings may now show as overdue. To change it, set `due:` in
+  `assets/policy/priority.yml` or in the org file, per environment too (`start: scan` restores the old count); see
+  [Due dates](docs/org-file.md#due-dates).
+- **TUI views are renumbered**: `1` ToDo, `2` Hosts … `9` Runs, `0` Scans. The Organizations view is gone: pick an
+  organization with `O`, an environment with `E`. The status bar replaces the header, so the `header` setting is
+  ignored.
+- **The 0.4 web page moved to `/classic`**; `/` is the new one, and `/index.html` redirects to `/`.
+- **`db update` and scans ask before downloading** on a terminal, with the size. In scripts nothing changes (no
+  terminal, no question); otherwise pass `--yes` (`-y`) or set `KANAREIKA_YES=1`.
+- **The Java DB (about 1 GB) is downloaded only when a scan first finds .jar files.** To have it in advance, e.g.
+  before `db export` for an isolated network, run `kanareika db update --java`.
+- **Release assets are archives**: `kanareika-<OS>-<ARCH>.tar.xz` (`.zip` on Windows), about a fifth of the
+  binary's size. The bare binaries are still published with this release only; switch download links and scripts
+  to the archives.
+
+### Added
+
+- **The vulnerability tree**: findings grouped by fix (one package update on many hosts, one image to rebuild, with
+  where it runs), by CVE or by host; per group the hosts, CVEs, max EPSS, KEV/RCE, fix states and the earliest due
+  date. A node's details say why its priority, where the due date comes from (`due_why`), every CVE with its CVSS
+  vector, EPSS, KEV and description, and the commands per OS family. The web page, the TUI and MCP show the same
+  tree (`/api/tree`, `/api/node`).
+- **A new web page** on the tree, with first-run setup and scans from the page; `⌘K` / `Ctrl+K` opens a command
+  palette.
+- **The TUI's ToDo is the tree**, with a details pane, a status bar, organization and environment pickers (`O`,
+  `E`), filters (`f`) and `:` to jump to a fix, a CVE, a host or a view.
+- **Context for AI agents**: `Y` in the TUI copies one node's context for an agent's chat, `y` the task for the
+  selection; `/api/prompt?nodes=`; MCP `list_fixes` and `get_fix`.
+- **Setup for every case**: my servers (homelab), a client's servers (one org per client) or a fleet. One field
+  takes IPs, `user@host`, ssh command lines, `~/.ssh/config` blocks and aliases, CSV and Ansible inventories, and
+  shows live what each line becomes; `~/.ssh/config` hosts can be picked from a list. Servers can be added to an
+  existing org (the old file kept as `.bak`). The access check runs per host and groups failures by cause, with
+  what to do. The TUI has the same setup.
+- **The download question shows real sizes**, read from the registries (`/api/db/size`).
+- **The web page on any port**: `--port` or `KANAREIKA_PORT`, `--port 0` for a free one; `--host` or
+  `KANAREIKA_HOST`. It still listens on localhost by default. A busy port gets a plain message.
+- **install.sh**: picks the build for this OS and CPU, checks its checksum and the build attestation (with the
+  GitHub CLI), asks before installing. Read it before running it; the README shows how.
+- **Code of Conduct** (Contributor Covenant 2.1, adapted), an **AI policy** for contributions, and a social preview
+  that reads at link-preview size.
+
+### Changed
+
+- **Scans refresh KEV and EPSS** when they are older than a day, and say so when they run without them; `--offline`
+  warns about a vulnerability DB older than a week.
+- **The demo** is a fleet of 118 hosts in groups, with shared advisories, updates rolling out per group, kernels
+  waiting for a reboot, and images in Docker and Kubernetes.
+- **The remaining web views** are redrawn in the new design.
+- **DB downloads run in parallel**, with progress per download and in total.
+- **Counts agree** between the web page, the TUI and MCP, "no access" messages say plainly what could not be read,
+  and findings waiting for a vendor fix are counted.
+
+### Fixed
+
+- **No telemetry from the embedded trivy**: `--skip-version-check` alone still sent anonymous usage data with the
+  version check. Every trivy run now has telemetry and the version check switched off.
+- **`kanareika org new`** dates the consent today, valid for a year: the template's `valid_until: 2027-01-01` would
+  have stopped every new org on that day.
+- **Pasted host lists**: impossible IPv4 addresses (`10.0.0.300`, `10.0.0`) and CSV header lines are skipped
+  instead of becoming hosts; pasted `~/.ssh/config` aliases are written out with their HostName, Port, User and
+  ProxyJump, as ssh would resolve them.
+
 ## 0.4.0 — 2026-11-08
 
 Five more languages, and the interfaces say plainly what they show.

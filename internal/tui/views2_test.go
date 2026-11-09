@@ -10,33 +10,33 @@ func TestAnalysisViews(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(130, 44)
 
-	h.key("5")
+	h.key("4")
 	h.has("Changes(acme/production)[1]", "Compared with the full run 2026-11-02 10:00", "+0 (0 CVE)", "−1 (1 CVE)", "custom-check")
 	h.key("/", "z", "z", "enter")
 	h.has("Changes(acme/production)[0]", "nothing here")
 	h.key("esc")
 
-	h.key("6")
+	h.key("5")
 	h.has("Access(acme/production)[3]", "PASSWORD", "12.3T", "Successful logins", "10.77.0.24", "Password guessing", "198.51.100.0")
 	h.key("enter") // the host's card
 	h.has("Host(db-01)")
 	h.key("esc")
-	h.has("Hosts(acme/production)")
+	h.has("Servers(acme/production)")
 
-	h.key("7")
+	h.key("6")
 	h.has("Network(acme/production)[3]", "192.0.2.1", "Listening ports 3", "internal")
 	h.key("f")
 	h.has("Listening ports 0", "●")
 	h.key("f", "down", "enter")
 	h.has("Host(db-01)")
 
-	h.key("8")
+	h.key("7")
 	h.has("Health(acme/production)[3]", "50% /", "1")
 
-	h.key("9")
+	h.key("8")
 	h.has("Exceptions(acme/production)[4]", "CVE-2026-0040", "no internet", "Already fixed in the installed build 2 CVE", "sqlite-libs")
 
-	h.key("0", "i")
+	h.key("9", "i")
 	h.has("Run(2026-11-02 11:00)", "Errors", "dead-01", "host unreachable: timeout", "Log", "No log.")
 	h.key("down", "j", "k", "up", "pgdown", "pgup", "G", "g", "esc")
 	h.has("Runs(acme/production)[5]")
@@ -75,28 +75,29 @@ func TestAnalysisViewsRich(t *testing.T) {
 		"db-01":  {"disks": []any{map[string]any{"mount": "/", "use": 87.0}}, "time": map[string]any{"timezone": "UTC", "synced": "no"}},
 		"app-01": {"time": map[string]any{"timezone": "Europe/Moscow", "synced": "yes", "offset_s": 1.5}},
 		"x-01":   {"ntp_synced": "unknown"}}
-	h.key("6")
+	h.key("5")
 	h.has("on", "off", "yes", "key only", "commands", "weird", "4981", "Successful logins", "password", "100.21.0.11",
 		"100.21.0.14", "360", "oracle,admin", "db-01,web-01")
-	h.key("7")
+	h.key("6")
 	h.has("192.0.2.9!", "80 443", "✓ firewalld · ufw · INPUT DROP · docker", "no access", "no filtering", "Listening ports 3",
 		"outside", "local", "nginx")
-	h.key("8")
-	h.has("96% /", "88%", "25% free", "0.4/2", "2", "OOM", "12", "Europe/Moscow!", "✓ 2 ms", "✗", "! 1.5 s", "unknown", "87% /")
+	h.key("7")
+	h.has("96% /", "88%", "25%", "0.4/2", "2", "OOM", "12", "Europe/Moscow!", "2 ms",
+		"MEM FREE", "LOAD /CPU", "JOURNAL /7D", "✗", "! 1.5 s", "unknown", "87% /")
 
 	rd.New, rd.Resolved = nil, nil // no previous full run
-	h.key("5")
+	h.key("4")
 	h.has("No previous full run.")
 	rd.Exceptions, rd.Backported = nil, nil
-	h.key("9")
+	h.key("8")
 	h.has("No exceptions.")
 	rd.Access, rd.Exposure, rd.Health = nil, nil, nil
-	for _, k := range []string{"6", "7", "8"} {
+	for _, k := range []string{"5", "6", "7"} {
 		h.key(k)
 		h.has("has not run yet.")
 	}
 	h.m.rund = nil
-	for _, k := range []string{"5", "6", "9"} {
+	for _, k := range []string{"4", "5", "8"} {
 		h.key(k)
 		h.screen()
 	}
@@ -112,15 +113,15 @@ func TestAnalysisViewsRich(t *testing.T) {
 
 func m0() *Model { return New(Options{}) }
 
-// TestOnlySelected: v lists only the selected actions (P4 among them too), the title counts them.
+// TestOnlySelected: v lists only the selected nodes (P4 among them too), the title counts them.
 func TestOnlySelected(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.key("v")
 	h.has("Nothing selected yet", "ToDo(acme/production)[0]", "<v> selected only")
 	h.key("v", "space", "down", "space") // two selected
-	h.has("●2")
+	h.has("2 selected")
 	h.key("v")
 	h.has("ToDo(acme/production)[2]", "<v> selected only")
 	h.key("v")
-	h.has("ToDo(acme/production)[13]", "●2")
+	h.has("ToDo(acme/production)[30]", "2 selected")
 }

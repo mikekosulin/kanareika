@@ -25,7 +25,7 @@ The README pictures come from tools, from made-up data only (they are published)
 
 ```bash
 go run ./tools/demo -out /tmp/kanareika-demo     # a month of daily runs of a made-up organization
-go run ./tools/screenshots -home /tmp/kanareika-demo -org acme -env production -size 150x26 -keys 2 \
+go run ./tools/screenshots -home /tmp/kanareika-demo -org acme -env production -size 150x26 -keys 1 \
   -now "$(date -u +%Y-%m-%dT12:00:00Z)" -out docs/screenshots   # tui-<lang>.png, web-<lang>.png
 go run ./tools/brand                                     # docs/brand: banners and the social preview
 ```

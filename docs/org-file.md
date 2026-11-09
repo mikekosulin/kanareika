@@ -27,6 +27,7 @@ Files starting with `_` are not loaded.
 | `k8s[]` | no | `name`, `env`, `kubeconfig`, `context`, `namespaces`, `exposure` |
 | `external` | no | list of IPs/CIDRs/domains/URLs; with environments a map `env: [list]` |
 | `exceptions[]` | no | `id`, `hosts`, `package`, `reason`, `owner`, `review_by`, `until_available` |
+| `due` | no | how due dates are counted, per org and per environment (see [Due dates](#due-dates)) |
 
 SSH port of a host: its `port`, else the one in its `address` (`192.0.2.10:2222`, `[2001:db8::10]:2222`), else the
 group's `port`, else `access.port`, else 22. Jump hosts likewise, without the group. A `port` that disagrees with

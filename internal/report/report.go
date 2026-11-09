@@ -21,6 +21,7 @@ import (
 
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/finding"
+	"github.com/mikekosulin/kanareika/internal/i18n"
 	"github.com/mikekosulin/kanareika/internal/pyfmt"
 )
 
@@ -108,7 +109,30 @@ func LoadFindings(dir string) ([]finding.Finding, error) {
 	if err := json.NewDecoder(r).Decode(&out); err != nil {
 		return nil, fmt.Errorf("%s: %w", dir, err)
 	}
+	for i := range out {
+		upgradeDenied(&out[i])
+	}
 	return out, nil
+}
+
+// upgradeDenied: runs before 0.5 stored what a module could not read as raw keys in one text ("cannot read:
+// denied.shadow, denied.keys (needs root or sudo)"); they read in plain words now, as new runs write them.
+func upgradeDenied(f *finding.Finding) {
+	what, ok := f.Args["what"].(string)
+	if f.Msg != "health.limited" || !ok {
+		return
+	}
+	var keys []string
+	for _, k := range strings.Split(what, ", ") {
+		if strings.HasPrefix(k, "denied.") {
+			keys = append(keys, k)
+		}
+	}
+	if len(keys) == 0 {
+		return
+	}
+	t := i18n.Msg("denied.title", map[string]any{"what_keys": keys})
+	f.Title, f.Msg, f.Args = t.Text, t.Key, t.Args
 }
 
 func LoadMeta(dir string) (*Meta, error) {
@@ -197,6 +221,7 @@ func SaveRun(runDir string, meta *Meta, findings []finding.Finding) error {
 	}
 	view := BuildView(runDir, meta, findings, prev)
 	meta.PlanCounts = &view.PlanCounts
+	meta.Totals = &view.Totals
 	if err := writeMeta(runDir, meta); err != nil {
 		return err
 	}

@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mikekosulin/kanareika/internal/check"
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/finding"
 	"github.com/mikekosulin/kanareika/internal/i18n"
@@ -405,11 +406,18 @@ func saveRun(r *rand.Rand, envDir string, org *config.Org, env string, day, days
 			failed.Set(h.name, "unreachable: dial tcp 192.0.2.32:22: i/o timeout")
 			continue
 		}
+		if h.name == downHost && day == days-1 { // down since this morning: the server view shows it failed
+			failed.Set(h.name, "unreachable: dial tcp "+h.addr+":22: connect: connection refused")
+			continue
+		}
 		if err := writeHostFiles(r, filepath.Join(runDir, "hosts", h.name), h, day); err != nil {
 			return err
 		}
 		base := finding.Finding{Org: "acme", Host: h.name, Group: h.group, Exposure: h.exposure}
 		for _, v := range vulns {
+			if h.name == cleanHost {
+				break
+			}
 			if v.host != h.name || day < v.from || v.fixed >= 0 && day >= v.fixed {
 				continue
 			}
@@ -450,6 +458,10 @@ func saveRun(r *rand.Rand, envDir string, org *config.Org, env string, day, days
 			use := 80 + (day - (days - 10))
 			misc("health", finding.Health, "disk-/var", "MEDIUM", i18n.Msg("health.disk", map[string]any{"mount": "/var/lib/pgsql", "use": use}), i18n.Plain(""))
 		}
+		if h.name == partialHost { // the audit user has no sudo here: some access checks were not possible
+			title, why := check.Denied(config.Host{User: "audit", Privilege: "sudo"}, []string{"denied.shadow", "denied.authlog"})
+			misc("access", finding.Inventory, "access-limited", "INFO", title, why)
+		}
 		if h.exposure == 1 {
 			misc("access", finding.Inventory, "ssh-bruteforce", "MEDIUM",
 				i18n.Msg("ssh.bruteforce", map[string]any{"n": 3000 + r.IntN(4000), "ips": 40 + r.IntN(60)}), i18n.Plain("203.0.113.66 (812)"))
@@ -481,6 +493,15 @@ func saveRun(r *rand.Rand, envDir string, org *config.Org, env string, day, days
 }
 
 // writeHostFiles: what the modules write per host: facts, access, exposure, health.
+// The server view's cases: a host with nothing to do, one only partly checked (no sudo), one down in the last run,
+// one in the org file that was never scanned (added after the last run).
+const (
+	cleanHost   = "mon-04"
+	partialHost = "bastion-02"
+	downHost    = "db-10"
+	newHost     = "mon-05"
+)
+
 // containerFindings: what the docker and k8s modules would report for the images that run (failed hosts report
 // nothing).
 func containerFindings(scanned []string, failed pyfmt.Ordered[string]) []finding.Finding {
@@ -634,6 +655,9 @@ groups:
 			if h.group == g.name {
 				fmt.Fprintf(&b, "      %s:\n        address: %s\n", h.name, h.addr)
 			}
+		}
+		if g.name == "mon" {
+			fmt.Fprintf(&b, "      %s:\n        address: 192.0.2.250\n", newHost)
 		}
 	}
 	b.WriteString("k8s:\n  - name: prod-eu\n    env: production\n    kubeconfig: acme/kubeconfig-prod-eu\n    namespaces: [jobs, ingress-nginx]\n    exposure: 2\n")
