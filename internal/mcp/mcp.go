@@ -34,7 +34,7 @@ func NewServer(p config.Paths, version string) *Server {
 	s.tools = map[string]func(args) (any, error){
 		"list_orgs": s.listOrgs, "get_summary": s.getSummary, "list_actions": s.listActions, "get_host": s.getHost,
 		"search_packages": s.searchPackages, "fix_prompt": s.fixPrompt, "fix_plan": s.fixPlan, "list_runs": s.listRuns,
-		"list_fixes": s.listFixes, "get_fix": s.getFix,
+		"list_fixes": s.listFixes, "get_fix": s.getFix, "list_servers": s.listServers,
 	}
 	return s
 }

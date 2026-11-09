@@ -11,6 +11,7 @@ import (
 
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/i18n"
+	"github.com/mikekosulin/kanareika/internal/lens"
 	"github.com/mikekosulin/kanareika/internal/prompt"
 	"github.com/mikekosulin/kanareika/internal/pyfmt"
 	"github.com/mikekosulin/kanareika/internal/remediate"
@@ -36,10 +37,10 @@ const instructionsTree = "list_fixes / get_fix — what to do grouped by fix, CV
 	"setting to change), cves = unique CVE ids, no_fix = fixes with nothing to install yet (no_fix per node: pending = " +
 	"the vendor has not released a fix, repos = released but not in the host's repositories, esm = only in Ubuntu " +
 	"Pro/ESM, deferred = postponed by the vendor, wontfix = the vendor will not fix it). list_fixes by=host all=true: " +
-	"every server, also clean, failed, not scanned and partly checked ones (state, problem, last_scan); "
+	"every server, also clean, failed, not scanned and partly checked ones (state, problem, last_scan). list_servers lens=priorities|logins|network|health — every server with that lens's columns, levels and notes (e.g. which servers allow password login); "
 
 // treeTools: how many of the last Tools are the tree tools (0.5).
-const treeTools = 2
+const treeTools = 3
 
 func orgEnv() pyfmt.Obj {
 	return pyfmt.O(
@@ -98,6 +99,10 @@ var Tools = []pyfmt.Obj{
 			pyfmt.KV{K: "by", V: pyfmt.O("enum", []string{"fix", "cve", "host"}, "default", "fix")},
 			pyfmt.KV{K: "filters", V: pyfmt.O("type", "array", "items", pyfmt.O("type", "string"))},
 			pyfmt.KV{K: "all", V: pyfmt.O("type", "boolean", "description", "as list_fixes was called")}), "org", "id")),
+	tool("list_servers", "Every server of the environment, one row each, with the columns of a lens: priorities (OS, internet-facing, P1–P4, fixes, CVEs, last scan), logins (password login, root login, users with passwords, authorized keys, failed logins in the last day, last attack), network (public IPs, ports open to the outside, firewall, listening services) or health (disk, inodes, memory, load, failed units, reboot pending, journal errors, clock, time zone). Each cell has v (raw value), s (as shown), level (ok, warn, bad, none) and a note; rows carry state (todo, clean, partial, failed, not_scanned). The same rows the human's Servers view shows.",
+		schema(append(orgEnv(),
+			pyfmt.KV{K: "lens", V: pyfmt.O("enum", lens.IDs(), "default", lens.IDs()[0])},
+			pyfmt.KV{K: "level", V: pyfmt.O("enum", []string{"bad", "warn", "ok"}, "description", "only servers with a cell of this level, e.g. lens=logins level=bad: password login with passwords set, root password login")}), "org")),
 }
 
 // args of a tools/call, as the client sent them.

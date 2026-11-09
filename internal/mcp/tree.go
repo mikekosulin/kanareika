@@ -3,8 +3,10 @@ package mcp
 import (
 	"errors"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/mikekosulin/kanareika/internal/lens"
 	"github.com/mikekosulin/kanareika/internal/report"
 	"github.com/mikekosulin/kanareika/internal/tree"
 )
@@ -71,4 +73,36 @@ func (s *Server) getFix(a args) (any, error) {
 	d := tree.Describe(n, hosts, v, mcpToday())
 	d.Node = trimmed(n, 2)
 	return d, nil
+}
+
+// listServers: every server of the env with the columns of one lens, as the server view shows them (/api/lens).
+func (s *Server) listServers(a args) (any, error) {
+	l := lens.Get(a.str("lens"))
+	if l == nil {
+		return nil, errors.New("unknown lens: " + strings.Join(lens.IDs(), ", "))
+	}
+	org, env, v, err := s.view(a)
+	if err != nil {
+		return nil, err
+	}
+	fs, err := report.LoadFindings(filepath.Join(report.EnvDir(s.store.Paths, org.ID, env), report.Current))
+	if err != nil {
+		return nil, err
+	}
+	o := tree.Opts{By: tree.ByHost, All: true, Inventory: tree.Servers(org, env, v, fs), Today: mcpToday()}
+	res := lens.Build(l, lens.Input{Servers: tree.Build(fs, tree.Hosts(v.Facts), o), View: v, Findings: fs,
+		Lang: a.str("lang")})
+	if lv := a.str("level"); lv != "" { // only rows with a cell of this level (bad: what needs attention)
+		rows := []lens.Row{}
+		for _, r := range res.Rows {
+			for _, c := range r.Cells {
+				if c.Level == lv {
+					rows = append(rows, r)
+					break
+				}
+			}
+		}
+		res.Rows = rows
+	}
+	return res, nil
 }

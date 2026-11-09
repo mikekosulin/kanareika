@@ -580,6 +580,12 @@ func writeHostFiles(r *rand.Rand, dir string, h host, day int) error {
 		"sshd_source": "sshd -T", "password_auth": pw, "password_auth_match_users": []any{}, "users_with_password": users, "keys": keys,
 		"logins": map[string]any{"accepted": accepted, "failed_total": failed, "failed_ips": len(attackers) * 9, "attackers": attackers,
 			"failed_top_ips": []any{}, "failed_daily": map[string]any{}}, "denied": []any{}}
+	if failed > 0 { // the last day of the log
+		access["logins"].(map[string]any)["failed_daily"] = map[string]any{"2026-11-07": failed / 12}
+	}
+	if h.name == partialHost { // no sudo: who has a password and the login log were not readable
+		access["users_with_password"], access["denied"] = nil, []any{"denied.shadow", "denied.authlog"}
+	}
 	listen := []any{map[string]any{"proto": "tcp", "addr": "*", "port": 22, "process": "sshd", "public": h.exposure == 1}}
 	if groupOf(h.group).role == "front" && h.group != "bastion" {
 		listen = append(listen, map[string]any{"proto": "tcp", "addr": "*", "port": 443, "process": "nginx", "public": true},
