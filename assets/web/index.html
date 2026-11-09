@@ -499,8 +499,10 @@ main { background: var(--bg); }
   .c-cve, .c-ep { display: none !important; }
 }
 /* sidebar: org / env / data in one block; language and theme as one small row at the bottom */
-.scope2 { margin: 0 12px 12px; border: 1px solid var(--line); border-radius: var(--r-panel); background: var(--raised); overflow: hidden; }
-.srow { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; height: 34px; padding-left: 10px; border-top: 1px solid var(--line); }
+.scope2 { margin: 0 12px 12px; border: 1px solid var(--line); border-radius: var(--r-panel); background: var(--raised); overflow: hidden; display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 12px; }
+/* the rows share one label column, as wide as the longest label in this language */
+.srow { position: relative; display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; height: 34px; padding-left: 10px; border-top: 1px solid var(--line); }
+.sl { white-space: nowrap; }
 .srow:first-child { border-top: 0; }
 .srow:hover { background: var(--hover); }
 .sl { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
