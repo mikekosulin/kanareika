@@ -818,6 +818,8 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
 .sv .nm .ttl { color: var(--ink-2); } .sv .nm .cveid { font-family: var(--mono); }
 .sv.clean .hostn, .sv.failed .hostn, .sv.not_scanned .hostn { color: var(--ink-2); }
 .sv .hostn { font-family: var(--mono); color: var(--host); }
+.tgt { flex: none; align-self: center; font: 11px/16px var(--mono); color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 4px; padding: 0 5px; }
+.sv .nm .os.prob { color: var(--ink-2); }
 .inet { flex: none; align-self: center; font: 11px/16px var(--mono); color: var(--p2); border: 1px solid color-mix(in srgb, var(--p2) 40%, transparent); border-radius: 4px; padding: 0 5px; }
 .pcs i { font-style: normal; opacity: .5; margin: 0 4px; } .pcs b { font-weight: 600; }
 .mk { display: inline-flex; align-items: center; justify-content: center; flex: none; align-self: center; width: 28px; height: 18px; font: 600 13px/18px var(--mono); }
@@ -955,7 +957,7 @@ const viewHref = (v) => "/" + v + "?" + qs({ org: S.org, env: S.env });
 // the number beside a view: what needs a look there (from the run shown, once loaded)
 function navCount(v) {
   const rd = RD.key === [S.org, S.env, S.run].join("|") ? RD.data : null;
-  if (v === "todo") return S.tree ? `<span class="n hot">${S.tree.fixes}</span>` : "";
+  if (v === "todo") { const f = rd?.totals?.fixes ?? S.tree?.fixes; return f != null ? `<span class="n hot">${f}</span>` : ""; }
   if (v === "servers") return envOf() ? `<span class="n">${envOf().hosts}</span>` : "";
   if (!rd) return "";
   const n = v === "packages" ? (rd.plan || []).filter((p) => p.priority && p.priority !== "P4").length || ""
@@ -996,7 +998,7 @@ function kindSlot(n) {
 }
 function mainText(n) {
   const ver = n.fixed ? `<code class="from" title="${esc(n.installed)}">${esc(n.installed)}</code><code class="arr">→</code><code class="to">${esc(n.fixed)}</code>`
-    : n.installed ? `<code class="from">${esc(n.installed)}</code><span class="ttl">${t("no fix in the repositories yet")}</span>` : "";
+    : n.installed ? `<code class="from">${esc(n.installed)}</code><span class="ttl">${esc(noFixTxt(n.no_fix))}</span>` : "";
   switch (n.kind) {
     case "pkg": case "part": return `<code class="pkg">${esc(n.label)}</code>${ver}${n.path ? `<code class="kind path" title="${esc(n.path)}">${esc(n.path)}</code>` : ""}`;
     case "image": return `<code class="pkg">${esc(n.label.replace(/^.*\//, ""))}</code><span class="ttl" title="${esc(n.label)}">${t("rebuild the image")}</span>`;
@@ -1073,7 +1075,7 @@ function drawTree() {
   const tr = S.tree; if (!tr || !$("#tree")) return;
   FLAT = [];
   $("#tree").innerHTML = tr.nodes.length ? rows(tr.nodes).join("") : `<div class="empty"><h3>${S.flt.size || S.q ? t("Nothing matches") : t("Nothing to do")}</h3>${S.flt.size || S.q ? `<button class="btn ghost" data-reset>${t("Clear filters")}</button>` : t("No open findings in this environment.")}</div>`;
-  $("#sub").innerHTML = t("{f} fixes · {c} CVE · {h} hosts", { f: tr.fixes, c: tr.cves, h: tr.hosts });
+  $("#sub").innerHTML = t("{f} fixes · {c} CVE · {h} hosts", { f: tr.fixes, c: tr.cves, h: tr.hosts }) + (tr.no_fix ? " · " + t("{n} with nothing to install yet", { n: tr.no_fix }) : "");
   $("#counts").innerHTML = counts();
   $("#hidden").innerHTML = tr.hidden_backported ? `${t("{n} findings hidden: already fixed by a backport (package changelog).", { n: tr.hidden_backported })} <button data-bp>${t("Show")}</button>` : S.backport ? `<button data-bp>${t("Hide backported")}</button>` : "";
   drawSelbar();
@@ -1102,6 +1104,18 @@ async function loadTree() {
 const WHY = { kev: "Exploited in the wild: listed in CISA KEV", rce: "Remote code execution without logging in", preauth: "Reachable without logging in",
   epss: "EPSS {epss}: likely to be exploited in the next 30 days", front: "{n} of {of} hosts are internet-facing", nofix: "{n} hosts: no fixed package in the repositories yet",
   reboot: "{n} hosts have the fix installed and wait for a reboot", severity: "Severity {severity}" };
+const NOFIX = { pending: "no fix released yet", repos: "released, not in this host's repositories", esm: "only with Ubuntu Pro (ESM)",
+  deferred: "deferred by the vendor", wontfix: "won't be fixed" };
+// one reason: its words; several: each with its host count
+function noFixTxt(nf) {
+  const ks = Object.keys(nf || {}).filter((k) => NOFIX[k]);
+  if (!ks.length) return t("no fix in the repositories yet");
+  return ks.length === 1 ? t(NOFIX[ks[0]]) : ks.map((k) => `${t(NOFIX[k])} (${nf[k]})`).join(", ");
+}
+function whyText(r) {
+  if (r.code === "nofix") { const nf = {}; Object.keys(NOFIX).forEach((k) => { if (r.args?.[k]) nf[k] = r.args[k]; }); return t("{n} hosts: nothing to install", { n: r.args?.n ?? "" }) + (Object.keys(nf).length ? ": " + noFixTxt(nf) : ""); }
+  return t(WHY[r.code] || r.code, { ...r.args, epss: pct(r.args?.epss || 0) });
+}
 const WHY_ICON = { kev: "alert", rce: "flame", preauth: "globe", epss: "chart", front: "globe", nofix: "clock", reboot: "server", severity: "shield" };
 const DUEWHY = { first_seen: "first seen {d}", fix_available: "fix available since {d}", published: "published {d}", scan: "from the scan of {d}",
   escalated: "priority raised on {d}", exception_ended: "exception ended {d}", kev: "CISA KEV due date", no_fix: "no date until a fix is available" };
@@ -1129,12 +1143,12 @@ function detailHTML(d) {
     `<tr><td><code>${esc(c.label)}</code><div class="note">${c.path ? `<code>${esc(c.path)}</code>` : t("OS package of the base image")}</div></td><td style="font:12.5px var(--mono)">${esc(c.installed)} → <span style="color:var(--ok)">${esc(c.fixed || "—")}</span></td></tr>`).join("")}</tbody></table>
     <div class="note" style="margin-top:8px">${t("One rebuild fixes it everywhere it runs.")}</div></div>` : "";
   const head = n.kind === "cve" ? esc(n.label) : n.kind === "pkg" || n.kind === "part" ? esc(n.label) : esc(n.label);
-  const sub = n.kind === "pkg" || n.kind === "part" ? `<div class="vers">${esc(n.installed)} → ${n.fixed ? `<b>${esc(n.fixed)}</b>` : t("no fix in the repositories yet")}</div>` : n.title && n.kind === "cve" ? `<div>${esc(n.title)}</div>` : "";
+  const sub = n.kind === "pkg" || n.kind === "part" ? `<div class="vers">${esc(n.installed)} → ${n.fixed ? `<b>${esc(n.fixed)}</b>` : esc(noFixTxt(n.no_fix))}</div>${n.pkgs?.length ? `<div class="note" style="margin-top:4px">${t("binary packages")}: <code>${esc(n.pkgs.join(", "))}</code></div>` : ""}` : n.title && n.kind === "cve" ? `<div>${esc(n.title)}</div>` : "";
   return `<div class="dh"><button class="btn ghost back" data-close>${icon("left")}${t("Back")}</button>${crumb}
       <div class="meta"><span class="pb ${n.priority}">${n.priority}</span>${n.runtime ? `<span class="imgb">${esc(n.runtime)}</span>` : ""}${flags(n)}</div>
       <div class="bigmono" style="word-break:break-all">${head}</div>${sub}
       <div class="kpis2"><div><b>${n.cves}</b>CVE</div><div><b>${n.hosts}</b>${t("hosts")}</div><div><b>${(n.groups || []).length}</b>${t("groups")}</div>${n.epss ? `<div><b>${pct(n.epss)}</b>${t("max EPSS")}</div>` : ""}</div></div>
-    <div class="sec"><h4>${t("Why {p}", { p: n.priority })}</h4><ul class="why">${d.why.map((r) => `<li class="${["kev", "rce", "epss"].includes(r.code) ? "hot" : ""}">${icon(WHY_ICON[r.code] || "shield")}<span>${esc(t(WHY[r.code] || r.code, { ...r.args, epss: pct(r.args?.epss || 0) }))}</span></li>`).join("")}</ul></div>
+    <div class="sec"><h4>${t("Why {p}", { p: n.priority })}</h4><ul class="why">${d.why.map((r) => `<li class="${["kev", "rce", "epss"].includes(r.code) ? "hot" : ""}">${icon(WHY_ICON[r.code] || "shield")}<span>${esc(whyText(r))}</span></li>`).join("")}</ul></div>
     <div class="sec"><h4>${t("Due")}</h4>${dueBlock(d.due)}</div>${parts}${cves}${where}${apply}
     <div class="dfoot"><button class="btn primary" data-addsel="${esc(n.id)}">${S.sel.has(n.id) ? icon("check") + t("In the task") : t("Add to task")}</button>
       <button class="btn" data-copyctx="${esc(n.id)}" title="${t("What, where, why and how, to paste into an agent chat")}">${icon("copy")}${t("Copy context")}</button></div>`;
@@ -1168,7 +1182,7 @@ function context(d) {
   const n = d.node;
   const lines = [`Kanareika ${S.org}/${S.env}: ${n.kind} ${n.label}${n.installed ? ` ${n.installed} -> ${n.fixed || "no fix yet"}` : ""}`,
     `priority ${n.priority}, due ${d.due.date || "-"}${d.due.overdue ? ` (${d.due.overdue} d overdue)` : ""}; ${n.hosts} hosts, ${n.cves} CVE`,
-    `why: ${d.why.map((r) => t(WHY[r.code] || r.code, { ...r.args, epss: pct(r.args?.epss || 0) })).join("; ")}`,
+    `why: ${d.why.map(whyText).join("; ")}`,
     `where: ${d.where.map((w) => `${w.group} (${w.hosts.join(", ")})`).join("; ")}`];
   if (d.cves.length) lines.push(`CVE: ${d.cves.map((c) => `${c.id} ${c.severity}${c.kev ? " KEV" : ""}${c.epss ? " EPSS " + pct(c.epss) : ""}`).join(", ")}`);
   (d.apply || []).forEach((s) => lines.push(`apply on ${s.hosts.join(", ")}: ${s.command}`));
@@ -1489,9 +1503,14 @@ function L(o, field = "title") {
   const key = field === "title" ? o.msg : o[field + "_msg"], m = key && CATALOG?.[key];
   if (!m || LANG === "en") return o[field] || "";
   const a = { ...((field === "title" ? o.args : o[field + "_args"]) || {}) };
-  for (const k of Object.keys(a)) if (k.endsWith("_key") && CATALOG[a[k]]) a[k.slice(0, -4)] = CATALOG[a[k]][LANG] || CATALOG[a[k]].en;
+  const msgOf = (key) => (CATALOG[key] && (CATALOG[key][LANG] || CATALOG[key].en)) || key;
+  for (const k of Object.keys(a)) {
+    if (k.endsWith("_keys") && Array.isArray(a[k])) a[k.slice(0, -5)] = a[k].map(msgOf).join(", ");
+    else if (k.endsWith("_key") && CATALOG[a[k]]) a[k.slice(0, -4)] = msgOf(a[k]);
+  }
   return (m[LANG] || m.en).replace(/\{(\w+)\}/g, (_, k) => a[k] ?? `{${k}}`);
 }
+const problemText = (n) => (n?.problem_msg ? L({ msg: n.problem_msg, args: n.problem_args, title: n.problem }) : n?.problem || "");
 const catMsg = (key, fb) => (CATALOG?.[key] && (CATALOG[key][LANG] || CATALOG[key].en)) || fb || key;
 const runLabel = (id) => (id === "current" ? t("Current state") : String(id || "").replace("_", " ").replace(/(\d\d)(\d\d)(\d\d)$/, "$1:$2"));
 const tsShort = (v) => (v || "").replace("T", " ").slice(0, 16);
@@ -1557,8 +1576,8 @@ const VIEWS = {
   packages: {
     title: "Packages",
     chips: [["ready", "fix ready"], ["kev", "KEV"], ["rce", "pre-auth RCE"], ["p4", "+ P4"]],
-    sub: (rd, xs) => t("{n} to update on {h} servers · {c} CVE", { n: fmtN(xs.filter((p) => p.priority !== "P4").length), h: new Set(xs.map((p) => p.host)).size, c: fmtN(rd.plan_counts?.cves) }),
-    right: (rd) => ["P1", "P2", "P3", "P4"].map((p) => `<span class="cnt"><i style="background:var(--${p.toLowerCase()})"></i><b>${fmtN(rd.plan_counts?.[p])}</b> ${p}</span>`).join(""),
+    sub: (rd, xs) => t("{n} to update on {h} servers · {c} CVE", { n: fmtN(xs.filter((p) => p.priority !== "P4").length), h: new Set(xs.map((p) => p.host)).size, c: fmtN((rd.totals || rd.plan_counts)?.cves) }),
+    right: (rd) => ["P1", "P2", "P3", "P4"].map((p) => `<span class="cnt"><i style="background:var(--${p.toLowerCase()})"></i><b>${fmtN((rd.totals || rd.plan_counts)?.[p])}</b> ${p}</span>`).join(""),
     items: (rd) => rd.plan || [],
     flt: (x, f) => (f.has("p4") || x.priority !== "P4") && (!f.has("ready") || x.fix_state === "available") && (!f.has("kev") || x.kev) && (!f.has("rce") || x.preauth_rce),
     text: (x) => `${x.host} ${x.pkg} ${x.target} ${(x.cve_top || []).join(" ")}`,
@@ -1740,7 +1759,7 @@ const VIEWS = {
       { l: t("Kind"), w: "minmax(0, .8fr)", k: 3, c: "d", v: (x) => esc(runScope(x)) },
       { l: t("Took"), w: "64px", k: 3, c: "r", v: (x) => esc(took(x.started, x.finished)) },
       { l: t("Hosts"), w: "72px", k: 2, c: "r", v: (x) => (x.hosts_total ? `${x.hosts_total - (x.hosts_failed || 0)}<span class="z">/${x.hosts_total}</span>` : "") },
-      ...["P1", "P2", "P3"].map((p, i) => ({ l: p, w: "40px", k: i ? i + 1 : 1, c: "r", v: (x) => (x.plan_counts ? pcount(x.plan_counts[p], p) : ""), s: (x) => x.plan_counts?.[p] || 0, d0: -1 })),
+      ...["P1", "P2", "P3"].map((p, i) => ({ l: p, w: "40px", k: i ? i + 1 : 1, c: "r", v: (x) => (x.totals || x.plan_counts ? pcount((x.totals || x.plan_counts)[p], p) : ""), s: (x) => (x.totals || x.plan_counts)?.[p] || 0, d0: -1 })),
     ],
     key: (x) => x.id || x.run_id, open: (x) => x,
   },
@@ -1862,13 +1881,16 @@ function hostDetail(rd, n) {
   const pcs = ["P1", "P2", "P3", "P4"].filter((p) => c[p]).map((p) => `<span class="c${p}">${p} ${c[p]}</span>`).join(" <span class=\"z\">•</span> ");
   const meta = [eh.address, f.os, eh.group && t("group {g}", { g: eh.group }), (eh.exposure === 1 || eh.public) && t("internet-facing")].filter(Boolean);
   const reboot = pk.some((p) => p.fix_state === "reboot");
+  const sn = SRV.byName?.[n], probl = sn && ["failed", "partial", "not_scanned"].includes(sn.state) ? problemText(sn) : "";
+  const scannedAt = sn?.last_scan || (s[0] === "mut" ? "" : last);
   const facts = kv(t("To fix"), pcs || `<span class="ok">${t("nothing to fix")}</span>`)
-    + kv(t("Scanned"), s[0] === "mut" ? `<span class="z">${t("not scanned")}</span>` : `${esc(ago(last))}${eh.user ? ` <span class="z">· ${t("as {user}", { user: esc(eh.user) })}</span>` : ""}`)
-    + (s[0] === "bad" || s[0] === "wn" ? kv(s[0] === "bad" ? t("Not checked") : t("Errors"), `<span class="${s[0]}">${esc(s[1])}</span>`) : "")
+    + kv(t("Scanned"), !scannedAt ? `<span class="z">${t("not scanned yet")}</span>` : `${esc(ago(scannedAt))}${eh.user ? ` <span class="z">· ${t("as {user}", { user: esc(eh.user) })}</span>` : ""}`)
+    + (probl ? kv(sn.state === "failed" ? t("Not reached") : sn.state === "partial" ? t("Partly checked") : t("Not scanned"), `<span class="${sn.state === "failed" ? "bad" : sn.state === "partial" ? "wn" : "z"}">${esc(probl)}</span>`)
+      : s[0] === "bad" || s[0] === "wn" ? kv(s[0] === "bad" ? t("Not reached") : t("Errors"), `<span class="${s[0]}">${esc(s[1])}</span>`) : "")
     + kv(t("Reboot"), reboot ? `<span class="wn">${t("pending")}</span>` : t("not pending"))
     + (H?.uptime_s ? kv(t("Uptime"), t("{n} d", { n: Math.floor(H.uptime_s / 86400) })) : "")
     + (f.kernel?.length ? kv(t("Kernel"), `<code>${esc(f.kernel.join(", "))}</code>`) : "");
-  const head = dhead("", `<div class="bigmono hn" title="${esc(n)}">${esc(n)}</div>`, `<div class="dmeta" title="${esc(meta.join(" · "))}">${esc(meta.join(" · "))}</div>`, `<div class="dkv">${facts}</div>`);
+  const head = dhead(probl ? `${srvMark(sn)}<span>${esc(sn.state === "failed" ? t("not reached") : sn.state === "partial" ? t("partly checked") : t("not scanned yet"))}</span>` : "", `<div class="bigmono hn" title="${esc(n)}">${esc(n)}</div>`, `<div class="dmeta" title="${esc(meta.join(" · "))}">${esc(meta.join(" · "))}</div>`, `<div class="dkv">${facts}</div>`);
   // fixes: packages first (most urgent), then the other things to change
   const fixRows = [...pk.map((p) => li(pb(p.priority), `<code>${esc(p.pkg)}</code> <span class="z">→</span> ${p.fixed || p.repo_version ? `<code>${esc(p.repo_version || p.fixed)}</code>` : `<span class="z">${t("no fix yet")}</span>`}${p.kev ? ` <span class="fl kev">KEV</span>` : ""}`, due(p.due, p.priority), `${p.installed} → ${p.fixed || ""}`)),
     ...rest.filter((o) => o.priority).map((o) => li(pb(o.priority), esc(L(o)), due(o.due, o.priority), o.target))];
@@ -1935,7 +1957,7 @@ function excDetail(x) {
     + sec(t("Exception"), kv(t("Host"), `<button class="lnk" data-vhost="${esc(x.host)}" style="font-family:var(--mono);color:var(--host)">${esc(x.host)}</button>`) + kv(t("Until"), `<code class="${e.expired ? "bad" : ""}">${esc(e.review_by)}</code>`) + kv(t("Who"), esc(e.owner)) + kv(t("Reason"), esc(e.reason)));
 }
 function runDetail(x) {
-  const c = x.plan_counts, job = x.kind === "job";
+  const c = x.totals || x.plan_counts, job = x.kind === "job";
   return dhead(runState(x), `<div class="bigmono">${esc(job ? tsShort(x.started) : runLabel(x.run_id))}</div>`, `<div class="vers">${esc(runScope(x))}</div>`,
     c ? `<div class="kpis2">${["P1", "P2", "P3", "P4"].map((p) => `<div><b class="${c[p] ? "c" + p : "z"}">${fmtN(c[p])}</b>${p}</div>`).join("")}<div><b>${fmtN(c.cves)}</b>CVE</div></div>` : "")
     + sec(t("Run"), kv(t("Started"), `<code>${esc(tsShort(x.started))}</code>`) + kv(t("Finished"), x.finished ? `<code>${esc(tsShort(x.finished))}</code> <span class="z">· ${esc(took(x.started, x.finished))}</span>` : "")
@@ -2068,39 +2090,24 @@ async function loadServers() {
   if (pick) show(pick.id, false, !want);
   else if (SRV.list[0] && !matchMedia("(max-width: 1240px)").matches) show(SRV.list[0].id, false, true);
 }
+// the backend's rows as they come: servers (with their state and problem) and org-level targets (a cluster)
 function serverList(tr) {
-  const rd = RD.data, out = [], seen = new Set();
-  const walk = (ns) => ns.forEach((n) => (n.kind === "host" ? out.push(n) : walk(n.kids || [])));
+  const out = [], walk = (ns) => ns.forEach((n) => (n.kind === "host" ? out.push(n) : walk(n.kids || [])));
   walk(tr.nodes || []);
-  const native = out.some((n) => n.state);
-  const fill = (n) => {
-    if (!rd) return;
-    const s = hostState(rd, n.label);
-    n.state ||= { bad: "failed", wn: "partial", mut: "not_scanned" }[s[0]] || (n.priority ? "findings" : "clean");
-    if (s[0] === "bad" || s[0] === "wn") n.error ||= s[1];
-    n.counts ||= rd.hosts?.[n.label];
-    n.last_scan ||= runIso(lastScan(rd, n.label)) || rd.meta.finished;
-    n.os ||= rd.facts?.[n.label]?.os || "";
-  };
-  out.forEach((n) => { seen.add(n.label); fill(n); const e = envHost(n.label); n.public ??= e.public; n.exposure ??= e.exposure; });
-  if (!native && !S.flt.size && !S.q.trim()) {
-    (S.envd?.hosts || []).filter((h) => !seen.has(h.name)).forEach((h) => {
-      const n = { id: `g:${h.group}/h:${h.name}`, kind: "host", label: h.name, exposure: h.exposure, public: h.public, kids: [] };
-      fill(n); out.push(n);
-    });
-  }
-  const rank = (n) => (n.priority && n.state !== "failed" && n.state !== "not_scanned" ? 0 : n.state === "partial" ? 1 : n.state === "failed" ? 2 : n.state === "not_scanned" ? 3 : 4);
-  const pc = (n, p) => n.counts?.[p] || 0;
-  out.sort((a, b) => rank(a) - rank(b) || (a.priority || "P9").localeCompare(b.priority || "P9") || pc(b, "P1") - pc(a, "P1") || pc(b, "P2") - pc(a, "P2") || pc(b, "P3") - pc(a, "P3") || a.label.localeCompare(b.label));
+  const known = new Set((S.envd?.hosts || []).map((h) => h.name));
+  out.forEach((n) => { n.target = known.size > 0 && !known.has(n.label); });
   SRV.byId = {}; SRV.byName = {};
   const index = (ns) => ns.forEach((n) => { SRV.byId[n.id] = n; index(n.kids || []); });
   index(out); out.forEach((n) => { SRV.byName[n.label] = n; });
   return out;
 }
 const visKids = (n) => (n.kids || []).filter((k) => k.kind !== "section" && (SRV.p4 || k.priority !== "P4"));
+// the state slot: ✓ clean, ✗ not reached, ◐ partly checked, – not scanned; a server with fixes: its priority
 function srvMark(n) {
-  const m = { clean: ["ok", "✓", t("nothing to fix")], failed: ["bad", "✗", n.error || t("unreachable")], partial: ["wn", "!", n.error || t("partial data")], not_scanned: ["mut", "–", t("not scanned")] }[n.state];
-  if (n.state === "partial" && n.priority || !m) return n.priority ? `<span class="pb ${n.priority}">${n.priority}</span>` : "<span></span>";
+  const why = problemText(n);
+  const m = { clean: ["ok", "✓", t("nothing to fix")], failed: ["bad", "✗", why || t("unreachable")], partial: ["wn", "◐", why || t("partly checked")],
+    not_scanned: ["mut", "–", why || t("not scanned yet")] }[n.state];
+  if (!m) return n.priority ? `<span class="pb ${n.priority}">${n.priority}</span>` : "<span></span>";
   return `<span class="mk ${m[0]}" title="${esc(m[2])}" aria-label="${esc(m[2])}">${m[1]}</span>`;
 }
 function srvRows(n, depth, out) {
@@ -2109,11 +2116,14 @@ function srvRows(n, depth, out) {
   const tw = kids.length ? `<button class="tw" data-tw="${esc(n.id)}" aria-expanded="${open}" aria-label="${open ? t("Collapse") : t("Expand")}">${icon("chev")}</button>` : "<span></span>";
   let name, pri, fx = "", sc = "";
   if (n.kind === "host") {
-    const c = n.counts || {}, failed = n.state === "failed" || n.state === "not_scanned";
-    name = `<span class="hostn" title="${esc(n.label)}">${esc(n.label)}</span><span class="os" title="${esc(failed ? n.error || "" : n.os || "")}">${esc(n.state === "failed" ? n.error || t("unreachable") : n.state === "not_scanned" ? t("not scanned") : n.os || "")}</span>${n.exposure === 1 || n.public ? `<span class="inet">${t("internet")}</span>` : ""}`;
-    pri = failed ? t("not checked") : n.state === "clean" ? t("nothing to fix") : ["P1", "P2", "P3", "P4"].map((p) => (c[p] ? `<b class="c${p}">${c[p]}</b>` : "0")).join("<i>•</i>");
-    fx = failed || n.state === "clean" ? "" : String(kids.length || "");
-    sc = failed ? "—" : n.last_scan ? esc(ago(n.last_scan)) : "";
+    const c = n.counts || {}, why = problemText(n), sub = n.state === "failed" || n.state === "partial" || n.state === "not_scanned" ? why : n.os_short || n.os || "";
+    name = `<span class="hostn" title="${esc(n.label)}">${esc(n.label)}</span>`
+      + (n.target ? `<span class="tgt">${t(n.label.startsWith("k8s:") ? "cluster" : "target")}</span>` : `<span class="os ${sub === why && why ? "prob" : ""}" title="${esc(sub)}">${esc(sub)}</span>`)
+      + (n.exposure === 1 || n.public ? `<span class="inet">${t("internet")}</span>` : "");
+    pri = n.state === "clean" ? t("nothing to fix") : !n.fixes && (n.state === "failed" || n.state === "not_scanned") ? t("not checked")
+      : ["P1", "P2", "P3", "P4"].map((p) => (c[p] ? `<b class="c${p}">${c[p]}</b>` : "0")).join("<i>•</i>");
+    fx = n.fixes ? String(n.fixes) : "";
+    sc = n.last_scan ? `<span class="${n.state === "failed" ? "bad" : ""}" title="${esc(n.last_scan)}">${esc(ago(n.last_scan))}</span>` : "—";
   } else {
     name = `<span style="width:${(depth - 1) * 20}px"></span>${mainText(n)}`;
     pri = [n.cves ? `${n.cves} CVE` : "", n.kev ? "KEV" : "", n.kind === "cve" && n.epss ? "EPSS " + pct(n.epss) : ""].filter(Boolean).join(" · ");
@@ -2129,8 +2139,10 @@ function drawServers() {
   const list = SRV.list, c = S.tree?.counts || {}, out = [];
   list.forEach((n) => srvRows(n, 0, out));
   $("#tree").innerHTML = out.length ? out.join("") : `<div class="empty"><h3>${S.flt.size || S.q ? t("Nothing matches") : t("No servers")}</h3>${S.flt.size || S.q ? `<button class="btn ghost" data-reset>${t("Clear filters")}</button>` : t("No server in this environment has been scanned.")}</div>`;
-  const ok = list.filter((n) => n.state === "clean").length, bad = list.filter((n) => n.state === "failed").length;
-  $("#sub").innerHTML = `<span class="mono">${list.length} · ${["P1", "P2", "P3", "P4"].map((p) => `<b class="c${p}">${p} ${c[p] || 0}</b>`).join(" <span class=z>•</span> ")} · <span class="ok">${ok} ✓</span>${bad ? ` · <b class="bad">${bad} ✗</b>` : ""}</span>`;
+  const sv = S.tree?.servers || {}, servers = list.filter((n) => !n.target).length;
+  const st = [["clean", "ok", "✓", "nothing to fix"], ["failed", "bad", "✗", "not reached"], ["partial", "wn", "◐", "partly checked"], ["not_scanned", "z", "–", "not scanned yet"]]
+    .filter(([k]) => sv[k]).map(([k, cls, m, l]) => `<span class="${cls}" title="${t(l)}">${sv[k]} ${m}</span>`).join(" · ");
+  $("#sub").innerHTML = `<span class="mono"><span title="${t("servers")}">${servers}</span> · ${["P1", "P2", "P3", "P4"].map((p) => `<b class="c${p}">${p} ${c[p] || 0}</b>`).join(" <span class=z>•</span> ")}${st ? " · " + st : ""}</span>`;
 }
 async function showServer(n, quiet) {
   S.cur = n.id; S.stack = []; DETAIL = null; S.cardHost = n.label; VS.stack = []; VS.item = null;
