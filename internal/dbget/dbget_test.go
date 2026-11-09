@@ -260,6 +260,7 @@ func TestReasons(t *testing.T) {
 			t.Errorf("%s: %q, want %q", path, got, want)
 		}
 	}
+	Timeout, Idle = 10*time.Second, 10*time.Second // the rest fail fast; a TLS handshake on a busy CI runner can take over 200 ms
 	if got := reasonOf(t, tlsSrv.URL); got != "TLS: certificate signed by unknown authority (a proxy?)" {
 		t.Error(got)
 	}
