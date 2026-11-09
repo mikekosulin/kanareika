@@ -123,6 +123,7 @@ type sshPick struct {
 }
 
 type wizard struct {
+	gen       int    // which wizard: an answer meant for one closed since is dropped
 	step      int    // 1: servers, 2: access, 3: the first scan
 	kind      string // add, personal, client, company
 	fields    []field
@@ -152,6 +153,7 @@ type wizard struct {
 // The messages of the setup.
 type (
 	setupMsg struct {
+		gen      int
 		kind     string // invalid, created
 		org, env string
 		path     string
@@ -165,8 +167,12 @@ type (
 		d   parseResp
 	}
 	parseDueMsg struct{ gen int }
-	hostsMsg    []hostRef
-	checkedMsg  struct {
+	hostsMsg    struct {
+		gen   int
+		hosts []hostRef
+	}
+	checkedMsg struct {
+		gen  int
 		host string
 		r    checkResult
 	}
@@ -222,13 +228,17 @@ func (m *Model) kindName(k string) string {
 }
 
 func (m *Model) newWizard() *wizard {
-	w := &wizard{step: 1, kind: "personal"}
+	m.wizGen++
+	w := &wizard{gen: m.wizGen, step: 1, kind: "personal", res: map[string]*checkResult{}}
 	w.fields = m.setupFields()
 	return w
 }
 
 // checkWizard: the access check of an env that has no runs yet, then its first scan.
-func checkWizard(org, env string) *wizard { return &wizard{step: 2, org: org, env: env} }
+func (m *Model) checkWizard(org, env string) *wizard {
+	m.wizGen++
+	return &wizard{gen: m.wizGen, step: 2, org: org, env: env, res: map[string]*checkResult{}}
+}
 
 // setupFields: the form; which of them show depends on the kind and on the login line being open.
 func (m *Model) setupFields() []field {
@@ -364,6 +374,9 @@ func (m *Model) setupUpdate(msg tea.Msg) tea.Cmd {
 	if w == nil {
 		return nil
 	}
+	if w.res == nil {
+		w.res = map[string]*checkResult{}
+	}
 	switch msg := msg.(type) {
 	case parseDueMsg:
 		if msg.gen == w.parseGen {
@@ -375,6 +388,9 @@ func (m *Model) setupUpdate(msg tea.Msg) tea.Cmd {
 			w.parsed = &d
 		}
 	case setupMsg:
+		if msg.gen != w.gen {
+			return nil
+		}
 		w.busy = false
 		switch msg.kind {
 		case "invalid":
@@ -385,17 +401,23 @@ func (m *Model) setupUpdate(msg tea.Msg) tea.Cmd {
 			return tea.Batch(m.fetchOrgs(), m.selectEnv(msg.org, msg.env), m.fetchHosts())
 		}
 	case hostsMsg:
+		if msg.gen != w.gen {
+			return nil
+		}
 		w.hosts = nil
-		for _, h := range msg {
+		for _, h := range msg.hosts {
 			if w.only == nil || slices.Contains(w.only, h.name) {
 				w.hosts = append(w.hosts, h)
 			}
 		}
 		return m.checkAccess(false)
 	case checkedMsg:
+		if msg.gen != w.gen {
+			return nil
+		}
 		r := msg.r
 		w.res[msg.host] = &r
-		w.inflight--
+		w.inflight = max(w.inflight-1, 0)
 		return m.nextCheck()
 	}
 	return nil
@@ -467,7 +489,7 @@ func (m *Model) parse() tea.Cmd {
 
 func (m *Model) fetchHosts() tea.Cmd {
 	w := m.setup
-	c, org, env := m.c, w.org, w.env
+	c, org, env, gen := m.c, w.org, w.env, w.gen
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -483,13 +505,13 @@ func (m *Model) fetchHosts() tea.Cmd {
 		if err := c.Get(ctx, "/api/env?org="+url.QueryEscape(org)+"&env="+url.QueryEscape(env), &e); err != nil {
 			return errMsg{err}
 		}
-		out := hostsMsg{}
+		out := hostsMsg{gen: gen}
 		for _, h := range e.Hosts {
 			r := hostRef{name: h.Name, address: h.Address, user: h.User, port: h.Port}
 			if h.Jump != nil {
 				r.jump = *h.Jump
 			}
-			out = append(out, r)
+			out.hosts = append(out.hosts, r)
 		}
 		return out
 	}
@@ -519,7 +541,7 @@ func (m *Model) nextCheck() tea.Cmd {
 		host := w.queue[0]
 		w.queue = w.queue[1:]
 		w.inflight++
-		c, org, env := m.c, w.org, w.env
+		c, org, env, gen := m.c, w.org, w.env, w.gen
 		cmds = append(cmds, func() tea.Msg {
 			ctx, cancel := context.WithTimeout(context.Background(), 3*timeout)
 			defer cancel()
@@ -529,11 +551,11 @@ func (m *Model) nextCheck() tea.Cmd {
 			err := c.Post(ctx, "/api/setup/check", map[string]any{"org": org, "env": env, "hosts": []string{host}}, &out)
 			switch {
 			case err != nil:
-				return checkedMsg{host, checkResult{Host: host, Error: err.Error()}}
+				return checkedMsg{gen, host, checkResult{Host: host, Error: err.Error()}}
 			case len(out.Results) == 0:
-				return checkedMsg{host, checkResult{Host: host, Error: "no answer"}}
+				return checkedMsg{gen, host, checkResult{Host: host, Error: "no answer"}}
 			}
-			return checkedMsg{host, out.Results[0]}
+			return checkedMsg{gen, host, out.Results[0]}
 		})
 	}
 	return tea.Batch(append(cmds, m.spin())...)
@@ -611,7 +633,7 @@ func (m *Model) submit() tea.Cmd {
 		}
 		body = base
 	}
-	c := m.c
+	c, gen := m.c, w.gen
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -625,11 +647,11 @@ func (m *Model) submit() tea.Cmd {
 		var ae *APIError
 		switch {
 		case errors.As(err, &ae) && len(ae.Errors) > 0:
-			return setupMsg{kind: "invalid", errs: ae.Errors}
+			return setupMsg{gen: gen, kind: "invalid", errs: ae.Errors}
 		case err != nil:
-			return setupMsg{kind: "invalid", errs: []string{err.Error()}}
+			return setupMsg{gen: gen, kind: "invalid", errs: []string{err.Error()}}
 		}
-		msg := setupMsg{kind: "created", org: orStr(out.Org, org), env: env, path: out.Path, skipped: out.Skipped}
+		msg := setupMsg{gen: gen, kind: "created", org: orStr(out.Org, org), env: env, path: out.Path, skipped: out.Skipped}
 		if path == "/api/setup/add" {
 			msg.only = out.Added
 			if msg.only == nil {
