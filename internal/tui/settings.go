@@ -27,6 +27,7 @@ type Settings struct {
 	UTC    bool   `json:"utc,omitempty"`     // times in UTC instead of the system's zone
 	// NoMouse: no mouse reporting (clicks and the wheel off; the terminal's own selection works without shift)
 	NoMouse bool                `json:"no_mouse,omitempty"`
+	Theme   string              `json:"theme,omitempty"`  // "" (the terminal's background), dark, light
 	Hidden  map[string][]string `json:"hidden,omitempty"` // view -> column keys switched off
 }
 

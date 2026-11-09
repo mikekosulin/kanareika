@@ -15,17 +15,23 @@ import (
 	"github.com/mikekosulin/kanareika/internal/i18n"
 )
 
-// Palette: the web page's priority colors on a dark terminal, k9s-like chrome.
+// Palette: the web page's priority colors, k9s-like chrome; for dark terminals and, darker and stronger, for light
+// ones (text at least WCAG AA on white). Which one: the terminal's background, or the theme set (o, KANAREIKA_THEME).
 var (
-	cP      = map[string]lipgloss.Color{"P1": "#e5484d", "P2": "#f2894f", "P3": "#f5c518", "P4": "#7d7c75"}
-	cBrand  = lipgloss.Color("#f5c518")
-	cAccent = lipgloss.Color("#3b82f6")
-	cCyan   = lipgloss.Color("#22d3ee")
-	cText   = lipgloss.Color("#e6e5e1")
-	cMuted  = lipgloss.Color("#8a8984")
-	cDim    = lipgloss.Color("#4a4945")
-	cOK     = lipgloss.Color("#22c55e")
-	cBad    = lipgloss.Color("#f87171")
+	cP = map[string]lipgloss.AdaptiveColor{"P1": {Dark: "#e5484d", Light: "#c01f26"}, "P2": {Dark: "#f2894f", Light: "#b4430b"},
+		"P3": {Dark: "#f5c518", Light: "#8a5a00"}, "P4": {Dark: "#7d7c75", Light: "#6b6a64"}}
+	cBrand  = lipgloss.AdaptiveColor{Dark: "#f5c518", Light: "#8a5a00"}
+	cAccent = lipgloss.AdaptiveColor{Dark: "#3b82f6", Light: "#1d4ed8"}
+	cCyan   = lipgloss.AdaptiveColor{Dark: "#22d3ee", Light: "#0e6f86"}
+	cText   = lipgloss.AdaptiveColor{Dark: "#e6e5e1", Light: "#1f1f1d"}
+	cMuted  = lipgloss.AdaptiveColor{Dark: "#8a8984", Light: "#5c5b56"}
+	cDim    = lipgloss.AdaptiveColor{Dark: "#4a4945", Light: "#a3a29c"}
+	cOK     = lipgloss.AdaptiveColor{Dark: "#22c55e", Light: "#15803d"}
+	cBad    = lipgloss.AdaptiveColor{Dark: "#f87171", Light: "#b91c1c"}
+	// backgrounds: bright in both themes, with dark ink on them
+	cInk     = lipgloss.Color("#0b0b0b")
+	cBgBrand = lipgloss.AdaptiveColor{Dark: "#f5c518", Light: "#f5c518"}
+	cBgCyan  = lipgloss.AdaptiveColor{Dark: "#22d3ee", Light: "#7fdcef"}
 
 	sBrand  = lipgloss.NewStyle().Foreground(cBrand).Bold(true)
 	sText   = lipgloss.NewStyle().Foreground(cText)
@@ -35,14 +41,14 @@ var (
 	sLabel  = lipgloss.NewStyle().Foreground(cBrand)
 	sKey    = lipgloss.NewStyle().Foreground(cCyan).Bold(true)
 	sHead   = lipgloss.NewStyle().Foreground(cText).Bold(true)
-	sSel    = lipgloss.NewStyle().Foreground(lipgloss.Color("#0b0b0b")).Background(cCyan).Bold(true)
+	sSel    = lipgloss.NewStyle().Foreground(cInk).Background(cBgCyan).Bold(true)
 	sErr    = lipgloss.NewStyle().Foreground(cBad)
 	sOK     = lipgloss.NewStyle().Foreground(cOK)
 	sRun    = lipgloss.NewStyle().Foreground(cAccent).Bold(true)
 	sFrame  = lipgloss.NewStyle().Foreground(cCyan)
 	sTitle  = lipgloss.NewStyle().Foreground(cBrand).Bold(true)
-	sCrumb  = lipgloss.NewStyle().Foreground(lipgloss.Color("#0b0b0b")).Background(cBrand).Bold(true).Padding(0, 1)
-	sCrumb2 = lipgloss.NewStyle().Foreground(lipgloss.Color("#0b0b0b")).Background(cCyan).Padding(0, 1)
+	sCrumb  = lipgloss.NewStyle().Foreground(cInk).Background(cBgBrand).Bold(true).Padding(0, 1)
+	sCrumb2 = lipgloss.NewStyle().Foreground(cInk).Background(cBgCyan).Padding(0, 1)
 )
 
 const ellipsis = "~" // single cell everywhere (… is double width in some terminals)
@@ -249,8 +255,18 @@ func (m *Model) grid(cols []col, rows [][]string, width, height int, cursor bool
 	return out
 }
 
-// panel: a k9s-style frame with the title set into its top border; content cut to the inside.
+// pad: the cells between a panel's border and its content, on each side (a selected row's bar starts inside).
+const pad = 1
+
+// panel: a k9s-style frame with the title set into its top border; content, w-2-2*pad wide, one cell inside it.
 func panel(title string, content []string, w, h int) []string {
+	return frame(title, content, w, h, pad)
+}
+
+// box: a frame its content fills (the popup lists: their lines carry their own margins).
+func box(title string, content []string, w, h int) []string { return frame(title, content, w, h, 0) }
+
+func frame(title string, content []string, w, h, p int) []string {
 	inner := max(w-2, 1)
 	t := " " + title + " "
 	if ansi.StringWidth(t) > inner-2 {
@@ -265,7 +281,8 @@ func panel(title string, content []string, w, h int) []string {
 		if i < len(content) {
 			c = content[i]
 		}
-		out = append(out, sFrame.Render("│")+fit(c, inner, false)+sFrame.Render("│"))
+		margin := strings.Repeat(" ", p)
+		out = append(out, sFrame.Render("│")+margin+fit(c, max(inner-2*p, 0), false)+margin+sFrame.Render("│"))
 	}
 	return append(out, sFrame.Render("└"+strings.Repeat("─", inner)+"┘"))
 }
@@ -427,7 +444,7 @@ func (m *Model) main(h int) []string {
 	w := m.w
 	switch {
 	case m.help:
-		return panel(sTitle.Render(m.t.T("Hotkeys")), m.helpView(w-2, h-2), w, h)
+		return panel(sTitle.Render(m.t.T("Hotkeys")), m.helpView(w-2-2*pad, h-2), w, h)
 	case m.langs != nil:
 		return panel(sTitle.Render(m.t.T("Language")), m.langView(), w, h)
 	case m.panels != nil:
@@ -435,7 +452,7 @@ func (m *Model) main(h int) []string {
 	case m.form != nil:
 		return panel(sTitle.Render(m.t.T("Scan"))+sText.Render("("+m.form.org+"/"+m.form.env+")"), m.formView(h-2), w, h)
 	case m.setup != nil:
-		return panel(m.setupTitle(), m.setupView(w-2, h-2), w, h)
+		return panel(m.setupTitle(), m.setupView(w-2-2*pad, h-2), w, h)
 	case !m.loaded:
 		msg := m.t.T("loading")
 		if m.err != "" {
@@ -445,7 +462,7 @@ func (m *Model) main(h int) []string {
 	case m.isTree() && m.host == "":
 		return m.todoMain(h)
 	}
-	title, content := m.body(w-2, h-2)
+	title, content := m.body(w-2-2*pad, h-2)
 	return panel(title, content, w, h)
 }
 

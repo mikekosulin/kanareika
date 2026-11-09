@@ -20,14 +20,22 @@ import (
 	"github.com/mikekosulin/kanareika/internal/i18n"
 	"github.com/mikekosulin/kanareika/internal/server"
 	"github.com/mikekosulin/kanareika/tools/internal/chrome"
+	"github.com/mikekosulin/kanareika/tools/internal/webp"
 )
 
 // seams for tests: where Chrome is, the file:// URL of a page, Chrome itself, and the environment
 var (
 	findChrome = chrome.Find
 	fileURL    = chrome.FileURL
-	shot       = chrome.Shot
-	setenv     = os.Setenv
+	capture    = chrome.Shot
+	shot       = func(bin, url, png string, w, h int, extra ...string) error { // Chrome's PNG, kept as lossless WebP
+		if err := capture(bin, url, png, w, h, extra...); err != nil {
+			return err
+		}
+		_, err := webp.FromPNG(png)
+		return err
+	}
+	setenv = os.Setenv
 )
 
 // The web page's size in CSS pixels (rendered at 2x); the TUI's follows its terminal size: a cell of the 13px
@@ -38,8 +46,8 @@ func tuiSize(cols, rows int) (int, int) {
 	return int(float64(cols)*7.83+0.5) + 32, int(float64(rows)*15.86+0.5) + 60
 }
 
-// shots: the README's screenshots in every language: tui-<lang>.png (the frame of size after keys, as run
-// draws it), web-<lang>.png and web-<lang>-light.png (ToDo of `kanareika web` grouped by CVE, dark and light), in out.
+// shots: the README's screenshots in every language, lossless WebP: tui-<lang>.webp and tui-<lang>-light.webp (the
+// frame of size after keys, as run draws it, dark and light), web-<lang>.webp and web-<lang>-light.webp (ToDo of `kanareika web` grouped by CVE, dark and light), in out.
 // The directory is demo data (tools/demo): its trivy cache and feeds are used, not this machine's.
 func shots(out, home, bin, org, env, size, keys, at string) error {
 	if bin == "" {
@@ -68,21 +76,30 @@ func shots(out, home, bin, org, env, size, keys, at string) error {
 	}
 	web := httptest.NewServer(s.Handler())
 	defer web.Close()
+	defer func() { frameTheme = "dark" }()
 	for _, lang := range i18n.Langs() {
-		var frame bytes.Buffer
-		if err := run(&frame, home, lang, org, env, size, keys, at); err != nil {
-			return err
-		}
-		page := filepath.Join(out, "tui-"+lang+".html")
-		if err := os.WriteFile(page, []byte(terminal(frame.String())), 0o644); err != nil {
-			return err
-		}
-		u, err := fileURL(page)
-		if err != nil {
-			return err
-		}
-		if err := shot(bin, u, filepath.Join(out, "tui-"+lang+".png"), tuiW, tuiH); err != nil {
-			return err
+		// the TUI in both themes: the README picks by the reader's theme
+		for _, theme := range []string{"dark", "light"} {
+			frameTheme = theme
+			var frame bytes.Buffer
+			if err := run(&frame, home, lang, org, env, size, keys, at); err != nil {
+				return err
+			}
+			name := "tui-" + lang
+			if theme == "light" {
+				name += "-light"
+			}
+			page := filepath.Join(out, name+".html")
+			if err := os.WriteFile(page, []byte(terminal(frame.String(), theme == "light")), 0o644); err != nil {
+				return err
+			}
+			u, err := fileURL(page)
+			if err != nil {
+				return err
+			}
+			if err := shot(bin, u, filepath.Join(out, name+".png"), tuiW, tuiH); err != nil {
+				return err
+			}
 		}
 		// the web page grouped by CVE (the most telling view), in both themes: the README picks by the reader's theme
 		where := url.Values{"org": {org}, "env": {env}, "by": {"cve"}, "lang": {lang}}
@@ -99,14 +116,19 @@ func shots(out, home, bin, org, env, size, keys, at string) error {
 	return nil
 }
 
-// terminal: a frame as an HTML page: a window with the frame's colors, the size tuiSize gives it.
-func terminal(frame string) string {
+// terminal: a frame as an HTML page: a window with the frame's colors (a dark or a light terminal), the size
+// tuiSize gives it.
+func terminal(frame string, light bool) string {
+	bg, ink := "#141413", "#e6e5e1"
+	if light {
+		bg, ink = "#fafaf8", "#1f1f1d"
+	}
 	return `<!doctype html><html><head><meta charset="utf-8"><style>
 html,body{margin:0;background:transparent;overflow:hidden}
-.term{display:inline-block;padding:14px 16px;background:#141413;border-radius:10px}
+.term{display:inline-block;padding:14px 16px;background:` + bg + `;border-radius:10px` + map[bool]string{true: ";box-shadow:inset 0 0 0 1px #e2e1dc", false: ""}[light] + `}
 .bar{height:26px;display:flex;gap:7px;align-items:center;padding:0 2px 6px}
 .bar i{width:11px;height:11px;border-radius:50%;display:block}
-pre{margin:0;color:#e6e5e1;font:13px/1.22 "SF Mono",Menlo,"DejaVu Sans Mono","PingFang SC","Noto Sans Mono CJK SC",monospace}
+pre{margin:0;color:` + ink + `;font:13px/1.22 "SF Mono",Menlo,"DejaVu Sans Mono","PingFang SC","Noto Sans Mono CJK SC",monospace}
 .w{display:inline-block;width:2ch;text-align:center;font-weight:inherit}
 </style></head><body><div class="term"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i>` +
 		`<i style="background:#28c840"></i></div><pre>` + ansiHTML(strings.TrimRight(frame, "\n")) + `</pre></div>

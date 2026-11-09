@@ -65,7 +65,7 @@ func uiStrings(t *testing.T) []string {
 			case *ast.ValueSpec:
 				for _, name := range x.Names {
 					if slices.Contains([]string{"viewNames", "helpRows", "headerNames", "zoneNames", "whyTexts", "dueWhy", "groupNames",
-						"sectionNames", "menuTitles", "steps"}, name.Name) {
+						"sectionNames", "menuTitles", "steps", "themeNames"}, name.Name) {
 						ast.Inspect(x, func(n ast.Node) bool {
 							if cl, ok := n.(*ast.CompositeLit); ok {
 								for i, e := range cl.Elts {
