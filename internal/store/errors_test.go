@@ -2,10 +2,15 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/uptrace/bun/migrate"
+
+	"github.com/mikekosulin/kanareika/internal/store/migrations"
 )
 
 // fail makes the database refuse one kind of write: a trigger raises "boom" on op ("INSERT", "UPDATE", "DELETE") of
@@ -166,4 +171,44 @@ func TestDescriptionsOfDroppedDataset(t *testing.T) {
 	if err != nil || len(ds) != 0 {
 		t.Fatalf("%v %v", ds, err)
 	}
+}
+
+// TestMigrationsBothWays: the schema rolls back to nothing and up again; a file that is a database of something else
+// (a table of the same name, no migrations recorded) is replaced rather than failing every open.
+func TestMigrationsBothWays(t *testing.T) {
+	ctx := context.Background()
+	reports := t.TempDir()
+	db, err := Open(ctx, reports)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := migrate.NewMigrator(db.DB, migrations.All)
+	if _, err := m.Rollback(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := db.NewRaw("SELECT count(*) FROM sqlite_master WHERE name IN ('datasets', 'packs', 'descs')").Scan(ctx, &n); err != nil || n != 0 {
+		t.Fatalf("%d tables left after the rollback (%v)", n, err)
+	}
+	_ = db.Close()
+	dir := filepath.Join(reports, "acme", "production", "current")
+	writeFindings(t, dir, sample())
+	if d, err := Load(ctx, reports, dir); err != nil || d.Len() != len(sample()) {
+		t.Fatalf("%v %v", d, err)
+	}
+	// someone else's database at our name
+	other := t.TempDir()
+	sqldb, err := sql.Open("sqlite", Path(other))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sqldb.Exec("CREATE TABLE datasets (x TEXT)"); err != nil {
+		t.Fatal(err)
+	}
+	_ = sqldb.Close()
+	db, err = Open(ctx, other)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
 }
