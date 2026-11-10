@@ -44,7 +44,7 @@ type tuiFlags struct {
 }
 
 func (a *app) tuiRun(cmd *cobra.Command, f tuiFlags) error {
-	limitReaderMemory()
+	limitMemory()
 	var c tui.Client
 	if f.url != "" {
 		c = tui.Remote(f.url, f.token)

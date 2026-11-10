@@ -47,6 +47,7 @@ report directory and history. An org with several environments needs --env (or -
   kanareika scan acme --dry-run          # what would run; connects nowhere
   kanareika scan --all`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			limitMemory()
 			ids := orgIDs(args, flagOrgs)
 			if !all && len(ids) == 0 {
 				return fail(1, "refusing to scan: name an org (kanareika scan <org>) or use --all")
@@ -279,6 +280,7 @@ func (a *app) pruneCmd() *cobra.Command {
 		Use:   "prune [org...]",
 		Short: "delete old runs according to policy/settings.yml (or flags)",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			limitMemory()
 			ids := orgIDs(args, flagOrgs)
 			orgs, _, err := a.load(ids, cmd.ErrOrStderr())
 			if err != nil {
