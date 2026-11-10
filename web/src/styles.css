@@ -814,6 +814,8 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
 .svh > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sv { min-height: 40px; border-bottom: 1px solid var(--line); cursor: pointer; position: relative; font-size: 13.5px; white-space: nowrap; }
 .sv.kid { min-height: 34px; font-size: 13px; background: color-mix(in srgb, var(--solid) 55%, transparent); }
+/* a level in per level: the server, an image in it, the packages of the image */
+.sv.kid { padding-left: calc(10px + var(--d, 1) * 22px); }
 .sv:hover { background: var(--hover); }
 .sv[aria-selected="true"] { background: var(--sel); }
 .sv > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

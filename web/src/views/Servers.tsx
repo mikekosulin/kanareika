@@ -157,15 +157,21 @@ function ServersSub({ tr, list }: { tr: Tree; list: (TreeNode & { target?: boole
 function ServerRows({ list, p, scrollRef }: { list: (TreeNode & { target?: boolean })[]; p: TreeParams; scrollRef: React.RefObject<HTMLDivElement | null> }) {
   const { open, p4, cur } = useS((s) => ({ open: s.open, p4: s.p4, cur: s.cur }));
   const kp = useMemo(() => ({ ...p, all: 1 }) as TreeParams, [p]);
-  const ids = list.filter((n) => open.has(n.id) && !n.kids && n.more).map((n) => n.id);
-  useKids(kp, ids);
-  const visKids = (n: TreeNode) => (n.kids || client.getQueryData<TreeNode[]>(["kids", kp, n.id]) || []).filter((k) => k.kind !== "section" && (p4 || k.priority !== "P4"));
+  // the rows open at any depth (a server, an image in it) whose kids came without them: asked for once each
+  const ids: string[] = [];
   const rows: SRow[] = [];
   const walk = (n: TreeNode, depth: number) => {
     rows.push({ n, depth });
-    if (open.has(n.id)) visKids(n).forEach((k) => walk(k, depth + 1));
+    if (!open.has(n.id)) return;
+    const kids = n.kids || client.getQueryData<TreeNode[]>(["kids", kp, n.id]);
+    if (!kids) {
+      if (n.more) ids.push(n.id);
+      return;
+    }
+    kids.filter((k) => k.kind !== "section" && (p4 || k.priority !== "P4")).forEach((k) => walk(k, depth + 1));
   };
   list.forEach((n) => walk(n, 0));
+  useKids(kp, ids);
   const listRef = useRef<HTMLDivElement>(null);
   const v = useVirtualizer({
     count: rows.length,
@@ -205,7 +211,7 @@ function ServerRows({ list, p, scrollRef }: { list: (TreeNode & { target?: boole
         const { n, depth } = rows[it.index];
         return (
           <div key={it.key} className="vrow-wrap" data-index={it.index} ref={v.measureElement} style={{ transform: `translateY(${it.start - margin}px)` }}>
-            <ServerRow n={n} depth={depth} open={open.has(n.id)} cur={cur === n.id} hasKids={!!(n.more || visKids(n).length)} onShow={show} />
+            <ServerRow n={n} depth={depth} open={open.has(n.id)} cur={cur === n.id} hasKids={!!(n.more || (n.kids || []).some((k) => k.kind !== "section" && (p4 || k.priority !== "P4")))} onShow={show} />
           </div>
         );
       })}
@@ -267,7 +273,15 @@ function ServerRow({ n, depth, open, cur, hasKids, onShow }: { n: TreeNode & { t
     ) : null;
   }
   return (
-    <div className={"sv " + (depth ? "kid" : n.state || "")} role="treeitem" aria-level={depth + 1} aria-expanded={hasKids ? open : undefined} aria-selected={cur} onClick={() => onShow(n.id)}>
+    <div
+      className={"sv " + (depth ? "kid" : n.state || "")}
+      style={depth ? ({ "--d": depth } as React.CSSProperties) : undefined}
+      role="treeitem"
+      aria-level={depth + 1}
+      aria-expanded={hasKids ? open : undefined}
+      aria-selected={cur}
+      onClick={() => onShow(n.id)}
+    >
       {hasKids ? (
         <button
           className="tw"
