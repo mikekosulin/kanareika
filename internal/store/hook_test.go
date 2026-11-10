@@ -2,10 +2,13 @@ package store
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate"
@@ -191,4 +194,50 @@ func TestMigrateLockFails(t *testing.T) {
 		t.Fatalf("%v (lock asked for: %v)", err, h.hit)
 	}
 	_ = db.Close()
+}
+
+// TestOpenWaitsForBusy: a database another process holds locked (a scan making it while a dashboard opens it:
+// SQLite answers "database is locked" at once on some steps, on Windows most of all) is waited for, never deleted
+// as unreadable; a wait given up returns that error and leaves the database as it was.
+func TestOpenWaitsForBusy(t *testing.T) {
+	reports := t.TempDir()
+	theirs, err := sql.Open("sqlite", Path(reports))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := theirs.Exec("CREATE TABLE theirs (x INTEGER); INSERT INTO theirs VALUES (1)"); err != nil {
+		t.Fatal(err)
+	}
+	_ = theirs.Close()
+	locked := errors.New("database is locked (5) (SQLITE_BUSY)")
+	tries := 0
+	openOnce = func(ctx context.Context, reports string) (*DB, error) {
+		if tries++; tries <= 2 {
+			return nil, locked
+		}
+		return open(ctx, reports)
+	}
+	t.Cleanup(func() { openOnce = open })
+	db, err := Open(context.Background(), reports)
+	if err != nil || tries != 3 {
+		t.Fatalf("%v after %d tries", err, tries)
+	}
+	var n int
+	if err := db.NewRaw("SELECT count(*) FROM theirs").Scan(context.Background(), &n); err != nil || n != 1 {
+		t.Fatalf("the other process's data is gone: %d %v", n, err)
+	}
+	_ = db.Close()
+	// given up (the context ends while it waits): the error, the file untouched
+	openOnce = func(context.Context, string) (*DB, error) { return nil, locked }
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	if _, err := Open(ctx, reports); !busy(err) {
+		t.Fatalf("%v", err)
+	}
+	if _, err := os.Stat(Path(reports)); err != nil {
+		t.Fatal("the database was deleted:", err)
+	}
+	if busy(nil) || busy(errors.New("no such table")) {
+		t.Fatal("busy")
+	}
 }
