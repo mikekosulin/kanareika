@@ -1054,6 +1054,19 @@
     "{n} logins from {m} addresses, 30 d": "{n} connexions depuis {m} adresses, 30 j",
     "{n} runs · last {ago}": "{n} exécutions · dernière {ago}",
     "{n} unreachable": "{n} injoignables",
-    "{n} with nothing to install yet": "{n} sans rien à installer pour l'instant"
+    "{n} with nothing to install yet": "{n} sans rien à installer pour l'instant",
+    "login users": "utilisateurs avec connexion",
+    "root accounts": "comptes UID 0",
+    "login period": "période du journal",
+    "unknown user names": "noms inexistants",
+    "usernames tried": "noms essayés",
+    "kernel log": "journal du noyau",
+    "owner": "responsable",
+    "review by": "à revoir avant",
+    "Sessions": "Sessions",
+    "Kernel log": "Journal du noyau",
+    "All packages": "Tous les paquets",
+    "Authorized keys": "Clés autorisées",
+    "Logins": "Connexions"
   }
 }

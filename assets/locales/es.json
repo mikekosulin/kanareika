@@ -1054,6 +1054,19 @@
     "{n} logins from {m} addresses, 30 d": "{n} accesos desde {m} direcciones, 30 d",
     "{n} runs · last {ago}": "{n} ejecuciones · última {ago}",
     "{n} unreachable": "{n} inaccesibles",
-    "{n} with nothing to install yet": "{n} aún sin nada que instalar"
+    "{n} with nothing to install yet": "{n} aún sin nada que instalar",
+    "login users": "usuarios con acceso",
+    "root accounts": "cuentas con UID 0",
+    "login period": "periodo del registro",
+    "unknown user names": "nombres inexistentes",
+    "usernames tried": "nombres probados",
+    "kernel log": "registro del kernel",
+    "owner": "responsable",
+    "review by": "revisar antes de",
+    "Sessions": "Sesiones",
+    "Kernel log": "Registro del kernel",
+    "All packages": "Todos los paquetes",
+    "Authorized keys": "Claves autorizadas",
+    "Logins": "Accesos"
   }
 }

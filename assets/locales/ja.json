@@ -1054,6 +1054,19 @@
     "{n} logins from {m} addresses, 30 d": "ログイン {n} 回 ({m} 件のアドレスから、30 日間)",
     "{n} runs · last {ago}": "実行 {n} 回 · 最終 {ago}",
     "{n} unreachable": "到達不能 {n} 台",
-    "{n} with nothing to install yet": "まだインストールするものがない: {n} 件"
+    "{n} with nothing to install yet": "まだインストールするものがない: {n} 件",
+    "login users": "ログイン可能なユーザー",
+    "root accounts": "UID 0 のアカウント",
+    "login period": "ログの期間",
+    "unknown user names": "存在しないユーザー名",
+    "usernames tried": "試されたユーザー名",
+    "kernel log": "カーネルログ",
+    "owner": "担当者",
+    "review by": "見直し期限",
+    "Sessions": "セッション",
+    "Kernel log": "カーネルログ",
+    "All packages": "すべてのパッケージ",
+    "Authorized keys": "許可された鍵",
+    "Logins": "ログイン"
   }
 }

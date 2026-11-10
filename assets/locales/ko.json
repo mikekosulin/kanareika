@@ -1054,6 +1054,19 @@
     "{n} logins from {m} addresses, 30 d": "로그인 {n}회, 주소 {m}개, 30일",
     "{n} runs · last {ago}": "실행 {n}회 · 마지막 {ago}",
     "{n} unreachable": "연결 불가 {n}대",
-    "{n} with nothing to install yet": "아직 설치할 것 없음 {n}개"
+    "{n} with nothing to install yet": "아직 설치할 것 없음 {n}개",
+    "login users": "로그인 가능한 사용자",
+    "root accounts": "UID 0 계정",
+    "login period": "로그 기간",
+    "unknown user names": "존재하지 않는 사용자 이름",
+    "usernames tried": "시도된 사용자 이름",
+    "kernel log": "커널 로그",
+    "owner": "담당자",
+    "review by": "재검토 기한",
+    "Sessions": "세션",
+    "Kernel log": "커널 로그",
+    "All packages": "모든 패키지",
+    "Authorized keys": "허용된 키",
+    "Logins": "로그인"
   }
 }

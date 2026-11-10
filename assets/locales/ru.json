@@ -1054,6 +1054,19 @@
     "{n} logins from {m} addresses, 30 d": "входов за 30 дн.: {n}, адресов: {m}",
     "{n} runs · last {ago}": "прогонов: {n} · последний {ago}",
     "{n} unreachable": "недоступно: {n}",
-    "{n} with nothing to install yet": "пока нечего устанавливать: {n}"
+    "{n} with nothing to install yet": "пока нечего устанавливать: {n}",
+    "login users": "пользователи со входом",
+    "root accounts": "учётки с UID 0",
+    "login period": "период логов",
+    "unknown user names": "несуществующие имена",
+    "usernames tried": "подбирали имена",
+    "kernel log": "журнал ядра",
+    "owner": "ответственный",
+    "review by": "пересмотреть до",
+    "Sessions": "Сеансы",
+    "Kernel log": "Журнал ядра",
+    "All packages": "Все пакеты",
+    "Authorized keys": "Ключи доступа",
+    "Logins": "Входы"
   }
 }

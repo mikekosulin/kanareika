@@ -29,9 +29,9 @@ func TestHostCard(t *testing.T) {
 		"Health", "disks", "50% /", "load", "Other findings", "SSH password guessing")
 	h.size(110, 20) // scrolls
 	h.has("CentOS Stream 9")
-	h.key("G")
+	h.key("G") // the end: the whole lists after the summaries
 	h.hasNot("CentOS Stream 9")
-	h.has("Other findings")
+	h.has("198.51.100.99")
 	h.key("g", "down", "up", "pgdown", "pgup")
 	h.has("CentOS Stream 9")
 	h.key("esc")
@@ -46,15 +46,19 @@ func TestHostCard(t *testing.T) {
 // TestHostCardSections: the fields the modules write on real hosts (as the module goldens have them).
 func TestHostCardSections(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.size(120, 90)
+	h.size(140, 120)
 	rd := h.m.rund
 	rd.Access["web-01"] = map[string]any{
 		"sshd": map[string]any{"port": "22", "permitrootlogin": "without-password"}, "password_auth": true,
 		"password_auth_match_users": []any{"deploy"}, "users_with_password": []any{"root", "admin"},
-		"keys": []any{map[string]any{"user": "root"}, map[string]any{"user": "deploy"}},
+		"keys": []any{map[string]any{"user": "root", "type": "ssh-ed25519", "fp": "SHA256:JDsJkvoMQRMG211AX9dOCtH40Q6", "comment": "user1@example.com"},
+			map[string]any{"user": "deploy"}},
+		"login_users": []any{"deploy", "root"}, "uid0": []any{"root", "toor"},
+		"last": []any{"deploy   pts/0        100.21.0.11  Sun Nov  1 22:43:30 2026 - Sun Nov  1 23:11:26 2026  (00:27)"},
 		"logins": map[string]any{"accepted": []any{map[string]any{"user": "root", "ip": "100.21.0.11", "method": "publickey", "count": 10.0, "last": "2026-11-01T23:54:24"}},
-			"failed_total": 4981.0, "failed_ips": 551.0,
-			"attackers": []any{map[string]any{"ip": "100.21.0.14", "n": 353.0, "users": []any{[]any{"admin", 10.0}}}}},
+			"failed_total": 4981.0, "failed_ips": 551.0, "failed_last": "2026-11-01T22:28:00", "invalid_users": 1624.0,
+			"failed_top_users": []any{[]any{"root", 1545.0}, []any{"ubuntu", 147.0}}, "period": []any{"2026-11-01T09:02:28", "2026-11-01T22:28:00"},
+			"attackers": []any{map[string]any{"ip": "100.21.0.14", "n": 353.0, "last": "2026-11-01T16:33:30", "users": []any{[]any{"admin", 10.0}}}}},
 		"denied": []any{"shadow"}}
 	rd.Exposure["web-01"] = map[string]any{"public": []any{"192.0.2.1", "192.0.2.9"}, "unlisted_public": []any{"192.0.2.9"},
 		"listen": []any{map[string]any{"proto": "tcp", "addr": "*", "port": 80.0, "process": "nginx", "public": true},
@@ -64,12 +68,17 @@ func TestHostCardSections(t *testing.T) {
 		"disks":  []any{map[string]any{"mount": "/", "use": 95.0}, map[string]any{"mount": "/var", "use": 85.0}},
 		"inodes": []any{map[string]any{"mount": "/", "use": 60.0}, map[string]any{"mount": "/boot", "use": 3.0}},
 		"mem":    map[string]any{"available_mb": 241.0, "total_mb": 490.0}, "load": map[string]any{"load1": 0.5, "load15": 0.2, "cpus": 2.0},
-		"failed_units": []any{"nginx.service"}, "readonly_mounts": []any{"/data"}, "journal": map[string]any{"errors_7d": 12.0},
-		"time": map[string]any{"service": "chronyd", "synced": "yes", "offset_s": 0.0008, "skew_s": 0.07}}
+		"failed_units": []any{"nginx.service"}, "readonly_mounts": []any{"/data"},
+		"journal": map[string]any{"errors_7d": 12.0, "top": []any{[]any{"kernel", 9.0}}},
+		"dmesg":   map[string]any{"classes": map[string]any{"oom": map[string]any{"count": 3.0, "last": "Out of memory: Killed process 812", "key": "dmesg.oom"}}, "tail": []any{"[1.0] eth0: link up"}},
+		"time":    map[string]any{"service": "chronyd", "synced": "yes", "offset_s": 0.0008, "skew_s": 0.07, "timezone": "Etc/UTC"}}
 	card(h)
 	h.has("password login       on (Match: deploy)", "root login           without-password", "users with password  root, admin",
-		"authorized keys      2 (root: 1)", "root @ 100.21.0.11 ×10 publickey 2026-11-01 23:54:24", "failed logins        4981 551 IPs",
-		"100.21.0.14 ×353 admin", "no access to", "192.0.2.9 (not in the config)", "tcp *:80", "nginx public", "no inbound filtering",
+		"authorized keys      2 (root: 1)", "root @ 100.21.0.11 ×10 publickey 2026-11-01 23:54:24", "failed logins        4981 551 IPs, last attack 2026-11-01 22:28:00",
+		"password guessing    100.21.0.14      ×353 2026-11-01 16:33:30 admin", "ssh-ed25519", "JDsJkvoMQRMG…", "user1@example.com", "login users          deploy, root",
+		"root accounts        root, toor", "login period         2026-11-01 09:02:28 — 2026-11-01 22:28:00", "unknown user names   1624",
+		"root ×1545, ubuntu ×147", "Sessions", "deploy pts/0 100.21.0.11 Sun Nov 1 22:43:30 2026", "×3  Out of memory: Killed process 812",
+		"Kernel log", "eth0: link up", "kernel ×9", "time zone Etc/UTC", "no access to", "192.0.2.9 (not in the config)", "tcp *:80", "nginx public", "no inbound filtering",
 		"iptables_input_policy=ACCEPT", "docker", "95% /", "85% /var", "60% /", "241 / 490 MB", "0.5 / 0.2", "nginx.service", "/data",
 		"journal errors       12", "chronyd, synchronized: yes, offset 0.001 s, clock skew 0.07 s")
 	h.hasNot("/boot")
