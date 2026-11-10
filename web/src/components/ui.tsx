@@ -63,9 +63,19 @@ export function Search(p: { value: string; onChange: (v: string) => void; placeh
         value={p.value}
         autoComplete="off"
         onChange={(e) => p.onChange(e.target.value)}
-        onKeyDown={(e) => e.key === "Escape" && e.currentTarget.blur()}
+        onKeyDown={(e) => {
+          if (e.key !== "Escape") return;
+          if (p.value) p.onChange("");
+          else e.currentTarget.blur();
+        }}
       />
-      <kbd>/</kbd>
+      {p.value ? (
+        <button type="button" className="clr" title={t("Clear filters")} aria-label={t("Clear filters")} onClick={() => p.onChange("")}>
+          <Icon name="x" />
+        </button>
+      ) : (
+        <kbd>/</kbd>
+      )}
     </label>
   );
 }

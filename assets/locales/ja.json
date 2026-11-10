@@ -944,7 +944,7 @@
     "One login per server, {cmd}, log out. Nothing is changed.": "各サーバーに 1 回ログインし、{cmd} を実行してログアウト。何も変更しません。",
     "One per line: {a}, an {b} command, ssh config, CSV": "1 行に 1 つ: {a}、{b} コマンド、ssh config、CSV",
     "One rebuild fixes it everywhere it runs.": "1 回の再ビルドで、稼働先すべてが修正されます。",
-    "Open in ToDo": "やることで開く",
+    "Its fixes in ToDo": "このサーバーの修正をやることで表示",
     "Organizations are added where kanareika web runs on localhost (or with a token). On that machine: kanareika org new <ORG_ID>.": "組織は、kanareika web が localhost (またはトークン付き) で動いているマシンで追加します。そのマシンで実行: kanareika org new <ORG_ID>",
     "Other": "その他",
     "Output": "出力",

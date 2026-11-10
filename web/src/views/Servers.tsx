@@ -130,7 +130,7 @@ function serverList(tr: Tree | undefined, hosts?: { name: string }[]) {
 function ServersSub({ tr, list }: { tr: Tree; list: (TreeNode & { target?: boolean })[] }) {
   const c = tr.counts || {}, sv = tr.servers || {};
   const servers = list.filter((n) => !n.target).length;
-  const st = ([["clean", "ok", "✓", "nothing to fix"], ["failed", "bad", "✗", "not reached"], ["partial", "wn", "◐", "partly checked"], ["not_scanned", "z", "–", "not scanned yet"]] as const).filter(([k]) => sv[k]);
+  const st = ([["clean", "ok", "nothing to fix"], ["failed", "bad", "not reached"], ["partial", "wn", "partly checked"], ["not_scanned", "z", "not scanned yet"]] as const).filter(([k]) => sv[k]);
   return (
     <span className="mono">
       <span title={t("servers")}>{servers}</span> ·{" "}
@@ -142,11 +142,11 @@ function ServersSub({ tr, list }: { tr: Tree; list: (TreeNode & { target?: boole
           </b>
         </span>
       ))}
-      {st.map(([k, cls, m, l]) => (
+      {st.map(([k, cls, l]) => (
         <span key={k}>
           {" · "}
-          <span className={cls} title={t(l)}>
-            {sv[k]} {m}
+          <span className={cls}>
+            {sv[k]} {t(l)}
           </span>
         </span>
       ))}

@@ -944,7 +944,7 @@
     "One login per server, {cmd}, log out. Nothing is changed.": "Un acceso por servidor, {cmd} y salir. No se cambia nada.",
     "One per line: {a}, an {b} command, ssh config, CSV": "Uno por línea: {a}, un comando {b}, ssh config, CSV",
     "One rebuild fixes it everywhere it runs.": "Una reconstrucción lo corrige en todos los sitios donde se ejecuta.",
-    "Open in ToDo": "Abrir en Por hacer",
+    "Its fixes in ToDo": "Sus correcciones en Por hacer",
     "Organizations are added where kanareika web runs on localhost (or with a token). On that machine: kanareika org new <ORG_ID>.": "Las organizaciones se añaden donde kanareika web se ejecuta en localhost (o con un token). En esa máquina: kanareika org new <ORG_ID>.",
     "Other": "Otros",
     "Output": "Salida",

@@ -21,7 +21,8 @@ export const useText = () => makeL(useCatalog().data);
 
 const Mk = ({ cls }: { cls: "ok" | "wn" | "bad" | "mut" }) => <span className={"mk " + cls}>{{ ok: "✓", wn: "!", bad: "!", mut: "–" }[cls]}</span>;
 
-/** srvMark: the state slot: ✓ clean, ✗ not reached, ◐ partly checked, – not scanned; a server with fixes: its priority. */
+/** srvMark: the state slot: ✓ clean, ✗ not reached, – not scanned, ! partly checked with nothing found; a server with
+ * fixes: its priority (a partly checked one too: why is said beside its name). */
 export function SrvMark({ n }: { n: TreeNode }) {
   const { problemText } = useText();
   const why = problemText(n);
@@ -29,13 +30,13 @@ export function SrvMark({ n }: { n: TreeNode }) {
     {
       clean: ["ok", "✓", t("nothing to fix")],
       failed: ["bad", "✗", why || t("unreachable")],
-      partial: ["wn", "◐", why || t("partly checked")],
+      partial: ["wn", "!", why || t("partly checked")],
       not_scanned: ["mut", "–", why || t("not scanned yet")],
     } as Record<string, string[]>
-  )[n.state || ""];
+  )[n.state === "partial" && n.priority ? "" : n.state || ""];
   if (!m) return n.priority ? <span className={"pb " + n.priority}>{n.priority}</span> : <span />;
   return (
-    <span className={"mk " + m[0]} title={m[2]} aria-label={m[2]}>
+    <span className={"pb st " + m[0]} title={m[2]} aria-label={m[2]}>
       {m[1]}
     </span>
   );
@@ -267,7 +268,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
       <Sec title={t("Exceptions")}>{exc}</Sec>
       <div className="dfoot">
         <button className="btn primary" onClick={() => go("todo", n)}>
-          {t("Open in ToDo")}
+          {t("Its fixes in ToDo")}
         </button>
         {scans && (
           <button className="btn" onClick={() => startScan(org, envName, [n])}>

@@ -944,7 +944,7 @@
     "One login per server, {cmd}, log out. Nothing is changed.": "서버마다 한 번 로그인, {cmd}, 로그아웃. 아무것도 바꾸지 않습니다.",
     "One per line: {a}, an {b} command, ssh config, CSV": "한 줄에 하나: {a}, {b} 명령, ssh config, CSV",
     "One rebuild fixes it everywhere it runs.": "한 번 재빌드하면 실행 중인 모든 곳에서 해결됩니다.",
-    "Open in ToDo": "할 일에서 열기",
+    "Its fixes in ToDo": "이 서버의 수정 사항을 할 일에서 보기",
     "Organizations are added where kanareika web runs on localhost (or with a token). On that machine: kanareika org new <ORG_ID>.": "조직은 kanareika web이 localhost(또는 토큰 사용)에서 실행되는 곳에서 추가합니다. 해당 머신에서: kanareika org new <ORG_ID>",
     "Other": "기타",
     "Output": "출력",

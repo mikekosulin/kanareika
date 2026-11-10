@@ -944,7 +944,7 @@
     "One login per server, {cmd}, log out. Nothing is changed.": "每台服务器登录一次，运行 {cmd}，然后退出。不会更改任何内容。",
     "One per line: {a}, an {b} command, ssh config, CSV": "每行一个：{a}、{b} 命令、ssh config、CSV",
     "One rebuild fixes it everywhere it runs.": "重新构建一次，所有运行它的地方都会修复。",
-    "Open in ToDo": "在待办中打开",
+    "Its fixes in ToDo": "在待办中查看它的修复",
     "Organizations are added where kanareika web runs on localhost (or with a token). On that machine: kanareika org new <ORG_ID>.": "组织需在 kanareika web 运行于 localhost（或使用令牌）的机器上添加。在那台机器上运行：kanareika org new <ORG_ID>",
     "Other": "其他",
     "Output": "输出",

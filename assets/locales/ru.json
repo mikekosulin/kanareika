@@ -944,7 +944,7 @@
     "One login per server, {cmd}, log out. Nothing is changed.": "Один вход на сервер, {cmd}, выход. Ничего не меняется.",
     "One per line: {a}, an {b} command, ssh config, CSV": "По одному на строку: {a}, команда {b}, ssh config, CSV",
     "One rebuild fixes it everywhere it runs.": "Одна пересборка исправит образ везде, где он запущен.",
-    "Open in ToDo": "Открыть в «Что делать»",
+    "Its fixes in ToDo": "Его исправления в «Что делать»",
     "Organizations are added where kanareika web runs on localhost (or with a token). On that machine: kanareika org new <ORG_ID>.": "Организации добавляются там, где kanareika web запущен на localhost (или с токеном). На той машине: kanareika org new <ORG_ID>.",
     "Other": "Прочее",
     "Output": "Вывод",

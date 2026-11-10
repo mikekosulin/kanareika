@@ -112,7 +112,7 @@ func TestLogos(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(b), "/logo.png") || !strings.Contains(string(b), `"/logo.webp"`) ||
+	if strings.Contains(string(b), "/logo.png") || !regexp.MustCompile("[\"'`]/logo\\.webp[\"'`]").Match(b) ||
 		!strings.Contains(string(b), `<link rel="icon" type="image/png" href="/favicon.png">`) {
 		t.Error("the page: images from logo.webp, the icon from favicon.png")
 	}
