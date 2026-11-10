@@ -1,6 +1,7 @@
 // What the page reads from the server, as cached queries: one request per question however many components ask,
 // the previous answer kept on screen while the next one loads, and an answer no one waits for any more cancelled.
-import { keepPreviousData, useQuery, useQueries, QueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueries, QueryClient } from "@tanstack/react-query";
 import { api, qs } from "./lib/api";
 import { LANG } from "./lib/i18n";
 import { useShallow } from "zustand/react/shallow";
@@ -38,14 +39,35 @@ export const treeParams = (s: State) => ({
 });
 export type TreeParams = ReturnType<typeof treeParams>;
 
-/** useTree: the top rows (levels=0) of a grouping; all=1 for the server list. */
+// PAGE: top rows per request. By CVE a large environment has tens of thousands (megabytes at once); the list
+// asks for the next page as it scrolls near the end.
+const PAGE = 400;
+
+/** useTree: the top rows (levels=0) of a grouping, a page at a time (more(): the next one); all=1 for the server
+ * list, which comes whole (a few hundred servers at most, and its lenses sort it all). */
 export function useTree(p: TreeParams, all = false) {
-  return useQuery({
+  const q = useInfiniteQuery({
     queryKey: ["tree", p, all],
-    queryFn: ({ signal }) => api<Tree>("/api/tree?" + qs({ ...p, all: all ? 1 : "", levels: 0 }), signal),
+    queryFn: ({ signal, pageParam }) =>
+      api<Tree>("/api/tree?" + qs({ ...p, all: all ? 1 : "", levels: 0, ...(all ? {} : { offset: pageParam, limit: PAGE }) }), signal),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) => {
+      const n = pages.reduce((a, pg) => a + (pg.nodes?.length || 0), 0);
+      return !all && last.rows != null && n < last.rows ? n : undefined;
+    },
     enabled: !!p.org && !!p.env,
     placeholderData: keepPreviousData,
   });
+  const pages = q.data?.pages;
+  const data = useMemo<Tree | undefined>(
+    () => (pages ? { ...pages[0], nodes: pages.length === 1 ? pages[0].nodes : pages.flatMap((pg) => pg.nodes || []) } : undefined),
+    [pages],
+  );
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = q;
+  const more = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  return { data, error: q.error, isPlaceholderData: q.isPlaceholderData, more };
 }
 
 /** useKids: the kids of the open rows that came without them, each asked for once. */

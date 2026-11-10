@@ -271,7 +271,8 @@ export function Palette() {
     const it: PalItem[] = [];
     // the fixes of the tree on screen (its top rows and what is open under them)
     const trees = client.getQueriesData<any>({ queryKey: ["tree"] });
-    const tr = trees.length ? trees[trees.length - 1][1] : null;
+    const last = trees.length ? trees[trees.length - 1][1] : null;
+    const tr = last?.pages ? { nodes: last.pages.flatMap((pg: any) => pg.nodes || []) } : last; // the pages loaded so far
     const walk = (ns: any[], depth: number) =>
       ns.forEach((n) => {
         if (n.kind !== "section")

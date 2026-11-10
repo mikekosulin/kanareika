@@ -13,7 +13,8 @@ export type Row =
   | { type: "node"; n: TreeNode; depth: number }
   | { type: "sec"; n: TreeNode; depth: number }
   | { type: "cloud"; kids: TreeNode[]; depth: number; key: string }
-  | { type: "wait"; depth: number; key: string };
+  | { type: "wait"; depth: number; key: string }
+  | { type: "page"; depth: 0; key: string }; // a top row of a page not loaded yet (the list has its full length)
 
 /** kidsOf: a row's kids, as the tree came (expand all) or as asked for. */
 const kidsOf = (n: TreeNode, got: Map<string, TreeNode[]>) => n.kids || got.get(n.id);
@@ -80,6 +81,7 @@ export function TreeRows(p: {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   selectable: boolean;
   onShow: (id: string) => void;
+  onEnd?: () => void; // the list is shown near (or past) its last loaded row: the next page
 }) {
   const { cur, sel, open } = useS((s) => ({ cur: s.cur, sel: s.sel, open: s.open }));
   const listRef = useRef<HTMLDivElement>(null);
@@ -91,7 +93,7 @@ export function TreeRows(p: {
     scrollMargin: listRef.current?.offsetTop ?? 0,
     getItemKey: (i) => {
       const r = p.rows[i];
-      return r.type === "cloud" || r.type === "wait" ? r.key : r.n.id + (r.type === "sec" ? "#" + i : "");
+      return r.type === "cloud" || r.type === "wait" || r.type === "page" ? r.key : r.n.id + (r.type === "sec" ? "#" + i : "");
     },
   });
   // the row under the cursor stays on screen (keys, a jump from the palette)
@@ -102,6 +104,12 @@ export function TreeRows(p: {
   }, [cur]); // eslint-disable-line react-hooks/exhaustive-deps
   const items = v.getVirtualItems();
   const margin = v.options.scrollMargin;
+  const lastShown = items.length ? items[items.length - 1].index : -1;
+  useEffect(() => {
+    if (!p.onEnd) return;
+    const loaded = p.rows.findIndex((r) => r.type === "page");
+    if (lastShown >= (loaded < 0 ? p.rows.length : loaded) - 60) p.onEnd();
+  }, [lastShown, p.rows.length, p.onEnd]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div ref={listRef} role="tree" id="tree" className="vlist" style={{ height: v.getTotalSize() }}>
       {items.map((it) => {
@@ -136,6 +144,10 @@ export function TreeRows(p: {
                     );
                   })}
                 </span>
+              </div>
+            ) : r.type === "page" ? (
+              <div className="node pagewait" aria-hidden="true">
+                <i className="sk w60" />
               </div>
             ) : (
               <div style={{ paddingLeft: r.depth * 20 }}>

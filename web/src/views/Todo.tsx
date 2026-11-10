@@ -10,7 +10,7 @@ import { client, fullTree, treeParams, useNode, useRunData, useTree } from "../q
 import type { TreeNode } from "../types";
 import { Chips, copy, Empty, Icon, Search, Seg, Skeleton } from "../components/ui";
 import { DataTable, type Col } from "../components/DataTable";
-import { TreeRows, useRows, useTreeKeys } from "./TreeList";
+import { TreeRows, useRows, useTreeKeys, type Row } from "./TreeList";
 import { NodeDetail } from "./NodeDetail";
 import { ExcDetail, Hcell } from "./HostDetail";
 import { Banner, NoRuns } from "./Shell";
@@ -40,7 +40,13 @@ export function Todo() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [text, setText] = useQueryInput();
   const nodes = tree.data?.nodes || [];
-  const rows = useRows(nodes, p);
+  const loadedRows = useRows(nodes, p);
+  // the rows of pages not loaded yet stand in for them: the scrollbar has its length from the start
+  const rest = Math.max(0, (tree.data?.rows ?? nodes.length) - nodes.length);
+  const rows = useMemo(
+    () => (rest ? [...loadedRows, ...Array.from({ length: rest }, (_, i): Row => ({ type: "page", depth: 0, key: "page/" + i }))] : loadedRows),
+    [loadedRows, rest],
+  );
   const show = useCallback((id: string) => set({ cur: id, stack: [], detailOpen: narrow() }), []);
   useTreeKeys(rows, show, s.view === "todo");
   // the first row's details on a wide window, when nothing is picked (or what was picked is gone)
@@ -132,7 +138,7 @@ export function Todo() {
                   </Empty>
                 ) : (
                   <div className={tree.isPlaceholderData ? "stale" : ""}>
-                    <TreeRows rows={rows} scrollRef={scrollRef} selectable={s.view === "todo"} onShow={show} />
+                    <TreeRows rows={rows} scrollRef={scrollRef} selectable={s.view === "todo"} onShow={show} onEnd={tree.more} />
                   </div>
                 )}
                 {tr && (
@@ -188,7 +194,7 @@ function AllButton({ nodes }: { nodes: TreeNode[] }) {
           try {
             const full = await fullTree(p);
             ns = full.nodes || [];
-            client.setQueryData(["tree", p, false], { ...full });
+            client.setQueryData(["tree", p, false], { pages: [{ ...full, rows: ns.length }], pageParams: [0] }); // every row, as one page
           } catch (e: any) {
             toast(e.message);
             return;
