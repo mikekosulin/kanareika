@@ -169,7 +169,10 @@ func checkCurrent(t *testing.T, env, gold string) {
 		}
 	}
 	sameJSON(t, "current/run.json", readFile(t, filepath.Join(gold, "run.json")), readFile(t, filepath.Join(cur, "run.json")))
-	sameJSON(t, "current/view.json", readFile(t, filepath.Join(gold, "view.json")), readFile(t, filepath.Join(cur, "view.json")))
+	// current/ keeps findings per host (0.6): lists that follow the findings' order follow the hosts' now; within a
+	// host the order is Python's
+	sameJSON(t, "current/view.json", byHostView(t, readFile(t, filepath.Join(gold, "view.json"))),
+		byHostView(t, readFile(t, filepath.Join(cur, "view.json"))))
 	want, err := LoadFindings(gold)
 	if err != nil {
 		t.Fatal(err)
@@ -178,7 +181,45 @@ func checkCurrent(t *testing.T, env, gold string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	byHost := func(fs []finding.Finding) {
+		slices.SortStableFunc(fs, func(a, b finding.Finding) int { return strings.Compare(FileHost(&a), FileHost(&b)) })
+	}
+	byHost(want)
+	byHost(got)
 	sameJSON(t, "current/findings", mustJSON(t, want), mustJSON(t, got))
+}
+
+// byHostView: view.json with the lists that follow the findings' order sorted by host file (stably).
+func byHostView(t *testing.T, b []byte) []byte {
+	t.Helper()
+	var v map[string]any
+	if err := json.Unmarshal(b, &v); err != nil {
+		t.Fatal(err)
+	}
+	fileHost := func(x any) string {
+		h, _ := x.(map[string]any)["host"].(string)
+		if strings.Contains(h, ":") {
+			return OrgHost
+		}
+		return h
+	}
+	for _, k := range []string{"other", "exceptions", "inventory", "plan"} {
+		if l, ok := v[k].([]any); ok {
+			slices.SortStableFunc(l, func(a, b any) int { return strings.Compare(fileHost(a), fileHost(b)) })
+		}
+	}
+	if acts, ok := v["actions"].([]any); ok {
+		for _, a := range acts {
+			if l, ok := a.(map[string]any)["detail_parts"].([]any); ok {
+				slices.SortStableFunc(l, func(a, b any) int { return strings.Compare(fileHost(a), fileHost(b)) })
+			}
+		}
+	}
+	out, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
 }
 
 // --- helpers ---------------------------------------------------------------------------------------------------

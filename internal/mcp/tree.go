@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"errors"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -20,16 +19,16 @@ func (s *Server) treeOf(a args) (*tree.Tree, tree.Hosts, *report.View, error) {
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	fs, err := report.LoadFindings(filepath.Join(report.EnvDir(s.store.Paths, org.ID, env), report.Current))
+	set, err := s.store.Findings(org.ID, env)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	hosts := tree.Hosts(v.Facts)
 	o := tree.Opts{By: a.str("by"), Filters: a.strs("filters"), Query: a.str("query"), Today: mcpToday()}
 	if all, _ := a["all"].(bool); all && o.By == tree.ByHost {
-		o.All, o.Inventory = true, tree.Servers(org, env, v, fs)
+		o.All, o.Inventory = true, tree.Servers(org, env, v, set.Inventory())
 	}
-	return tree.Build(fs, hosts, o), hosts, v, nil
+	return tree.BuildSet(set, hosts, o), hosts, v, nil
 }
 
 // trimmed: a node without its subtree beyond depth (0: the node only).
@@ -37,7 +36,7 @@ func trimmed(n *tree.Node, depth int) *tree.Node {
 	c := *n
 	c.Kids = nil
 	if depth > 0 {
-		for _, k := range n.Kids {
+		for _, k := range n.Children() {
 			c.Kids = append(c.Kids, trimmed(k, depth-1))
 		}
 	}
@@ -85,12 +84,12 @@ func (s *Server) listServers(a args) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	fs, err := report.LoadFindings(filepath.Join(report.EnvDir(s.store.Paths, org.ID, env), report.Current))
+	set, err := s.store.Findings(org.ID, env)
 	if err != nil {
 		return nil, err
 	}
-	o := tree.Opts{By: tree.ByHost, All: true, Inventory: tree.Servers(org, env, v, fs), Today: mcpToday()}
-	res := lens.Build(l, lens.Input{Servers: tree.Build(fs, tree.Hosts(v.Facts), o), View: v, Findings: fs,
+	o := tree.Opts{By: tree.ByHost, All: true, Inventory: tree.Servers(org, env, v, set.Inventory()), Today: mcpToday()}
+	res := lens.Build(l, lens.Input{Servers: tree.BuildSet(set, tree.Hosts(v.Facts), o), View: v, Findings: set.Select(lens.Reads),
 		Lang: a.str("lang")})
 	if lv := a.str("level"); lv != "" { // only rows with a cell of this level (bad: what needs attention)
 		rows := []lens.Row{}

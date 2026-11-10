@@ -117,7 +117,7 @@ func withTrivy(t *testing.T, f TrivyFunc) {
 }
 
 // TrivyFunc mirrors trivyRun's type.
-type TrivyFunc = func(ctx context.Context, args []string, output string, timeout time.Duration) ([]byte, error)
+type TrivyFunc = func(ctx context.Context, args []string, output string, timeout time.Duration) (io.ReadCloser, error)
 
 func TestMode(t *testing.T) {
 	for _, c := range []struct {
@@ -186,12 +186,12 @@ func TestRunInventoryErrors(t *testing.T) {
 func TestRunRegistry(t *testing.T) {
 	var mu sync.Mutex
 	var pulled []string
-	withTrivy(t, func(_ context.Context, args []string, _ string, _ time.Duration) ([]byte, error) {
+	withTrivy(t, func(_ context.Context, args []string, _ string, _ time.Duration) (io.ReadCloser, error) {
 		mu.Lock()
 		pulled = append(pulled, args[len(args)-1])
 		mu.Unlock()
 		if args[len(args)-1] == "app:1" {
-			return []byte(`{"Results": []}`), nil
+			return trivy.Bytes([]byte(`{"Results": []}`)), nil
 		}
 		return nil, &trivy.Error{Msg: "trivy image: unauthorized"}
 	})
@@ -219,17 +219,19 @@ func TestRunRegistry(t *testing.T) {
 
 // A report trivy wrote but that isn't JSON fails the image.
 func TestRunBrokenReport(t *testing.T) {
-	withTrivy(t, func(context.Context, []string, string, time.Duration) ([]byte, error) { return []byte("<html>"), nil })
+	withTrivy(t, func(context.Context, []string, string, time.Duration) (io.ReadCloser, error) {
+		return trivy.Bytes([]byte("<html>")), nil
+	})
 	ctx, _ := newCtx(healthy())
 	fs, err := Run(ctx, host(), map[string]any{"scan_images": "registry"}, t.TempDir(), check.Facts{})
-	if err != nil || len(fs) != 3 || !strings.HasPrefix(fs[1].Target, "trivy report: invalid character") {
+	if err != nil || len(fs) != 3 || !strings.Contains(fs[1].Target, "invalid character") || !strings.HasPrefix(fs[1].Target, "trivy report: ") {
 		t.Errorf("got %+v, %v", fs, err)
 	}
 }
 
 // save mode: the stream reports progress; a failing stream or `docker save` op fails the image, not the host.
 func TestRunSaveFailures(t *testing.T) {
-	withTrivy(t, func(context.Context, []string, string, time.Duration) ([]byte, error) {
+	withTrivy(t, func(context.Context, []string, string, time.Duration) (io.ReadCloser, error) {
 		t.Error("trivy ran")
 		return nil, nil
 	})

@@ -7,7 +7,6 @@ package report
 
 import (
 	"bufio"
-	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -89,30 +88,46 @@ func runDirs(env string) []string {
 // Runs: run directories of an environment, oldest first.
 func Runs(p config.Paths, org, env string) []string { return runDirs(EnvDir(p, org, env)) }
 
-// LoadFindings reads findings.json.gz (or findings.json of older runs); none = empty.
+// LoadFindings reads every findings file of dir (see HostFiles), host after host; none = empty. It holds them
+// all: a whole environment's findings are large, so what can go a host at a time uses EachFindingIn or
+// EachFinding instead.
 func LoadFindings(dir string) ([]finding.Finding, error) {
-	var r io.Reader
-	if f, err := os.Open(filepath.Join(dir, "findings.json.gz")); err == nil {
-		defer f.Close()
-		gz, err := gzip.NewReader(bufio.NewReaderSize(f, 1<<20))
+	hfs, err := HostFiles(dir)
+	if err != nil {
+		return nil, err
+	}
+	out := []finding.Finding{}
+	for _, hf := range hfs {
+		r, closeFn, err := openPath(hf.Path)
 		if err != nil {
 			return nil, err
 		}
-		r = gz
-	} else if f, err := os.Open(filepath.Join(dir, "findings.json")); err == nil {
-		defer f.Close()
-		r = bufio.NewReaderSize(f, 1<<20)
-	} else {
-		return []finding.Finding{}, nil
-	}
-	out := []finding.Finding{}
-	if err := json.NewDecoder(r).Decode(&out); err != nil {
-		return nil, fmt.Errorf("%s: %w", dir, err)
+		fs, err := decodeFindings(r)
+		closeFn()
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", hf.Path, err)
+		}
+		out = append(out, fs...)
 	}
 	for i := range out {
 		upgradeDenied(&out[i])
 	}
 	return out, nil
+}
+
+// EachFinding calls fn with every finding of dir (as LoadFindings reads them) without holding them all: f is
+// reused, so fn copies what it keeps.
+func EachFinding(dir string, fn func(f *finding.Finding)) error {
+	hfs, err := HostFiles(dir)
+	if err != nil {
+		return err
+	}
+	for _, hf := range hfs {
+		if err := EachFindingIn(hf.Path, fn); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // upgradeDenied: runs before 0.5 stored what a module could not read as raw keys in one text ("cannot read:
@@ -172,6 +187,15 @@ func isPartialDir(dir string) (bool, error) {
 
 // PreviousRun: the latest finished run before runDir (fullOnly: the latest full one); nil when there is none.
 func PreviousRun(runDir string, fullOnly bool) (*Prev, error) {
+	dir, err := PreviousRunDir(runDir, fullOnly)
+	if dir == "" || err != nil {
+		return nil, err
+	}
+	return loadPrev(dir)
+}
+
+// PreviousRunDir: the directory of the run PreviousRun loads; "" when there is none.
+func PreviousRunDir(runDir string, fullOnly bool) (string, error) {
 	var done []string
 	for _, d := range runDirs(filepath.Dir(runDir)) {
 		if filepath.Base(d) < filepath.Base(runDir) {
@@ -183,7 +207,7 @@ func PreviousRun(runDir string, fullOnly bool) (*Prev, error) {
 		for _, d := range done {
 			p, err := isPartialDir(d)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			if !p {
 				full = append(full, d)
@@ -192,9 +216,9 @@ func PreviousRun(runDir string, fullOnly bool) (*Prev, error) {
 		done = full
 	}
 	if len(done) == 0 {
-		return nil, nil
+		return "", nil
 	}
-	return loadPrev(done[len(done)-1])
+	return done[len(done)-1], nil
 }
 
 func loadPrev(dir string) (*Prev, error) {
@@ -205,21 +229,32 @@ func loadPrev(dir string) (*Prev, error) {
 	return &Prev{ID: filepath.Base(dir), Meta: m, Findings: fs}, nil
 }
 
-// SaveRun writes a finished run: findings, run.json (with counts), view.json and summary.md.
+// SaveRun writes a finished run from findings in memory: its host files, then what FinishRun writes.
 func SaveRun(runDir string, meta *Meta, findings []finding.Finding) error {
+	if _, err := os.Stat(runDir); err != nil { // a run directory is made by the scan; never one by accident
+		return err
+	}
 	if err := writeFindings(runDir, findings); err != nil {
 		return err
 	}
-	c := CountsOf(findings)
-	meta.Counts = c.Map()
-	var prev *Prev
+	return FinishRun(runDir, meta)
+}
+
+// FinishRun completes a run whose host files are written (WriteHostFindings): run.json (with counts), view.json
+// and summary.md, read one host at a time.
+func FinishRun(runDir string, meta *Meta) error {
+	prevDir := ""
 	if !IsPartial(meta) { // statistics compare FULL runs only; a partial run has nothing comparable
 		var err error
-		if prev, err = PreviousRun(runDir, true); err != nil {
+		if prevDir, err = PreviousRunDir(runDir, true); err != nil {
 			return err
 		}
 	}
-	view := BuildView(runDir, meta, findings, prev)
+	view, acc, err := buildViewDir(runDir, meta, prevDir)
+	if err != nil {
+		return err
+	}
+	meta.Counts = acc.counts.Map()
 	meta.PlanCounts = &view.PlanCounts
 	meta.Totals = &view.Totals
 	if err := writeMeta(runDir, meta); err != nil {
@@ -228,25 +263,7 @@ func SaveRun(runDir string, meta *Meta, findings []finding.Finding) error {
 	if err := WriteView(runDir, view); err != nil {
 		return err
 	}
-	if err := WriteSummary(runDir, meta, findings); err != nil {
-		return err
-	}
-	return nil
-}
-
-func writeFindings(dir string, findings []finding.Finding) error {
-	if findings == nil {
-		findings = []finding.Finding{}
-	}
-	return writeAtomic(filepath.Join(dir, "findings.json.gz"), func(w io.Writer) error {
-		gz, _ := gzip.NewWriterLevel(w, 6)
-		e := json.NewEncoder(gz)
-		e.SetEscapeHTML(false)
-		if err := e.Encode(findings); err != nil {
-			return err
-		}
-		return gz.Close()
-	})
+	return os.WriteFile(filepath.Join(runDir, "summary.md"), []byte(acc.summary(meta)), 0o644)
 }
 
 // writeMeta: run.json indented by one space, like Python's json.dumps(indent=1).
@@ -412,50 +429,90 @@ func exists(path string) bool { _, err := os.Stat(path); return err == nil }
 // PrevIndex: the env's current state (reports/<org>/<env>/current) by finding key, for the due date's clock
 // (priority.Prev). Findings saved before 0.5 have no first_seen: they get the date of the oldest kept run that
 // has them (and fix_since of the oldest that had an installable fix), so upgrading does not restart every clock.
+//
+// It reads one host at a time, when asked about a finding of another host than the last: give it the findings
+// host by host (as a scan does) and it holds one host's clocks.
 func PrevIndex(env string) (func(*finding.Finding) *finding.Finding, error) {
 	cur := filepath.Join(env, Current)
-	idx := map[Key]*finding.Finding{}
-	if exists(filepath.Join(cur, "findings.json.gz")) {
-		fs, err := LoadFindings(cur)
-		if err != nil {
-			return nil, err
+	host := "\x00"
+	var idx map[uint64]*clockOf
+	var ferr error
+	return func(f *finding.Finding) *finding.Finding {
+		if h := FileHost(f); h != host {
+			host = h
+			if idx, ferr = hostClocks(env, cur, h); ferr != nil {
+				idx = nil
+			}
 		}
-		for i := range fs {
-			idx[KeyOf(&fs[i])] = &fs[i]
+		if c := idx[keyHash(f)]; c != nil {
+			return c.finding()
 		}
+		return nil
+	}, nil
+}
+
+// HostPrev: PrevIndex for the findings of one host (its file in current/), for scanning hosts in parallel: each
+// holds its own host's clocks.
+func HostPrev(env, host string) (func(*finding.Finding) *finding.Finding, error) {
+	idx, err := hostClocks(env, filepath.Join(env, Current), host)
+	if err != nil {
+		return nil, err
 	}
+	return func(f *finding.Finding) *finding.Finding {
+		if c := idx[keyHash(f)]; c != nil {
+			return c.finding()
+		}
+		return nil
+	}, nil
+}
+
+// clockOf: what the due date's clock takes from a finding of the previous state.
+type clockOf struct {
+	firstSeen, fixSince, clockStart, dueWhy string
+	priority, due                           *string
+	accepted                                bool
+}
+
+func (c *clockOf) finding() *finding.Finding {
+	return &finding.Finding{FirstSeen: c.firstSeen, FixSince: c.fixSince, ClockStart: c.clockStart, DueWhy: c.dueWhy,
+		Priority: c.priority, Due: c.due, Accepted: c.accepted}
+}
+
+// hostClocks: the clocks of one host's findings in current/.
+func hostClocks(env, cur, host string) (map[uint64]*clockOf, error) {
+	idx := map[uint64]*clockOf{} // by keyHash: a host's keys are kept as 8 bytes each
 	missing := 0
-	for _, f := range idx {
+	err := eachHostFinding(cur, host, func(f *finding.Finding) {
 		if f.FirstSeen == "" {
 			missing++
 		}
+		idx[keyHash(f)] = &clockOf{firstSeen: f.FirstSeen, fixSince: f.FixSince, clockStart: f.ClockStart, dueWhy: f.DueWhy,
+			priority: f.Priority, due: f.Due, accepted: f.Accepted}
+	})
+	if err != nil || missing == 0 {
+		return idx, err
 	}
-	if missing > 0 {
-		for _, run := range runDirs(env) { // oldest first
-			day := filepath.Base(run)
-			if len(day) < 10 {
-				continue
-			}
-			day = day[:10]
-			fs, err := LoadFindings(run)
-			if err != nil {
-				continue // a damaged old run: the clock starts later, nothing else depends on it
-			}
-			for i := range fs {
-				f := idx[KeyOf(&fs[i])]
-				if f == nil {
-					continue
-				}
-				if f.FirstSeen == "" || day < f.FirstSeen {
-					f.FirstSeen = day
-				}
-				installable := fs[i].FixState == finding.FixAvailable || fs[i].FixState == finding.FixReboot ||
-					(fs[i].FixState == "" && fs[i].Fixed != "")
-				if installable && (f.FixSince == "" || day < f.FixSince) {
-					f.FixSince = day
-				}
-			}
+	for _, run := range runDirs(env) { // oldest first
+		day := filepath.Base(run)
+		if len(day) < 10 {
+			continue
 		}
+		day = day[:10]
+		// a damaged old run: the clock starts later, nothing else depends on it
+		_ = eachHostFinding(run, host, func(rf *finding.Finding) {
+			c := idx[keyHash(rf)]
+			if c == nil {
+				return
+			}
+			if c.firstSeen == "" || day < c.firstSeen {
+				c.firstSeen = day
+			}
+			installable := rf.FixState == finding.FixAvailable || rf.FixState == finding.FixReboot ||
+				(rf.FixState == "" && rf.Fixed != "")
+			if installable && (c.fixSince == "" || day < c.fixSince) {
+				c.fixSince = day
+			}
+		})
 	}
-	return func(f *finding.Finding) *finding.Finding { return idx[KeyOf(f)] }, nil
+	return idx, nil
 }

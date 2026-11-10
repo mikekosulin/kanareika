@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -511,7 +512,15 @@ func TestFakeTrivy(t *testing.T) {
 		"err.json": {Err: ptr("trivy failed")}, "gone.json": {File: ptr("gone.json.gz")}}}
 	n := &Norm{Roots: [][2]string{{out, "$OUT"}}}
 	var calls []any
-	tr := FakeTrivy(here, c, n, &calls)
+	fake := FakeTrivy(here, c, n, &calls)
+	tr := func(ctx context.Context, args []string, output string, timeout time.Duration) ([]byte, error) {
+		rep, err := fake(ctx, args, output, timeout)
+		if err != nil {
+			return nil, err
+		}
+		defer rep.Close()
+		return io.ReadAll(rep)
+	}
 	ctx := context.Background()
 
 	got, err := tr(ctx, []string{"rootfs", stage, filepath.Join(out, "image.tar"), "/", "/nonexistent-kanareika"},
@@ -647,7 +656,12 @@ func replayCase(t *testing.T) (*Replay, func(*check.Ctx, ReplayRun, string) ([]f
 		}
 		ctx.Log("%s: %s in %s 0a1b2c3d-0000-4000-8000-00000000abcd (12s)", h.Name, osr, ctx.RunDir)
 		_ = os.WriteFile(filepath.Join(out, "x.txt"), []byte("written to "+ctx.RunDir), 0o644)
-		rep, err := trivyHook(ctx, []string{"rootfs", stage}, filepath.Join(out, "rootfs.json"), 10*time.Minute)
+		rc, err := trivyHook(ctx, []string{"rootfs", stage}, filepath.Join(out, "rootfs.json"), 10*time.Minute)
+		var rep []byte
+		if err == nil {
+			rep, _ = io.ReadAll(rc)
+			rc.Close()
+		}
 		if err != nil || !strings.Contains(string(rep), filepath.ToSlash(stage)) {
 			return nil, fmt.Errorf("trivy: %q %w", rep, err)
 		}
@@ -659,7 +673,7 @@ func replayCase(t *testing.T) (*Replay, func(*check.Ctx, ReplayRun, string) ([]f
 }
 
 // trivyHook: the "module's" trivy hook the replay swaps.
-var trivyHook TrivyFunc = func(context.Context, []string, string, time.Duration) ([]byte, error) {
+var trivyHook TrivyFunc = func(context.Context, []string, string, time.Duration) (io.ReadCloser, error) {
 	return nil, errors.New("real trivy called")
 }
 

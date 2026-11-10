@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -14,6 +15,8 @@ import (
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/pyfmt"
 	"github.com/mikekosulin/kanareika/internal/report"
+	kdb "github.com/mikekosulin/kanareika/internal/store"
+	"github.com/mikekosulin/kanareika/internal/tree"
 )
 
 // Store is the read-only data access MCP needs: orgs (reloaded on every call, so edits to orgs/ show up without a
@@ -27,6 +30,14 @@ type Store struct {
 	byID   map[string]*config.Org
 	errors []string
 	views  map[string]cached // path of view.json -> decoded view (one per env: current/ only)
+	data   *findingsCache    // the last environment's findings (an assistant asks about one at a time)
+}
+
+// findingsCache: an environment's current findings as the database holds them, the set trees are built from.
+type findingsCache struct {
+	dir   string
+	mtime time.Time // of view.json (written after the findings)
+	set   *tree.Set
 }
 
 type cached struct {
@@ -36,6 +47,34 @@ type cached struct {
 }
 
 func NewStore(p config.Paths) *Store { return &Store{Paths: p, views: map[string]cached{}} }
+
+// Findings: the current findings of org's env (from reports/kanareika.db) as a tree set; the last environment's
+// are kept until its view changes.
+func (s *Store) Findings(org, env string) (*tree.Set, error) {
+	dir := filepath.Join(report.EnvDir(s.Paths, org, env), report.Current)
+	var mtime time.Time
+	if st, err := os.Stat(filepath.Join(dir, "view.json")); err == nil {
+		mtime = st.ModTime()
+	}
+	s.mu.Lock()
+	c := s.data
+	s.mu.Unlock()
+	if c != nil && c.dir == dir && c.mtime.Equal(mtime) {
+		return c.set, nil
+	}
+	s.mu.Lock()
+	s.data = nil // the last one goes before the next is read
+	s.mu.Unlock()
+	fs, err := kdb.Load(context.Background(), s.Paths.Reports, dir)
+	if err != nil {
+		return nil, err
+	}
+	c = &findingsCache{dir: dir, mtime: mtime, set: tree.FromSet(fs)}
+	s.mu.Lock()
+	s.data = c
+	s.mu.Unlock()
+	return c.set, nil
+}
 
 // Reload reads every org file again; a broken setup is reported as errors, not a failure.
 func (s *Store) Reload() {

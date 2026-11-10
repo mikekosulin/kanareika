@@ -44,15 +44,17 @@ type tuiFlags struct {
 }
 
 func (a *app) tuiRun(cmd *cobra.Command, f tuiFlags) error {
+	limitReaderMemory()
 	var c tui.Client
 	if f.url != "" {
 		c = tui.Remote(f.url, f.token)
 	} else {
-		s, err := newServer(server.Options{Paths: a.paths, Prompt: prompt.Build, Scan: a.dashboardScan, UpdateDB: a.updateDBFunc,
+		s, err := newServer(server.Options{Paths: a.paths, Prompt: prompt.Build, Warm: true, Scan: a.dashboardScan, UpdateDB: a.updateDBFunc,
 			Log: log.New(io.Discard, "", 0)}) // nothing may write to the terminal under the TUI
 		if err != nil {
 			return err
 		}
+		defer s.Close()
 		c = tui.Local(s.Handler())
 	}
 	if f.lang == "" {

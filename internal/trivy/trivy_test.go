@@ -161,8 +161,10 @@ func TestRun(t *testing.T) {
 	// writes its arguments as the report: shows the command line and the gzip step
 	fake(t, `while [ $# -gt 0 ]; do [ "$1" = --output ] && out=$2; shift; done; echo '{"Results":[]}' > "$out"`)
 	out := filepath.Join(t.TempDir(), "trivy-os.json")
-	data, err := Run(ctx, []string{"sbom", "x"}, out, time.Minute)
+	rep, err := Run(ctx, []string{"sbom", "x"}, out, time.Minute)
 	must(t, err)
+	data, _ := io.ReadAll(rep)
+	must(t, rep.Close()) // the raw output goes with it
 	if strings.TrimSpace(string(data)) != `{"Results":[]}` {
 		t.Fatal(string(data))
 	}

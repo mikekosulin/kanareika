@@ -3,6 +3,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +16,8 @@ import (
 
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/priority"
+	"github.com/mikekosulin/kanareika/internal/report"
+	"github.com/mikekosulin/kanareika/internal/store"
 )
 
 // exitError carries an exit code through cobra.
@@ -86,6 +89,20 @@ directory, or KANAREIKA_HOME, or --home.`,
 				return err
 			}
 			a.paths = config.PathsAt(abs)
+			reports := a.paths.Reports
+			// the findings just written, into the database the interfaces read (a failure costs only time: they
+			// import the files on first read)
+			dbErr := func(err error) {
+				if err != nil {
+					fmt.Fprintf(stderr, "kanareika: findings database: %v\n", err)
+				}
+			}
+			report.OnHost = func(dir, host string) {
+				dbErr(store.SyncHost(context.Background(), reports, dir, host))
+			}
+			report.OnCurrent = func(dir string, _ []string) { // current/'s files linked from a run: copied in SQL
+				dbErr(store.Sync(context.Background(), reports, dir))
+			}
 			return nil
 		},
 	}

@@ -69,7 +69,7 @@ func rows(t *testing.T, id string, health, access, exposure map[string]string, f
 		}
 	}
 	tr := tree.Build(fs, tree.Hosts(v.Facts), tree.Opts{By: tree.ByHost, All: true, Inventory: inv})
-	res := Build(Get(id), Input{Servers: tr, View: v, Findings: fs})
+	res := Build(Get(id), Input{Servers: tr, View: v, Findings: tree.NewSet(fs).Select(Reads)})
 	out := map[string]map[string]Cell{}
 	for _, r := range res.Rows {
 		out[r.Host] = r.Cells

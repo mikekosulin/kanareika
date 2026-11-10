@@ -31,7 +31,17 @@ type Ctx struct {
 	Log    func(format string, args ...any)
 	// shared across hosts of one org within a run (e.g. image id -> findings)
 	Cache sync.Map
+	// Sinks: host -> where the scan streams that host's findings. A module with many findings (a package scan)
+	// passes them there one at a time instead of returning them, so they are never held. Set before the hosts
+	// run, only read after; nil (tests, replays): modules return what they find.
+	Sinks map[string]func(f *finding.Finding)
+	// Spool: a directory for what a module shares across hosts and would otherwise hold for the whole run (an
+	// image's findings); the scan removes it at the end. "": held in memory.
+	Spool string
 }
+
+// Sink: where h's findings go one at a time; nil when they are returned.
+func (c *Ctx) Sink(host string) func(f *finding.Finding) { return c.Sinks[host] }
 
 // Facts collected before the modules run.
 type Facts struct {

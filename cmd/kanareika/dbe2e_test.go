@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -100,7 +101,12 @@ func TestEmbeddedTrivyReadsDownloadedDB(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, err := trivy.ParseReport(data)
+	raw, err := io.ReadAll(data)
+	data.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := trivy.ParseReport(raw)
 	if err != nil {
 		t.Fatal(err)
 	}

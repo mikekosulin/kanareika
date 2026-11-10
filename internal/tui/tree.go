@@ -20,21 +20,22 @@ import (
 
 // tnode: a node of /api/tree.
 type tnode struct {
-	ID        string `json:"id"`
-	Kind      string `json:"kind"`
-	Label     string `json:"label"`
-	Installed string `json:"installed"`
-	Fixed     string `json:"fixed"`
-	Path      string `json:"path"`
-	Runtime   string `json:"runtime"`
-	Title     string `json:"title"`
-	Severity  string `json:"severity"`
-	OS        string `json:"os"`
-	Exposure  int    `json:"exposure"`
-	Priority  string `json:"priority"`
-	Due       string `json:"due"`
-	DueWhy    string `json:"due_why"`
-	Hosts     int    `json:"hosts"`
+	ID        string   `json:"id"`
+	Kind      string   `json:"kind"`
+	Label     string   `json:"label"`
+	Installed string   `json:"installed"`
+	Fixed     string   `json:"fixed"`
+	Path      string   `json:"path"`
+	Parts     []string `json:"parts"`
+	Runtime   string   `json:"runtime"`
+	Title     string   `json:"title"`
+	Severity  string   `json:"severity"`
+	OS        string   `json:"os"`
+	Exposure  int      `json:"exposure"`
+	Priority  string   `json:"priority"`
+	Due       string   `json:"due"`
+	DueWhy    string   `json:"due_why"`
+	Hosts     int      `json:"hosts"`
 	Groups    []struct {
 		Name string `json:"name"`
 		N    int    `json:"n"`
@@ -851,12 +852,7 @@ func (m *Model) nodeText(n *tnode, full, styled bool) string {
 		if !full {
 			label = shortImage(label)
 		}
-		var parts []string
-		for _, k := range n.Kids {
-			if k.Kind == "part" && !slices.Contains(parts, k.Label) {
-				parts = append(parts, k.Label)
-			}
-		}
+		parts := n.Parts
 		s := st(sBold, label)
 		if len(parts) > 0 {
 			s += "  " + st(sMuted, m.t.F("rebuild: {parts}", "parts", strings.Join(parts, ", ")))

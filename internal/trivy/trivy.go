@@ -11,8 +11,12 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
+	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,6 +28,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mikekosulin/kanareika/internal/finding"
+	"github.com/mikekosulin/kanareika/internal/jsonx"
 )
 
 // Error: trivy ran and failed (bad target, broken DB, ...). Timeouts and a missing binary are plain errors.
@@ -296,8 +301,9 @@ func DBStatus() []DBInfo {
 }
 
 // Run trivy with JSON output into output; the raw report is kept next to it as output.gz (raw trivy output
-// carries full CVE descriptions — hundreds of MB per host) and returned.
-func Run(ctx context.Context, args []string, output string, timeout time.Duration) ([]byte, error) {
+// carries full CVE descriptions — hundreds of MB per host) and returned to be read once (ReadReport): closing it
+// removes the raw file. Nothing holds the report in memory.
+func Run(ctx context.Context, args []string, output string, timeout time.Duration) (io.ReadCloser, error) {
 	cmd := append(slices.Clone(args), "--format", "json", "--output", output, "--skip-version-check")
 	if prepared.Load() {
 		cmd = append(cmd, "--skip-db-update", "--skip-java-db-update")
@@ -325,26 +331,52 @@ func Run(ctx context.Context, args []string, output string, timeout time.Duratio
 	} else if err != nil {
 		return nil, err
 	}
-	data, err := os.ReadFile(output)
+	f, err := os.Open(output)
 	if err != nil {
 		return nil, err
 	}
-	if len(data) == 0 {
-		data = []byte("{}")
+	st, err := f.Stat()
+	if err == nil && st.Size() == 0 {
+		f.Close()
+		if err := gzipFile(output, strings.NewReader("{}")); err != nil {
+			return nil, err
+		}
+		return Bytes([]byte("{}")), os.Remove(output)
 	}
-	if err := gzipFile(output, data); err != nil {
+	if err == nil {
+		err = gzipFile(output, f)
+	}
+	if err == nil {
+		_, err = f.Seek(0, io.SeekStart)
+	}
+	if err != nil {
+		f.Close()
 		return nil, err
 	}
-	return data, os.Remove(output)
+	return &rawReport{f}, nil
 }
 
-func gzipFile(path string, data []byte) error {
+// rawReport: trivy's output file, removed when closed (output.gz stays).
+type rawReport struct{ *os.File }
+
+func (r *rawReport) Close() error {
+	err := r.File.Close()
+	if rerr := os.Remove(r.Name()); err == nil {
+		err = rerr
+	}
+	return err
+}
+
+// Bytes: a report in memory, as Run returns one (tests, recorded reports).
+func Bytes(b []byte) io.ReadCloser { return io.NopCloser(bytes.NewReader(b)) }
+
+func gzipFile(path string, src io.Reader) error {
 	f, err := os.Create(path + ".gz")
 	if err != nil {
 		return err
 	}
 	zw, _ := gzip.NewWriterLevel(f, 6)
-	_, err = zw.Write(data)
+	_, err = io.Copy(zw, src)
 	if cerr := zw.Close(); err == nil {
 		err = cerr
 	}
@@ -469,6 +501,124 @@ func ParseReport(data []byte) (*Report, error) {
 	return &r, nil
 }
 
+// ReadReport reads a trivy report (fs / image / rootfs / sbom JSON) one vulnerability at a time: fn gets each with
+// its result's target (v is reused: fn copies what it keeps), its strings interned in strs (nil: a new set).
+// meta, when not nil, gets the report's Metadata.
+func ReadReport(r io.Reader, strs jsonx.Strings, meta any, fn func(target string, v *Vulnerability)) error {
+	if strs == nil {
+		strs = jsonx.Strings{}
+	}
+	opts := jsonv2.JoinOptions(json.DefaultOptionsV1(), strs.Unmarshalers())
+	dec := jsontext.NewDecoder(r, opts)
+	err := readReport(dec, opts, meta, fn)
+	if err != nil {
+		return fmt.Errorf("trivy report: %w", err)
+	}
+	return nil
+}
+
+func readReport(dec *jsontext.Decoder, opts jsonv2.Options, meta any, fn func(string, *Vulnerability)) error {
+	return readObject(dec, func(key string) error {
+		switch {
+		case strings.EqualFold(key, "Results"):
+			return readArray(dec, func() error { return readResult(dec, opts, fn) })
+		case strings.EqualFold(key, "Metadata") && meta != nil:
+			return jsonv2.UnmarshalDecode(dec, meta, opts)
+		}
+		return dec.SkipValue()
+	})
+}
+
+// readResult: one of Results; its vulnerabilities are read before its target only when the report lists them
+// first (trivy does not), and then kept as JSON until the target comes.
+func readResult(dec *jsontext.Decoder, opts jsonv2.Options, fn func(string, *Vulnerability)) error {
+	var target string
+	var early jsontext.Value
+	var v Vulnerability
+	vulns := func(d *jsontext.Decoder) error {
+		return readArray(d, func() error {
+			v = Vulnerability{}
+			if err := jsonv2.UnmarshalDecode(d, &v, opts); err != nil {
+				return err
+			}
+			fn(target, &v)
+			return nil
+		})
+	}
+	seenTarget := false
+	err := readObject(dec, func(key string) error {
+		switch {
+		case strings.EqualFold(key, "Target"):
+			seenTarget = true
+			return jsonv2.UnmarshalDecode(dec, &target, opts)
+		case strings.EqualFold(key, "Vulnerabilities"):
+			if seenTarget {
+				return vulns(dec)
+			}
+			val, err := dec.ReadValue()
+			early = slices.Clone(val)
+			return err
+		}
+		return dec.SkipValue()
+	})
+	if err != nil || early == nil {
+		return err
+	}
+	return vulns(jsontext.NewDecoder(bytes.NewReader(early), opts))
+}
+
+// readObject calls member for each member of the object (or null) next in dec, positioned at its value.
+func readObject(dec *jsontext.Decoder, member func(key string) error) error {
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return err
+	}
+	switch tok.Kind() {
+	case 'n':
+		return nil
+	case '{':
+	default:
+		return fmt.Errorf("object expected, got %v", tok.Kind())
+	}
+	for dec.PeekKind() != '}' {
+		k, err := dec.ReadToken()
+		if err != nil {
+			return err
+		}
+		if err := member(k.String()); err != nil {
+			return err
+		}
+	}
+	_, err = dec.ReadToken()
+	return err
+}
+
+// readArray calls elem for each element of the array (or null) next in dec, positioned at it.
+func readArray(dec *jsontext.Decoder, elem func() error) error {
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return err
+	}
+	switch tok.Kind() {
+	case 'n':
+		return nil
+	case '[':
+	default:
+		return fmt.Errorf("array expected, got %v", tok.Kind())
+	}
+	for dec.PeekKind() != ']' {
+		if dec.PeekKind() == 0 {
+			_, err := dec.ReadToken()
+			return err
+		}
+		if err := elem(); err != nil {
+			return err
+		}
+	}
+	_, err = dec.ReadToken()
+	return err
+}
+
 // rceCWEs: weakness types that typically end in code execution.
 var rceCWEs = map[string]bool{"CWE-94": true, "CWE-77": true, "CWE-78": true, "CWE-95": true, "CWE-96": true,
 	"CWE-502": true, "CWE-787": true, "CWE-788": true, "CWE-416": true, "CWE-415": true, "CWE-119": true,
@@ -556,29 +706,96 @@ func Classify(v Vulnerability) Class {
 // set, replaces the result's target, e.g. "os" or "image:<ref>").
 func VulnFindings(r *Report, base finding.Finding) []finding.Finding {
 	var out []finding.Finding
+	d := newDeriver(nil)
 	for _, res := range r.Results {
 		for _, v := range res.Vulnerabilities {
-			f := base
-			f.Kind, f.ID, f.Pkg, f.PkgPath = finding.Vuln, v.VulnerabilityID, v.PkgName, v.PkgPath
-			f.Installed, f.Fixed, f.Status = v.InstalledVersion, v.FixedVersion, v.Status
-			f.Severity = "UNKNOWN"
-			if v.Severity != nil {
-				f.Severity = *v.Severity
-			}
-			f.Title, f.URL = v.Title, v.PrimaryURL
-			if f.Target == "" {
-				f.Target = res.Target
-			}
-			c := Classify(v)
-			f.Vector, f.Preauth, f.RCE = c.Vector, c.Preauth, c.RCE
-			f.CVSSScore, f.Description = score(v), shorten(v.Description, maxDescription)
-			if len(v.PublishedDate) >= 10 {
-				f.Published = v.PublishedDate[:10]
-			}
-			out = append(out, f)
+			out = append(out, d.finding(base, res.Target, &v))
 		}
 	}
 	return out
+}
+
+// ReadFindings: VulnFindings of the report in r, read one vulnerability at a time (see ReadReport).
+func ReadFindings(r io.Reader, base finding.Finding, meta any) ([]finding.Finding, error) {
+	var out []finding.Finding
+	err := EachFinding(r, base, meta, func(f *finding.Finding) { out = append(out, *f) })
+	return slices.Clip(out), err
+}
+
+// EachFinding: the findings of ReadFindings, one at a time (f is reused: fn copies what it keeps).
+func EachFinding(r io.Reader, base finding.Finding, meta any, fn func(f *finding.Finding)) error {
+	strs := jsonx.Strings{}
+	d := newDeriver(strs)
+	var f finding.Finding
+	return ReadReport(r, strs, meta, func(target string, v *Vulnerability) {
+		f = d.finding(base, target, v)
+		fn(&f)
+	})
+}
+
+// deriver makes findings of vulnerabilities. What a finding derives from the advisory (class, shortened
+// description, score) is the same for every package a CVE is listed on: worked out once per CVE (a kernel CVE
+// comes once per kernel package), its strings shared.
+type deriver struct {
+	strs jsonx.Strings
+	seen map[string]*derived
+}
+
+type derived struct {
+	title, desc string // what it was derived from
+	cwes        []string
+	cvss        *CVSS
+	class       Class
+	short, pub  string
+	score       *float64
+}
+
+func newDeriver(strs jsonx.Strings) *deriver {
+	if strs == nil {
+		strs = jsonx.Strings{}
+	}
+	return &deriver{strs: strs, seen: map[string]*derived{}}
+}
+
+func (d *deriver) derive(v *Vulnerability) *derived {
+	if x := d.seen[v.VulnerabilityID]; x != nil && x.title == v.Title && x.desc == v.Description &&
+		slices.Equal(x.cwes, v.CweIDs) && sameCVSS(x.cvss, &v.CVSS) {
+		return x
+	}
+	c := Classify(*v)
+	c.Vector = d.strs.Intern(c.Vector)
+	x := &derived{title: v.Title, desc: v.Description, cwes: slices.Clone(v.CweIDs), cvss: &v.CVSS, class: c,
+		short: d.strs.Intern(shorten(v.Description, maxDescription)), score: score(*v)}
+	if len(v.PublishedDate) >= 10 {
+		x.pub = d.strs.Intern(v.PublishedDate[:10])
+	}
+	cv := v.CVSS // v is reused by the reader: keep a copy of what is compared
+	x.cvss = &cv
+	d.seen[v.VulnerabilityID] = x
+	return x
+}
+
+func sameCVSS(a, b *CVSS) bool {
+	return slices.Equal(a.Sources, b.Sources) && maps.Equal(a.Vectors, b.Vectors)
+}
+
+// finding: one vulnerability as a finding.
+func (d *deriver) finding(base finding.Finding, target string, v *Vulnerability) finding.Finding {
+	f := base
+	f.Kind, f.ID, f.Pkg, f.PkgPath = finding.Vuln, v.VulnerabilityID, v.PkgName, v.PkgPath
+	f.Installed, f.Fixed, f.Status = v.InstalledVersion, v.FixedVersion, v.Status
+	f.Severity = "UNKNOWN"
+	if v.Severity != nil {
+		f.Severity = *v.Severity
+	}
+	f.Title, f.URL = v.Title, v.PrimaryURL
+	if f.Target == "" {
+		f.Target = target
+	}
+	x := d.derive(v)
+	f.Vector, f.Preauth, f.RCE = x.class.Vector, x.class.Preauth, x.class.RCE
+	f.CVSSScore, f.Description, f.Published = x.score, x.short, x.pub
+	return f
 }
 
 // javaDBMissing: trivy's words when it met .jar files and the Java DB is not downloaded (--skip-java-db-update).

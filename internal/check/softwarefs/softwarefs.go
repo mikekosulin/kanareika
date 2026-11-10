@@ -110,16 +110,16 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 	if err := os.WriteFile(filepath.Join(out, "software_fs.files.txt"), []byte(strings.Join(files, "\n")+"\n"), 0o644); err != nil {
 		return nil, err
 	}
-	data, err := trivyRun(ctx, []string{"fs", "--scanners", "vuln", stage}, filepath.Join(out, "trivy-fs.json"), time.Hour)
+	rep, err := trivyRun(ctx, []string{"fs", "--scanners", "vuln", stage}, filepath.Join(out, "trivy-fs.json"), time.Hour)
 	if err != nil {
 		return nil, err
 	}
-	report, err := trivy.ParseReport(data)
+	findings, err := trivy.ReadFindings(rep, check.Base(h, "software_fs"), nil)
+	rep.Close()
 	if err != nil {
 		return nil, err
 	}
 	ctx.Log("%s: software_fs: %d files", h.Name, len(files))
-	findings := trivy.VulnFindings(report, check.Base(h, "software_fs"))
 	for i := range findings { // trivy paths are relative to the staging dir == relative to the host root
 		f := &findings[i]
 		rel := f.PkgPath

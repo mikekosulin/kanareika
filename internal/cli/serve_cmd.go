@@ -29,6 +29,7 @@ var serveFunc = func(ctx context.Context, s *server.Server, host string, port in
 // dashboardScan: a scan started from the dashboard, run like `kanareika scan` (plan, log and summary go to the
 // job's output on the page).
 func (a *app) dashboardScan(ctx context.Context, o *config.Org, req server.ScanRequest, out io.Writer) int {
+	defer scanning()()
 	s := &scan.Scanner{Paths: a.paths, Out: out, Err: out}
 	return runOrg(ctx, s, o, req.Env, scan.Options{Groups: req.Groups, Hosts: req.Hosts, Modules: req.Modules,
 		DryRun: req.DryRun, IgnoreWindow: req.IgnoreWindow, Offline: req.Offline, Parallel: 4, Version: a.version})
@@ -76,6 +77,7 @@ printed URL carries it once, the browser keeps it in a cookie. Without a token i
 The TUI can connect to it too: kanareika tui --url http://<SERVER>:8088 --token <YOUR_SECRET_TOKEN>`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			limitReaderMemory()
 			if portEnv != "" && !cmd.Flags().Changed("port") {
 				p, err := strconv.Atoi(portEnv)
 				if err != nil || p < 0 || p > 65535 {
@@ -86,7 +88,7 @@ The TUI can connect to it too: kanareika tui --url http://<SERVER>:8088 --token 
 			if port < 0 || port > 65535 {
 				return fmt.Errorf("--port %d: a port number 0-65535 is required", port)
 			}
-			opts := server.Options{Paths: a.paths, Prompt: prompt.Build, Token: token}
+			opts := server.Options{Paths: a.paths, Prompt: prompt.Build, Warm: true, Token: token}
 			if !noScans { // read-only: no scans, no downloads, no outbound size lookups
 				opts.Scan, opts.UpdateDB = a.dashboardScan, a.updateDBFunc
 			}
@@ -94,6 +96,7 @@ The TUI can connect to it too: kanareika tui --url http://<SERVER>:8088 --token 
 			if err != nil {
 				return err
 			}
+			defer s.Close()
 			ctx, stop := interruptible()
 			defer stop()
 			err = serveFunc(ctx, s, host, port, cmd.ErrOrStderr())

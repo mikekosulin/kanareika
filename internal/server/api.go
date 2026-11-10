@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"time"
 
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/i18n"
@@ -161,6 +162,16 @@ func (s *Server) apiEnv(q query) (any, error) {
 }
 
 // runDir resolves ?run= to a finished run, or to current/ (brought up to date first).
+// currentEvery: how often an environment's current/ is brought up to date (a lock and a look at every run): a
+// page asks many times a second, a run that finished shows within this.
+const currentEvery = time.Second
+
+// checked: when current/ was last brought up to date, and where it is ("" when there are no runs).
+type checked struct {
+	at  time.Time
+	dir string
+}
+
 func (s *Server) runDir(q query) (string, error) {
 	o, env, err := s.orgEnv(q)
 	if err != nil {
@@ -169,7 +180,19 @@ func (s *Server) runDir(q query) (string, error) {
 	id := q.get("run")
 	if id == report.Current {
 		s.mu.Lock() // fold in runs that finished since (also bootstraps current/ for old reports)
-		cur, err := report.UpdateCurrent(s.envDir(o.ID, env), false, false)
+		envDir := s.envDir(o.ID, env)
+		c, ok := s.current[envDir]
+		if !ok || time.Since(c.at) >= currentEvery {
+			c.dir, err = report.UpdateCurrent(envDir, false, false)
+			c.at = time.Now()
+			if s.current == nil {
+				s.current = map[string]checked{}
+			}
+			if err == nil {
+				s.current[envDir] = c
+			}
+		}
+		cur := c.dir
 		s.mu.Unlock()
 		if err != nil {
 			return "", err
@@ -222,17 +245,20 @@ func (s *Server) view(dir string) ([]byte, error) {
 	}
 	body, ok := storedView(vf, filepath.Base(dir) == report.Current)
 	if !ok {
-		meta, findings, err := report.LoadRun(dir)
+		meta, err := report.LoadMeta(dir)
 		if err != nil {
 			return nil, err
 		}
-		var prev *report.Prev
+		prev := "" // a partial run is not compared
 		if !report.IsPartial(meta) {
-			if prev, err = report.PreviousRun(dir, true); err != nil {
+			if prev, err = report.PreviousRunDir(dir, true); err != nil {
 				return nil, err
 			}
 		}
-		v := report.BuildView(dir, meta, findings, prev)
+		v, err := report.BuildViewDir(dir, meta, prev) // host file by host file: never the whole run at once
+		if err != nil {
+			return nil, err
+		}
 		meta.PlanCounts = &v.PlanCounts
 		meta.Totals = &v.Totals
 		v.Meta = meta

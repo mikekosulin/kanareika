@@ -6,11 +6,14 @@ package tree
 
 import (
 	"cmp"
+	"iter"
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/mikekosulin/kanareika/internal/finding"
+	"github.com/mikekosulin/kanareika/internal/fset"
 	"github.com/mikekosulin/kanareika/internal/report"
 )
 
@@ -73,6 +76,7 @@ type Node struct {
 	Installed string   `json:"installed,omitempty"`
 	Fixed     string   `json:"fixed,omitempty"`   // a package update: the highest fixed version of its CVEs
 	Pkgs      []string `json:"pkgs,omitempty"`    // a source package update: its binary packages (libssl3, openssl)
+	Parts     []string `json:"parts,omitempty"`   // an image: the names of the components to update in it, most urgent first
 	Path      string   `json:"path,omitempty"`    // a library's file in the image
 	Runtime   string   `json:"runtime,omitempty"` // image / where: docker, k8s
 	Title     string   `json:"title,omitempty"`   // CVE: the advisory's title; other: what it is
@@ -94,7 +98,6 @@ type Node struct {
 	Preauth  bool           `json:"preauth,omitempty"`
 	States   map[string]int `json:"states,omitempty"` // hosts per fix state: available, reboot, vendor, backported, other
 	NoFix    map[string]int `json:"no_fix,omitempty"` // of the vendor hosts, why there is nothing to install (finding.NoFix*)
-	Keys     []string       `json:"-"`                // the report keys of the findings under it
 
 	// host rows of the server view (Opts.All)
 	State       string         `json:"state,omitempty"`        // todo, clean, partial, failed, not_scanned
@@ -109,7 +112,37 @@ type Node struct {
 
 	Kids []*Node `json:"kids,omitempty"`
 	More int     `json:"more,omitempty"` // kids left out of this answer (Shallow): ask for them with the node's id
-	fs   []*finding.Finding
+	fs   []*item
+	lz   *lazy        // kids made on first use (BuildSet); Kids is then empty and never written
+	full func() *Node // a top row (BuildSet): itself made again with its findings and kids, once
+}
+
+// lazy: a node's kids, made when first asked for. A built tree is cached and read by many requests at once, so the
+// kids are made once (once) and kept here, never written into the shared node.
+type lazy struct {
+	once sync.Once
+	n    int // how many there will be
+	make func() []*Node
+	kids []*Node
+}
+
+func later(n int, make func() []*Node) *lazy { return &lazy{n: n, make: make} }
+
+// Children: the node's kids, made on first use.
+func (n *Node) Children() []*Node {
+	if n.lz == nil {
+		return n.Kids
+	}
+	n.lz.once.Do(func() { n.lz.kids, n.lz.make = n.lz.make(), nil })
+	return n.lz.kids
+}
+
+// count: how many kids the node has, without making them.
+func (n *Node) count() int {
+	if n.lz != nil {
+		return n.lz.n
+	}
+	return len(n.Kids)
 }
 
 // Tree: the env's nodes for a grouping, most urgent first.
@@ -124,6 +157,8 @@ type Tree struct {
 	Hidden int            `json:"hidden_backported"` // findings left out because a backport fixed them
 	// Servers: with Opts.All, host rows per state (todo, clean, partial, failed, not_scanned)
 	Servers map[string]int `json:"servers,omitempty"`
+	// Rows: the top rows there are, when Nodes is one page of them (Page)
+	Rows int `json:"rows,omitempty"`
 }
 
 // Key: a finding's selection key, stable between runs (the report key).
@@ -132,12 +167,97 @@ func Key(f *finding.Finding) string {
 	return strings.Join(k[:], "|")
 }
 
+// item: a finding (its vulnerability's fields under C) with the fix it belongs to (U: report.FixKey).
+type item = fset.Item
+
+// Set: findings to build trees from, with the words the query filter searches. A server keeps one per run and
+// builds many trees from it.
+type Set struct {
+	fs *fset.Set
+}
+
+// NewSet: a set over findings.
+func NewSet(findings []finding.Finding) *Set { return &Set{fs: fset.Of(findings)} }
+
+// FromSet: a set over findings already held compactly (package store's).
+func FromSet(s *fset.Set) *Set { return &Set{fs: s} }
+
+// All: the set's findings one at a time (fset.Set.All: the finding is reused).
+func (s *Set) All() iter.Seq[*finding.Finding] { return s.fs.All() }
+
+// Select: the set's findings of the kinds and ids keep says (keep sees each distinct pair once), one at a time,
+// reused: a few of many, without making the rest into findings.
+func (s *Set) Select(keep func(kind, id string) bool) iter.Seq[*finding.Finding] {
+	return func(yield func(*finding.Finding) bool) {
+		type pair struct {
+			kind string
+			c    int32
+		}
+		seen := map[pair]bool{}
+		var f finding.Finding
+		for _, it := range s.fs.Items {
+			p := pair{it.Kind, it.C.Idx}
+			k, ok := seen[p]
+			if !ok {
+				k = keep(it.Kind, it.C.ID)
+				seen[p] = k
+			}
+			if !k {
+				continue
+			}
+			it.Finding(&f)
+			if !yield(&f) {
+				return
+			}
+		}
+	}
+}
+
+// Inventory: the set's inventory findings (Servers reads them).
+func (s *Set) Inventory() iter.Seq[*finding.Finding] {
+	return s.Select(func(kind, _ string) bool { return kind == finding.Inventory })
+}
+
+// searched: the fields the query filter looks in, joined (a query with spaces is matched against them).
+func searched(f *item) string {
+	return strings.Join([]string{f.Host, f.Group, f.Pkg, f.C.ID, f.C.Title, f.Target, f.Image, f.PkgPath}, " ")
+}
+
+// matcher: whether an item matches query q (lower case, trimmed). A query without spaces is in the joined fields
+// only if it is in one of them, so each part (fset: shared by many findings) is checked once; one with spaces is
+// matched against the joined fields, as before.
+func (s *Set) matcher(q string) func(f *item) bool {
+	if q == "" {
+		return func(*item) bool { return true }
+	}
+	if strings.Contains(q, " ") {
+		return func(f *item) bool { return strings.Contains(strings.ToLower(searched(f)), q) }
+	}
+	in := func(fields ...string) bool {
+		for _, w := range fields {
+			if strings.Contains(strings.ToLower(w), q) {
+				return true
+			}
+		}
+		return false
+	}
+	rest := make([]bool, len(s.fs.Rests))
+	for i, r := range s.fs.Rests {
+		rest[i] = in(r.Host, r.Group, r.Pkg, r.Target, r.Image, r.PkgPath)
+	}
+	cve := make([]bool, len(s.fs.CVEs))
+	for i, c := range s.fs.CVEs {
+		cve[i] = in(c.ID, c.Title)
+	}
+	return func(f *item) bool { return rest[f.Idx] || cve[f.C.Idx] }
+}
+
 // actionable: what the tree shows; inventory and accepted risks are not to-dos.
-func actionable(f *finding.Finding) bool { return report.Actionable(f) }
+func actionable(f *item) bool { return f.Actionable() }
 
-func installable(f *finding.Finding) bool { return report.Installable(f) }
+func installable(f *item) bool { return f.Installable() }
 
-func state(f *finding.Finding) string {
+func state(f *item) string {
 	switch {
 	case f.Backported:
 		return "backported"
@@ -151,22 +271,23 @@ func state(f *finding.Finding) string {
 	return finding.FixAvailable
 }
 
-func (o Opts) keep(f *finding.Finding) bool {
+// keep: whether the filters (the query apart: Set.matcher) keep the item.
+func (o Opts) keep(f *item) bool {
 	if !actionable(f) || (f.Backported && !o.Backported) {
 		return false
 	}
 	for _, x := range o.Filters {
 		switch x {
 		case FKEV:
-			if !f.KEV {
+			if !f.C.KEV {
 				return false
 			}
 		case FRCE:
-			if !(f.Preauth && f.RCE) {
+			if !(f.C.Preauth && f.C.RCE) {
 				return false
 			}
 		case FEPSS:
-			if f.EPSS == nil || *f.EPSS < 0.1 {
+			if f.C.EPSS == nil || *f.C.EPSS < 0.1 {
 				return false
 			}
 		case FFront:
@@ -187,17 +308,11 @@ func (o Opts) keep(f *finding.Finding) bool {
 			}
 		}
 	}
-	if q := strings.ToLower(strings.TrimSpace(o.Query)); q != "" {
-		hay := strings.ToLower(strings.Join([]string{f.Host, f.Group, f.Pkg, f.ID, f.Title, f.Target, f.Image, f.PkgPath}, " "))
-		if !strings.Contains(hay, q) {
-			return false
-		}
-	}
 	return true
 }
 
 // unit: what one change fixes (report.FixKey, which every count of fixes uses).
-func unit(f *finding.Finding) (key, kind string) { return report.FixKey(f) }
+func unit(f *item) (key, kind string) { return f.U.Key, f.U.Kind }
 
 // Hosts: what the tree needs to know about hosts (from the view's facts).
 type Hosts map[string]report.Fact
@@ -207,6 +322,37 @@ func (h Hosts) os(name string) string {
 		return *f.OS
 	}
 	return ""
+}
+
+// hostNames: the hosts of a filled node's findings.
+func (n *Node) hostNames() []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, f := range n.fs {
+		if !seen[f.Host] {
+			seen[f.Host] = true
+			out = append(out, f.Host)
+		}
+	}
+	return out
+}
+
+// common: the OS most of names run (of equal counts, the first by name), "" when none is known; a group's, which
+// does not depend on the order of the findings.
+func (h Hosts) common(names []string) string {
+	n := map[string]int{}
+	for _, name := range names {
+		if os := h.os(name); os != "" {
+			n[os]++
+		}
+	}
+	best := ""
+	for os, c := range n {
+		if best == "" || c > n[best] || c == n[best] && os < best {
+			best = os
+		}
+	}
+	return best
 }
 
 func prioRank(p string) int {
@@ -224,14 +370,24 @@ func prioRank(p string) int {
 }
 
 func sevRank(s string) int {
-	return map[string]int{"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}[s]
+	switch s {
+	case "CRITICAL":
+		return 4
+	case "HIGH":
+		return 3
+	case "MEDIUM":
+		return 2
+	case "LOW":
+		return 1
+	}
+	return 0
 }
 
 // noFixOrder: why there is nothing to install, from the closest to a fix to the farthest.
 var noFixOrder = []string{finding.NoFixRepos, finding.NoFixESM, finding.NoFixPending, finding.NoFixDeferred, finding.NoFixWontFix}
 
 // fill sets a node's aggregates from its findings.
-func fill(n *Node, fs []*finding.Finding) *Node {
+func fill(n *Node, fs []*item) *Node {
 	n.fs = fs
 	hosts := map[string]string{} // host -> its state (the most urgent of its findings')
 	why := map[string]string{}   // host -> why it has nothing to install (the reason closest to a fix)
@@ -246,16 +402,16 @@ func fill(n *Node, fs []*finding.Finding) *Node {
 			n.Due, n.DueWhy = d, f.DueWhy
 		}
 		if f.Kind == finding.Vuln {
-			cves[f.ID] = true
+			cves[f.C.ID] = true
 		}
-		if f.EPSS != nil && *f.EPSS > n.EPSS {
-			n.EPSS = *f.EPSS
+		if f.C.EPSS != nil && *f.C.EPSS > n.EPSS {
+			n.EPSS = *f.C.EPSS
 		}
-		n.KEV = n.KEV || f.KEV
-		n.RCE = n.RCE || f.Preauth && f.RCE
-		n.Preauth = n.Preauth || f.Preauth
-		if sevRank(f.Severity) > sevRank(n.Severity) {
-			n.Severity = f.Severity
+		n.KEV = n.KEV || f.C.KEV
+		n.RCE = n.RCE || f.C.Preauth && f.C.RCE
+		n.Preauth = n.Preauth || f.C.Preauth
+		if sevRank(f.C.Severity) > sevRank(n.Severity) {
+			n.Severity = f.C.Severity
 		}
 		st := state(f)
 		if old, ok := hosts[f.Host]; !ok || old == finding.FixAvailable {
@@ -270,7 +426,6 @@ func fill(n *Node, fs []*finding.Finding) *Node {
 			groups[f.Group] = map[string]bool{}
 		}
 		groups[f.Group][f.Host] = true
-		n.Keys = append(n.Keys, Key(f))
 	}
 	n.Hosts, n.CVEs = len(hosts), len(cves)
 	n.States = map[string]int{}
@@ -293,8 +448,6 @@ func fill(n *Node, fs []*finding.Finding) *Node {
 		}
 		slices.Sort(n.HostList)
 	}
-	slices.Sort(n.Keys)
-	n.Keys = slices.Compact(n.Keys)
 	return n
 }
 
@@ -314,8 +467,8 @@ func boolFirst(a, b bool) int {
 	return 1
 }
 
-func byKey(fs []*finding.Finding, key func(*finding.Finding) string) ([]string, map[string][]*finding.Finding) {
-	m := map[string][]*finding.Finding{}
+func byKey(fs []*item, key func(*item) string) ([]string, map[string][]*item) {
+	m := map[string][]*item{}
 	var order []string
 	for _, f := range fs {
 		k := key(f)
@@ -327,38 +480,44 @@ func byKey(fs []*finding.Finding, key func(*finding.Finding) string) ([]string, 
 	return order, m
 }
 
-// hostKids: the hosts under a node, grouped by host group when there are many.
-func hostKids(id string, fs []*finding.Finding, hosts Hosts) []*Node {
-	leaf := func(h string, hf []*finding.Finding) *Node {
-		n := fill(&Node{ID: id + "/h:" + h, Kind: KindHost, Label: h, OS: hosts.os(h), Exposure: hf[0].Exposure}, hf)
-		return n
+// hostKids: the hosts under a node, grouped by host group when there are many. Made when first asked for; n is
+// the node over the same findings (filled), whose host and group counts say how many kids there will be.
+func hostKids(n *Node, id string, fs []*item, hosts Hosts) *lazy {
+	count := n.Hosts
+	if count >= minGroupSize {
+		count = len(n.Groups)
 	}
-	order, byHost := byKey(fs, func(f *finding.Finding) string { return f.Host })
-	if len(order) < minGroupSize {
+	return later(count, func() []*Node {
+		leaf := func(h string, hf []*item) *Node {
+			return fill(&Node{ID: id + "/h:" + h, Kind: KindHost, Label: h, OS: hosts.os(h), Exposure: hf[0].Exposure}, hf)
+		}
+		order, byHost := byKey(fs, func(f *item) string { return f.Host })
+		if len(order) < minGroupSize {
+			var out []*Node
+			for _, h := range order {
+				out = append(out, leaf(h, byHost[h]))
+			}
+			slices.SortFunc(out, func(a, b *Node) int { return strings.Compare(a.Label, b.Label) })
+			return out
+		}
+		gorder, byGroup := byKey(fs, func(f *item) string { return f.Group })
 		var out []*Node
-		for _, h := range order {
-			out = append(out, leaf(h, byHost[h]))
+		for _, g := range gorder {
+			gf := byGroup[g]
+			ho, bh := byKey(gf, func(f *item) string { return f.Host })
+			n := fill(&Node{ID: id + "/g:" + g, Kind: KindGroup, Label: g, OS: hosts.common(ho), Exposure: gf[0].Exposure}, gf)
+			for _, h := range ho {
+				n.Kids = append(n.Kids, leaf(h, bh[h]))
+			}
+			slices.SortFunc(n.Kids, func(a, b *Node) int { return strings.Compare(a.Label, b.Label) })
+			out = append(out, n)
 		}
-		slices.SortFunc(out, func(a, b *Node) int { return strings.Compare(a.Label, b.Label) })
+		slices.SortFunc(out, func(a, b *Node) int { return cmp.Or(b.Hosts-a.Hosts, strings.Compare(a.Label, b.Label)) })
 		return out
-	}
-	gorder, byGroup := byKey(fs, func(f *finding.Finding) string { return f.Group })
-	var out []*Node
-	for _, g := range gorder {
-		gf := byGroup[g]
-		n := fill(&Node{ID: id + "/g:" + g, Kind: KindGroup, Label: g, OS: hosts.os(gf[0].Host), Exposure: gf[0].Exposure}, gf)
-		ho, bh := byKey(gf, func(f *finding.Finding) string { return f.Host })
-		for _, h := range ho {
-			n.Kids = append(n.Kids, leaf(h, bh[h]))
-		}
-		slices.SortFunc(n.Kids, func(a, b *Node) int { return strings.Compare(a.Label, b.Label) })
-		out = append(out, n)
-	}
-	slices.SortFunc(out, func(a, b *Node) int { return cmp.Or(b.Hosts-a.Hosts, strings.Compare(a.Label, b.Label)) })
-	return out
+	})
 }
 
-func where(f *finding.Finding) string {
+func where(f *item) string {
 	if f.Module == "k8s" {
 		return strings.TrimPrefix(f.Host, "k8s:") + " · " + f.Target
 	}
@@ -367,14 +526,14 @@ func where(f *finding.Finding) string {
 
 // unitNode: one unit and what is under it. deep: include where it is (hosts, or for images their components and
 // where they run); the host grouping lists units under a host without repeating the host.
-func unitNode(id string, fs []*finding.Finding, hosts Hosts, deep bool) *Node {
+func unitNode(id string, fs []*item, hosts Hosts, deep bool) *Node {
 	f0 := fs[0]
 	_, kind := unit(f0)
 	switch kind {
 	case KindOther:
-		n := fill(&Node{ID: id, Kind: KindOther, Label: f0.Title, Title: f0.Module}, fs)
+		n := fill(&Node{ID: id, Kind: KindOther, Label: f0.C.Title, Title: f0.Module}, fs)
 		if deep {
-			n.Kids = hostKids(id, fs, hosts)
+			n.lz = hostKids(n, id, fs, hosts)
 		}
 		return n
 	case KindPkg:
@@ -398,7 +557,7 @@ func unitNode(id string, fs []*finding.Finding, hosts Hosts, deep bool) *Node {
 			n.Path = f0.Target
 		}
 		if deep {
-			n.Kids = hostKids(id, fs, hosts)
+			n.lz = hostKids(n, id, fs, hosts)
 		}
 		return n
 	}
@@ -408,7 +567,7 @@ func unitNode(id string, fs []*finding.Finding, hosts Hosts, deep bool) *Node {
 		runtime, img = "k8s", cmp.Or(f0.Image, f0.Target)
 	}
 	n := fill(&Node{ID: id, Kind: KindImage, Label: img, Runtime: runtime}, fs)
-	porder, parts := byKey(fs, func(f *finding.Finding) string { return f.Pkg + "|" + f.PkgPath + "|" + f.Installed + "|" + f.Fixed })
+	porder, parts := byKey(fs, func(f *item) string { return f.Pkg + "|" + f.PkgPath + "|" + f.Installed + "|" + f.Fixed })
 	var comps []*Node
 	for _, k := range porder {
 		pf := parts[k]
@@ -416,6 +575,11 @@ func unitNode(id string, fs []*finding.Finding, hosts Hosts, deep bool) *Node {
 			Fixed: pf[0].Fixed, Path: pf[0].PkgPath}, pf))
 	}
 	slices.SortFunc(comps, urgency)
+	for _, c := range comps {
+		if !slices.Contains(n.Parts, c.Label) {
+			n.Parts = append(n.Parts, c.Label)
+		}
+	}
 	n.Kids = append([]*Node{{ID: id + "/s:parts", Kind: KindSection, Label: "parts"}}, comps...)
 	if deep {
 		worder, ws := byKey(fs, where)
@@ -424,7 +588,7 @@ func unitNode(id string, fs []*finding.Finding, hosts Hosts, deep bool) *Node {
 			wf := ws[w]
 			wn := fill(&Node{ID: id + "/w:" + w, Kind: KindWhere, Label: w, Runtime: runtime}, wf)
 			if runtime == "docker" {
-				wn.Kids = hostKids(wn.ID, wf, hosts)
+				wn.lz = hostKids(wn, wn.ID, wf, hosts)
 			}
 			n.Kids = append(n.Kids, wn)
 		}
@@ -432,84 +596,198 @@ func unitNode(id string, fs []*finding.Finding, hosts Hosts, deep bool) *Node {
 	return n
 }
 
-// Build: the tree of an environment's findings.
+// units: the units of fs as nodes (not deep), most urgent first, made when first asked for.
+func units(id string, fs []*item, hosts Hosts) *lazy {
+	seen := map[string]bool{}
+	for _, f := range fs {
+		seen[f.U.Key] = true
+	}
+	return later(len(seen), func() []*Node {
+		uo, us := byKey(fs, func(f *item) string { return f.U.Key })
+		var out []*Node
+		for _, u := range uo {
+			out = append(out, unitNode(id+"/"+u, us[u], hosts, false))
+		}
+		slices.SortFunc(out, urgency)
+		return out
+	})
+}
+
+// Build: the tree of an environment's findings, every level made.
 func Build(findings []finding.Finding, hosts Hosts, o Opts) *Tree {
+	return BuildSet(NewSet(findings), hosts, o).Full()
+}
+
+// BuildSet: the tree of a set's findings with its top rows made; the levels under them are made when first
+// asked for (Node.Children, Find, Shallow, Under, Full), once. The top rows don't keep their findings: a large
+// environment's would be a million pointers per cached tree. A row's findings are picked from the set again
+// when its kids or details are first asked for (a pass over the set: milliseconds).
+func BuildSet(s *Set, hosts Hosts, o Opts) *Tree {
 	t := &Tree{By: cmp.Or(o.By, ByFix), Counts: map[string]int{}}
-	var fs, all []*finding.Finding
+	var fs, all []*item
 	tally := report.NewTally()
-	for i := range findings {
-		f := &findings[i]
+	match := s.matcher(strings.ToLower(strings.TrimSpace(o.Query)))
+	kept := func(f *item) bool { return o.keep(f) && match(f) }
+	for i := range s.fs.Items {
+		f := &s.fs.Items[i]
 		if actionable(f) && f.Backported && !o.Backported {
 			t.Hidden++
 		}
 		if actionable(f) && (!f.Backported || o.Backported) {
 			all = append(all, f)
 		}
-		if !o.keep(f) {
+		if !kept(f) {
 			continue
 		}
 		fs = append(fs, f)
-		tally.Add(f)
+		tally.AddParts(f.U.Key, f.PriorityOr(), f.Installable(), f.Kind == finding.Vuln, f.C.ID, f.Host)
 	}
 	tot := tally.Totals()
 	t.Counts, t.Fixes, t.NoFix, t.CVEs, t.Hosts = tot.ByPriority(), tot.Fixes, tot.NoFix, tot.CVEs, tot.Hosts
+	recipes := map[*Node]recipe{}
+	add := func(n *Node, r recipe) {
+		recipes[n] = r
+		t.Nodes = append(t.Nodes, n)
+	}
 	switch t.By {
 	case ByCVE:
-		order, m := byKey(fs, func(f *finding.Finding) string {
+		order, m := byKey(fs, func(f *item) string {
 			if f.Kind == finding.Vuln {
-				return "cve:" + f.ID
+				return "cve:" + f.C.ID
 			}
-			k, _ := unit(f)
-			return k
+			return f.U.Key
 		})
 		for _, k := range order {
-			g := m[k]
 			if !strings.HasPrefix(k, "cve:") {
-				t.Nodes = append(t.Nodes, unitNode(k, g, hosts, true))
+				u := m[k][0].U
+				mk := func(fs []*item) *Node { return unitNode(k, fs, hosts, true) }
+				add(mk(m[k]), recipe{func(f *item) bool { return f.Kind != finding.Vuln && f.U == u && kept(f) }, mk})
 				continue
 			}
-			n := fill(&Node{ID: k, Kind: KindCVE, Label: g[0].ID, Title: g[0].Title}, g)
-			uo, us := byKey(g, func(f *finding.Finding) string { k, _ := unit(f); return k })
-			for _, u := range uo {
-				n.Kids = append(n.Kids, unitNode(k+"/"+u, us[u], hosts, true))
-			}
-			disambiguate(n.Kids, hosts)
-			slices.SortFunc(n.Kids, urgency)
-			t.Nodes = append(t.Nodes, n)
+			id := strings.TrimPrefix(k, "cve:")
+			mk := func(fs []*item) *Node { return cveNode(k, fs, hosts) }
+			add(mk(m[k]), recipe{func(f *item) bool { return f.Kind == finding.Vuln && f.C.ID == id && kept(f) }, mk})
 		}
 	case ByHost:
 		if o.All {
 			servers(t, all, fs, hosts, o)
+			for _, n := range t.Nodes {
+				if n.fs == nil {
+					continue // no findings (clean, not scanned)
+				}
+				h := n.Label
+				mk := func(hf []*item) *Node {
+					var kf []*item
+					for _, f := range hf {
+						if kept(f) {
+							kf = append(kf, f)
+						}
+					}
+					k := &Node{fs: hf}
+					if len(kf) > 0 {
+						k.lz = units(n.ID, kf, hosts)
+					}
+					return k
+				}
+				recipes[n] = recipe{func(f *item) bool { return f.Host == h && actionable(f) && (!f.Backported || o.Backported) }, mk}
+			}
+			t.detach(s, recipes)
 			return t
 		}
-		order, m := byKey(fs, func(f *finding.Finding) string { return f.Group })
+		order, m := byKey(fs, func(f *item) string { return f.Group })
 		for _, g := range order {
-			gf := m[g]
-			gn := fill(&Node{ID: "g:" + g, Kind: KindGroup, Label: g, OS: hosts.os(gf[0].Host), Exposure: gf[0].Exposure}, gf)
-			ho, hm := byKey(gf, func(f *finding.Finding) string { return f.Host })
-			for _, h := range ho {
-				hf := hm[h]
-				hn := fill(&Node{ID: gn.ID + "/h:" + h, Kind: KindHost, Label: h, OS: hosts.os(h), Exposure: hf[0].Exposure}, hf)
-				uo, us := byKey(hf, func(f *finding.Finding) string { k, _ := unit(f); return k })
-				for _, u := range uo {
-					hn.Kids = append(hn.Kids, unitNode(hn.ID+"/"+u, us[u], hosts, false))
-				}
-				slices.SortFunc(hn.Kids, urgency)
-				gn.Kids = append(gn.Kids, hn)
-			}
-			slices.SortFunc(gn.Kids, urgency)
-			t.Nodes = append(t.Nodes, gn)
+			mk := func(gf []*item) *Node { return groupNode(g, gf, hosts) }
+			add(mk(m[g]), recipe{func(f *item) bool { return f.Group == g && kept(f) }, mk})
 		}
 	default:
 		t.By = ByFix
-		order, m := byKey(fs, func(f *finding.Finding) string { k, _ := unit(f); return k })
+		order, m := byKey(fs, func(f *item) string { return f.U.Key })
 		for _, k := range order {
-			t.Nodes = append(t.Nodes, unitNode(k, m[k], hosts, true))
+			u := m[k][0].U
+			mk := func(fs []*item) *Node { return unitNode(k, fs, hosts, true) }
+			add(mk(m[k]), recipe{func(f *item) bool { return f.U == u && kept(f) }, mk})
 		}
 	}
 	disambiguate(t.Nodes, hosts)
 	slices.SortFunc(t.Nodes, urgency)
+	t.detach(s, recipes)
 	return t
+}
+
+// recipe: how to make a top row again from the set: which findings are its, and the row from them.
+type recipe struct {
+	pick func(*item) bool
+	make func([]*item) *Node
+}
+
+// detach lets the top rows go of their findings (and of kids made with them); each picks them from the set
+// again, once, when they are needed.
+func (t *Tree) detach(s *Set, recipes map[*Node]recipe) {
+	for _, n := range t.Nodes {
+		r, ok := recipes[n]
+		if !ok {
+			continue
+		}
+		count := n.count()
+		full := sync.OnceValue(func() *Node {
+			var fs []*item
+			for i := range s.fs.Items {
+				if f := &s.fs.Items[i]; r.pick(f) {
+					fs = append(fs, f)
+				}
+			}
+			return r.make(fs)
+		})
+		n.fs, n.Kids, n.full = nil, nil, full
+		n.lz = later(count, func() []*Node { return full().Children() })
+	}
+}
+
+// items: the node's findings.
+func (n *Node) items() []*item {
+	if n.full != nil {
+		return n.full().fs
+	}
+	return n.fs
+}
+
+// cveNode: a CVE and the fixes under it.
+func cveNode(k string, g []*item, hosts Hosts) *Node {
+	n := fill(&Node{ID: k, Kind: KindCVE, Label: g[0].C.ID, Title: g[0].C.Title}, g)
+	seen := map[*fset.Unit]bool{}
+	for _, f := range g {
+		seen[f.U] = true
+	}
+	n.lz = later(len(seen), func() []*Node {
+		uo, us := byKey(g, func(f *item) string { return f.U.Key })
+		var kids []*Node
+		for _, u := range uo {
+			kids = append(kids, unitNode(k+"/"+u, us[u], hosts, true))
+		}
+		disambiguate(kids, hosts)
+		slices.SortFunc(kids, urgency)
+		return kids
+	})
+	return n
+}
+
+// groupNode: a host group and its hosts, each with its fixes.
+func groupNode(g string, gf []*item, hosts Hosts) *Node {
+	gn := fill(&Node{ID: "g:" + g, Kind: KindGroup, Label: g, Exposure: gf[0].Exposure}, gf)
+	gn.OS = hosts.common(gn.hostNames())
+	gn.lz = later(gn.Hosts, func() []*Node {
+		ho, hm := byKey(gf, func(f *item) string { return f.Host })
+		var kids []*Node
+		for _, h := range ho {
+			hf := hm[h]
+			hn := fill(&Node{ID: gn.ID + "/h:" + h, Kind: KindHost, Label: h, OS: hosts.os(h), Exposure: hf[0].Exposure}, hf)
+			hn.lz = units(hn.ID, hf, hosts)
+			kids = append(kids, hn)
+		}
+		slices.SortFunc(kids, urgency)
+		return kids
+	})
+	return gn
 }
 
 var (
@@ -540,10 +818,16 @@ func disambiguate(nodes []*Node, hosts Hosts) {
 			continue
 		}
 		oses := make([]string, len(same))
+		short := map[string]string{} // host -> ShortOS of its OS (a node has many findings per host)
 		for i, n := range same {
 			var l []string
 			for _, f := range n.fs {
-				if o := ShortOS(hosts.os(f.Host)); o != "" && !slices.Contains(l, o) {
+				o, ok := short[f.Host]
+				if !ok {
+					o = ShortOS(hosts.os(f.Host))
+					short[f.Host] = o
+				}
+				if o != "" && !slices.Contains(l, o) {
 					l = append(l, o)
 				}
 			}
@@ -562,12 +846,58 @@ func disambiguate(nodes []*Node, hosts Hosts) {
 	}
 }
 
+// Full: the tree with every level made, as plain nodes (t itself is not changed: it may be cached).
+func (t *Tree) Full() *Tree {
+	c := *t
+	c.Nodes = full(t.Nodes)
+	return &c
+}
+
+func full(ns []*Node) []*Node {
+	if ns == nil {
+		return nil // an empty tree reads "nodes": null, as it always has
+	}
+	out := make([]*Node, len(ns))
+	for i, n := range ns {
+		c := *n
+		c.lz, c.Kids = nil, nil
+		if kids := n.Children(); kids != nil {
+			c.Kids = full(kids)
+		}
+		out[i] = &c
+	}
+	return out
+}
+
 // Shallow: the tree with levels kids under the top rows (0: the top rows only); deeper kids are left out and
-// counted in More. An image keeps its own kids, the parts its row names. t itself is not changed (it is cached).
+// counted in More (an image's row names its parts in Parts). t itself is not changed (it is cached).
 func (t *Tree) Shallow(levels int) *Tree {
 	c := *t
 	c.Nodes = shallow(t.Nodes, levels)
 	return &c
+}
+
+// Page: the tree with limit top rows from offset (limit <= 0: all of them after offset); Rows says how many there
+// are. t itself is not changed.
+func (t *Tree) Page(offset, limit int) *Tree {
+	c := *t
+	c.Rows = len(t.Nodes)
+	offset = min(max(offset, 0), len(t.Nodes))
+	end := len(t.Nodes)
+	if limit > 0 {
+		end = min(offset+limit, end)
+	}
+	c.Nodes = t.Nodes[offset:end]
+	return &c
+}
+
+// FullUnder: the kids of node id with every level under them made; nil when there is no such node.
+func (t *Tree) FullUnder(id string) []*Node {
+	n := t.Find(id)
+	if n == nil {
+		return nil
+	}
+	return full(n.Children())
 }
 
 // Under: the kids of node id, with levels kids under them, as Shallow; nil when there is no such node.
@@ -576,25 +906,27 @@ func (t *Tree) Under(id string, levels int) []*Node {
 	if n == nil {
 		return nil
 	}
-	return shallow(n.Kids, levels)
+	return shallow(n.Children(), levels)
 }
 
 func shallow(ns []*Node, levels int) []*Node {
 	out := make([]*Node, len(ns))
 	for i, n := range ns {
 		c := *n
+		c.lz = nil
 		switch {
-		case levels > 0 || n.Kind == KindImage && levels == 0:
-			c.Kids = shallow(n.Kids, levels-1)
+		case levels > 0:
+			c.Kids = shallow(n.Children(), levels-1)
 		default:
-			c.Kids, c.More = nil, len(n.Kids)
+			c.Kids, c.More = nil, n.count()
 		}
 		out[i] = &c
 	}
 	return out
 }
 
-// Find: the node with id anywhere in the tree, nil if none.
+// Find: the node with id anywhere in the tree, nil if none. Only the levels on the way to it are made: a node's
+// kids' ids start with its own and "/" (but a host group's under a fix: its hosts' ids start with the fix's).
 func (t *Tree) Find(id string) *Node {
 	var walk func([]*Node) *Node
 	walk = func(ns []*Node) *Node {
@@ -602,7 +934,10 @@ func (t *Tree) Find(id string) *Node {
 			if n.ID == id {
 				return n
 			}
-			if k := walk(n.Kids); k != nil {
+			if !strings.HasPrefix(id, n.ID+"/") && n.Kind != KindGroup { // hosts grouped under a fix keep the fix's id
+				continue
+			}
+			if k := walk(n.Children()); k != nil {
 				return k
 			}
 		}

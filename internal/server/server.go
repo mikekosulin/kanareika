@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,6 +38,7 @@ import (
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/pyfmt"
 	"github.com/mikekosulin/kanareika/internal/report"
+	"github.com/mikekosulin/kanareika/internal/store"
 )
 
 // Defaults of `kanareika serve`.
@@ -60,17 +62,19 @@ type Options struct {
 	UpdateDB DBUpdateFunc
 	Token    string      // "": no access token (fine on localhost)
 	Log      *log.Logger // errors and panics; nil: the standard logger
+	// Warm: on start, bring every environment's current/ up to date and into the findings database in the
+	// background, so the first look at one doesn't wait for it (after a scan elsewhere, or an upgrade)
+	Warm bool
 }
 
 // Server holds the API state: org configs (reloaded by /api/orgs) and the last few views.
 type Server struct {
-	paths   config.Paths
-	prompt  PromptFunc
-	log     *log.Logger
-	state   atomic.Pointer[orgState]
-	page    []byte // index.html with the UI strings and the CSRF token filled in
-	classic []byte // classic.html, the same way
-	logo    []byte // logo.png: the favicon
+	paths  config.Paths
+	prompt PromptFunc
+	log    *log.Logger
+	state  atomic.Pointer[orgState]
+	page   []byte // index.html with the UI strings and the CSRF token filled in
+	logo   []byte // logo.png: the favicon
 	// logoWebP: logo.webp, the page's images (lossless, less than half the PNG)
 	logoWebP []byte
 	token    string
@@ -81,9 +85,13 @@ type Server struct {
 
 	orgFiles sync.Map // org id -> *sync.Mutex: one setup write (create, add hosts) per org file at a time
 
-	mu    sync.Mutex // view builds and current/ updates, one at a time (each can take seconds on big runs)
-	views []cachedView
-	trees *treeInput // the last tree input (findings + view), by view mtime
+	stopWarm context.CancelFunc // nil: no warm-up (Options.Warm)
+	warmDone chan struct{}
+
+	mu      sync.Mutex // view builds and current/ updates, one at a time (each can take seconds on big runs)
+	views   []cachedView
+	current map[string]checked // per environment directory: current/ was brought up to date (runDir)
+	trees   []*treeInput       // the runs' tree inputs (findings + view), most recently used first
 }
 
 type cachedView struct {
@@ -120,10 +128,6 @@ func New(o Options) (*Server, error) {
 		return nil, err
 	}
 	s.page = bytes.Replace(s.page, []byte(`/*CSRF*/""`), []byte(`"`+s.csrf+`"`), 1)
-	if s.classic, err = page("classic.html"); err != nil {
-		return nil, err
-	}
-	s.classic = bytes.Replace(s.classic, []byte(`/*CSRF*/""`), []byte(`"`+s.csrf+`"`), 1)
 	if s.logo, err = fs.ReadFile(webFS(), "logo.png"); err != nil {
 		return nil, err
 	}
@@ -131,7 +135,39 @@ func New(o Options) (*Server, error) {
 		return nil, err
 	}
 	s.reload()
+	if o.Warm {
+		ctx, stop := context.WithCancel(context.Background())
+		s.stopWarm, s.warmDone = stop, make(chan struct{})
+		go func() {
+			defer close(s.warmDone)
+			s.warm(ctx)
+		}()
+	}
 	return s, nil
+}
+
+// Close stops what the server does in the background (the warm-up) and waits for it; serve calls it on shutdown.
+func (s *Server) Close() {
+	if s.stopWarm != nil {
+		s.stopWarm()
+		<-s.warmDone
+	}
+}
+
+// warm: every environment's current/, folded and imported, one after the other; errors show when it is opened.
+func (s *Server) warm(ctx context.Context) {
+	for _, o := range s.state.Load().orgs {
+		for _, env := range o.Envs() {
+			if ctx.Err() != nil {
+				return
+			}
+			q := parseQS("org=" + url.QueryEscape(o.ID) + "&env=" + url.QueryEscape(env) + "&run=" + report.Current)
+			if dir, err := s.runDir(q); err == nil {
+				_ = store.Sync(ctx, s.paths.Reports, dir)
+				debug.FreeOSMemory() // an import decodes the JSON: give that back before the next
+			}
+		}
+	}
 }
 
 // webFS and localesFS: where the page and the UI strings come from (variables so tests can break them).
@@ -228,7 +264,7 @@ func (s *Server) Handler() http.Handler {
 			http.Redirect(w, r, u, http.StatusMovedPermanently)
 		})
 	}
-	r.Get("/classic", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "text/html; charset=utf-8", s.classic) })
+	r.Get("/classic", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/", http.StatusMovedPermanently) }) // the 0.4 page, gone in 0.6
 	for path, fn := range map[string]func(query) (any, error){
 		"/api/orgs": s.apiOrgs, "/api/env": s.apiEnv, "/api/run": s.apiRun, "/api/log": s.apiLog,
 		"/api/hostfile": s.apiHostfile, "/api/ipinfo": s.apiIPInfo, "/api/prompt": s.apiPrompt,
@@ -433,6 +469,7 @@ func (s *Server) serve(ctx context.Context, ln net.Listener, host string, out io
 		defer cancel()
 		done <- srv.Shutdown(sctx)
 	}()
+	defer s.Close()
 	if err := srv.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}

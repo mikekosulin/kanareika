@@ -5,7 +5,8 @@ package finding
 
 import (
 	"encoding/json"
-	"maps"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"strings"
 )
 
@@ -160,38 +161,48 @@ type Finding struct {
 
 type plain Finding
 
-func (f *Finding) UnmarshalJSON(b []byte) error {
-	if err := json.Unmarshal(b, (*plain)(f)); err != nil {
+// wire: a Finding as stored, the members this version does not know collected by encoding/json/v2 in one pass
+// (a findings file holds about a million of them: decoding each twice, or re-parsing what MarshalJSON returned,
+// cost gigabytes).
+type wire struct {
+	*plain
+	Extra map[string]jsontext.Value `json:",embed"`
+}
+
+// UnmarshalJSONFrom reads a finding from the stream; json.Unmarshal (v1) uses it too.
+func (f *Finding) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	w := wire{plain: (*plain)(f)}
+	if err := jsonv2.UnmarshalDecode(dec, &w); err != nil {
 		return err
 	}
-	var all map[string]json.RawMessage
-	_ = json.Unmarshal(b, &all) // b just decoded into a struct: it is an object or null, never an error here
-	for _, k := range known {
-		delete(all, k)
-	}
-	if len(all) > 0 {
-		f.Extra = all
+	if len(w.Extra) > 0 {
+		f.Extra = w.Extra // json.RawMessage is jsontext.Value
 	}
 	return nil
 }
 
-func (f Finding) MarshalJSON() ([]byte, error) {
-	b, err := json.Marshal(plain(f))
-	if err != nil || len(f.Extra) == 0 {
-		return b, err
+// MarshalJSONTo writes a finding to the stream; json.Marshal (v1) uses it too. Extra never overrides a known field.
+func (f Finding) MarshalJSONTo(enc *jsontext.Encoder) error {
+	w := wire{plain: (*plain)(&f)}
+	for k, v := range f.Extra {
+		if !known[k] {
+			if w.Extra == nil {
+				w.Extra = make(map[string]jsontext.Value, len(f.Extra))
+			}
+			w.Extra[k] = v
+		}
 	}
-	var all map[string]json.RawMessage
-	_ = json.Unmarshal(b, &all) // b is json.Marshal of a struct: always an object
-	extra := maps.Clone(f.Extra)
-	maps.Copy(extra, all)
-	return json.Marshal(extra)
+	return jsonv2.MarshalEncode(enc, &w)
 }
 
-var known = []string{"org", "host", "group", "exposure", "module", "kind", "id", "pkg", "pkg_path", "installed", "fixed",
-	"status", "severity", "title", "url", "target", "msg", "args", "target_msg", "target_args", "vector", "preauth",
-	"rce", "kernel", "inactive", "pending_reboot", "backported", "fix_state", "repo_version", "image_in_use", "kev",
-	"epss", "priority", "due", "accepted", "exception", "first_seen", "fix_since", "clock_start", "due_why", "published",
-	"kev_due", "cvss_score", "description", "image", "src_pkg"}
+var known = map[string]bool{"org": true, "host": true, "group": true, "exposure": true, "module": true, "kind": true,
+	"id": true, "pkg": true, "pkg_path": true, "installed": true, "fixed": true, "status": true, "severity": true,
+	"title": true, "url": true, "target": true, "msg": true, "args": true, "target_msg": true, "target_args": true,
+	"vector": true, "preauth": true, "rce": true, "kernel": true, "inactive": true, "pending_reboot": true,
+	"backported": true, "fix_state": true, "repo_version": true, "image_in_use": true, "kev": true, "epss": true,
+	"priority": true, "due": true, "accepted": true, "exception": true, "first_seen": true, "fix_since": true,
+	"clock_start": true, "due_why": true, "published": true, "kev_due": true, "cvss_score": true, "description": true,
+	"image": true, "src_pkg": true}
 
 // PriorityOr: the priority or "" when none was assigned.
 func (f *Finding) PriorityOr() string {

@@ -845,46 +845,66 @@ func clock(f *finding.Finding, p *finding.Finding, d DueRules, kevDue map[string
 // before this scan (nil: none), where the due date's clock carries over from.
 func Apply(findings []finding.Finding, org *config.Org, env string, pol *Policy, feeds Feeds,
 	scanDate time.Time, prev Prev) ([]finding.Finding, error) {
-	today := scanDate.Format(time.DateOnly)
-	rules, err := pol.DueFor(org, env)
+	a, err := NewApplier(org, env, pol, feeds, scanDate)
 	if err != nil {
 		return findings, err
 	}
 	for i := range findings {
-		f := &findings[i]
-		f.KEV = feeds.KEV[f.ID]
-		f.EPSS = nil
-		if e, ok := feeds.EPSS[f.ID]; ok {
-			f.EPSS = &e
-		}
-		f.Priority = nil
-		if f.Inactive {
-			p := "P4"
-			f.Priority = &p
-		} else if f.Kind != finding.Inventory {
-			for _, r := range pol.Rules {
-				if matches(f, r.When) {
-					p := r.Priority
-					f.Priority = &p
-					break
-				}
-			}
-		}
-		ex, active := exceptionFor(f, org, today)
-		f.Accepted = ex != nil && active
-		f.Exception = nil
-		if ex != nil {
-			f.Exception = &finding.Exception{Reason: str(ex, "reason"), Owner: str(ex, "owner"),
-				ReviewBy: str(ex, "review_by"), Expired: !active,
-				FixAvailable: truthy(ex["until_available"]) && !active && fixInstallable(f)}
-		}
-		var p *finding.Finding
-		if prev != nil {
-			p = prev(f)
-		}
-		clock(f, p, rules, feeds.KEVDue, today)
+		a.Apply(&findings[i], prev)
 	}
 	return findings, nil
+}
+
+// Applier: Apply one finding at a time (a scan streams each host's findings into its file).
+type Applier struct {
+	org   *config.Org
+	pol   *Policy
+	feeds Feeds
+	rules DueRules
+	today string
+}
+
+func NewApplier(org *config.Org, env string, pol *Policy, feeds Feeds, scanDate time.Time) (*Applier, error) {
+	rules, err := pol.DueFor(org, env)
+	if err != nil {
+		return nil, err
+	}
+	return &Applier{org: org, pol: pol, feeds: feeds, rules: rules, today: scanDate.Format(time.DateOnly)}, nil
+}
+
+// Apply: what Apply does to one finding; prev (nil: none) is the host's state before the scan.
+func (a *Applier) Apply(f *finding.Finding, prev Prev) {
+	f.KEV = a.feeds.KEV[f.ID]
+	f.EPSS = nil
+	if e, ok := a.feeds.EPSS[f.ID]; ok {
+		f.EPSS = &e
+	}
+	f.Priority = nil
+	if f.Inactive {
+		p := "P4"
+		f.Priority = &p
+	} else if f.Kind != finding.Inventory {
+		for _, r := range a.pol.Rules {
+			if matches(f, r.When) {
+				p := r.Priority
+				f.Priority = &p
+				break
+			}
+		}
+	}
+	ex, active := exceptionFor(f, a.org, a.today)
+	f.Accepted = ex != nil && active
+	f.Exception = nil
+	if ex != nil {
+		f.Exception = &finding.Exception{Reason: str(ex, "reason"), Owner: str(ex, "owner"),
+			ReviewBy: str(ex, "review_by"), Expired: !active,
+			FixAvailable: truthy(ex["until_available"]) && !active && fixInstallable(f)}
+	}
+	var p *finding.Finding
+	if prev != nil {
+		p = prev(f)
+	}
+	clock(f, p, a.rules, a.feeds.KEVDue, a.today)
 }
 
 // DownloadSize: bytes the next feed update would take — "kev", "epss", "dbip-city", "dbip-asn" — from HEAD requests

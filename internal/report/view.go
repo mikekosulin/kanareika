@@ -167,82 +167,6 @@ func readAny(path string) (any, error) {
 	return v, nil
 }
 
-func diffRows(items []finding.Finding) []DiffRow {
-	type gk struct{ host, target, pkg string }
-	idx := map[gk]int{}
-	rows := []DiffRow{}
-	for i := range items {
-		f := &items[i]
-		pkg := f.Pkg
-		if pkg == "" {
-			pkg = f.ID
-		}
-		k := gk{f.Host, f.Target, pkg}
-		j, ok := idx[k]
-		if !ok {
-			j = len(rows)
-			idx[k] = j
-			rows = append(rows, DiffRow{Host: f.Host, Target: f.Target, Pkg: pkg, Kind: f.Kind, Title: f.Title})
-		}
-		g := &rows[j]
-		g.IDs = append(g.IDs, f.ID)
-		g.KEV = g.KEV || f.KEV
-		if f.Preauth && f.RCE {
-			g.RCE++
-		}
-		if prioRank(f.PriorityOr()) < rankPtr(g.Priority) {
-			g.Priority = f.Priority
-		}
-	}
-	slices.SortStableFunc(rows, func(a, b DiffRow) int {
-		return cmp.Or(cmp.Compare(rankPtr(a.Priority), rankPtr(b.Priority)), cmp.Compare(len(b.IDs), len(a.IDs)),
-			cmp.Compare(a.Host, b.Host), cmp.Compare(a.Pkg, b.Pkg))
-	})
-	for i := range rows {
-		g := &rows[i]
-		g.Count = len(g.IDs)
-		slices.Sort(g.IDs)
-		slices.Reverse(g.IDs)
-		g.IDs = g.IDs[:min(8, len(g.IDs))]
-	}
-	return rows
-}
-
-func backported(findings []finding.Finding) []BackportedRow {
-	type gk struct{ host, pkg string }
-	idx := map[gk]int{}
-	var rows []BackportedRow
-	var ids []map[string]bool
-	for i := range findings {
-		f := &findings[i]
-		if !f.Backported {
-			continue
-		}
-		k := gk{f.Host, f.Pkg}
-		j, ok := idx[k]
-		if !ok {
-			j = len(rows)
-			idx[k] = j
-			rows = append(rows, BackportedRow{Host: f.Host, Pkg: f.Pkg, Installed: f.Installed})
-			ids = append(ids, map[string]bool{})
-		}
-		ids[j][f.ID] = true
-	}
-	for j := range rows {
-		s := sortedKeys(ids[j])
-		slices.Reverse(s)
-		rows[j].CVEs = len(s)
-		rows[j].IDs = s[:min(8, len(s))]
-	}
-	slices.SortStableFunc(rows, func(a, b BackportedRow) int {
-		return cmp.Or(cmp.Compare(a.Host, b.Host), cmp.Compare(b.CVEs, a.CVEs), cmp.Compare(a.Pkg, b.Pkg))
-	})
-	if rows == nil {
-		rows = []BackportedRow{}
-	}
-	return rows
-}
-
 func facts(runDir string, hosts []string) map[string]Fact {
 	out := map[string]Fact{}
 	for _, h := range hosts {
@@ -274,34 +198,35 @@ func limit[T any](s []T, n int) []T {
 	return s[:min(n, len(s))]
 }
 
-// BuildView aggregates one run for the dashboard. runDir holds hosts/<h>/*.json; prev (may be nil) is the run
-// "new" / "resolved" are computed against.
+// BuildView aggregates one run for the dashboard from findings in memory. runDir holds hosts/<h>/*.json; prev
+// (may be nil) is the run "new" / "resolved" are computed against. A run on disk: BuildViewDir, which never holds
+// its findings.
 func BuildView(runDir string, meta *Meta, findings []finding.Finding, prev *Prev) *View {
-	plan := PatchPlan(findings)
-	hosts := map[string]*HostCounts{}
-	hc := func(h string) *HostCounts {
-		if hosts[h] == nil {
-			hosts[h] = &HostCounts{}
-		}
-		return hosts[h]
+	a := newViewAcc()
+	for i := range findings {
+		a.add(&findings[i])
 	}
-	for _, h := range plan {
-		for _, g := range h.Groups {
-			c := hc(h.Host)
-			c.add(deref(g.Priority))
-			c.CVEs += len(g.CVEs)
+	a.flushHost()
+	var d *diffAcc
+	if prev != nil {
+		both := hostsInBoth(meta, prev.Meta)
+		for _, fs := range [][]finding.Finding{findings, prev.Findings} { // org-level checks: always comparable
+			for i := range fs {
+				if strings.Contains(fs[i].Host, ":") {
+					both[fs[i].Host] = true
+				}
+			}
 		}
+		newF, gone := Diff(prev.Findings, findings, both)
+		d = &diffAcc{prevID: prev.ID, newN: len(newF), goneN: len(gone), newRows: diffRows(newF), goneRows: diffRows(gone)}
 	}
-	other := otherFindings(findings)
-	for _, f := range other {
-		if slices.Contains(Prios, f.PriorityOr()) {
-			hc(f.Host).add(f.PriorityOr())
-		}
-	}
-	fc := facts(runDir, meta.HostsScanned)
-	rows := PlanRows(plan)
-	access := hostJSON(runDir, meta.HostsScanned, "access.json")
-	for _, v := range access { // keep the view small: long tails stay in hosts/<h>/access.json
+	return a.view(runDir, meta, d)
+}
+
+// accessView: hosts/<h>/access.json of every host, long tails cut (they stay in the files).
+func accessView(runDir string, hosts []string) map[string]any {
+	access := hostJSON(runDir, hosts, "access.json")
+	for _, v := range access {
 		a, _ := v.(map[string]any)
 		if a == nil {
 			continue
@@ -320,65 +245,18 @@ func BuildView(runDir string, meta *Meta, findings []finding.Finding, prev *Prev
 		}
 		delete(a, "last")
 	}
-	exposure := hostJSON(runDir, meta.HostsScanned, "exposure.json")
+	return access
+}
+
+// exposureView: hosts/<h>/exposure.json of every host without the raw firewall dump.
+func exposureView(runDir string, hosts []string) map[string]any {
+	exposure := hostJSON(runDir, hosts, "exposure.json")
 	for _, v := range exposure {
 		if e, _ := v.(map[string]any); e != nil {
 			delete(e, "firewall_raw")
 		}
 	}
-	slims := func(keep func(*finding.Finding) bool) []map[string]any {
-		out := []map[string]any{}
-		for i := range findings {
-			if keep(&findings[i]) {
-				out = append(out, slim(&findings[i]))
-			}
-		}
-		return out
-	}
-	otherSlim := []map[string]any{}
-	for _, f := range other {
-		otherSlim = append(otherSlim, slim(f))
-	}
-	v := &View{
-		Version: ViewVersion, Meta: meta, Counts: CountsOf(findings), PlanCounts: PlanCountsOf(plan), Totals: TotalsOf(findings),
-		Hosts: hosts, Facts: fc, Actions: BuildActions(rows, other, fc),
-		Health: hostJSON(runDir, meta.HostsScanned, "health.json"), Access: access, Exposure: exposure,
-		Plan:       rows,
-		Other:      limit(otherSlim, 5000),
-		Exceptions: limit(slims(func(f *finding.Finding) bool { return f.Exception != nil }), 5000),
-		Inventory:  limit(slims(func(f *finding.Finding) bool { return f.Kind == finding.Inventory }), 5000),
-		Backported: limit(backported(findings), 3000),
-	}
-	if prev != nil {
-		ok := func(m *Meta) map[string]bool {
-			s := map[string]bool{}
-			for _, h := range m.HostsScanned {
-				if !m.HostsFailed.Has(h) {
-					s[h] = true
-				}
-			}
-			return s
-		}
-		a, b := ok(meta), ok(prev.Meta)
-		both := map[string]bool{}
-		for h := range a {
-			if b[h] {
-				both[h] = true
-			}
-		}
-		for _, fs := range [][]finding.Finding{findings, prev.Findings} { // org-level checks: always comparable
-			for i := range fs {
-				if strings.Contains(fs[i].Host, ":") {
-					both[fs[i].Host] = true
-				}
-			}
-		}
-		newF, gone := Diff(prev.Findings, findings, both)
-		v.Prev = &prev.ID
-		v.New = &DiffSet{Total: len(newF), Rows: limit(diffRows(newF), 3000)}
-		v.Resolved = &DiffSet{Total: len(gone), Rows: limit(diffRows(gone), 3000)}
-	}
-	return v
+	return exposure
 }
 
 // Diff: findings new in b and resolved since a, restricted to hosts (nil: all) scanned successfully in both.
@@ -387,8 +265,7 @@ func Diff(a, b []finding.Finding, hosts map[string]bool) (newF, gone []finding.F
 	active := func(fs []finding.Finding) map[Key]*finding.Finding {
 		m := map[Key]*finding.Finding{}
 		for i := range fs {
-			f := &fs[i]
-			if f.Kind != finding.Inventory && !f.Accepted && !f.Backported && (hosts == nil || hosts[f.Host]) {
+			if f := &fs[i]; diffable(f, hosts) {
 				m[KeyOf(f)] = f // the last one wins, as in a dict comprehension
 			}
 		}
@@ -406,13 +283,148 @@ func Diff(a, b []finding.Finding, hosts map[string]bool) (newF, gone []finding.F
 			gone = append(gone, *f)
 		}
 	}
-	// Python orders ties of (priority, host, pkg, id) by set order (random); the full key makes it deterministic
-	order := func(x, y finding.Finding) int {
+	sortDiff(newF)
+	sortDiff(gone)
+	return newF, gone
+}
+
+// diffable: a finding Diff compares (hosts nil: on any host).
+func diffable(f *finding.Finding, hosts map[string]bool) bool {
+	return f.Kind != finding.Inventory && !f.Accepted && !f.Backported && (hosts == nil || hosts[f.Host])
+}
+
+// sortDiff orders Diff's lists. Python orders ties of (priority, host, pkg, id) by set order (random); the full key
+// makes it deterministic.
+func sortDiff(fs []finding.Finding) {
+	slices.SortFunc(fs, func(x, y finding.Finding) int {
 		kx, ky := KeyOf(&x), KeyOf(&y)
 		return cmp.Or(cmp.Compare(prioRank(x.PriorityOr()), prioRank(y.PriorityOr())), cmp.Compare(x.Host, y.Host),
 			cmp.Compare(x.Pkg, y.Pkg), cmp.Compare(x.ID, y.ID), slices.Compare(kx[:], ky[:]))
+	})
+}
+
+// hostsInBoth: the hosts scanned successfully in both runs.
+func hostsInBoth(a, b *Meta) map[string]bool {
+	ok := func(m *Meta) map[string]bool {
+		s := map[string]bool{}
+		for _, h := range m.HostsScanned {
+			if !m.HostsFailed.Has(h) {
+				s[h] = true
+			}
+		}
+		return s
 	}
-	slices.SortFunc(newF, order)
-	slices.SortFunc(gone, order)
-	return newF, gone
+	sa, sb := ok(a), ok(b)
+	both := map[string]bool{}
+	for h := range sa {
+		if sb[h] {
+			both[h] = true
+		}
+	}
+	return both
+}
+
+// BuildViewDir: the view of dir (a run or current/) described by meta, compared with the run in prevDir ("":
+// none), read one host at a time: what is held is one host's findings' groups and keys, never the run's.
+func BuildViewDir(dir string, meta *Meta, prevDir string) (*View, error) {
+	v, _, err := buildViewDir(dir, meta, prevDir)
+	return v, err
+}
+
+func buildViewDir(dir string, meta *Meta, prevDir string) (*View, *viewAcc, error) {
+	hosts, err := fileHosts(dir)
+	if err != nil {
+		return nil, nil, err
+	}
+	var d *diffAcc
+	var both map[string]bool
+	if prevDir != "" {
+		pm, err := LoadMeta(prevDir)
+		if err != nil {
+			return nil, nil, err
+		}
+		both = hostsInBoth(meta, pm)
+		both[OrgHost] = true // org-level checks: always comparable
+		d = &diffAcc{prevID: filepath.Base(prevDir)}
+		ph, err := fileHosts(prevDir)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, h := range ph { // hosts with nothing left: all of it is resolved
+			if both[h] && !slices.Contains(hosts, h) {
+				hosts = append(hosts, h)
+			}
+		}
+		slices.Sort(hosts)
+	}
+	a := newViewAcc()
+	if legacy := legacyFile(dir); legacy != "" {
+		// a run written before 0.6: added in the file's order (a merged action takes its first finding's words, as
+		// it always did), the comparison a host at a time
+		if err := EachFindingIn(legacy, a.add); err != nil {
+			return nil, nil, err
+		}
+		a.flushHost()
+		if d != nil {
+			for _, h := range hosts {
+				if !both[h] {
+					continue
+				}
+				if err := d.startHost(prevDir, h); err != nil {
+					return nil, nil, err
+				}
+				if err := eachHostFinding(dir, h, d.cur); err != nil {
+					return nil, nil, err
+				}
+				if err := d.endHost(); err != nil {
+					return nil, nil, err
+				}
+			}
+		}
+		return a.view(dir, meta, d), a, nil
+	}
+	for _, h := range hosts {
+		compare := d != nil && both[h]
+		if compare {
+			if err := d.startHost(prevDir, h); err != nil {
+				return nil, nil, err
+			}
+		}
+		err := eachHostFinding(dir, h, func(f *finding.Finding) {
+			a.add(f)
+			if compare {
+				d.cur(f)
+			}
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+		if compare {
+			if err := d.endHost(); err != nil {
+				return nil, nil, err
+			}
+		}
+		a.flushHost()
+	}
+	return a.view(dir, meta, d), a, nil
+}
+
+// fileHosts: the hosts dir has findings of, sorted (a run written before 0.6: read to find them).
+func fileHosts(dir string) ([]string, error) {
+	hfs, err := HostFiles(dir)
+	if err != nil {
+		return nil, err
+	}
+	if len(hfs) == 1 && hfs[0].Host == "" {
+		set := map[string]bool{}
+		if err := EachFindingIn(hfs[0].Path, func(f *finding.Finding) { set[FileHost(f)] = true }); err != nil {
+			return nil, err
+		}
+		return sortedKeys(set), nil
+	}
+	out := make([]string, len(hfs))
+	for i, hf := range hfs {
+		out[i] = hf.Host
+	}
+	return out, nil
 }

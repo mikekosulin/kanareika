@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -210,11 +209,11 @@ func (s *Server) getSummary(a args) (any, error) {
 		return nil, err
 	}
 	m := v.Meta
-	fs, err := report.LoadFindings(filepath.Join(report.EnvDir(s.store.Paths, org.ID, env), report.Current))
+	set, err := s.store.Findings(org.ID, env)
 	if err != nil {
 		return nil, err
 	}
-	byHost := report.TotalsByHost(fs)
+	t, byHost := report.TotalsSeq(set.All(), true)
 	hosts := pyfmt.Obj{}
 	for _, h := range m.HostsScanned {
 		st := "ok"
@@ -255,7 +254,6 @@ func (s *Server) getSummary(a args) (any, error) {
 	if m.Finished != "" {
 		updated = m.Finished
 	}
-	t := report.TotalsOf(fs)
 	totals := pyfmt.O("fixes", t.Fixes, "P1", t.P1, "P2", t.P2, "P3", t.P3, "P4", t.P4, "no_fix", t.NoFix, "cves", t.CVEs,
 		"hosts", t.Hosts, "accepted", t.Accepted, "backported", t.Backported)
 	return pyfmt.O("org", org.ID, "env", env, "updated", updated, "totals", totals,

@@ -86,7 +86,7 @@ func TestLogos(t *testing.T) {
 		len(webp.body) >= len(png.body) {
 		t.Errorf("webp: %d %s %d bytes", webp.code, webp.h.Get("Content-Type"), len(webp.body))
 	}
-	for _, name := range []string{"index.html", "classic.html"} {
+	for _, name := range []string{"index.html"} {
 		b, err := fs.ReadFile(assets.Web(), name)
 		if err != nil {
 			t.Fatal(err)

@@ -8,6 +8,7 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
+	"iter"
 	"math"
 	"slices"
 	"sort"
@@ -168,9 +169,12 @@ func IDs() []string {
 type Input struct {
 	Servers  *tree.Tree // tree.Build by host with Opts.All
 	View     *report.View
-	Findings []finding.Finding
+	Findings iter.Seq[*finding.Finding] // those Reads keeps, or more
 	Lang     string
 }
+
+// Reads: the findings Build looks at (of all of a run's): the reboot-required check's.
+func Reads(_, id string) bool { return id == "reboot-required" }
 
 type ctx struct {
 	in     Input
@@ -201,9 +205,11 @@ func Build(l *Lens, in Input) Result {
 			c.tzMain = tz
 		}
 	}
-	for _, f := range in.Findings {
-		if f.ID == "reboot-required" && !f.Accepted {
-			c.reboot[f.Host] = true
+	if in.Findings != nil {
+		for f := range in.Findings {
+			if Reads(f.Kind, f.ID) && !f.Accepted {
+				c.reboot[f.Host] = true
+			}
 		}
 	}
 	res := Result{Lens: Info{ID: l.ID, Title: i18n.T("lens."+l.ID, lang, nil)}, Rows: []Row{}, Totals: Totals{}}

@@ -926,7 +926,7 @@ async function post(path, data) {
 /* ---------- state ---------- */
 const S = {
   orgs: [], org: store.get("org", ""), env: store.get("env", ""), run: "current", runs: [],
-  view: "servers", lens: "priorities", accepted: false, by: store.get("by", "fix"), flt: new Set(), q: "", open: new Set(), cur: null, stack: [], sel: new Set(),
+  view: "servers", lens: "priorities", accepted: false, by: store.get("by", "fix"), tby: store.get("by", "fix"), sby: store.get("sby", "host"), flt: new Set(), q: "", open: new Set(), cur: null, stack: [], sel: new Set(),
   tree: null, theme: store.get("theme", "system"), scans: false, db: null, jobs: [], setup: null,
 };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -951,6 +951,8 @@ applyTheme();
 /* ---------- sidebar ---------- */
 const NAV = [["servers", "Servers", "server"], ["todo", "ToDo", "list"], ["history", "History", "clock"]];
 const isTree = (v) => v === "servers" || v === "todo";
+// Servers grouped by server: the server list (with its lenses); grouped by fix or CVE, Servers draws the tree as ToDo does
+const srvList = () => S.view === "servers" && S.by === "host";
 const orgOf = () => S.orgs.find((o) => o.id === S.org);
 const envOf = () => orgOf()?.envs.find((e) => e.env === S.env);
 
@@ -1069,7 +1071,7 @@ function find(id, ns = S.tree?.nodes || []) { for (const n of ns) { if (n.id ===
 /* ---------- ToDo ---------- */
 const FILTERS = [["kev", "KEV"], ["rce", "pre-auth RCE"], ["epss", "EPSS ≥ 10%"], ["front", "Public"], ["ready", "fix ready"], ["nofix", "no fix yet"], ["overdue", "overdue"]];
 function todoShell() {
-  return `<div class="work"><div class="listcol"><div class="work-top"><div class="hdr"><div><h1>${t("ToDo")}</h1><div class="sub" id="sub"></div></div>
+  return `<div class="work"><div class="listcol"><div class="work-top"><div class="hdr"><div><h1>${t(S.view === "servers" ? "Servers" : "ToDo")}</h1><div class="sub" id="sub"></div></div>
       <div class="counts" id="counts"></div></div></div>
       <div class="bar2">
         <div class="seg2" role="group" aria-label="${t("Group by")}"><span class="lbl">${t("group")}</span>${[["host", "server"], ["fix", "fix"], ["cve", "CVE"]].map(([k, l]) => `<button data-by="${k}" aria-pressed="${S.by === k}">${t(l)}</button>`).join("")}</div>
@@ -1219,7 +1221,7 @@ function cveFull(c) {
 }
 let DETAIL = null;
 async function show(id, push, quiet) {
-  const node = S.view === "servers" ? SRV.byId[id] : find(id);
+  const node = srvList() ? SRV.byId[id] : find(id);
   if (node?.kind === "host") return showServer(node, quiet);
   S.cardHost = "";
   const prev = DETAIL?.node;
@@ -1538,7 +1540,7 @@ async function pollJobs() {
   if (S.view === "setup") $("#view").innerHTML = setupView();
   banner();
   if (running) polling = setTimeout(pollJobs, 1500);
-  else if (S.wasRunning) { S.wasRunning = false; await loadOrgs(); await loadEnv(); RD.key = ""; if (S.view === "todo") loadTree(); else if (S.view === "servers") loadServers(); else if (isData(S.view)) loadData(); }
+  else if (S.wasRunning) { S.wasRunning = false; await loadOrgs(); await loadEnv(); RD.key = ""; if (srvList()) loadServers(); else if (isTree(S.view)) loadTree(); else if (isData(S.view)) loadData(); }
   if (S.view === "history" && $("#vtable")) drawData(RD.data, true);
   S.wasRunning ||= running;
 }
@@ -1890,7 +1892,7 @@ function syncURL(push) {
   const host = isData(S.view) ? (VS.item?.kind === "host" ? VS.item.name : VS.want || "") : S.view === "servers" ? S.cardHost || S.wantHost || "" : "";
   const tab = isData(S.view) ? VS.tab[S.view] : "";
   const show = S.view === "servers" && S.lens !== "priorities" ? S.lens : "", f = S.view === "todo" && S.accepted ? "accepted" : "";
-  const by = S.view === "todo" && S.by !== "fix" ? S.by : "";
+  const by = S.view === "todo" && S.by !== "fix" || S.view === "servers" && S.by !== "host" ? S.by : "";
   const u = "/" + S.view + "?" + qs({ org: S.org, env: S.env, run: S.run !== "current" ? S.run : "", by, show, f, tab, host, lang: keep || "" });
   const cur = location.pathname + location.search;
   if (u.replace(/\?$/, "") !== cur) history[push ? "pushState" : "replaceState"](null, "", u.replace(/\?$/, ""));
@@ -1906,7 +1908,8 @@ function readURL() {
   S.wantHost = S.view === "servers" ? p.get("host") || "" : "";
   S.lens = p.get("show") || "priorities";
   S.accepted = S.view === "todo" && p.get("f") === "accepted";
-  if (S.view === "todo" && ["fix", "cve"].includes(p.get("by"))) S.by = p.get("by"); // a link to a grouping
+  if (S.view === "todo" && ["fix", "cve", "host"].includes(p.get("by"))) S.tby = p.get("by"); // a link to a grouping
+  if (S.view === "servers") S.sby = ["fix", "cve"].includes(p.get("by")) ? p.get("by") : "host";
 }
 function go(view, push = true, q) {
   if (view !== S.view) { VS.q = ""; VS.flt.clear(); VS.all = false; VS.sel = ""; VS.item = null; VS.stack = []; VS.want = ""; S.cardHost = ""; if (isTree(view) && isTree(S.view)) { S.open.clear(); S.cur = null; S.q = ""; } }
@@ -1921,7 +1924,7 @@ function vopenRow(i) {
   else if (S.view === "todo") vshow({ ...x, kind: "exc" });
   else vshow(VIEWS[S.view].open(x));
 }
-const vredraw = () => (S.view === "servers" ? drawLens() : S.view === "todo" ? drawAccepted() : drawData(RD.data, true));
+const vredraw = () => (srvList() ? drawLens() : S.view === "todo" ? drawAccepted() : drawData(RD.data, true));
 document.addEventListener("click", (e) => {
   if (!isData(S.view) && !isTree(S.view)) return;
   const el = e.target.closest("[data-vrow], [data-vtab], [data-vflt], [data-vsort], [data-vall], [data-vreset], [data-vhost], [data-vback], [data-fwrules], [data-showrun], [data-todohost]");
@@ -1966,7 +1969,7 @@ addEventListener("popstate", () => { if (location.pathname.startsWith("/setup"))
    answers with states, the run's own data fills them in ---------- */
 const SRV = { list: [], byId: {}, byName: {}, p4: false };
 const SFILT = [["front", "Public"], ["kev", "KEV"], ["overdue", "overdue"]];
-const redraw = () => (S.view === "servers" ? drawServers() : drawTree());
+const redraw = () => (srvList() ? drawServers() : drawTree());
 function serversShell() {
   return `<div class="work"><div class="listcol"><div class="work-top"><div class="hdr"><div style="min-width:0"><h1>${t("Servers")}</h1><div class="sub" id="sub"></div></div></div></div>
       <div class="bar2 vbar">
@@ -1984,15 +1987,15 @@ async function loadServers() {
   let tr;
   try { [tr] = await Promise.all([api("/api/tree?" + qs({ ...scope(), by: "host", all: 1, f: [...S.flt].join(","), q: S.q, backported: S.backport ? 1 : "" })), loadRunData()]); }
   catch (e) {
-    if (S.view !== "servers") return;
+    if (!srvList()) return;
     if (e.status === 404) { $("#view").innerHTML = `<div id="banner"></div>` + noRuns(); banner(); return; }
     toast(e.message); tr = { nodes: [], counts: {}, fixes: 0, cves: 0, hosts: 0 };
   }
-  if (S.view !== "servers") return;
+  if (!srvList()) return;
   S.tree = tr;
   SRV.list = serverList(tr);
   if (S.lens !== "priorities") {
-    await loadLens(); if (S.view !== "servers") return;
+    await loadLens(); if (!srvList()) return;
     const n = drawLens(); renderSide();
     const want = S.wantHost; S.wantHost = "";
     if (want) showServer(SRV.byName[want] || { id: "h:" + want, label: want });
@@ -2075,7 +2078,7 @@ function lensCols(lens) {
   ];
 }
 function drawLens() {
-  const d = LENS.data, el = $("#tree"); if (!d || !el || S.view !== "servers") return 0;
+  const d = LENS.data, el = $("#tree"); if (!d || !el || !srvList()) return 0;
   VS.tab.servers = S.lens;
   const q = S.q.trim().toLowerCase(), rows = (d.rows || []).filter((r) => !q || r.host.toLowerCase().includes(q));
   el.innerHTML = rows.length ? vtable(lensCols(d.lens || {}), rows, (r) => r.host) : `<div class="empty"><h3>${t("Nothing matches")}</h3></div>`;
@@ -2125,7 +2128,7 @@ function lensStub(id, rd) {
   return { lenses: LENS_DEFAULT, lens: { id, columns: cols }, rows: hosts.map((h) => ({ host: h, state: st(h), cells: cells(h) })) };
 }
 function drawServers() {
-  if (!$("#tree") || S.view !== "servers") return;
+  if (!$("#tree") || !srvList()) return;
   FLAT = []; $("#tree").style.minHeight = "";
   const list = SRV.list, c = S.tree?.counts || {}, out = [];
   list.forEach((n) => srvRows(n, 0, out));
@@ -2150,14 +2153,20 @@ async function showServer(n, quiet) {
   syncURL();
   if (!quiet && matchMedia("(max-width: 1240px)").matches) $("#detail").classList.add("open");
 }
+// setBy: the grouping of the view open (Servers and ToDo each keep their own), regrouped in place
+function setBy(by) {
+  if (!isTree(S.view)) { S.tby = by; store.set("by", by); go("todo"); return; }
+  if (S.view === "servers") { S.sby = by; store.set("sby", by); } else { S.tby = by; store.set("by", by); }
+  S.open.clear(); S.cur = null; S.stack = []; render();
+}
 function openServer(name) {
-  if (S.view === "servers" && SRV.byName[name]) { show(SRV.byName[name].id); return; }
-  S.wantHost = name; S.q = ""; S.flt.clear();
+  if (srvList() && SRV.byName[name]) { show(SRV.byName[name].id); return; }
+  S.wantHost = name; S.q = ""; S.flt.clear(); S.sby = "host";
   if (S.view === "servers") render(); else go("servers");
 }
 document.addEventListener("click", (e) => {
   const b = e.target.closest("[data-lens]"); if (!b) return;
-  S.lens = b.dataset.lens; S.wantHost = S.cardHost || ""; VS.sel = ""; syncURL(); render();
+  S.lens = b.dataset.lens; S.sby = "host"; S.wantHost = S.cardHost || ""; VS.sel = ""; syncURL(); render();
 });
 document.addEventListener("click", (e) => { if (e.target.closest("[data-sp4]")) { SRV.p4 = !SRV.p4; e.target.closest("[data-sp4]").setAttribute("aria-pressed", SRV.p4); drawServers(); } });
 
@@ -2174,8 +2183,10 @@ function render() {
   const sk = [S.org, S.env, S.run].join("|");
   if (render.scope !== sk) { render.scope = sk; VS.item = null; VS.sel = ""; VS.stack = []; }
   if (isData(S.view)) { $("#view").innerHTML = `<div id="banner"></div>` + dataShell(); banner(); loadData().then(renderSide); syncURL(); return; }
-  if (S.view === "servers") { S.by = "host"; $("#view").innerHTML = `<div id="banner"></div>` + serversShell(); banner(); loadServers(); syncURL(); return; }
-  if (S.by === "host") S.by = store.get("by", "fix") === "host" ? "fix" : store.get("by", "fix");
+  if (S.view === "servers") {
+    S.by = S.sby;
+    if (S.by === "host") { $("#view").innerHTML = `<div id="banner"></div>` + serversShell(); banner(); loadServers(); syncURL(); return; }
+  } else S.by = S.tby;
   $("#view").innerHTML = `<div id="banner"></div>` + todoShell();
   banner(); loadTree(); syncURL();
 }
@@ -2190,10 +2201,10 @@ function palItems(q) {
   const walk = (ns, depth) => ns.forEach((n) => { if (n.kind !== "section") it.push({ g: depth ? t("Inside") : t("Fixes"), label: `${n.priority} · ${n.label}${n.fixed ? " → " + n.fixed : ""}`, hint: n.hosts ? t("{n} hosts", { n: n.hosts }) : "", go: () => { if (isTree(S.view)) show(n.id); else { go("servers"); S.cur = n.id; } } }); if (depth < 2) walk(n.kids || [], depth + 1); });
   walk(S.tree?.nodes || [], 0);
   NAV.filter((n) => n !== "-").forEach((n) => it.push({ g: t("Go to"), label: t(n[1]), hint: n[0] === "todo" ? "/" : "/" + n[0], go: () => go(n[0]) }));
-  lensList().forEach((l) => it.push({ g: t("Go to"), label: t(l.title), hint: "/servers?show=" + l.id, go: () => { S.lens = l.id; S.wantHost = ""; if (S.view === "servers") { syncURL(); render(); } else go("servers"); } }));
+  lensList().forEach((l) => it.push({ g: t("Go to"), label: t(l.title), hint: "/servers?show=" + l.id, go: () => { S.lens = l.id; S.sby = "host"; S.wantHost = ""; if (S.view === "servers") { syncURL(); render(); } else go("servers"); } }));
   it.push({ g: t("Go to"), label: t("Accepted risks"), hint: "/todo?f=accepted", go: () => { S.accepted = true; if (S.view === "todo") { syncURL(); render(); } else go("todo"); } });
   (S.envd?.hosts || []).forEach((h) => it.push({ g: t("Servers"), label: h.name, hint: h.group, go: () => openServer(h.name) }));
-  [["fix", "Group by fix"], ["cve", "Group by CVE"]].forEach(([k, l]) => it.push({ g: t("Commands"), label: t(l), hint: "/todo", go: () => { S.by = k; store.set("by", k); S.open.clear(); S.cur = null; S.view === "todo" ? render() : go("todo"); } }));
+  [["fix", "Group by fix"], ["cve", "Group by CVE"]].forEach(([k, l]) => it.push({ g: t("Commands"), label: t(l), hint: "/todo", go: () => setBy(k) }));
   if (S.scans && S.env) it.push({ g: t("Commands"), label: t("Scan {env}", { env: S.env }), hint: "", go: () => startScan(S.org, S.env) });
   if (S.scans) it.push({ g: t("Commands"), label: t("Add servers…"), hint: "", go: () => { S.setup = null; S.view = "setup"; render(); } });
   return (q ? it.filter((x) => x.label.toLowerCase().includes(q)) : it.filter((x) => x.g !== t("Inside") && x.g !== t("Servers"))).slice(0, 50);
@@ -2217,8 +2228,8 @@ document.addEventListener("click", async (e) => {
   if (el.classList.contains("node") || el.classList.contains("sv") || el.classList.contains("hc")) { if (d.n) show(d.n); return; }
   if (d.goto) { show(d.goto, true); return; }
   if ("back" in d) { const p = S.stack.pop(); if (p) { S.cur = p.id; DETAIL = await api("/api/node?" + qs({ ...scope(), by: S.by, f: [...S.flt].join(","), q: S.q, id: p.id })); $("#detail").innerHTML = detailHTML(DETAIL); } return; }
-  if (d.by) { if (d.by === "host") { go("servers"); return; } S.by = d.by; store.set("by", d.by); S.open.clear(); S.cur = null; S.stack = []; if (S.view !== "todo") go("todo"); else render(); return; }
-  if (d.flt) { S.flt.has(d.flt) ? S.flt.delete(d.flt) : S.flt.add(d.flt); el.setAttribute("aria-pressed", S.flt.has(d.flt)); S.view === "servers" ? loadServers() : loadTree(); return; }
+  if (d.by) { setBy(d.by); return; }
+  if (d.flt) { S.flt.has(d.flt) ? S.flt.delete(d.flt) : S.flt.add(d.flt); el.setAttribute("aria-pressed", S.flt.has(d.flt)); srvList() ? loadServers() : loadTree(); return; }
   if ("acc" in d) { S.accepted = !S.accepted; S.cur = null; VS.item = null; VS.sel = ""; syncURL(); render(); return; }
   if ("bp" in d) { S.backport = !S.backport; loadTree(); return; }
   if ("allrows" in d) { const sc = $("#scroll").scrollTop; S.allRows = true; redraw(); $("#scroll").scrollTop = sc; return; }
@@ -2284,7 +2295,7 @@ document.addEventListener("input", (e) => {
   if (e.target.id === "pickq") { const q = e.target.value.toLowerCase(); document.querySelectorAll("#picklist .pick").forEach((l) => (l.hidden = !l.dataset.alias.includes(q) && !l.textContent.toLowerCase().includes(q))); return; }
   if (e.target.id === "pastebox") grow(e.target);
   if (e.target.id === "pastebox" || e.target.name === "user") { clearTimeout(previewTimer); previewTimer = setTimeout(preview, 250); }
-  if (e.target.id === "q") { S.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(S.view === "servers" ? (S.lens === "priorities" ? loadServers : drawLens) : S.accepted ? drawAccepted : loadTree, 200); } else if (e.target.id === "palq") { PI = 0; palRender(); } });
+  if (e.target.id === "q") { S.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(srvList() ? (S.lens === "priorities" ? loadServers : drawLens) : S.accepted ? drawAccepted : loadTree, 200); } else if (e.target.id === "palq") { PI = 0; palRender(); } });
 // keepRow: the row toggled stays where it was on screen. A collapse near the end would shrink the list under the
 // scroll position and pull everything down, so the list keeps its height until the rows fill the screen again.
 function keepRow(id, fn) {
@@ -2318,7 +2329,7 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (e.target.matches?.("input, select, textarea")) { if (e.key === "Escape") e.target.blur(); return; }
-  if (isData(S.view) || S.view === "servers" && S.lens !== "priorities" || S.view === "todo" && S.accepted) { vkeys(e); return; }
+  if (isData(S.view) || srvList() && S.lens !== "priorities" || S.view === "todo" && S.accepted) { vkeys(e); return; }
   if (!isTree(S.view)) return;
   const i = FLAT.findIndex((n) => n.id === S.cur), n = FLAT[i];
   const go = (m) => { if (!m) return; show(m.id); document.querySelector(`.node[data-n="${CSS.escape(m.id)}"]`)?.scrollIntoView({ block: "nearest" }); };

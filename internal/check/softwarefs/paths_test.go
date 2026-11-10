@@ -18,6 +18,7 @@ import (
 
 	"github.com/mikekosulin/kanareika/internal/check"
 	"github.com/mikekosulin/kanareika/internal/config"
+	"github.com/mikekosulin/kanareika/internal/trivy"
 )
 
 // member of a test archive; Typeflag 0 = regular file.
@@ -248,7 +249,9 @@ var cfg = map[string]any{"paths": []any{"/opt"}, "patterns": []any{"*.jar"}}
 
 func runWith(t *testing.T, out, report string) error {
 	t.Helper()
-	swap(t, &trivyRun, func(context.Context, []string, string, time.Duration) ([]byte, error) { return []byte(report), nil })
+	swap(t, &trivyRun, func(context.Context, []string, string, time.Duration) (io.ReadCloser, error) {
+		return trivy.Bytes([]byte(report)), nil
+	})
 	ctx := &check.Ctx{Context: context.Background(), SSH: streamer{tarOf(t, member{name: "opt/app/lib.jar", body: "jar"})},
 		Log: func(string, ...any) {}}
 	_, err := Run(ctx, config.Host{Name: "web-01"}, cfg, out, check.Facts{})

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -112,12 +113,17 @@ func Run(ctx *check.Ctx, cfg map[string]any, env string) ([]finding.Finding, err
 			ctx.Log("k8s %s: kubeconfig not found: secrets/%s", name, str(cl, "kubeconfig"))
 			continue
 		}
-		data, err := trivyRun(ctx, Args(cl, kubeconfig), filepath.Join(out, name+".json"), 2*time.Hour)
+		rep, err := trivyRun(ctx, Args(cl, kubeconfig), filepath.Join(out, name+".json"), 2*time.Hour)
 		var terr *trivy.Error
 		if errors.As(err, &terr) {
 			ctx.Log("k8s %s: %v", name, err)
 			continue
 		} else if err != nil {
+			return nil, err
+		}
+		data, err := io.ReadAll(rep) // a cluster's report: its resources are read as one document
+		rep.Close()
+		if err != nil {
 			return nil, err
 		}
 		var r report

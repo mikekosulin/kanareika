@@ -4,7 +4,6 @@
 package ospkg
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -92,22 +91,13 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 	if err := os.WriteFile(bomPath, bomJSON, 0o644); err != nil {
 		return nil, err
 	}
-	data, err := trivyRun(ctx, []string{"sbom", "--scanners", "vuln", bomPath}, filepath.Join(out, "trivy-os.json"), time.Hour)
+	rep, err := trivyRun(ctx, []string{"sbom", "--scanners", "vuln", bomPath}, filepath.Join(out, "trivy-os.json"), time.Hour)
 	if err != nil {
 		return nil, err
 	}
-	report, err := trivy.ParseReport(data)
-	if err != nil {
-		return nil, err
-	}
-	var meta osMeta
-	_ = json.Unmarshal(data, &meta) // ParseReport accepted it: the shape is a JSON object
+	defer rep.Close()
 	ctx.Log("%s: os_packages: %d packages", h.Name, len(pkgs))
 
-	base := check.Base(h, "os_packages")
-	base.Target = "os"
-	findings := trivy.VulnFindings(report, base)
-	SetSources(findings, pkgs)
 	running := ""
 	if f := strings.Fields(facts.Uname); len(f) > 1 {
 		running = f[1] // `uname -srm`: Linux <release> <machine>
@@ -116,8 +106,28 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 	if fam.Type == "rpm" {
 		newer = NewerKernel(pkgs, running)
 	}
-	MarkKernels(findings, running, fam.Type == "rpm")
-	n := vendor.Annotate(findings, changelog(ctx, h, fam.Type, out), upgrades(ctx, h, fam.Type, out), newer)
+	cl, up := changelog(ctx, h, fam.Type, out), upgrades(ctx, h, fam.Type, out)
+	src := sources(pkgs)
+	n := map[string]int{"backported": 0, finding.FixAvailable: 0, finding.FixVendor: 0, finding.FixReboot: 0}
+	// the report is read one vulnerability at a time (hundreds of MB on a large host), and each finding goes to
+	// the scan's sink as soon as it is complete: a host's packages are never held whole
+	var findings []finding.Finding
+	emit := ctx.Sink(h.Name)
+	if emit == nil {
+		emit = func(f *finding.Finding) { findings = append(findings, *f) }
+	}
+	base := check.Base(h, "os_packages")
+	base.Target = "os"
+	var meta osMeta
+	err = trivy.EachFinding(rep, base, &meta.Metadata, func(f *finding.Finding) {
+		setSource(f, src)
+		markKernel(f, running, fam.Type == "rpm")
+		vendor.AnnotateOne(f, cl, up, newer, n)
+		emit(f)
+	})
+	if err != nil {
+		return nil, err
+	}
 	ctx.Log("%s: os_packages: backported %d, in repos %d, waiting for vendor %d, reboot %d", h.Name,
 		n["backported"], n[finding.FixAvailable], n[finding.FixVendor], n[finding.FixReboot])
 
@@ -132,7 +142,7 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 		if m.OS.Name != nil {
 			f.Installed = *m.OS.Name
 		}
-		findings = append(findings, f)
+		emit(&f)
 	}
 	return findings, nil
 }
@@ -140,16 +150,26 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 // SetSources records the source package of each finding whose binary package comes from a source of another name
 // (libssl3 and openssl from openssl, libc6 from glibc), so one update of one source reads as one fix.
 func SetSources(findings []finding.Finding, pkgs []sbom.Package) {
+	src := sources(pkgs)
+	for i := range findings {
+		setSource(&findings[i], src)
+	}
+}
+
+// sources: binary package -> its source package, where the names differ.
+func sources(pkgs []sbom.Package) map[string]string {
 	src := map[string]string{}
 	for _, p := range pkgs {
 		if p.SrcName != "" && p.SrcName != p.Name {
 			src[p.Name] = p.SrcName
 		}
 	}
-	for i := range findings {
-		if s, ok := src[findings[i].Pkg]; ok {
-			findings[i].SrcPkg = s
-		}
+	return src
+}
+
+func setSource(f *finding.Finding, src map[string]string) {
+	if s, ok := src[f.Pkg]; ok {
+		f.SrcPkg = s
 	}
 }
 
@@ -157,24 +177,24 @@ func SetSources(findings []finding.Finding, pkgs []sbom.Package) {
 // booted (not exploitable until someone boots it) — with Pending when it is newer than the running one (rpm: the
 // update is in place, the reboot is not). running = `uname -r`; "" leaves the findings alone.
 func MarkKernels(findings []finding.Finding, running string, rpm bool) {
-	if running == "" {
+	for i := range findings {
+		markKernel(&findings[i], running, rpm)
+	}
+}
+
+func markKernel(f *finding.Finding, running string, rpm bool) {
+	if running == "" || !IsKernel(f.Pkg) {
 		return
 	}
-	for i := range findings {
-		f := &findings[i]
-		if !IsKernel(f.Pkg) {
-			continue
-		}
-		if KernelMatches(f.Pkg, f.Installed, running) {
-			f.Kernel = true
-			continue
-		}
-		f.Inactive = true
-		if rpm && vendor.Vercmp(f.Installed, EVR(running)) > 0 {
-			f.Pending, f.Target = true, TargetPending
-		} else {
-			f.Target = TargetOld
-		}
+	if KernelMatches(f.Pkg, f.Installed, running) {
+		f.Kernel = true
+		return
+	}
+	f.Inactive = true
+	if rpm && vendor.Vercmp(f.Installed, EVR(running)) > 0 {
+		f.Pending, f.Target = true, TargetPending
+	} else {
+		f.Target = TargetOld
 	}
 }
 

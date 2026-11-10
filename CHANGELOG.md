@@ -2,6 +2,13 @@
 
 Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor version may break things; each break is listed under **Breaking** with what to do instead.
 
+## 0.6.0 — 2026-11-10
+
+### Changed
+
+- **Processing a scan's results takes a fraction of the memory**, and no longer grows with the size of the environment: gigabytes before, about a hundred megabytes now.
+- **Large vulnerability reports no longer blow up a scan.**
+
 ## 0.5.1 — 2026-11-09
 
 ### Fixed
