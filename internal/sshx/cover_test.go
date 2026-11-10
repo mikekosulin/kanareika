@@ -203,7 +203,7 @@ func TestBastionStopsForwarding(t *testing.T) {
 	o, err := New(org, p)
 	must(t, err)
 	defer o.Close()
-	_, err = o.Run(ctx, host(org, "web-01"), "true", 5*time.Second, true)
+	_, err = o.Run(ctx, host(org, "web-01"), "true", slowCI, true)
 	if err == nil || !strings.Contains(err.Error(), "web-01: connect to 192.0.2.10:22") || !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("err %v", err)
 	}
@@ -263,7 +263,7 @@ func TestCloseWhileConnecting(t *testing.T) {
 		s.onAuth = func() { inAuth <- struct{}{}; <-release }
 	})
 	res := make(chan error, 1)
-	go func() { _, err := o.Run(ctx, h, "true", 5*time.Second, true); res <- err }()
+	go func() { _, err := o.Run(ctx, h, "true", slowCI, true); res <- err }()
 	<-inAuth
 	closed := make(chan struct{})
 	go func() { o.Close(); close(closed) }()
@@ -323,11 +323,11 @@ func TestKilledBySignal(t *testing.T) {
 		t.Skip("the test sshd kills a sh process: Unix")
 	}
 	_, o, h := setupWith(t)
-	_, err := o.Run(ctx, h, "echo before; kill -9 $$", 5*time.Second, true)
+	_, err := o.Run(ctx, h, "echo before; kill -9 $$", slowCI, true)
 	if err == nil || !strings.HasPrefix(err.Error(), "h1: exit 255") {
 		t.Fatalf("err %v", err)
 	}
-	out, err := o.Run(ctx, h, "echo before; kill -9 $$", 5*time.Second, false)
+	out, err := o.Run(ctx, h, "echo before; kill -9 $$", slowCI, false)
 	if err != nil || out != "before\n" {
 		t.Fatalf("check=false: %q %v", out, err)
 	}
@@ -339,7 +339,7 @@ func (failWriter) Write([]byte) (int, error) { return 0, errors.New("disk full")
 
 func TestStreamWriteError(t *testing.T) {
 	_, o, h := setupWith(t)
-	n, err := o.Stream(ctx, h, "echo data", failWriter{}, 1<<20, 5*time.Second, nil)
+	n, err := o.Stream(ctx, h, "echo data", failWriter{}, 1<<20, slowCI, nil)
 	if err == nil || err.Error() != "h1: write: disk full" || n != 0 {
 		t.Fatalf("%d %v", n, err)
 	}
@@ -363,7 +363,7 @@ func TestLimitWriterStaysFailed(t *testing.T) {
 // TestForgetUnknown: forgetting a connection that is not cached only closes it.
 func TestForgetUnknown(t *testing.T) {
 	_, o, h := setupWith(t)
-	_, err := o.Run(ctx, h, "true", 5*time.Second, true)
+	_, err := o.Run(ctx, h, "true", slowCI, true)
 	must(t, err)
 	o.mu.Lock()
 	c := o.conns["h:h1"].client
@@ -588,3 +588,7 @@ func TestKeepaliveStopsWhileWaiting(t *testing.T) {
 		t.Fatal("keepalive did not stop")
 	}
 }
+
+// slowCI: the most a command of these tests may take: a cap, not a wait (they finish at once). A loaded Windows
+// runner has needed more than 5 s for a connection to the test server.
+const slowCI = 30 * time.Second
