@@ -41,7 +41,7 @@ type PlanRow struct {
 func planRow(host string, g *Group) PlanRow {
 	fixed := sortedVersions(g.Fixed)
 	r := PlanRow{Host: host, Target: g.Target, Pkg: g.Pkg, Installed: g.Installed, FixedN: len(fixed), CVEs: len(g.CVEs),
-		CVETop: topIDs(g.CVEs, 8), Unfixed: g.Unfixed, Priority: g.Priority, Due: g.Due, KEV: g.KEV,
+		CVETop: topIDs(g.CVEs), Unfixed: g.Unfixed, Priority: g.Priority, Due: g.Due, KEV: g.KEV,
 		Inactive: g.Inactive, Kernel: g.Kernel, Module: g.Module, Preauth: g.Preauth, PreauthRCE: g.PreauthRCE,
 		FixState: g.FixState, RepoVersion: g.RepoVersion, Pending: g.Pending}
 	if len(fixed) > 0 {
@@ -477,8 +477,12 @@ func cmpBool(a, b bool) int {
 	return 1
 }
 
-// topIDs: the n greatest ids of set, greatest first (the newest CVEs), without sorting the set.
-func topIDs(set map[string]bool, n int) []string {
+// topN: how many CVE ids an action names (the rest are counted).
+const topN = 8
+
+// topIDs: the topN greatest ids of set, greatest first (the newest CVEs), without sorting the set.
+func topIDs(set map[string]bool) []string {
+	const n = topN
 	top := make([]string, 0, n+1)
 	for id := range set {
 		if len(top) == n && id <= top[n-1] {

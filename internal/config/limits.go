@@ -97,6 +97,9 @@ func SetScanLimits(p Paths, parallel, trivyParallel *int) error {
 		return errors.New("policy/settings.yml: not a mapping")
 	}
 	scan := child(root, "scan")
+	if scan != nil && scan.Kind != yaml.MappingNode {
+		return errors.New("policy/settings.yml: scan is not a mapping")
+	}
 	if scan == nil {
 		scan = &yaml.Node{Kind: yaml.MappingNode}
 		root.Content = append(root.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: "scan",
@@ -121,9 +124,7 @@ func SetScanLimits(p Paths, parallel, trivyParallel *int) error {
 	var out bytes.Buffer
 	enc := yaml.NewEncoder(&out)
 	enc.SetIndent(2)
-	if err := enc.Encode(&doc); err != nil {
-		return err
-	}
+	_ = enc.Encode(&doc) // a node tree decoded from YAML and extended with scalars always encodes
 	if err := os.MkdirAll(p.Policy, 0o755); err != nil {
 		return err
 	}

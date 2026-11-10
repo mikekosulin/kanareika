@@ -40,9 +40,7 @@ func (in Strings) unmarshal(dec *jsontext.Decoder, s *string) error {
 	}
 	b := v[1 : len(v)-1]
 	if bytes.IndexByte(b, '\\') >= 0 || !utf8.Valid(b) {
-		if b, err = jsontext.AppendUnquote(nil, v); err != nil {
-			return err
-		}
+		b, _ = jsontext.AppendUnquote(nil, v) // cannot fail: ReadValue has validated the string
 	}
 	if x, ok := in[string(b)]; ok { // no allocation for a lookup by string(bytes)
 		*s = x

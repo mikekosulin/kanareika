@@ -165,7 +165,7 @@ func (a *viewAcc) flushHost() {
 	a.gorder = nil
 	for j := range a.bpPending {
 		a.bpPending[j].CVEs = len(a.bpIDs[j])
-		a.bpPending[j].IDs = topIDs(a.bpIDs[j], 8)
+		a.bpPending[j].IDs = topIDs(a.bpIDs[j])
 	}
 	a.backported = append(a.backported, a.bpPending...)
 	a.bpPending, a.bpIDs = nil, nil
