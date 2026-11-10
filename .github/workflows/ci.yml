@@ -37,7 +37,8 @@ jobs:
         run: go test -race -count=1 ./...
 
   web:
-    # the page embedded into the binary (assets/web/index.html) is built from web/: it must match its sources
+    # the page embedded into the binary (assets/web/index.html.gz) is built from web/: it must match its sources.
+    # Compared unpacked: another Node's zlib may pack the same page into other bytes.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -50,9 +51,11 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: build
         working-directory: web
-        run: npm ci && npm run build
+        run: |
+          gzip -dc ../assets/web/index.html.gz > "$RUNNER_TEMP/committed.html"
+          npm ci && npm run build
       - name: up to date
-        run: git diff --exit-code assets/web/index.html || { echo "assets/web/index.html is not built from web/: make web"; exit 1; }
+        run: gzip -dc assets/web/index.html.gz | cmp - "$RUNNER_TEMP/committed.html" || { echo "assets/web/index.html.gz is not built from web/: make web"; exit 1; }
 
   windows:
     runs-on: windows-2025

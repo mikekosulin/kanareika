@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -293,8 +294,12 @@ func (f globErrFS) Glob(string) ([]string, error) {
 }
 
 func TestPageAssetErrors(t *testing.T) {
-	page := &fstest.MapFile{Data: []byte("<html>/*I18N_UI*/{}</html>")}
-	web := fstest.MapFS{"index.html": page, "logo.png": {Data: []byte("png")}, "logo.webp": {Data: []byte("webp")}}
+	var gz bytes.Buffer
+	z := gzip.NewWriter(&gz)
+	_, _ = z.Write([]byte("<html>/*I18N_UI*/{}</html>"))
+	_ = z.Close()
+	page := &fstest.MapFile{Data: gz.Bytes()}
+	web := fstest.MapFS{"index.html.gz": page, "favicon.png": {Data: []byte("png")}, "logo.webp": {Data: []byte("webp")}}
 	t.Cleanup(func() { webFS, localesFS = assets.Web, assets.Locales })
 	for _, c := range []struct {
 		name    string
@@ -302,9 +307,10 @@ func TestPageAssetErrors(t *testing.T) {
 		locales fs.FS
 		want    string
 	}{
-		{"no page", fstest.MapFS{"logo.png": web["logo.png"], "logo.webp": web["logo.webp"]}, assets.Locales(), "index.html"},
-		{"no logo", fstest.MapFS{"index.html": page, "logo.webp": web["logo.webp"]}, assets.Locales(), "logo.png"},
-		{"no webp logo", fstest.MapFS{"index.html": page, "logo.png": web["logo.png"]}, assets.Locales(), "logo.webp"},
+		{"no page", fstest.MapFS{"favicon.png": web["favicon.png"], "logo.webp": web["logo.webp"]}, assets.Locales(), "index.html.gz"},
+		{"page not gzipped", fstest.MapFS{"index.html.gz": {Data: []byte("<html>")}, "favicon.png": web["favicon.png"], "logo.webp": web["logo.webp"]}, assets.Locales(), "index.html.gz: "},
+		{"no favicon", fstest.MapFS{"index.html.gz": page, "logo.webp": web["logo.webp"]}, assets.Locales(), "favicon.png"},
+		{"no webp logo", fstest.MapFS{"index.html.gz": page, "favicon.png": web["favicon.png"]}, assets.Locales(), "logo.webp"},
 		{"glob", web, globErrFS{glob: true}, "glob failed"},
 		{"read", web, globErrFS{}, "permission denied"},
 		{"bad json", web, fstest.MapFS{"en.json": {Data: []byte("{")}}, "locales/en.json"},

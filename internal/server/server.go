@@ -12,6 +12,7 @@ package server
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/subtle"
 	"encoding/json"
@@ -69,14 +70,13 @@ type Options struct {
 
 // Server holds the API state: org configs (reloaded by /api/orgs) and the last few views.
 type Server struct {
-	paths  config.Paths
-	prompt PromptFunc
-	log    *log.Logger
-	state  atomic.Pointer[orgState]
-	page   []byte // index.html with the UI strings and the CSRF token filled in
-	logo   []byte // logo.png: the favicon
-	// logoWebP: logo.webp, the page's images (lossless, less than half the PNG)
-	logoWebP []byte
+	paths    config.Paths
+	prompt   PromptFunc
+	log      *log.Logger
+	state    atomic.Pointer[orgState]
+	page     []byte // index.html with the UI strings and the CSRF token filled in
+	favicon  []byte // favicon.png, 64 px
+	logoWebP []byte // logo.webp: the page's images
 	token    string
 	csrf     string
 	jobs     *jobs       // nil: scans disabled
@@ -124,11 +124,11 @@ func New(o Options) (*Server, error) {
 		}
 	}
 	var err error
-	if s.page, err = page("index.html"); err != nil {
+	if s.page, err = page("index.html.gz"); err != nil {
 		return nil, err
 	}
 	s.page = bytes.Replace(s.page, []byte(`/*CSRF*/""`), []byte(`"`+s.csrf+`"`), 1)
-	if s.logo, err = fs.ReadFile(webFS(), "logo.png"); err != nil {
+	if s.favicon, err = fs.ReadFile(webFS(), "favicon.png"); err != nil {
 		return nil, err
 	}
 	if s.logoWebP, err = fs.ReadFile(webFS(), "logo.webp"); err != nil {
@@ -184,10 +184,10 @@ var moved = map[string]string{
 	"/setup/access": "/setup/connect",
 }
 
-// page: index.html with the /*I18N_UI*/{} placeholder replaced by the UI strings of every language, encoded
-// as Python's json.dumps did ("</" escaped so a string cannot close the script tag).
+// page: the built page (gzipped) with the /*I18N_UI*/{} placeholder replaced by the UI strings of every
+// language, encoded as Python's json.dumps did ("</" escaped so a string cannot close the script tag).
 func page(name string) ([]byte, error) {
-	html, err := fs.ReadFile(webFS(), name)
+	html, err := gunzip(webFS(), name)
 	if err != nil {
 		return nil, err
 	}
@@ -199,6 +199,20 @@ func page(name string) ([]byte, error) {
 	names = strings.ReplaceAll(names, "</", `<\/`)
 	html = bytes.ReplaceAll(html, []byte("/*I18N_UI*/{}"), []byte(ui))
 	return bytes.ReplaceAll(html, []byte("/*I18N_NAMES*/{}"), []byte(names)), nil
+}
+
+// gunzip: a gzipped file of fsys, unpacked.
+func gunzip(fsys fs.FS, name string) ([]byte, error) {
+	f, err := fsys.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+	z, err := gzip.NewReader(f)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", name, err)
+	}
+	return io.ReadAll(z)
 }
 
 // uiJSON: {lang: ui} for the locales that have UI strings, in file name order, keys as in the files; and
@@ -240,7 +254,9 @@ func (s *Server) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer, headers, s.errorLog, s.guard, methods)
 	r.NotFound(func(w http.ResponseWriter, _ *http.Request) { send(w, 404, "text/plain", []byte("not found")) })
-	r.Get("/logo.png", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "image/png", s.logo) })
+	favicon := func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "image/png", s.favicon) }
+	r.Get("/favicon.png", favicon)
+	r.Get("/favicon.ico", favicon) // asked for by browsers on their own; PNG in it is understood
 	r.Get("/logo.webp", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "image/webp", s.logoWebP) })
 	index := func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "text/html; charset=utf-8", s.page) }
 	r.Get("/", index)

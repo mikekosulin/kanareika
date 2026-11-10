@@ -1,13 +1,29 @@
-import { defineConfig } from "vite";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { gzipSync } from "node:zlib";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
-// The page is one file, assets/web/index.html, scripts and styles inlined: the Go binary embeds it as before
-// (no Node at run time), and the server fills in its placeholders (window.KANAREIKA).
+const out = "../assets/web";
+
+// gzip: the built page is minified code, not for reading: the binary embeds it compressed (index.html.gz) and
+// the server unpacks it once at start.
+const gzip = (): Plugin => ({
+  name: "kanareika-gzip",
+  apply: "build",
+  closeBundle() {
+    const page = `${out}/index.html`;
+    writeFileSync(page + ".gz", gzipSync(readFileSync(page), { level: 9 }));
+    rmSync(page);
+  },
+});
+
+// The page is one file, scripts and styles inlined: the Go binary embeds it (no Node at run time), and the server
+// fills in its placeholders (window.KANAREIKA).
 export default defineConfig({
-  plugins: [react(), viteSingleFile({ removeViteModuleLoader: true })],
+  plugins: [react(), viteSingleFile({ removeViteModuleLoader: true }), gzip()],
   build: {
-    outDir: "../assets/web",
+    outDir: out,
     emptyOutDir: false, // the logos live there too
     target: "es2022",
     reportCompressedSize: false,

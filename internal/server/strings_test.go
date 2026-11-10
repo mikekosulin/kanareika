@@ -19,7 +19,7 @@ var (
 	notWord = regexp.MustCompile(`^([A-Z0-9/+-]{1,6}|[^A-Za-z]*|Trivy|Kanareika)$`)
 )
 
-// webSources: the page's source files (web/src; the built page, assets/web/index.html, is minified).
+// webSources: the page's source files (web/src; the built page, assets/web/index.html.gz, is minified).
 func webSources(t *testing.T) map[string]string {
 	t.Helper()
 	out := map[string]string{}
@@ -70,7 +70,7 @@ func TestEveryPageStringTranslated(t *testing.T) {
 // TestPageShape: the built page is HTML from its first byte, with the server's placeholders once each, inside
 // the script that hands them to the page; and it is built from the sources (web/: npm run build).
 func TestPageShape(t *testing.T) {
-	b, err := fs.ReadFile(assets.Web(), "index.html")
+	b, err := gunzip(assets.Web(), "index.html.gz")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,30 +87,34 @@ func TestPageShape(t *testing.T) {
 		}
 	}
 	if !strings.Contains(page, `<script type="module"`) || strings.Contains(page, `src="/src/main.tsx"`) {
-		t.Error("assets/web/index.html is not the built page: cd web && npm run build")
+		t.Error("assets/web/index.html.gz is not the built page: make web")
 	}
 }
 
-// TestLogos: the page's images are the lossless WebP (/logo.webp); the favicon stays PNG (/logo.png).
+// TestLogos: the page's images are the lossless WebP (/logo.webp); the favicon is a small PNG (/favicon.png, and
+// /favicon.ico, which browsers ask for on their own).
 func TestLogos(t *testing.T) {
 	_, h := newTest(t, Options{})
-	png, webp := do(h, "GET", "/logo.png", nil, nil), do(h, "GET", "/logo.webp", nil, nil)
-	if png.code != 200 || png.h.Get("Content-Type") != "image/png" || !strings.HasPrefix(png.body, "\x89PNG") {
-		t.Errorf("png: %d %s", png.code, png.h.Get("Content-Type"))
-	}
-	if webp.code != 200 || webp.h.Get("Content-Type") != "image/webp" || webp.body[:4] != "RIFF" || webp.body[8:12] != "WEBP" ||
-		len(webp.body) >= len(png.body) {
-		t.Errorf("webp: %d %s %d bytes", webp.code, webp.h.Get("Content-Type"), len(webp.body))
-	}
-	for _, name := range []string{"index.html"} {
-		b, err := fs.ReadFile(assets.Web(), name)
-		if err != nil {
-			t.Fatal(err)
+	for _, path := range []string{"/favicon.png", "/favicon.ico"} {
+		png := do(h, "GET", path, nil, nil)
+		if png.code != 200 || png.h.Get("Content-Type") != "image/png" || !strings.HasPrefix(png.body, "\x89PNG") || len(png.body) > 8<<10 {
+			t.Errorf("%s: %d %s %d bytes", path, png.code, png.h.Get("Content-Type"), len(png.body))
 		}
-		if strings.Contains(string(b), `src:"/logo.png"`) || !strings.Contains(string(b), `"/logo.webp"`) ||
-			!strings.Contains(string(b), `<link rel="icon" type="image/png" href="/logo.png">`) {
-			t.Errorf("%s: images from logo.webp, the favicon from logo.png", name)
-		}
+	}
+	if r := do(h, "GET", "/logo.png", nil, nil); r.code != 404 {
+		t.Errorf("/logo.png: %d", r.code)
+	}
+	webp := do(h, "GET", "/logo.webp", nil, nil)
+	if webp.code != 200 || webp.h.Get("Content-Type") != "image/webp" || webp.body[:4] != "RIFF" || webp.body[8:12] != "WEBP" {
+		t.Errorf("webp: %d %s", webp.code, webp.h.Get("Content-Type"))
+	}
+	b, err := gunzip(assets.Web(), "index.html.gz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "/logo.png") || !strings.Contains(string(b), `"/logo.webp"`) ||
+		!strings.Contains(string(b), `<link rel="icon" type="image/png" href="/favicon.png">`) {
+		t.Error("the page: images from logo.webp, the icon from favicon.png")
 	}
 }
 

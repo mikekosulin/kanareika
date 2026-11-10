@@ -17,7 +17,7 @@ CI also runs `gofmt` and `go test -race`; run `gofmt -l cmd internal assets tool
 
 ## Web page
 
-The dashboard is a React app in `web/` (TypeScript, Vite). It is built into one file, `assets/web/index.html`, scripts and styles inlined, which the binary embeds: users need nothing but the binary, and `go build` needs no Node. Change the sources, then rebuild and commit both (CI checks that they match):
+The dashboard is a React app in `web/` (TypeScript, Vite). It is built into one gzipped file, `assets/web/index.html.gz`, scripts and styles inlined, which the binary embeds: users need nothing but the binary, and `go build` needs no Node. Change the sources, then rebuild and commit both (CI checks that they match):
 
 ```bash
 make web                       # npm ci && npm run build in web/

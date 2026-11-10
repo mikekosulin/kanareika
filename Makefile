@@ -4,7 +4,7 @@
 #   make cover   — tests with coverage, per function (dist/coverage.html)
 #   make lint    — golangci-lint
 #   make check   — test + lint
-#   make web     — the web page, assets/web/index.html, from web/ (needs Node; the binary does not)
+#   make web     — the web page, assets/web/index.html.gz, from web/ (needs Node; the binary does not)
 #   make cross   — release binaries for every platform into dist/
 #   make clean
 
