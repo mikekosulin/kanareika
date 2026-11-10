@@ -1072,6 +1072,19 @@
     "Failed logins by day": "Échecs de connexion par jour",
     "sshd settings": "réglages de sshd",
     "users with a shell": "utilisateurs avec un shell",
-    "last sessions ({n})": "dernières sessions ({n})"
+    "last sessions ({n})": "dernières sessions ({n})",
+    "login users": "utilisateurs avec connexion",
+    "root accounts": "comptes UID 0",
+    "login period": "période du journal",
+    "unknown user names": "noms inexistants",
+    "usernames tried": "noms essayés",
+    "kernel log": "journal du noyau",
+    "owner": "responsable",
+    "review by": "à revoir avant",
+    "Sessions": "Sessions",
+    "Kernel log": "Journal du noyau",
+    "All packages": "Tous les paquets",
+    "Authorized keys": "Clés autorisées",
+    "Firewall rules": "Règles du pare-feu"
   }
 }

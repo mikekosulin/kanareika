@@ -1072,6 +1072,19 @@
     "Failed logins by day": "日別のログイン失敗",
     "sshd settings": "sshd の設定",
     "users with a shell": "シェルを持つユーザー",
-    "last sessions ({n})": "最近のセッション（{n}）"
+    "last sessions ({n})": "最近のセッション（{n}）",
+    "login users": "ログイン可能なユーザー",
+    "root accounts": "UID 0 のアカウント",
+    "login period": "ログの期間",
+    "unknown user names": "存在しないユーザー名",
+    "usernames tried": "試されたユーザー名",
+    "kernel log": "カーネルログ",
+    "owner": "担当者",
+    "review by": "見直し期限",
+    "Sessions": "セッション",
+    "Kernel log": "カーネルログ",
+    "All packages": "すべてのパッケージ",
+    "Authorized keys": "許可された鍵",
+    "Firewall rules": "ファイアウォールのルール"
   }
 }

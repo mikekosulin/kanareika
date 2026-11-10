@@ -1072,6 +1072,19 @@
     "Failed logins by day": "每日登录失败",
     "sshd settings": "sshd 设置",
     "users with a shell": "有 shell 的用户",
-    "last sessions ({n})": "最近的会话（{n}）"
+    "last sessions ({n})": "最近的会话（{n}）",
+    "login users": "可登录用户",
+    "root accounts": "UID 0 账户",
+    "login period": "日志时段",
+    "unknown user names": "不存在的用户名",
+    "usernames tried": "尝试的用户名",
+    "kernel log": "内核日志",
+    "owner": "负责人",
+    "review by": "复查期限",
+    "Sessions": "会话",
+    "Kernel log": "内核日志",
+    "All packages": "全部软件包",
+    "Authorized keys": "授权密钥",
+    "Firewall rules": "防火墙规则"
   }
 }

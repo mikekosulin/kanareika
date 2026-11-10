@@ -254,6 +254,9 @@ func (m *Model) sync() tea.Cmd {
 		if c := m.fetchLens(); c != nil {
 			return c
 		}
+		if c := m.fetchFirewall(); c != nil {
+			return c
+		}
 	}
 	if m.setup != nil {
 		if c := tea.Batch(m.fetchDBSize(), m.fetchFound()); c != nil {

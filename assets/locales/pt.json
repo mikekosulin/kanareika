@@ -1072,6 +1072,19 @@
     "Failed logins by day": "Acessos falhos por dia",
     "sshd settings": "ajustes do sshd",
     "users with a shell": "usuários com shell",
-    "last sessions ({n})": "últimas sessões ({n})"
+    "last sessions ({n})": "últimas sessões ({n})",
+    "login users": "usuários com login",
+    "root accounts": "contas com UID 0",
+    "login period": "período do registro",
+    "unknown user names": "nomes inexistentes",
+    "usernames tried": "nomes tentados",
+    "kernel log": "registro do kernel",
+    "owner": "responsável",
+    "review by": "revisar até",
+    "Sessions": "Sessões",
+    "Kernel log": "Registro do kernel",
+    "All packages": "Todos os pacotes",
+    "Authorized keys": "Chaves autorizadas",
+    "Firewall rules": "Regras do firewall"
   }
 }

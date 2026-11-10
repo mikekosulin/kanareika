@@ -1072,6 +1072,19 @@
     "Failed logins by day": "Неудачные входы по дням",
     "sshd settings": "настройки sshd",
     "users with a shell": "пользователи с оболочкой",
-    "last sessions ({n})": "последние сеансы ({n})"
+    "last sessions ({n})": "последние сеансы ({n})",
+    "login users": "пользователи со входом",
+    "root accounts": "учётки с UID 0",
+    "login period": "период логов",
+    "unknown user names": "несуществующие имена",
+    "usernames tried": "подбирали имена",
+    "kernel log": "журнал ядра",
+    "owner": "ответственный",
+    "review by": "пересмотреть до",
+    "Sessions": "Сеансы",
+    "Kernel log": "Журнал ядра",
+    "All packages": "Все пакеты",
+    "Authorized keys": "Ключи доступа",
+    "Firewall rules": "Правила файрвола"
   }
 }
