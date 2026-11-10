@@ -431,23 +431,20 @@ func exists(path string) bool { _, err := os.Stat(path); return err == nil }
 // has them (and fix_since of the oldest that had an installable fix), so upgrading does not restart every clock.
 //
 // It reads one host at a time, when asked about a finding of another host than the last: give it the findings
-// host by host (as a scan does) and it holds one host's clocks.
+// host by host and it holds one host's clocks (HostPrev: one host's, for hosts scanned in parallel).
 func PrevIndex(env string) (func(*finding.Finding) *finding.Finding, error) {
 	cur := filepath.Join(env, Current)
 	host := "\x00"
-	var idx map[uint64]*clockOf
-	var ferr error
+	var idx *clocks
 	return func(f *finding.Finding) *finding.Finding {
 		if h := FileHost(f); h != host {
 			host = h
-			if idx, ferr = hostClocks(env, cur, h); ferr != nil {
+			var err error
+			if idx, err = hostClocks(env, cur, h); err != nil {
 				idx = nil
 			}
 		}
-		if c := idx[keyHash(f)]; c != nil {
-			return c.finding()
-		}
-		return nil
+		return idx.get(keyHash(f))
 	}, nil
 }
 
@@ -458,36 +455,140 @@ func HostPrev(env, host string) (func(*finding.Finding) *finding.Finding, error)
 	if err != nil {
 		return nil, err
 	}
-	return func(f *finding.Finding) *finding.Finding {
-		if c := idx[keyHash(f)]; c != nil {
-			return c.finding()
-		}
-		return nil
-	}, nil
+	return func(f *finding.Finding) *finding.Finding { return idx.get(keyHash(f)) }, nil
 }
 
-// clockOf: what the due date's clock takes from a finding of the previous state.
+// clocks: what the due date's clock takes from each finding of a host's previous state, by keyHash. A host has
+// up to a few hundred thousand findings: dates are kept as day numbers, priority and reason as small codes (about
+// 40 bytes a finding, nothing pointing into the file's strings); what does not fit the codes is kept as it is.
+type clocks struct {
+	m   map[uint64]clock
+	odd map[uint64]*clockOf
+}
+
+type clock struct {
+	first, fix, start, due int32 // days since 1970 + 1; 0: none
+	prio, why              uint8 // index+1 in Prios / dueWhys; 0: none
+	accepted               bool
+}
+
+// clockOf: a clock as the strings it was read from.
 type clockOf struct {
 	firstSeen, fixSince, clockStart, dueWhy string
 	priority, due                           *string
 	accepted                                bool
 }
 
-func (c *clockOf) finding() *finding.Finding {
-	return &finding.Finding{FirstSeen: c.firstSeen, FixSince: c.fixSince, ClockStart: c.clockStart, DueWhy: c.dueWhy,
-		Priority: c.priority, Due: c.due, Accepted: c.accepted}
+var dueWhys = []string{finding.DueFirstSeen, finding.DueFixSince, finding.DuePublished, finding.DueScan,
+	finding.DueEscalated, finding.DueAfterExcept, finding.DueKEV, finding.DueNoFix}
+
+var epoch = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+
+// dayOf: a date as a day number (0: ""); ok=false when it is not a plain date.
+func dayOf(s string) (int32, bool) {
+	if s == "" {
+		return 0, true
+	}
+	t, err := time.Parse(time.DateOnly, s)
+	if err != nil || t.Format(time.DateOnly) != s {
+		return 0, false
+	}
+	d := int32(t.Sub(epoch)/(24*time.Hour)) + 1
+	return d, d > 0 // before 1970: kept as it is
+}
+
+func dayString(d int32) string {
+	if d == 0 {
+		return ""
+	}
+	return epoch.AddDate(0, 0, int(d-1)).Format(time.DateOnly)
+}
+
+func codeOf(s *string, list []string) (uint8, bool) {
+	if s == nil {
+		return 0, true
+	}
+	i := slices.Index(list, *s)
+	return uint8(i + 1), i >= 0
+}
+
+func (c *clocks) put(h uint64, o *clockOf) {
+	var k clock
+	ok := true
+	set := func(d *int32, s string) {
+		v, good := dayOf(s)
+		*d, ok = v, ok && good
+	}
+	set(&k.first, o.firstSeen)
+	set(&k.fix, o.fixSince)
+	set(&k.start, o.clockStart)
+	if o.due != nil {
+		if k.due, ok = dayOf(*o.due); k.due == 0 { // a due date of "" is not a plain date: kept as it is
+			ok = false
+		}
+	}
+	p, pok := codeOf(o.priority, Prios)
+	var why uint8
+	wok := true
+	if o.dueWhy != "" {
+		why, wok = codeOf(&o.dueWhy, dueWhys)
+	}
+	k.prio, k.why, k.accepted = p, why, o.accepted
+	if ok && pok && wok {
+		c.m[h] = k
+		delete(c.odd, h)
+		return
+	}
+	delete(c.m, h)
+	c.odd[h] = o
+}
+
+func (c *clocks) lookup(h uint64) (*clockOf, bool) {
+	if c == nil {
+		return nil, false
+	}
+	if o := c.odd[h]; o != nil {
+		return o, true
+	}
+	k, ok := c.m[h]
+	if !ok {
+		return nil, false
+	}
+	o := &clockOf{firstSeen: dayString(k.first), fixSince: dayString(k.fix), clockStart: dayString(k.start),
+		accepted: k.accepted}
+	if k.due != 0 {
+		d := dayString(k.due)
+		o.due = &d
+	}
+	if k.prio != 0 {
+		o.priority = &Prios[k.prio-1]
+	}
+	if k.why != 0 {
+		o.dueWhy = dueWhys[k.why-1]
+	}
+	return o, true
+}
+
+// get: the previous state's finding with the key hash h (only its clock fields), nil when there is none.
+func (c *clocks) get(h uint64) *finding.Finding {
+	o, ok := c.lookup(h)
+	if !ok {
+		return nil
+	}
+	return &finding.Finding{FirstSeen: o.firstSeen, FixSince: o.fixSince, ClockStart: o.clockStart, DueWhy: o.dueWhy,
+		Priority: o.priority, Due: o.due, Accepted: o.accepted}
 }
 
 // hostClocks: the clocks of one host's findings in current/.
-func hostClocks(env, cur, host string) (map[uint64]*clockOf, error) {
-	idx := map[uint64]*clockOf{} // by keyHash: a host's keys are kept as 8 bytes each
+func hostClocks(env, cur, host string) (*clocks, error) {
+	idx := &clocks{m: map[uint64]clock{}, odd: map[uint64]*clockOf{}}
 	missing := 0
 	err := eachHostFinding(cur, host, func(f *finding.Finding) {
 		if f.FirstSeen == "" {
 			missing++
 		}
-		idx[keyHash(f)] = &clockOf{firstSeen: f.FirstSeen, fixSince: f.FixSince, clockStart: f.ClockStart, dueWhy: f.DueWhy,
-			priority: f.Priority, due: f.Due, accepted: f.Accepted}
+		idx.put(keyHash(f), &clockOf{firstSeen: f.FirstSeen, fixSince: f.FixSince, clockStart: f.ClockStart,
+			dueWhy: f.DueWhy, priority: f.Priority, due: f.Due, accepted: f.Accepted})
 	})
 	if err != nil || missing == 0 {
 		return idx, err
@@ -500,17 +601,22 @@ func hostClocks(env, cur, host string) (map[uint64]*clockOf, error) {
 		day = day[:10]
 		// a damaged old run: the clock starts later, nothing else depends on it
 		_ = eachHostFinding(run, host, func(rf *finding.Finding) {
-			c := idx[keyHash(rf)]
-			if c == nil {
+			h := keyHash(rf)
+			c, ok := idx.lookup(h)
+			if !ok {
 				return
 			}
+			changed := false
 			if c.firstSeen == "" || day < c.firstSeen {
-				c.firstSeen = day
+				c.firstSeen, changed = day, true
 			}
 			installable := rf.FixState == finding.FixAvailable || rf.FixState == finding.FixReboot ||
 				(rf.FixState == "" && rf.Fixed != "")
 			if installable && (c.fixSince == "" || day < c.fixSince) {
-				c.fixSince = day
+				c.fixSince, changed = day, true
+			}
+			if changed {
+				idx.put(h, c)
 			}
 		})
 	}

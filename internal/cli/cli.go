@@ -90,15 +90,12 @@ directory, or KANAREIKA_HOME, or --home.`,
 			}
 			a.paths = config.PathsAt(abs)
 			reports := a.paths.Reports
-			// the findings just written, into the database the interfaces read (a failure costs only time: they
-			// import the files on first read)
+			// current/'s findings, into the database the interfaces read, after a scan (a failure costs only
+			// time: they import the files on first read; a run's own files are imported when first looked at)
 			dbErr := func(err error) {
 				if err != nil {
 					fmt.Fprintf(stderr, "kanareika: findings database: %v\n", err)
 				}
-			}
-			report.OnHost = func(dir, host string) {
-				dbErr(store.SyncHost(context.Background(), reports, dir, host))
 			}
 			report.OnCurrent = func(dir string, _ []string) { // current/'s files linked from a run: copied in SQL
 				dbErr(store.Sync(context.Background(), reports, dir))

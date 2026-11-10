@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"slices"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -90,38 +89,6 @@ func Sync(ctx context.Context, reports, dir string) error {
 	defer func() { _ = db.Close() }() // read-only use, or committed already
 	_, err = db.sync(ctx, dir)
 	return err
-}
-
-// SyncHost imports host's findings file in dir unless the database holds it as it is: call it right after
-// writing the file. It is read one finding at a time.
-func SyncHost(ctx context.Context, reports, dir, host string) error {
-	hfs, err := report.HostFiles(dir)
-	if err != nil {
-		return err
-	}
-	i := slices.IndexFunc(hfs, func(hf report.HostFile) bool { return hf.Host == host })
-	if i < 0 {
-		return nil // not what dir holds (an older run's single file is there): nothing to keep in step with
-	}
-	mtime, size, ok := stat(hfs[i].Path)
-	if !ok {
-		return nil
-	}
-	db, err := Open(ctx, reports)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = db.Close() }() // committed already
-	have, err := db.datasets(ctx, dir)
-	if err != nil {
-		return err
-	}
-	if !fresh(have[host], mtime, size) {
-		if err := db.copyOrImport(ctx, &Dataset{Dir: dir, Host: host, Mtime: mtime, Size: size}, hfs[i].Path); err != nil {
-			return err
-		}
-	}
-	return db.touch(ctx, dir)
 }
 
 // sync brings dir's datasets in step with its findings files and returns them, in the files' order.

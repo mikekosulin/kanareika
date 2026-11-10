@@ -192,7 +192,7 @@ func (w *findingsWriter) Abort() {
 	os.Remove(w.tmp.Name())
 }
 
-// WriteHostFindings writes the findings of one host of dir (a run or current/) and tells OnHost.
+// WriteHostFindings writes the findings of one host of dir (a run or current/).
 func WriteHostFindings(dir, host string, findings []finding.Finding) error {
 	w, err := newFindingsWriter(hostFindingsPath(dir, host))
 	if err != nil {
@@ -206,9 +206,6 @@ func WriteHostFindings(dir, host string, findings []finding.Finding) error {
 	}
 	if err := w.Commit(); err != nil {
 		return err
-	}
-	if OnHost != nil {
-		OnHost(dir, host)
 	}
 	return nil
 }
@@ -249,13 +246,10 @@ func (h *HostWriter) Add(f *finding.Finding) error { return h.w.Add(f) }
 // Len: the findings added so far.
 func (h *HostWriter) Len() int { return h.w.n }
 
-// Commit puts the file in place and tells OnHost (without the findings: they were never held; the file has them).
+// Commit puts the file in place.
 func (h *HostWriter) Commit() error {
 	if err := h.w.Commit(); err != nil {
 		return err
-	}
-	if OnHost != nil {
-		OnHost(h.dir, h.host)
 	}
 	return nil
 }

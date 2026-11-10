@@ -2,8 +2,8 @@
 // without parsing the findings files (over a gigabyte of JSON on a large environment) on every start.
 //
 // The report files stay the source of truth. Each findings file (one per host: report.HostFiles) is a dataset,
-// imported when it is written (report.OnHost), when current/ takes it from a run (report.OnCurrent: a hard link
-// is copied row by row, not decoded) or when first read, and imported again when it changes, when the import code
+// imported when current/ takes it after a scan (report.OnCurrent: a run's file linked there and already held is
+// copied in SQL, not decoded) or when first read, and imported again when it changes, when the import code
 // changes (Version) or when the database is missing. Deleting kanareika.db loses nothing.
 //
 // The database is opened for each operation and closed after it: no file stays open between requests (Windows can

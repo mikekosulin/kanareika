@@ -150,7 +150,7 @@ func TestHostFiles(t *testing.T) {
 	if d, err = Load(ctx, reports, cur); err != nil || !reflect.DeepEqual(must(d.Findings()), want) {
 		t.Fatalf("current: %v %+v", err, d)
 	}
-	// a host scanned again: SyncHost keeps it in step, the other host's rows stay
+	// a host scanned again: Sync takes only it again, the other host's rows stay
 	one := sample()[1:2]
 	one[0].Installed = "3.0.3"
 	if err := os.Remove(filepath.Join(cur, "hosts", "web-02", "findings.json.gz")); err != nil {
@@ -159,7 +159,7 @@ func TestHostFiles(t *testing.T) {
 	if err := report.WriteHostFindings(cur, "web-02", one); err != nil {
 		t.Fatal(err)
 	}
-	if err := SyncHost(ctx, reports, cur, "web-02"); err != nil {
+	if err := Sync(ctx, reports, cur); err != nil {
 		t.Fatal(err)
 	}
 	if d, err = Load(ctx, reports, cur); err != nil || d.Len() != 4 || d.Items[3].Installed != "3.0.3" {
@@ -232,7 +232,7 @@ func TestNoFindingsFile(t *testing.T) {
 	if err != nil || d.Len() != 0 {
 		t.Fatalf("%v %+v", err, d)
 	}
-	if err := SyncHost(ctx, reports, dir, "web-01"); err != nil {
+	if err := Sync(ctx, reports, dir); err != nil {
 		t.Fatal(err)
 	}
 }
