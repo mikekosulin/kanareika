@@ -30,8 +30,14 @@ type treeInput struct {
 	view  *report.View
 
 	mu    sync.Mutex
-	built map[string]*tree.Tree // trees of this input by grouping, filters, query and inventory: a node's details,
+	built map[string]*building // trees of this input by grouping, filters, query and inventory: a node's details,
 	// its kids or a switch back to a grouping don't build it again
+}
+
+// building: a tree being built or built; whoever asks for it meanwhile waits for the same build.
+type building struct {
+	done chan struct{}
+	t    *tree.Tree
 }
 
 // Runs kept in memory: the ones looked at last, while they hold keepFindings findings together (a large
@@ -69,20 +75,40 @@ func (s *Server) treeInput(q query) (*treeInput, error) {
 		s.trees = slices.DeleteFunc(s.trees, func(c *treeInput) bool { return c.dir == dir })
 		s.trees = append([]*treeInput{in}, s.trees...)
 		s.trees = trim(s.trees)
-		go s.loadInput(in, b) // requests asking meanwhile wait for the same load
+		go s.loadInput(in, b, q, today()) // requests asking meanwhile wait for the same load
 	}
 	s.mu.Unlock()
 	<-in.ready
 	return in, in.err
 }
 
-func (s *Server) loadInput(in *treeInput, view []byte) {
+func (s *Server) loadInput(in *treeInput, view []byte, q query, day string) {
 	in.err = in.load(s.paths.Reports, view)
 	close(in.ready)
 	s.mu.Lock()
 	s.trees = trim(s.trees) // now that its size is known
 	s.mu.Unlock()
 	debug.FreeOSMemory() // what reading it took goes back to the system now
+	if in.err == nil {
+		s.prebuild(q, in, day)
+	}
+}
+
+// prebuild: the groupings the page switches between, without filters, built while nobody waits for them: the first
+// switch to fix, CVE or server finds its tree ready. The one asked for first is among them and already building.
+func (s *Server) prebuild(q query, in *treeInput, day string) {
+	for _, by := range []string{tree.ByFix, tree.ByCVE, tree.ByHost} {
+		for _, all := range []string{"", "1"} {
+			if all == "1" && by != tree.ByHost {
+				continue
+			}
+			p := query{"org": {q.get("org")}, "env": {q.get("env")}, "by": {by}, "all": {all}}
+			if _, err := s.buildOpts(p, in, tree.Opts{By: by, Today: day}); err != nil {
+				return
+			}
+		}
+	}
+	debug.FreeOSMemory()
 }
 
 func (in *treeInput) load(reports string, view []byte) error {
@@ -133,7 +159,10 @@ func treeOpts(q query) tree.Opts {
 // build: the tree of the query's grouping and filters, its levels made when asked for. ?all=1 with by=host: every
 // host of the env (the server view), from the org file too, which is part of the key.
 func (s *Server) build(q query, in *treeInput) (*tree.Tree, error) {
-	o := treeOpts(q)
+	return s.buildOpts(q, in, treeOpts(q))
+}
+
+func (s *Server) buildOpts(q query, in *treeInput, o tree.Opts) (*tree.Tree, error) {
 	if q.get("all") == "1" && o.By == tree.ByHost {
 		org, env, err := s.orgEnv(q)
 		if err != nil {
@@ -150,19 +179,23 @@ func (in *treeInput) tree(o tree.Opts) *tree.Tree {
 	key := strings.Join([]string{o.By, strings.Join(o.Filters, ","), o.Query, strconv.FormatBool(o.Backported), o.Today,
 		strconv.FormatBool(o.All), string(inv)}, "\x00")
 	in.mu.Lock()
-	t := in.built[key]
-	in.mu.Unlock()
-	if t != nil {
-		return t
+	b := in.built[key]
+	if b == nil {
+		if in.built == nil || len(in.built) >= keepTrees {
+			in.built = map[string]*building{}
+		}
+		b = &building{done: make(chan struct{})}
+		in.built[key] = b
+		in.mu.Unlock()
+		func() {
+			defer close(b.done) // a panic too must not leave the others waiting
+			b.t = tree.BuildSet(in.set, tree.Hosts(in.view.Facts), o)
+		}()
+		return b.t
 	}
-	t = tree.BuildSet(in.set, tree.Hosts(in.view.Facts), o)
-	in.mu.Lock()
-	if in.built == nil || len(in.built) >= keepTrees {
-		in.built = map[string]*tree.Tree{}
-	}
-	in.built[key] = t
 	in.mu.Unlock()
-	return t
+	<-b.done
+	return b.t
 }
 
 // apiTree: the env's findings as a tree (?by=fix|cve|host, ?f=kev,rce,epss,front,ready,nofix,overdue, ?q=,
