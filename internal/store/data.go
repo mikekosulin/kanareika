@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -53,7 +54,8 @@ func Load(ctx context.Context, reports, dir string) (*fset.Set, error) {
 	return b.Set(), nil
 }
 
-// descriptions: the CVE descriptions refs name (dataset << 32 | index); a dataset dropped since gives none.
+// descriptions: the CVE descriptions refs name (dataset << 32 | index); a dataset dropped since gives none. One
+// query per dataset (a node's details ask for a few dozen).
 func descriptions(reports string, refs []int64) (map[int64]string, error) {
 	ctx := context.Background()
 	db, err := Open(ctx, reports)
@@ -61,19 +63,24 @@ func descriptions(reports string, refs []int64) (map[int64]string, error) {
 		return nil, err
 	}
 	defer func() { _ = db.Close() }() // read-only
-	q, err := db.PrepareContext(ctx, "SELECT text FROM descs WHERE dataset_id = ? AND idx = ?")
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = q.Close() }()
-	out := map[int64]string{}
+	byDS := map[int64][]int64{}
 	for _, r := range refs {
-		var t string
-		switch err := q.QueryRowContext(ctx, r>>32, r&(1<<32-1)).Scan(&t); {
-		case err == nil:
-			out[r] = t
-		case !errors.Is(err, sql.ErrNoRows):
-			return nil, err
+		byDS[r>>32] = append(byDS[r>>32], r&(1<<32-1))
+	}
+	out := map[int64]string{}
+	for ds, idx := range byDS {
+		for part := range slices.Chunk(idx, 500) { // well under SQLite's limit of variables
+			var rows []struct {
+				Idx  int64
+				Text string
+			}
+			if err := db.NewSelect().Table("descs").Column("idx", "text").Where("dataset_id = ?", ds).
+				Where("idx IN (?)", bun.List(part)).Scan(ctx, &rows); err != nil {
+				return nil, err
+			}
+			for _, r := range rows {
+				out[ds<<32|r.Idx] = r.Text
+			}
 		}
 	}
 	return out, nil
@@ -91,9 +98,12 @@ func Sync(ctx context.Context, reports, dir string) error {
 	return err
 }
 
+// hostFiles is report.HostFiles; a test lists a file that is gone by the time it is read.
+var hostFiles = report.HostFiles
+
 // sync brings dir's datasets in step with its findings files and returns them, in the files' order.
 func (db *DB) sync(ctx context.Context, dir string) ([]*Dataset, error) {
-	hfs, err := report.HostFiles(dir)
+	hfs, err := hostFiles(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -141,19 +151,17 @@ func (db *DB) copyOrImport(ctx context.Context, ds *Dataset, path string) error 
 	case !errors.Is(err, sql.ErrNoRows):
 		return err
 	}
+	// a finding read from JSON always encodes: Add's error and Encode's (a fetch of descriptions left out, which
+	// a set built here has none of) come together with the file's
 	b := fset.NewBuilder()
 	var aerr error
-	if err := report.EachFindingIn(path, func(f *finding.Finding) {
-		if aerr == nil {
-			aerr = b.Add(f)
-		}
-	}); err != nil {
+	err = report.EachFindingIn(path, func(f *finding.Finding) { aerr = errors.Join(aerr, b.Add(f)) })
+	s := b.Set()
+	parts, items, descs, eerr := s.Encode()
+	if err := errors.Join(err, aerr, eerr); err != nil {
 		return err
 	}
-	if aerr != nil {
-		return aerr
-	}
-	return db.put(ctx, ds, b.Set())
+	return db.put(ctx, ds, parts, items, descs, s.Len())
 }
 
 // copyFrom stores src's pack as ds.
@@ -177,18 +185,14 @@ func (db *DB) copyFrom(ctx context.Context, ds, src *Dataset) error {
 	return tx.Commit()
 }
 
-// put stores s as ds (Dir, Host, Mtime, Size), replacing what was there.
-func (db *DB) put(ctx context.Context, ds *Dataset, s *fset.Set) error {
-	parts, items, descs, err := s.Encode()
-	if err != nil {
-		return err
-	}
+// put stores an encoded set of n findings as ds (Dir, Host, Mtime, Size), replacing what was there.
+func (db *DB) put(ctx context.Context, ds *Dataset, parts, items []byte, descs []string, n int) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
-	if err := replace(ctx, tx, ds, s.Len()); err != nil {
+	if err := replace(ctx, tx, ds, n); err != nil {
 		return err
 	}
 	if _, err := tx.NewInsert().Model(&Pack{DatasetID: ds.ID, Parts: parts, Items: items}).Exec(ctx); err != nil {

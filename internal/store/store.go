@@ -57,6 +57,9 @@ type DB struct {
 	*bun.DB
 }
 
+// testHook: tests see (and fail) the queries of every database opened.
+var testHook bun.QueryHook
+
 // Path: the database of a reports directory.
 func Path(reports string) string { return filepath.Join(reports, File) }
 
@@ -98,12 +101,13 @@ func open(ctx context.Context, reports string) (*DB, error) {
 	dsn := "file:" + filepath.ToSlash(Path(reports)) +
 		"?_pragma=busy_timeout(30000)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=foreign_keys(1)" +
 		"&_txlock=immediate"
-	sqldb, err := sql.Open("sqlite", dsn)
-	if err != nil {
-		return nil, err
+	sqldb, _ := sql.Open("sqlite", dsn) // fails only for a driver not registered; this one is, by the import above
+	sqldb.SetMaxOpenConns(1)            // one connection: pragmas hold, and SQLite writes one at a time anyway
+	bdb := bun.NewDB(sqldb, sqlitedialect.New())
+	if testHook != nil {
+		bdb = bdb.WithQueryHook(testHook)
 	}
-	sqldb.SetMaxOpenConns(1) // one connection: pragmas hold, and SQLite writes one at a time anyway
-	db := &DB{bun.NewDB(sqldb, sqlitedialect.New())}
+	db := &DB{bdb}
 	if err := db.migrate(ctx); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("%s: %w", Path(reports), err)
