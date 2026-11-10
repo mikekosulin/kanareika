@@ -64,7 +64,8 @@ jobs:
           gzip -dc ../assets/web/index.html.gz > "$RUNNER_TEMP/committed.html"
           pnpm run build
       - name: up to date
-        run: gzip -dc assets/web/index.html.gz | cmp - "$RUNNER_TEMP/committed.html" || { echo "assets/web/index.html.gz is not built from web/: make web"; exit 1; }
+        run: |
+          gzip -dc assets/web/index.html.gz | cmp - "$RUNNER_TEMP/committed.html" || { echo "assets/web/index.html.gz is not built from web/: make web"; exit 1; }
 
   windows:
     runs-on: windows-2025
