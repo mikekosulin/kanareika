@@ -4018,7 +4018,10 @@ code.to,
   position: sticky;
   top: 0;
   z-index: 3;
-  height: 32px;
+  min-height: 32px; /* a heading longer than its column takes two lines */
+  padding-top: 4px;
+  padding-bottom: 4px;
+  line-height: 1.25;
   font-size: 11.5px;
   color: var(--ink-3);
   text-transform: uppercase;
@@ -4035,9 +4038,7 @@ code.to,
   letter-spacing: inherit;
   text-transform: inherit;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-align: inherit;
 }
 .vhead button:hover,
 .vhead button[aria-sort] {
@@ -4062,6 +4063,9 @@ code.to,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.vhead > span {
+  white-space: normal; /* a heading wraps at its spaces to a second line instead of losing its end */
 }
 .vrow .r,
 .vhead .r {
