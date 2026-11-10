@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -64,21 +65,53 @@ var testHook bun.QueryHook
 func Path(reports string) string { return filepath.Join(reports, File) }
 
 // Open opens (creating it if needed) the database of a reports directory and brings its schema up to date. A
-// database it can't read (a development build's schema) is deleted and made again: it only caches the files.
+// database it can't read (a development build's schema) is deleted and made again: it only caches the files. One
+// busy with another process (a scan and a dashboard opening a new database at once) is waited for, never deleted.
 func Open(ctx context.Context, reports string) (*DB, error) {
-	db, err := open(ctx, reports)
+	db, err := openWaiting(ctx, reports)
 	if err == nil {
 		if err = db.check(ctx); err == nil {
 			return db, nil
 		}
 		_ = db.Close()
 	}
+	if busy(err) || ctx.Err() != nil {
+		return nil, err
+	}
 	for _, sfx := range []string{"", "-wal", "-shm"} {
 		if rerr := os.Remove(Path(reports) + sfx); rerr != nil && !errors.Is(rerr, os.ErrNotExist) {
 			return nil, err
 		}
 	}
-	return open(ctx, reports)
+	return openWaiting(ctx, reports)
+}
+
+// busyWait: how long Open waits for a database another process holds (SQLite's own busy timeout does not cover
+// every step of making a new one, switching it to WAL among them).
+const busyWait = 30 * time.Second
+
+// openWaiting is open, tried again while the database is busy, up to busyWait.
+func openWaiting(ctx context.Context, reports string) (*DB, error) {
+	deadline := time.Now().Add(busyWait)
+	for wait := 10 * time.Millisecond; ; wait = min(2*wait, 500*time.Millisecond) {
+		db, err := openOnce(ctx, reports)
+		if !busy(err) || time.Now().After(deadline) {
+			return db, err
+		}
+		select {
+		case <-ctx.Done():
+			return nil, err
+		case <-time.After(wait):
+		}
+	}
+}
+
+// openOnce is open; a test makes it busy.
+var openOnce = open
+
+// busy: whether err is SQLite's "database is locked" (another connection holds the write lock).
+func busy(err error) bool {
+	return err != nil && (strings.Contains(err.Error(), "SQLITE_BUSY") || strings.Contains(err.Error(), "database is locked"))
 }
 
 // check: whether the tables read as this version expects.
