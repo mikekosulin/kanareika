@@ -4,11 +4,14 @@
 package ospkg
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -31,6 +34,11 @@ var (
 	buildBOM   = sbom.BuildCycloneDX
 	marshalBOM = pyfmt.MarshalLine
 )
+
+// partSize: the most packages one trivy run matches. trivy holds a run's whole report in memory, and one kernel build
+// alone brings thousands of CVEs (gigabytes for a host with three kernels installed), so each kernel build gets a run
+// of its own and the other packages go in runs of up to partSize; 0 = one run for the whole host.
+var partSize = 500
 
 // Target texts of kernel findings, as the Python version wrote them (the report layer groups by them).
 const (
@@ -57,7 +65,8 @@ func orNone(s *string) string {
 	return *s
 }
 
-// Run is the module. Files in out: packages.txt (raw query output), sbom.cdx.json, trivy-os.json.gz,
+// Run is the module. Files in out: packages.txt (raw query output), sbom.cdx.json, trivy-os.json.gz (trivy-os-NN.json.gz
+// when the host is matched in several runs, see partSize),
 // changelog-cves.txt and upgrades.txt (when the package type has those queries).
 func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts check.Facts) ([]finding.Finding, error) {
 	fam, ok := sbom.FamilyFor(facts.OSRelease)
@@ -91,11 +100,32 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 	if err := os.WriteFile(bomPath, bomJSON, 0o644); err != nil {
 		return nil, err
 	}
-	rep, err := trivyRun(ctx, []string{"sbom", "--scanners", "vuln", bomPath}, filepath.Join(out, "trivy-os.json"), time.Hour)
+	split := parts(pkgs, partSize)
+	// match runs one trivy run: the whole host's BOM when it is one part, else part i's own BOM (removed after the
+	// run; sbom.cdx.json stays the whole host)
+	match := func(i int) (io.ReadCloser, error) {
+		if len(split) == 1 {
+			return trivyRun(ctx, []string{"sbom", "--scanners", "vuln", bomPath}, filepath.Join(out, "trivy-os.json"), time.Hour)
+		}
+		b, err := buildBOM(h.Name, facts.OSRelease, split[i])
+		if err != nil {
+			return nil, err
+		}
+		j, err := marshalBOM(b, true)
+		if err != nil {
+			return nil, err
+		}
+		p := filepath.Join(out, fmt.Sprintf("sbom-%02d.cdx.json", i+1))
+		if err := os.WriteFile(p, j, 0o644); err != nil {
+			return nil, err
+		}
+		defer os.Remove(p)
+		return trivyRun(ctx, []string{"sbom", "--scanners", "vuln", p}, filepath.Join(out, fmt.Sprintf("trivy-os-%02d.json", i+1)), time.Hour)
+	}
+	rep, err := match(0)
 	if err != nil {
 		return nil, err
 	}
-	defer rep.Close()
 	ctx.Log("%s: os_packages: %d packages", h.Name, len(pkgs))
 
 	running := ""
@@ -119,14 +149,22 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 	base := check.Base(h, "os_packages")
 	base.Target = "os"
 	var meta osMeta
-	err = trivy.EachFinding(rep, base, &meta.Metadata, func(f *finding.Finding) {
-		setSource(f, src)
-		markKernel(f, running, fam.Type == "rpm")
-		vendor.AnnotateOne(f, cl, up, newer, n)
-		emit(f)
-	})
-	if err != nil {
-		return nil, err
+	for i := range split {
+		if i > 0 {
+			if rep, err = match(i); err != nil {
+				return nil, err
+			}
+		}
+		err = trivy.EachFinding(rep, base, &meta.Metadata, func(f *finding.Finding) {
+			setSource(f, src)
+			markKernel(f, running, fam.Type == "rpm")
+			vendor.AnnotateOne(f, cl, up, newer, n)
+			emit(f)
+		})
+		rep.Close()
+		if err != nil {
+			return nil, err
+		}
 	}
 	ctx.Log("%s: os_packages: backported %d, in repos %d, waiting for vendor %d, reboot %d", h.Name,
 		n["backported"], n[finding.FixAvailable], n[finding.FixVendor], n[finding.FixReboot])
@@ -145,6 +183,53 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 		emit(&f)
 	}
 	return findings, nil
+}
+
+// parts splits a host's packages into trivy runs. trivy orders a report by package name, then by name@version-release,
+// so the runs taken in that order read back as one report of the whole host would; packages of one name and version
+// (multilib builds) stay in one run.
+func parts(pkgs []sbom.Package, size int) [][]sbom.Package {
+	if size <= 0 {
+		return [][]sbom.Package{pkgs}
+	}
+	ver := func(p sbom.Package) string {
+		if p.Release != "" {
+			return p.Version + "-" + p.Release
+		}
+		return p.Version
+	}
+	sorted := slices.Clone(pkgs)
+	slices.SortStableFunc(sorted, func(a, b sbom.Package) int {
+		return cmp.Or(strings.Compare(a.Name, b.Name), strings.Compare(ver(a), ver(b)))
+	})
+	var out [][]sbom.Package
+	var cur []sbom.Package
+	for i := 0; i < len(sorted); {
+		j := i + 1
+		for j < len(sorted) && sorted[j].Name == sorted[i].Name && ver(sorted[j]) == ver(sorted[i]) {
+			j++
+		}
+		g := sorted[i:j:j]
+		if IsKernel(g[0].Name) || len(cur)+len(g) > size {
+			if len(cur) > 0 {
+				out = append(out, cur)
+			}
+			cur = nil
+		}
+		if IsKernel(g[0].Name) {
+			out = append(out, g)
+		} else {
+			cur = append(cur, g...)
+		}
+		i = j
+	}
+	if len(cur) > 0 {
+		out = append(out, cur)
+	}
+	if len(out) <= 1 {
+		return [][]sbom.Package{pkgs} // one run: the whole host's BOM, in the host's order
+	}
+	return out
 }
 
 // SetSources records the source package of each finding whose binary package comes from a source of another name
