@@ -1067,6 +1067,7 @@
     "Kernel log": "Registro do kernel",
     "All packages": "Todos os pacotes",
     "Authorized keys": "Chaves autorizadas",
-    "Logins": "Logins"
+    "Logins": "Logins",
+    "Firewall rules": "Regras do firewall"
   }
 }

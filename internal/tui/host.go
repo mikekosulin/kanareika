@@ -1,11 +1,14 @@
 package tui
 
 import (
+	"context"
 	"fmt"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -332,6 +335,15 @@ func (m *Model) hostCard(name string, w int) []string {
 				parts = []string{sMuted.Render(m.t.T("not readable without root"))}
 			}
 			kv("firewall", strings.Join(parts, sMuted.Render(" · ")))
+			if rules := m.fwRules[m.fwKey(name)]; rules != "" {
+				out[len(out)-1] += sMuted.Render(" ↓")
+				tail = append(tail, func() {
+					section("Firewall rules")
+					for _, l := range strings.Split(strings.TrimRight(rules, "\n"), "\n") {
+						out = append(out, " "+sMuted.Render(l))
+					}
+				})
+			}
 		}
 		m.denied(&out, e)
 	}
@@ -489,6 +501,65 @@ func (m *Model) hostCard(name string, w int) []string {
 		f()
 	}
 	return out
+}
+
+// fwMsg: a host's firewall rules, as its exposure file has them.
+type fwMsg struct{ key, rules string }
+
+// cardHost: the host whose card is on screen: opened on its own, or a host row's details in the tree.
+func (m *Model) cardHost() string {
+	if m.host != "" {
+		return m.host
+	}
+	if m.isTree() {
+		if n := m.curNode(); n != nil && n.Kind == "host" {
+			return n.Label
+		}
+	}
+	return ""
+}
+
+func (m *Model) fwKey(host string) string { return m.org + "/" + m.env + "/" + m.run + "/" + host }
+
+// fetchFirewall: the rules of the firewall of the host on screen, when the run could read them; once per host.
+func (m *Model) fetchFirewall() tea.Cmd {
+	host := m.cardHost()
+	if host == "" || m.rund == nil || m.pending["fw"] != "" {
+		return nil
+	}
+	if r, ok := obj(m.rund.Exposure[host]["firewall"])["readable"].(bool); !ok || !r {
+		return nil
+	}
+	k := m.fwKey(host)
+	if _, ok := m.fwRules[k]; ok {
+		return nil
+	}
+	m.pending["fw"] = k
+	c := m.c
+	q := "/api/hostfile?org=" + url.QueryEscape(m.org) + "&env=" + url.QueryEscape(m.env) + "&run=" + url.QueryEscape(m.run) +
+		"&host=" + url.QueryEscape(host) + "&name=exposure"
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		var d struct {
+			Raw map[string]string `json:"firewall_raw"`
+		}
+		if err := c.Get(ctx, q, &d); err != nil {
+			return fwMsg{k, ""} // none: the card says what it knows without them
+		}
+		names := make([]string, 0, len(d.Raw))
+		for n, v := range d.Raw {
+			if strings.TrimSpace(v) != "" {
+				names = append(names, n)
+			}
+		}
+		sort.Strings(names)
+		var b strings.Builder
+		for _, n := range names {
+			fmt.Fprintf(&b, "## %s\n%s\n", n, strings.TrimRight(d.Raw[n], "\n"))
+		}
+		return fwMsg{k, b.String()}
+	}
 }
 
 // denied: what a module could not read without more rights.

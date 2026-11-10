@@ -1067,6 +1067,7 @@
     "Kernel log": "内核日志",
     "All packages": "全部软件包",
     "Authorized keys": "授权密钥",
-    "Logins": "登录"
+    "Logins": "登录",
+    "Firewall rules": "防火墙规则"
   }
 }

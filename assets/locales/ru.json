@@ -1067,6 +1067,7 @@
     "Kernel log": "Журнал ядра",
     "All packages": "Все пакеты",
     "Authorized keys": "Ключи доступа",
-    "Logins": "Входы"
+    "Logins": "Входы",
+    "Firewall rules": "Правила файрвола"
   }
 }

@@ -1067,6 +1067,7 @@
     "Kernel log": "カーネルログ",
     "All packages": "すべてのパッケージ",
     "Authorized keys": "許可された鍵",
-    "Logins": "ログイン"
+    "Logins": "ログイン",
+    "Firewall rules": "ファイアウォールのルール"
   }
 }

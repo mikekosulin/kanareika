@@ -155,6 +155,29 @@ func card(h *harness) {
 	h.key("enter", "enter")
 }
 
+// TestHostCardFirewallRules: the rules a run read are fetched once for the card on screen and shown at its end.
+func TestHostCardFirewallRules(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
+	h.size(120, 200)
+	card(h)
+	h.m.rund.Exposure["web-01"] = map[string]any{"firewall": map[string]any{"readable": true, "has_input_filtering": true}}
+	delete(h.m.fwRules, h.m.fwKey("web-01"))
+	delete(h.m.pending, "fw")
+	if h.m.fetchFirewall() == nil {
+		t.Fatal("no request for the rules of the card on screen")
+	}
+	if h.m.fetchFirewall() != nil {
+		t.Fatal("a second request while the first is on the way")
+	}
+	h.m.Update(fwMsg{h.m.fwKey("web-01"), "## nft\ntable inet filter {\n  chain input { policy drop; }\n}\n"})
+	h.has("inbound filtered ↓")
+	h.key("G") // the whole lists are at the end
+	h.has("Firewall rules", "## nft", "chain input { policy drop; }")
+	if h.m.fetchFirewall() != nil {
+		t.Fatal("the rules again")
+	}
+}
+
 // TestDBStatus: checked at start (none yet: a hint), shown in the header, U updates it.
 func TestDBStatus(t *testing.T) {
 	t.Setenv("KN_TEST_NO_DB", "1")

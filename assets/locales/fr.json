@@ -1067,6 +1067,7 @@
     "Kernel log": "Journal du noyau",
     "All packages": "Tous les paquets",
     "Authorized keys": "Clés autorisées",
-    "Logins": "Connexions"
+    "Logins": "Connexions",
+    "Firewall rules": "Règles du pare-feu"
   }
 }

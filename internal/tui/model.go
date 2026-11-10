@@ -101,6 +101,7 @@ type Model struct {
 	treeKey string                 // what the tree on screen is for (wantTree)
 	nodes   map[string]*nodeDetail // details by treeKey#node id
 	pending map[string]string      // requests on the way: "tree" -> its key, a node's key -> itself
+	fwRules map[string]string      // a host's firewall rules as read (GET /api/hostfile), by org/env/run/host
 	opened  map[string]bool        // expanded nodes
 	sel     map[string]bool        // selected nodes (a node selects everything under it)
 	onlySel bool                   // only the selected (v)
@@ -349,6 +350,12 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		m.onTree(msg)
 	case lensMsg:
 		m.onLens(msg)
+	case fwMsg:
+		delete(m.pending, "fw")
+		if m.fwRules == nil {
+			m.fwRules = map[string]string{}
+		}
+		m.fwRules[msg.key] = msg.rules
 	case nodeMsg:
 		delete(m.pending, msg.key)
 		if strings.HasPrefix(msg.key, m.treeKey+"#") {

@@ -1067,6 +1067,7 @@
     "Kernel log": "커널 로그",
     "All packages": "모든 패키지",
     "Authorized keys": "허용된 키",
-    "Logins": "로그인"
+    "Logins": "로그인",
+    "Firewall rules": "방화벽 규칙"
   }
 }
