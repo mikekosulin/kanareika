@@ -49,6 +49,41 @@ func tail(s string, n int) string {
 
 // quiet: no call home from trivy, in every subcommand. --skip-version-check alone still sends Aqua anonymous usage
 // data (trivy pkg/notification: the version check request carries telemetry unless it is disabled too).
+// slots bounds the trivy processes running at once across all hosts and scans of this process: each holds its
+// report in memory, so this is the memory bound; a host waits here while the others go on collecting. nil = none.
+var (
+	slotsMu sync.Mutex
+	slots   chan struct{}
+)
+
+// SetParallel bounds the trivy matches running at once (n <= 0: no bound). Matches already waiting keep the bound
+// they started under.
+func SetParallel(n int) {
+	slotsMu.Lock()
+	defer slotsMu.Unlock()
+	switch {
+	case n <= 0:
+		slots = nil
+	case slots == nil || cap(slots) != n:
+		slots = make(chan struct{}, n)
+	}
+}
+
+func acquire(ctx context.Context) (release func(), err error) {
+	slotsMu.Lock()
+	c := slots
+	slotsMu.Unlock()
+	if c == nil {
+		return func() {}, nil
+	}
+	select {
+	case c <- struct{}{}:
+		return func() { <-c }, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
 var quiet = []string{"TRIVY_DISABLE_TELEMETRY=true", "TRIVY_SKIP_VERSION_CHECK=true"}
 
 func command(ctx context.Context, timeout time.Duration, args ...string) (stdout, stderr string, err error) {
@@ -304,6 +339,11 @@ func DBStatus() []DBInfo {
 // carries full CVE descriptions — hundreds of MB per host) and returned to be read once (ReadReport): closing it
 // removes the raw file. Nothing holds the report in memory.
 func Run(ctx context.Context, args []string, output string, timeout time.Duration) (io.ReadCloser, error) {
+	release, err := acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
 	cmd := append(slices.Clone(args), "--format", "json", "--output", output, "--skip-version-check")
 	if prepared.Load() {
 		cmd = append(cmd, "--skip-db-update", "--skip-java-db-update")

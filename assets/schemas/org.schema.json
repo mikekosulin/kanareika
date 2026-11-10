@@ -58,6 +58,7 @@
         "privilege": {"enum": ["none", "sudo", "helper"], "description": "how root-only reads run, see kanareika/priv.py"},
         "admin_user": {"type": "string", "description": "account with sudo used by fix.sh (remediation); default: the SSH user"},
         "port": {"$ref": "#/$defs/port", "description": "default SSH port of every host and jump host (default 22)"},
+        "parallel": {"type": "integer", "minimum": 1, "maximum": 64, "description": "hosts of this org collected at once over SSH (default: scan.parallel in policy/settings.yml, else 8)"},
         "jumps": {
           "type": "object",
           "propertyNames": {"$ref": "#/$defs/slug"},

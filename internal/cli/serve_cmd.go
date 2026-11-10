@@ -31,7 +31,7 @@ var serveFunc = func(ctx context.Context, s *server.Server, host string, port in
 func (a *app) dashboardScan(ctx context.Context, o *config.Org, req server.ScanRequest, out io.Writer) int {
 	s := &scan.Scanner{Paths: a.paths, Out: out, Err: out}
 	return runOrg(ctx, s, o, req.Env, scan.Options{Groups: req.Groups, Hosts: req.Hosts, Modules: req.Modules,
-		DryRun: req.DryRun, IgnoreWindow: req.IgnoreWindow, Offline: req.Offline, Parallel: 4, Version: a.version})
+		DryRun: req.DryRun, IgnoreWindow: req.IgnoreWindow, Offline: req.Offline, Version: a.version})
 }
 
 // updateDBFunc: `db update` as the interfaces start it (its log to the update's output).

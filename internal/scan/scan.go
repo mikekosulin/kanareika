@@ -57,7 +57,8 @@ type Options struct {
 	Groups, Hosts, Modules []string
 	DryRun                 bool
 	IgnoreWindow           bool
-	Parallel               int
+	Parallel               int    // hosts collected at once; 0: from the settings (config.ScanLimits)
+	TrivyParallel          int    // trivy matches at once; 0: from the settings
 	Offline                bool   // use the cached vulnerability DBs, never download (isolated networks)
 	Version                string // kanareika version, stored in run.json
 }
@@ -256,6 +257,10 @@ func (s *Scanner) Org(ctx context.Context, o *config.Org, env string, opt Option
 		return refuse(err)
 	}
 	defer lock.Unlock()
+	lim := config.ScanLimits(s.Paths, o)
+	opt.Parallel = lim.Parallel.Override(opt.Parallel).Value
+	opt.TrivyParallel = lim.TrivyParallel.Override(opt.TrivyParallel).Value
+	trivy.SetParallel(opt.TrivyParallel)
 	return s.run(ctx, o, env, selected, opt, p, conn, envDir)
 }
 
@@ -390,20 +395,25 @@ func (s *Scanner) run(ctx context.Context, o *config.Org, env string, selected [
 		werr error
 	}
 	results := make(chan result)
-	sem := make(chan struct{}, max(1, opt.Parallel))
+	// a queue in the order to start the hosts (longest first), worked by Parallel workers
+	queue := make(chan config.Host, len(selected))
+	for _, h := range longestFirst(selected, hostSeconds(envDir)) {
+		queue <- h
+	}
+	close(queue)
 	var wg sync.WaitGroup
-	for _, h := range selected {
+	for range min(max(1, opt.Parallel), len(selected)) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-			st := outs[h.Name]
-			fs, e, m := s.host(cctx, h, p.Hosts[h.Name])
-			for i := range fs {
-				add(st, &fs[i])
+			for h := range queue {
+				st := outs[h.Name]
+				fs, e, m := s.host(cctx, h, p.Hosts[h.Name])
+				for i := range fs {
+					add(st, &fs[i])
+				}
+				results <- result{h.Name, e, m, finish(st)}
 			}
-			results <- result{h.Name, e, m, finish(st)}
 		}()
 	}
 	go func() { wg.Wait(); close(results) }()

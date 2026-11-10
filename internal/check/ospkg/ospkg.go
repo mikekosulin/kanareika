@@ -38,7 +38,7 @@ var (
 // partSize: the most packages one trivy run matches. trivy holds a run's whole report in memory, and one kernel build
 // alone brings thousands of CVEs (gigabytes for a host with three kernels installed), so each kernel build gets a run
 // of its own and the other packages go in runs of up to partSize; 0 = one run for the whole host.
-var partSize = 500
+var partSize = 2000
 
 // Target texts of kernel findings, as the Python version wrote them (the report layer groups by them).
 const (

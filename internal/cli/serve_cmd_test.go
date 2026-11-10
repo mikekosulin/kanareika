@@ -144,7 +144,7 @@ func TestDashboardScan(t *testing.T) {
 		Offline: true}, &out)
 	if rc != 3 || gotEnv != "staging" || gotOut != &out || !slices.Equal(got.Hosts, []string{"h"}) ||
 		!slices.Equal(got.Groups, []string{"g"}) || !got.DryRun || !got.IgnoreWindow || !got.Offline ||
-		got.Parallel != 4 || got.Version != "v1" {
+		got.Parallel != 0 || got.Version != "v1" { // 0: the settings decide
 		t.Fatalf("%+v", got)
 	}
 }

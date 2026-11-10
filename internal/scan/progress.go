@@ -2,11 +2,15 @@ package scan
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mikekosulin/kanareika/internal/config"
 )
 
 // Heartbeat keeps status.json fresh so a killed scan shows up as stale on the dashboard.
@@ -19,6 +23,9 @@ type hostStatus struct {
 	Errors int     `json:"errors"`
 	Step   int     `json:"step,omitempty"`  // modules started on the host so far
 	Steps  int     `json:"steps,omitempty"` // modules planned for it
+	// Seconds: how long the host took, once done; the next scan starts its longest hosts first
+	Seconds float64 `json:"seconds,omitempty"`
+	start   time.Time
 }
 
 // Progress: live state of a running scan in <run>/status.json + run.log, read by the dashboard.
@@ -138,6 +145,12 @@ func (p *Progress) Host(name string, u HostUpdate) {
 	}
 	if u.State != "" {
 		h.State = u.State
+		switch {
+		case u.State == "running" && h.start.IsZero():
+			h.start = time.Now()
+		case u.State != "running" && !h.start.IsZero() && h.Seconds == 0:
+			h.Seconds = math.Round(time.Since(h.start).Seconds()*10) / 10
+		}
 	}
 	if u.Module != nil {
 		if *u.Module == "" {
@@ -190,3 +203,55 @@ func (p *Progress) Finish(state string, extra map[string]any) {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+// hostSeconds: how long each host took in the latest runs of envDir that timed it (newest first, five runs with a
+// status.json looked at at most); hosts never timed are absent.
+func hostSeconds(envDir string) map[string]float64 {
+	out := map[string]float64{}
+	ents, _ := os.ReadDir(envDir) // sorted by name: run IDs are timestamps
+	seen := 0
+	for i := len(ents) - 1; i >= 0 && seen < 5; i-- {
+		b, err := os.ReadFile(filepath.Join(envDir, ents[i].Name(), "status.json"))
+		if err != nil {
+			continue
+		}
+		seen++
+		var st struct {
+			Hosts map[string]struct {
+				Seconds float64 `json:"seconds"`
+			} `json:"hosts"`
+		}
+		if json.Unmarshal(b, &st) != nil {
+			continue
+		}
+		for h, v := range st.Hosts {
+			if _, ok := out[h]; !ok && v.Seconds > 0 {
+				out[h] = v.Seconds
+			}
+		}
+	}
+	return out
+}
+
+// longestFirst: hosts in the order to start them, so the slowest do not start last and set the wall clock alone:
+// hosts never timed first (in the given order), then by the time they took before, longest first.
+func longestFirst(hosts []config.Host, secs map[string]float64) []config.Host {
+	out := slices.Clone(hosts)
+	slices.SortStableFunc(out, func(a, b config.Host) int {
+		sa, oka := secs[a.Name]
+		sb, okb := secs[b.Name]
+		switch {
+		case oka != okb:
+			if !oka {
+				return -1
+			}
+			return 1
+		case sa > sb:
+			return -1
+		case sa < sb:
+			return 1
+		}
+		return 0
+	})
+	return out
+}
