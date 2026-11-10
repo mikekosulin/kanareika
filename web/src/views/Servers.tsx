@@ -259,12 +259,7 @@ function ServerRow({ n, depth, open, cur, hasKids, onShow }: { n: TreeNode & { t
       </span>
     ) : "—";
   } else {
-    name = (
-      <>
-        <span style={{ width: (depth - 1) * 20 }} />
-        <MainText n={n} />
-      </>
-    );
+    name = <MainText n={n} />; // the row as a whole is indented by its depth (.sv.kid)
     pri = [n.cves ? `${n.cves} CVE` : "", n.kev ? "KEV" : "", n.kind === "cve" && n.epss ? "EPSS " + pct(n.epss) : ""].filter(Boolean).join(" · ");
     sc = n.due ? (
       <span className={days(n.due) < 0 ? "late" : ""} title={n.due}>
