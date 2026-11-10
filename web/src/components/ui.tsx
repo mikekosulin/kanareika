@@ -1,6 +1,6 @@
 // The small pieces every view uses: icons, segmented switches, filter chips, the search field, skeleton rows,
 // the empty state, key/value lines and the toast.
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { t } from "../lib/i18n";
 import { set, toast as say, useApp } from "../state";
 
@@ -162,8 +162,16 @@ export async function copy(text: string, what?: string) {
 
 /** SortHead: a column heading that orders the rows by it (asc: its first order is A to Z, earliest, most urgent);
  * again: the other way; a third time: back to priority. */
-export function SortHead(p: { k: string; sort: string; onSort: (k: string) => void; asc?: boolean; className?: string; children: ReactNode }) {
-  const first = p.sort === p.k, other = p.sort === "-" + p.k;
+export function SortHead(p: {
+  k: string;
+  sort: string;
+  onSort: (k: string) => void;
+  asc?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const first = p.sort === p.k,
+    other = p.sort === "-" + p.k;
   const up = (first && p.asc) || (other && !p.asc);
   return (
     <span className={p.className} aria-sort={first || other ? (up ? "ascending" : "descending") : undefined}>
@@ -173,4 +181,15 @@ export function SortHead(p: { k: string; sort: string; onSort: (k: string) => vo
       </button>
     </span>
   );
+}
+
+/** useNow: the time, a second fresh while active (a timer on screen); the time of the first draw otherwise. */
+export function useNow(active: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [active]);
+  return now;
 }

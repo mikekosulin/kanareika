@@ -18,7 +18,14 @@ const WHY: Record<string, string> = {
   severity: "Severity {severity}",
 };
 const WHY_ICON: Record<string, string> = {
-  kev: "alert", rce: "flame", preauth: "globe", epss: "chart", front: "globe", nofix: "clock", reboot: "server", severity: "shield",
+  kev: "alert",
+  rce: "flame",
+  preauth: "globe",
+  epss: "chart",
+  front: "globe",
+  nofix: "clock",
+  reboot: "server",
+  severity: "shield",
 };
 const DUEWHY: Record<string, string> = {
   first_seen: "first seen {d}",
@@ -44,7 +51,10 @@ export function whyText(r: { code: string; args?: Record<string, any> }) {
 
 function DueBlock({ d }: { d: ND["due"] }) {
   if (!d.date) return d.why === "no_fix" ? <p className="desc">{t(DUEWHY.no_fix)}</p> : null;
-  const from = d.why === "kev" ? t(DUEWHY.kev) + (d.kev_due ? " · " + fmtDay(d.kev_due) : "") : t(DUEWHY[d.why || ""] || "{d}", { d: d.clock_start ? fmtDay(d.clock_start) : "" });
+  const from =
+    d.why === "kev"
+      ? t(DUEWHY.kev) + (d.kev_due ? " · " + fmtDay(d.kev_due) : "")
+      : t(DUEWHY[d.why || ""] || "{d}", { d: d.clock_start ? fmtDay(d.clock_start) : "" });
   return (
     <div className="duebox">
       <div>
@@ -69,15 +79,18 @@ function Vector({ v }: { v?: string }) {
   const m: Record<string, string> = {};
   const ok =
     /^CVSS:3\.[01]$/.test(v.split("/")[0]) &&
-    v.split("/").slice(1).every((x) => {
-      const [k, l, ...rest] = x.split(":");
-      if (rest.length || !l || l.length !== 1) return false;
-      if (CVSS3[k]) {
-        if (!CVSS3[k].includes(l)) return false;
-        m[k] = l;
-      }
-      return true;
-    }) &&
+    v
+      .split("/")
+      .slice(1)
+      .every((x) => {
+        const [k, l, ...rest] = x.split(":");
+        if (rest.length || !l || l.length !== 1) return false;
+        if (CVSS3[k]) {
+          if (!CVSS3[k].includes(l)) return false;
+          m[k] = l;
+        }
+        return true;
+      }) &&
     Object.keys(CVSS3).every((k) => m[k]);
   if (!ok) return <code className="note">{v}</code>;
   const c = (lab: string, val: string, bad: boolean) => (
@@ -146,7 +159,10 @@ export function context(d: ND, org: string, env: string) {
     `why: ${d.why.map(whyText).join("; ")}`,
     `where: ${d.where.map((w) => `${w.group} (${w.hosts.join(", ")})`).join("; ")}`,
   ];
-  if (d.cves.length) lines.push(`CVE: ${d.cves.map((c) => `${c.id} ${c.severity}${c.kev ? " KEV" : ""}${c.epss ? " EPSS " + pct(c.epss) : ""}`).join(", ")}`);
+  if (d.cves.length)
+    lines.push(
+      `CVE: ${d.cves.map((c) => `${c.id} ${c.severity}${c.kev ? " KEV" : ""}${c.epss ? " EPSS " + pct(c.epss) : ""}`).join(", ")}`,
+    );
   (d.apply || []).forEach((s) => lines.push(`apply on ${s.hosts.join(", ")}: ${s.command}`));
   lines.push(`MCP: get_fix org=${org} env=${env} id=${n.id}`);
   return lines.join("\n");
@@ -342,7 +358,11 @@ export function NodeDetail({ d, onGo, onBack }: { d: ND; onGo: (id: string) => v
             t("Add to task")
           )}
         </button>
-        <button className="btn" title={t("What, where, why and how, to paste into an agent chat")} onClick={() => copy(context(d, org, env), t("Context copied: paste it into your agent"))}>
+        <button
+          className="btn"
+          title={t("What, where, why and how, to paste into an agent chat")}
+          onClick={() => copy(context(d, org, env), t("Context copied: paste it into your agent"))}
+        >
           <Icon name="copy" />
           {t("Copy context")}
         </button>

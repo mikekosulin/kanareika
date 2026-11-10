@@ -9,18 +9,40 @@ import { bytes, today } from "../lib/format";
 import { local } from "../lib/local";
 import { set, setScope, syncURL, toast, useApp } from "../state";
 import { client, useDB, useJobs, useOrgs, useSession } from "../queries";
-import { copy, Icon, Spin } from "../components/ui";
+import { copy, Icon, Spin, useNow } from "../components/ui";
 import { Prefs } from "./Shell";
 
 type Kind = "add" | "personal" | "client" | "company";
 interface Form {
-  hosts: string; user: string; key: string; sudo: boolean; name: string; consent: string; env: string; jump: string; confirmed: boolean;
+  hosts: string;
+  user: string;
+  key: string;
+  sudo: boolean;
+  name: string;
+  consent: string;
+  env: string;
+  jump: string;
+  confirmed: boolean;
 }
 interface Found {
-  user: string; keys: string[]; agent_keys: number; hosts: { alias: string; hostname?: string; user?: string; port?: string; jump?: string }[];
+  user: string;
+  keys: string[];
+  agent_keys: number;
+  hosts: { alias: string; hostname?: string; user?: string; port?: string; jump?: string }[];
 }
-interface Check { ok: boolean; error?: string; hint?: string; system?: string }
-interface Host { name: string; address: string; user?: string; jump?: string; login: string }
+interface Check {
+  ok: boolean;
+  error?: string;
+  hint?: string;
+  system?: string;
+}
+interface Host {
+  name: string;
+  address: string;
+  user?: string;
+  jump?: string;
+  login: string;
+}
 
 const STEP_PATH: Record<number, string> = { 1: "/setup", 2: "/setup/connect", 3: "/setup/scan" };
 
@@ -51,7 +73,11 @@ export function Setup() {
     return (
       <div className="onb">
         <h2>{t("Read-only dashboard")}</h2>
-        <p>{t("Organizations are added where kanareika web runs on localhost (or with a token). On that machine: kanareika org new <ORG_ID>.")}</p>
+        <p>
+          {t(
+            "Organizations are added where kanareika web runs on localhost (or with a token). On that machine: kanareika org new <ORG_ID>.",
+          )}
+        </p>
       </div>
     );
   const close = () => {
@@ -97,7 +123,8 @@ export function Setup() {
         <div className="wtop">
           <nav className="stabs" aria-label={t("Setup steps")}>
             {["Servers", "Connect", "First scan"].map((l, i) => {
-              const n = i + 1, st = n < step ? "done" : n === step ? "on" : "";
+              const n = i + 1,
+                st = n < step ? "done" : n === step ? "on" : "";
               return (
                 <Fragment key={l}>
                   {i > 0 && <i aria-hidden="true">›</i>}
@@ -128,7 +155,11 @@ export function Setup() {
             />
           ) : step === 2 ? (
             <CheckView
-              org={org} env={env} only={only} skipped={skipped} file={file}
+              org={org}
+              env={env}
+              only={only}
+              skipped={skipped}
+              file={file}
               onBack={() => setStep(1)}
               onScan={async (hosts) => {
                 setScope({ org, env, run: "current" });
@@ -143,10 +174,13 @@ export function Setup() {
               }}
             />
           ) : (
-            <ScanView job={job} onDone={() => {
-              client.invalidateQueries();
-              close();
-            }} />
+            <ScanView
+              job={job}
+              onDone={() => {
+                client.invalidateQueries();
+                close();
+              }}
+            />
           )}
         </div>
         <StatusBar org={orgs.find((o) => o.id === org)} env={env} />
@@ -186,15 +220,13 @@ function DBLine() {
   const z = useDBSize().data;
   const db = useDB().data || {};
   const [asked, setAsked] = useState(false);
-  const [started, setStarted] = useState(0);
-  const [, tick] = useState(0);
+  const [started, setStarted] = useState(0); // when this page asked for the download (0: asked elsewhere)
+  const now = useNow(!!db.updating);
   const was = useRef(false);
   useEffect(() => {
     if (db.updating) {
       was.current = true;
-      if (!started) setStarted(Date.now());
-      const id = setInterval(() => tick((x) => x + 1), 1000);
-      return () => clearInterval(id);
+      return;
     }
     if (was.current) {
       was.current = false;
@@ -222,7 +254,7 @@ function DBLine() {
         <span className="bar">
           <i />
         </span>
-        <span className="mut">{Math.round((Date.now() - (started || Date.now())) / 1000)} s</span>
+        <span className="mut">{started ? Math.max(0, Math.round((now - started) / 1000)) + " s" : ""}</span>
       </div>
     );
   if (db.error && asked)
@@ -247,7 +279,11 @@ function DBLine() {
   // what the total is made of: on hover, not on the page (less text)
   const part = (keys: string[]) => keys.filter((k) => z.need.includes(k)).reduce((n, k) => n + (z.sizes[k] || 0), 0);
   const tip = (
-    [[t("Linux packages and libraries"), part(["db"])], [t("IP locations"), part(["dbip-city", "dbip-asn"])], [t("exploit data (KEV, EPSS)"), part(["kev", "epss"])]] as [string, number][]
+    [
+      [t("Linux packages and libraries"), part(["db"])],
+      [t("IP locations"), part(["dbip-city", "dbip-asn"])],
+      [t("exploit data (KEV, EPSS)"), part(["kev", "epss"])],
+    ] as [string, number][]
   )
     .filter(([, n]) => n)
     .map(([l, n]) => `${l}: ${bytes(n)}`)
@@ -275,7 +311,17 @@ function ServersForm(p: {
 }) {
   const orgs = useOrgs().data?.orgs || [];
   const d = useFound().data || { hosts: [], keys: [], agent_keys: 0, user: "" };
-  const [f, setF] = useState<Form>({ hosts: "", user: "", key: "", sudo: false, name: "", consent: "", env: "production", jump: "", confirmed: false });
+  const [f, setF] = useState<Form>({
+    hosts: "",
+    user: "",
+    key: "",
+    sudo: false,
+    name: "",
+    consent: "",
+    env: "production",
+    jump: "",
+    confirmed: false,
+  });
   const [loginOpen, setLoginOpen] = useState(false);
   const [errs, setErrs] = useState<string[]>([]);
   const [pick, setPick] = useState(false);
@@ -283,10 +329,13 @@ function ServersForm(p: {
   const { kind } = p;
   const kinds: [Kind, string][] = [
     ...(p.cur && p.cur.id !== "servers" ? [["add", t("Add to {org}", { org: p.cur.name || p.cur.id })] as [Kind, string]] : []),
-    ["personal", t("Personal")], ["client", t("Client")], ["company", t("Company")],
+    ["personal", t("Personal")],
+    ["client", t("Client")],
+    ["company", t("Company")],
   ];
   const freeId = (base: string) => {
-    let id = base, i = 2;
+    let id = base,
+      i = 2;
     while (orgs.some((o) => o.id === id)) id = base + "-" + i++;
     return id;
   };
@@ -296,7 +345,13 @@ function ServersForm(p: {
       await client.invalidateQueries({ queryKey: ["orgs"] });
       const fresh = (client.getQueryData<any>(["orgs"])?.orgs || []).find((x: any) => x.id === org.id);
       const st = useApp.getState();
-      p.onDone({ org: org.id, env: (fresh?.envs.find((e: any) => e.env === st.env) || fresh?.envs[0])?.env || "production", file: "", only: r.added, skipped: r.skipped || [] });
+      p.onDone({
+        org: org.id,
+        env: (fresh?.envs.find((e: any) => e.env === st.env) || fresh?.envs[0])?.env || "production",
+        file: "",
+        only: r.added,
+        skipped: r.skipped || [],
+      });
     } catch (e: any) {
       setErrs(e.body?.errors || [e.message]);
     }
@@ -318,17 +373,46 @@ function ServersForm(p: {
     if (!f.confirmed) return err(t("Confirm that you are allowed to audit these servers."));
     // the key the Login line shows: the agent's keys, else the first key in ~/.ssh
     const key = f.key || (d.agent_keys ? "" : d.keys[0] || "");
-    const base = { user: f.user || d.user || "root", privilege: f.sudo ? "sudo" : "none", key, hosts: f.hosts, internet: false, confirmed: f.confirmed };
+    const base = {
+      user: f.user || d.user || "root",
+      privilege: f.sudo ? "sudo" : "none",
+      key,
+      hosts: f.hosts,
+      internet: false,
+      confirmed: f.confirmed,
+    };
     if (kind === "add") return addHosts(p.cur!, { hosts: f.hosts, user: f.user });
     if (kind === "personal") {
       const mine = orgs.find((o) => o.id === "servers");
       if (mine) return addHosts(mine, { hosts: f.hosts, user: f.user });
-      return createOrg({ ...base, id: "servers", name: t("Personal"), env: "production", consent: t("Confirmed in the setup on {d}", { d: today() }) });
+      return createOrg({
+        ...base,
+        id: "servers",
+        name: t("Personal"),
+        env: "production",
+        consent: t("Confirmed in the setup on {d}", { d: today() }),
+      });
     }
-    const id = freeId(f.name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || kind);
-    return createOrg({ ...base, id, name: f.name, env: kind === "company" ? f.env || "production" : "production", jump: f.jump, consent: f.consent });
+    const id = freeId(
+      f.name
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || kind,
+    );
+    return createOrg({
+      ...base,
+      id,
+      name: f.name,
+      env: kind === "company" ? f.env || "production" : "production",
+      jump: f.jump,
+      consent: f.consent,
+    });
   };
-  const keyOpts: [string, string][] = [["", d.agent_keys ? t("ssh-agent ({n} keys)", { n: d.agent_keys }) : t("ssh-agent")], ...d.keys.map((k): [string, string] => [k, k])];
+  const keyOpts: [string, string][] = [
+    ["", d.agent_keys ? t("ssh-agent ({n} keys)", { n: d.agent_keys }) : t("ssh-agent")],
+    ...d.keys.map((k): [string, string] => [k, k]),
+  ];
   return (
     <form
       id="setupform"
@@ -358,7 +442,12 @@ function ServersForm(p: {
             </label>
             <label>
               <span>{kind === "client" ? t("Their permission") : t("Permission")}</span>
-              <input value={f.consent} required placeholder={kind === "client" ? t("contract, ticket, e-mail") : t("ticket, policy")} onChange={(e) => upd({ consent: e.target.value })} />
+              <input
+                value={f.consent}
+                required
+                placeholder={kind === "client" ? t("contract, ticket, e-mail") : t("ticket, policy")}
+                onChange={(e) => upd({ consent: e.target.value })}
+              />
             </label>
           </div>
         )}
@@ -461,10 +550,7 @@ function Editor({ text, user, onChange }: { text: string; user: string; onChange
   const n = Math.max(3, text.split("\n").length + (text.endsWith("\n") ? 0 : 1));
   const [parsed, setParsed] = useState<{ text: string; r?: any; err?: string } | null>(null);
   useEffect(() => {
-    if (!text.trim()) {
-      setParsed(null);
-      return;
-    }
+    if (!text.trim()) return; // an answer for other text is not drawn (parsed.text === text below)
     const id = setTimeout(async () => {
       try {
         const r = await post("/api/setup/parse", { text });
@@ -527,7 +613,15 @@ function Editor({ text, user, onChange }: { text: string; user: string; onChange
           <div className="bad">{parsed.err}</div>
         ) : text.trim() && parsed?.r ? (
           <>
-            {Array.from({ length: lines }, (_, i) => rows[i + 1] || <div key={"g" + i} className="gap">&nbsp;</div>)}
+            {Array.from(
+              { length: lines },
+              (_, i) =>
+                rows[i + 1] || (
+                  <div key={"g" + i} className="gap">
+                    &nbsp;
+                  </div>
+                ),
+            )}
             {loose}
           </>
         ) : null}
@@ -557,7 +651,18 @@ function SSHPicker({ hosts, onClose, onAdd }: { hosts: Found["hosts"]; onClose: 
             const hidden = qq && !h.alias.toLowerCase().includes(qq) && !addr.toLowerCase().includes(qq);
             return (
               <label key={i} className="pick" hidden={!!hidden}>
-                <input type="checkbox" checked={on.has(i)} onChange={() => setOn((s) => { const n = new Set(s); if (n.has(i)) n.delete(i); else n.add(i); return n; })} />{" "}
+                <input
+                  type="checkbox"
+                  checked={on.has(i)}
+                  onChange={() =>
+                    setOn((s) => {
+                      const n = new Set(s);
+                      if (n.has(i)) n.delete(i);
+                      else n.add(i);
+                      return n;
+                    })
+                  }
+                />{" "}
                 <b>{h.alias}</b>{" "}
                 <span className="note">
                   {addr}
@@ -581,12 +686,20 @@ function SSHPicker({ hosts, onClose, onAdd }: { hosts: Found["hosts"]; onClose: 
 }
 
 // step 2: one login per server, eight at a time; rows grouped by outcome: one cause, its hosts, the fix
-function CheckView(p: { org: string; env: string; only: string[] | null; skipped: string[]; file: string; onBack: () => void; onScan: (hosts?: string[]) => void }) {
+function CheckView(p: {
+  org: string;
+  env: string;
+  only: string[] | null;
+  skipped: string[];
+  file: string;
+  onBack: () => void;
+  onScan: (hosts?: string[]) => void;
+}) {
   const [hosts, setHosts] = useState<Host[] | null>(null);
   const [res, setRes] = useState<Record<string, Check>>({});
-  const [started, setStarted] = useState(Date.now());
-  const [, tick] = useState(0);
-  const dbs = useDBSize().data, db = useDB().data;
+  const [started, setStarted] = useState(() => Date.now());
+  const dbs = useDBSize().data,
+    db = useDB().data;
   const run = async (hs: Host[], onlyFailed: boolean, prev: Record<string, Check>) => {
     const todo = hs.filter((h) => !onlyFailed || (prev[h.name] && !prev[h.name].ok));
     setRes((r) => {
@@ -616,7 +729,15 @@ function CheckView(p: { org: string; env: string; only: string[] | null; skipped
       let hs: Host[] = [];
       try {
         const e = await api("/api/env?" + qs({ org: p.org, env: p.env }));
-        hs = (e.hosts || []).filter((h: any) => !p.only || p.only.includes(h.name)).map((h: any) => ({ name: h.name, address: h.address, user: h.user, jump: h.jump, login: (h.user ? h.user + "@" : "") + h.address }));
+        hs = (e.hosts || [])
+          .filter((h: any) => !p.only || p.only.includes(h.name))
+          .map((h: any) => ({
+            name: h.name,
+            address: h.address,
+            user: h.user,
+            jump: h.jump,
+            login: (h.user ? h.user + "@" : "") + h.address,
+          }));
       } catch {
         /* none */
       }
@@ -625,13 +746,11 @@ function CheckView(p: { org: string; env: string; only: string[] | null; skipped
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const all = hosts || [];
-  const ok = all.filter((h) => res[h.name]?.ok), bad = all.filter((h) => res[h.name] && !res[h.name].ok), waiting = all.filter((h) => !res[h.name]);
-  useEffect(() => {
-    if (!waiting.length) return;
-    const id = setInterval(() => tick((x) => x + 1), 1000);
-    return () => clearInterval(id);
-  }, [waiting.length]);
-  const secs = Math.round((Date.now() - started) / 1000);
+  const ok = all.filter((h) => res[h.name]?.ok),
+    bad = all.filter((h) => res[h.name] && !res[h.name].ok),
+    waiting = all.filter((h) => !res[h.name]);
+  const now = useNow(waiting.length > 0);
+  const secs = Math.max(0, Math.round((now - started) / 1000));
   const who = (h: Host) => h.login || h.address || h.name;
   const Row = ({ mark, h, note }: { mark: React.ReactNode; h: Host; note: string }) => (
     <div className="hr">
@@ -642,19 +761,32 @@ function CheckView(p: { org: string; env: string; only: string[] | null; skipped
   );
   const causes: Record<string, { r: Check; hosts: Host[] }> = {};
   bad.forEach((h) => {
-    const r = res[h.name], k = r.hint || r.error || "";
+    const r = res[h.name],
+      k = r.hint || r.error || "";
     (causes[k] ||= { r, hosts: [] }).hosts.push(h);
   });
   const fixFor = (c: { r: Check; hosts: Host[] }) =>
     /authenticat|permission denied|publickey|refused the login/i.test((c.r.error || "") + (c.r.hint || ""))
       ? c.hosts.slice(0, 3).map((h) => {
           const [host, port] = (h.address || "").split(/:(?=\d+$)/);
-          return <code key={h.name}>ssh-copy-id{port ? " -p " + port : ""} {(h.user ? h.user + "@" : "") + host}</code>;
+          return (
+            <code key={h.name}>
+              ssh-copy-id{port ? " -p " + port : ""} {(h.user ? h.user + "@" : "") + host}
+            </code>
+          );
         })
       : null;
   const strip = (s?: string) => (s || "").replace(/^[^:]+:\s*/, "");
-  const dl = dbs && dbs.need.length > 0 && !db?.updating ? <span className="mut">{t("downloads the vuln list first ({size})", { size: bytes(dbs.total) })}</span> : null;
-  const recheck = () => run(all, Object.values(res).some((r) => !r.ok), res);
+  const dl =
+    dbs && dbs.need.length > 0 && !db?.updating ? (
+      <span className="mut">{t("downloads the vuln list first ({size})", { size: bytes(dbs.total) })}</span>
+    ) : null;
+  const recheck = () =>
+    run(
+      all,
+      Object.values(res).some((r) => !r.ok),
+      res,
+    );
   return (
     <>
       <div className="q">
@@ -688,7 +820,12 @@ function CheckView(p: { org: string; env: string; only: string[] | null; skipped
                     {c.r.hint || c.r.error}
                   </div>
                   {c.hosts.map((h) => (
-                    <Row key={h.name} mark={<span className="bad">✗</span>} h={h} note={c.r.hint && !same ? strip(res[h.name].error) : ""} />
+                    <Row
+                      key={h.name}
+                      mark={<span className="bad">✗</span>}
+                      h={h}
+                      note={c.r.hint && !same ? strip(res[h.name].error) : ""}
+                    />
                   ))}
                   {fx && <div className="fix">{fx}</div>}
                 </div>
@@ -734,10 +871,14 @@ function CheckView(p: { org: string; env: string; only: string[] | null; skipped
         </p>
       )}
       <div className="go">
-        {hosts && !waiting.length &&
+        {hosts &&
+          !waiting.length &&
           (ok.length ? (
             <>
-              <button className="btn primary" onClick={() => p.onScan(ok.length < all.length || p.only ? ok.map((h) => h.name) : undefined)}>
+              <button
+                className="btn primary"
+                onClick={() => p.onScan(ok.length < all.length || p.only ? ok.map((h) => h.name) : undefined)}
+              >
                 {bad.length ? t("Scan the {n} that answered", { n: ok.length }) : t("Start the first scan")}
               </button>
               {bad.length > 0 && (

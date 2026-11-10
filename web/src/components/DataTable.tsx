@@ -31,13 +31,19 @@ export function DataTable<T>(p: {
     if (!sort) return p.items;
     const c = p.cols[sort.i];
     if (!c?.s) return p.items;
-    const f = c.s, d = sort.d;
+    const f = c.s,
+      d = sort.d;
     return [...p.items].sort((a, b) => {
-      const x = f(a), y = f(b);
+      const x = f(a),
+        y = f(b);
       return (x < y ? -1 : x > y ? 1 : 0) * d;
     });
   }, [p.items, p.cols, sort]);
-  const tpl = (lv: number) => p.cols.filter((c) => (c.k || 1) <= lv).map((c) => c.w).join(" ");
+  const tpl = (lv: number) =>
+    p.cols
+      .filter((c) => (c.k || 1) <= lv)
+      .map((c) => c.w)
+      .join(" ");
   const cls = (c: Col<T>) => `${c.c || ""} ${c.k === 2 ? "k2" : c.k === 3 ? "k3" : ""}`;
   const listRef = useRef<HTMLDivElement>(null);
   const v = useVirtualizer({

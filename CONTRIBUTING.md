@@ -17,11 +17,12 @@ CI also runs `gofmt` and `go test -race`; run `gofmt -l cmd internal assets tool
 
 ## Web page
 
-The dashboard is a React app in `web/` (TypeScript, Vite). It is built into one gzipped file, `assets/web/index.html.gz`, scripts and styles inlined, which the binary embeds: users need nothing but the binary, and `go build` needs no Node. Change the sources, then rebuild and commit both (CI checks that they match):
+The dashboard is a React app in `web/` (TypeScript 7, Vite, pnpm; oxlint and oxfmt check and format it). It is built into one gzipped file, `assets/web/index.html.gz`, scripts and styles inlined, which the binary embeds: users need nothing but the binary, and `go build` needs no Node. Change the sources, then rebuild and commit both (CI checks that they match):
 
 ```bash
-make web                       # npm ci && npm run build in web/
-cd web && npm run dev          # live reload on :5173, the API from kanareika web on :8088
+make web                       # in web/: pnpm install, lint, format check, build
+cd web && pnpm run fmt         # format the sources (CI fails on unformatted ones)
+cd web && pnpm run dev         # live reload on :5173, the API from kanareika web on :8088
 ```
 
 Every interface string goes through `t("…")` (or `tx("…", {…})` when its arguments are elements) with its English text; `TestEveryPageStringTranslated` fails until each one has a translation in every `assets/locales/*.json`. Text from the server is rendered by React as text: no raw HTML, and links from data only through `webURL` (`TestPageEscapesData`).

@@ -13,7 +13,11 @@ export const client = new QueryClient({
 });
 
 export const useSession = () =>
-  useQuery({ queryKey: ["session"], queryFn: () => api<{ scans: boolean }>("/api/session").catch(() => ({ scans: false })), staleTime: Infinity });
+  useQuery({
+    queryKey: ["session"],
+    queryFn: () => api<{ scans: boolean }>("/api/session").catch(() => ({ scans: false })),
+    staleTime: Infinity,
+  });
 
 export const useOrgs = () =>
   useQuery({ queryKey: ["orgs"], queryFn: () => api<{ orgs: Org[]; errors?: string[] }>("/api/orgs"), staleTime: 10_000 });
@@ -115,7 +119,10 @@ export function useNode(tp: TreeParams, id: string | null) {
 export const useCatalog = () =>
   useQuery({
     queryKey: ["i18n"],
-    queryFn: () => api<{ messages: Record<string, Record<string, string>> }>("/api/i18n").then((r) => r.messages || {}).catch(() => ({})),
+    queryFn: () =>
+      api<{ messages: Record<string, Record<string, string>> }>("/api/i18n")
+        .then((r) => r.messages || {})
+        .catch(() => ({})),
     enabled: LANG !== "en",
     staleTime: Infinity,
   });

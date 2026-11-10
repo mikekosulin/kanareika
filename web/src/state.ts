@@ -108,7 +108,9 @@ export function go(view: View, q?: string) {
 
 /** setSort: the column the open view's rows are ordered by; the same column again turns the order around. */
 export function setSort(key: string) {
-  const s = get(), k = s.view === "servers" ? "ssort" : "tsort", cur = s[k];
+  const s = get(),
+    k = s.view === "servers" ? "ssort" : "tsort",
+    cur = s[k];
   set({ [k]: cur === key ? "-" + key : cur === "-" + key ? "" : key } as Partial<State>);
 }
 
@@ -157,7 +159,16 @@ export function syncURL(push = false) {
   const f = s.view === "todo" && s.accepted ? "accepted" : "";
   const b = s.view === "todo" && s.tby !== "fix" ? s.tby : s.view === "servers" && s.sby !== "host" ? s.sby : "";
   const p = new URLSearchParams();
-  for (const [k, v] of Object.entries({ org: s.org, env: s.env, run: s.run !== "current" ? s.run : "", by: b, show, f, host, lang: keep || "" }))
+  for (const [k, v] of Object.entries({
+    org: s.org,
+    env: s.env,
+    run: s.run !== "current" ? s.run : "",
+    by: b,
+    show,
+    f,
+    host,
+    lang: keep || "",
+  }))
     if (v) p.set(k, v);
   const u = "/" + s.view + (p.size ? "?" + p : "");
   if (u !== location.pathname + location.search) history[push ? "pushState" : "replaceState"](null, "", u);
@@ -191,7 +202,7 @@ export function applyTheme() {
 darkMQ.addEventListener("change", applyTheme);
 
 /** toggle: a set with one value added or removed (a new set: the store sees the change). */
-export const toggle = <T,>(xs: Set<T>, x: T) => {
+export const toggle = <T>(xs: Set<T>, x: T) => {
   const n = new Set(xs);
   if (n.has(x)) n.delete(x);
   else n.add(x);

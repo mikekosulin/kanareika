@@ -11,7 +11,7 @@ export function makeL(cat: Catalog | undefined) {
     const key = field === "title" ? o.msg : o[field + "_msg"];
     const m = key && cat?.[key];
     if (!m || LANG === "en") return o[field] || "";
-    const a: Record<string, any> = { ...((field === "title" ? o.args : o[field + "_args"]) || {}) };
+    const a: Record<string, any> = { ...(field === "title" ? o.args : o[field + "_args"]) };
     for (const k of Object.keys(a)) {
       if (k.endsWith("_keys") && Array.isArray(a[k])) a[k.slice(0, -5)] = a[k].map(msgOf).join(", ");
       else if (k.endsWith("_key") && cat?.[a[k]]) a[k.slice(0, -4)] = msgOf(a[k]);

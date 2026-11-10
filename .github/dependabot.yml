@@ -25,3 +25,16 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: deps
+
+  # the web page's packages (pnpm-lock.yaml); two weeks old at least, like every version picked by hand
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      web:
+        patterns: ["*"]
+    commit-message:
+      prefix: deps

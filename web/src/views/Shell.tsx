@@ -69,7 +69,11 @@ export function Prefs() {
         <Icon name="chev" />
       </label>
       <div className="seg3" role="radiogroup" aria-label={t("Theme")}>
-        {[["light", "sun", "Light"], ["system", "monitor", "System"], ["dark", "moon", "Dark"]].map(([v, i, l]) => (
+        {[
+          ["light", "sun", "Light"],
+          ["system", "monitor", "System"],
+          ["dark", "moon", "Dark"],
+        ].map(([v, i, l]) => (
           <button key={v} role="radio" aria-checked={theme === v} title={t(l)} aria-label={t(l)} onClick={() => setTheme(v)}>
             <Icon name={i} />
           </button>
@@ -86,12 +90,19 @@ export function Sidebar() {
   const scans = useSession().data?.scans;
   const db = useDB().data;
   const rd = useRunData(isTree(s.view) || s.view === "history").data;
-  const o = orgs.find((x) => x.id === s.org), e = o?.envs.find((x) => x.env === s.env);
+  const o = orgs.find((x) => x.id === s.org),
+    e = o?.envs.find((x) => x.env === s.env);
   const orgOpts: [string, string][] = orgs.map((x) => [x.id, x.name || x.id]);
   if (scans) orgOpts.push(["__new", "+ " + t("Add servers…")]);
   const runs = env?.runs || [];
-  const dbOld = db && (db.dbs || []).some((d: any) => d.outdated), feedsOld = db?.feeds_outdated;
-  const dbAt = db && (db.dbs || []).map((d: any) => d.updated).filter(Boolean).sort()[0];
+  const dbOld = db && (db.dbs || []).some((d: any) => d.outdated),
+    feedsOld = db?.feeds_outdated;
+  const dbAt =
+    db &&
+    (db.dbs || [])
+      .map((d: any) => d.updated)
+      .filter(Boolean)
+      .sort()[0];
   const off = !orgs.length || (s.view === "setup" && !e?.last);
   const href = (v: View) => "/" + v + "?" + new URLSearchParams({ org: s.org, env: s.env });
   const fixes = rd?.totals?.fixes;
@@ -99,7 +110,12 @@ export function Sidebar() {
     <aside className={"side" + (s.sideOpen ? " open" : "")} id="side" aria-label="Navigation">
       <div className="brand">
         <img src="/logo.webp" alt="" /> kanareika
-        <button className="btn ghost" style={{ marginLeft: "auto", height: 26, padding: "0 6px" }} aria-label="Command palette" onClick={() => set({ palOpen: true })}>
+        <button
+          className="btn ghost"
+          style={{ marginLeft: "auto", height: 26, padding: "0 6px" }}
+          aria-label="Command palette"
+          onClick={() => set({ palOpen: true })}
+        >
           <kbd>⌘K</kbd>
         </button>
       </div>
@@ -107,7 +123,10 @@ export function Sidebar() {
         {orgs.length > 0 && (
           <>
             <Sel
-              id="org" label={t("Org")} opts={orgOpts} value={s.org}
+              id="org"
+              label={t("Org")}
+              opts={orgOpts}
+              value={s.org}
               onChange={(v) => {
                 if (v === "__new") {
                   set({ view: "setup" });
@@ -116,12 +135,26 @@ export function Sidebar() {
                 setScope({ org: v, env: orgs.find((x) => x.id === v)?.envs[0]?.env || "", run: "current" });
               }}
             />
-            <Sel id="env" label={t("Env")} value={s.env}
+            <Sel
+              id="env"
+              label={t("Env")}
+              value={s.env}
               opts={(o?.envs || []).map((x) => [x.env, `${x.env} · ${x.hosts}${x.last ? "" : " · " + t("no scans")}`])}
-              onChange={(v) => setScope({ env: v, run: "current" })} />
-            <Sel id="run" label={t("Data")} value={s.run}
-              opts={[["current", t("Current state")], ...runs.slice(-20).reverse().map((r: any): [string, string] => [r.run_id, runLabel(r.run_id) + (r.partial ? " · " + t("partial") : "")])]}
-              onChange={(v) => setScope({ run: v })} />
+              onChange={(v) => setScope({ env: v, run: "current" })}
+            />
+            <Sel
+              id="run"
+              label={t("Data")}
+              value={s.run}
+              opts={[
+                ["current", t("Current state")],
+                ...runs
+                  .slice(-20)
+                  .reverse()
+                  .map((r: any): [string, string] => [r.run_id, runLabel(r.run_id) + (r.partial ? " · " + t("partial") : "")]),
+              ]}
+              onChange={(v) => setScope({ run: v })}
+            />
           </>
         )}
       </div>
@@ -150,7 +183,11 @@ export function Sidebar() {
             >
               <Icon name={i} />
               {t(l)}
-              {v === "servers" && e ? <span className="n">{e.hosts}</span> : v === "todo" && fixes != null ? <span className="n hot">{fixes}</span> : null}
+              {v === "servers" && e ? (
+                <span className="n">{e.hosts}</span>
+              ) : v === "todo" && fixes != null ? (
+                <span className="n hot">{fixes}</span>
+              ) : null}
             </a>
           ))
         )}
@@ -199,7 +236,8 @@ function ScanLimits({ org, env }: { org: string; env: string }) {
   const [open, setOpen] = useState(false);
   const o = useQuery({
     queryKey: ["scanopts", org, env],
-    queryFn: ({ signal }) => api<{ limits: Record<"parallel" | "trivy_parallel", Limit>; limits_max: number }>("/api/scan-options?" + qs({ org, env }), signal),
+    queryFn: ({ signal }) =>
+      api<{ limits: Record<"parallel" | "trivy_parallel", Limit>; limits_max: number }>("/api/scan-options?" + qs({ org, env }), signal),
   });
   const l = o.data?.limits;
   if (!l) return null;
@@ -212,7 +250,8 @@ function ScanLimits({ org, env }: { org: string; env: string }) {
     }
   };
   const field = (k: "parallel" | "trivy_parallel", label: string) => {
-    const x = l[k], fixed = x.source === "org" || x.source === "flag";
+    const x = l[k],
+      fixed = x.source === "org" || x.source === "flag";
     return (
       <label className="lim" title={fixed ? t(x.source === "org" ? "Set in the org file" : "Set by a flag") : undefined}>
         <span>{label}</span>
@@ -320,12 +359,17 @@ export function Palette() {
     addEventListener("keydown", k);
     return () => removeEventListener("keydown", k);
   }, []);
-  useEffect(() => {
+  const [was, setWas] = useState(palOpen);
+  if (palOpen !== was) {
+    // opened: a new search
+    setWas(palOpen);
     if (palOpen) {
       setQ("");
       setPi(0);
-      setTimeout(() => inRef.current?.focus());
     }
+  }
+  useEffect(() => {
+    if (palOpen) setTimeout(() => inRef.current?.focus());
   }, [palOpen]);
   const items = useMemo(() => {
     if (!palOpen) return [];
@@ -350,16 +394,46 @@ export function Palette() {
       });
     if (view !== "servers") walk(tr?.nodes || [], 0);
     NAV.forEach(([v, l]) => it.push({ g: t("Go to"), label: t(l), hint: v === "todo" ? "/" : "/" + v, go: () => go(v) }));
-    [["priorities", "Priorities"], ["logins", "Logins"], ["network", "Network"], ["health", "Health"]].forEach(([id, l]) =>
-      it.push({ g: t("Go to"), label: t(l), hint: "/servers?show=" + id, go: () => { set({ lens: id, sby: "host" }); if (view !== "servers") go("servers"); else syncURL(); } }),
+    [
+      ["priorities", "Priorities"],
+      ["logins", "Logins"],
+      ["network", "Network"],
+      ["health", "Health"],
+    ].forEach(([id, l]) =>
+      it.push({
+        g: t("Go to"),
+        label: t(l),
+        hint: "/servers?show=" + id,
+        go: () => {
+          set({ lens: id, sby: "host" });
+          if (view !== "servers") go("servers");
+          else syncURL();
+        },
+      }),
     );
-    it.push({ g: t("Go to"), label: t("Accepted risks"), hint: "/todo?f=accepted", go: () => { set({ accepted: true }); if (view !== "todo") go("todo"); else syncURL(); } });
+    it.push({
+      g: t("Go to"),
+      label: t("Accepted risks"),
+      hint: "/todo?f=accepted",
+      go: () => {
+        set({ accepted: true });
+        if (view !== "todo") go("todo");
+        else syncURL();
+      },
+    });
     (envd?.hosts || []).forEach((h) => it.push({ g: t("Servers"), label: h.name, hint: h.group || "", go: () => openServer(h.name) }));
-    ([["fix", "Group by fix"], ["cve", "Group by CVE"]] as const).forEach(([k, l]) => it.push({ g: t("Commands"), label: t(l), hint: "/todo", go: () => setBy(k) }));
+    (
+      [
+        ["fix", "Group by fix"],
+        ["cve", "Group by CVE"],
+      ] as const
+    ).forEach(([k, l]) => it.push({ g: t("Commands"), label: t(l), hint: "/todo", go: () => setBy(k) }));
     if (scans && env) it.push({ g: t("Commands"), label: t("Scan {env}", { env }), hint: "", go: () => startScan(org, env) });
     if (scans) it.push({ g: t("Commands"), label: t("Add servers…"), hint: "", go: () => set({ view: "setup" }) });
     const qq = q.trim().toLowerCase();
-    return (qq ? it.filter((x) => x.label.toLowerCase().includes(qq)) : it.filter((x) => x.g !== t("Inside") && x.g !== t("Servers"))).slice(0, 50);
+    return (
+      qq ? it.filter((x) => x.label.toLowerCase().includes(qq)) : it.filter((x) => x.g !== t("Inside") && x.g !== t("Servers"))
+    ).slice(0, 50);
   }, [palOpen, q, view, envd, scans, org, env]);
   const pick = (x?: PalItem) => {
     set({ palOpen: false });
@@ -367,7 +441,12 @@ export function Palette() {
   };
   let g = "";
   return (
-    <div className={"pal" + (palOpen ? " on" : "")} role="dialog" aria-label="Command palette" onClick={(e) => e.target === e.currentTarget && set({ palOpen: false })}>
+    <div
+      className={"pal" + (palOpen ? " on" : "")}
+      role="dialog"
+      aria-label="Command palette"
+      onClick={(e) => e.target === e.currentTarget && set({ palOpen: false })}
+    >
       <div className="box">
         <input
           ref={inRef}
@@ -393,9 +472,7 @@ export function Palette() {
           {items.length ? (
             items.map((x, i) => {
               const head = x.g !== g ? (g = x.g) : null;
-              return (
-                <PalRow key={i} head={head} x={x} on={i === pi} onPick={() => pick(x)} />
-              );
+              return <PalRow key={i} head={head} x={x} on={i === pi} onPick={() => pick(x)} />;
             })
           ) : (
             <div className="grp">{t("Nothing found")}</div>

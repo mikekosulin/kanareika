@@ -19,7 +19,9 @@ export const Hcell = ({ n }: { n: string }) => (
 
 export const useText = () => makeL(useCatalog().data);
 
-const Mk = ({ cls }: { cls: "ok" | "wn" | "bad" | "mut" }) => <span className={"mk " + cls}>{{ ok: "✓", wn: "!", bad: "!", mut: "–" }[cls]}</span>;
+const Mk = ({ cls }: { cls: "ok" | "wn" | "bad" | "mut" }) => (
+  <span className={"mk " + cls}>{{ ok: "✓", wn: "!", bad: "!", mut: "–" }[cls]}</span>
+);
 
 /** srvMark: the state slot: ✓ clean, ✗ not reached, – not scanned, ! partly checked with nothing found; a server with
  * fixes: its priority (a partly checked one too: why is said beside its name). */
@@ -65,18 +67,32 @@ const lastScan = (rd: any, n: string) => {
   const src = rd.meta.sources?.[n];
   return src ? (Object.values(src) as string[]).sort().at(-1) : rd.meta.run_id;
 };
-export const lastAttack = (lg: any) => [lg?.failed_last, ...(lg?.attackers || []).map((a: any) => a.last)].filter(Boolean).sort().at(-1) || "";
+export const lastAttack = (lg: any) =>
+  [lg?.failed_last, ...(lg?.attackers || []).map((a: any) => a.last)].filter(Boolean).sort().at(-1) || "";
 export function fwState(fw: any): ["ok" | "bad" | "mut", string, string] {
   if (!fw || !fw.readable) return ["mut", t("no access"), ""];
-  const parts = [fw.firewalld === "running" && "firewalld", fw.ufw_active && "ufw", fw.iptables_input_policy && `INPUT ${fw.iptables_input_policy}`, fw.docker_rules && "docker"].filter(Boolean);
+  const parts = [
+    fw.firewalld === "running" && "firewalld",
+    fw.ufw_active && "ufw",
+    fw.iptables_input_policy && `INPUT ${fw.iptables_input_policy}`,
+    fw.docker_rules && "docker",
+  ].filter(Boolean);
   return fw.has_input_filtering ? ["ok", parts[0] || t("filtering"), parts.join(" · ")] : ["bad", t("no filtering"), parts.join(" · ")];
 }
 export function timeState(x: any): ["ok" | "wn" | "bad" | "mut", string, string] {
   const tm = x.time;
   if (!tm) return x.ntp_synced === "yes" ? ["ok", t("synced"), ""] : x.ntp_synced === "no" ? ["wn", t("not synced"), ""] : ["mut", "?", ""];
-  const off = tm.offset_s, offTxt = off == null ? "" : Math.abs(off) < 1 ? `${Math.round(off * 1000)} ms` : `${off.toFixed(1)} s`;
-  const tip = [`${t("synchronized")}: ${tm.synced ?? "?"}`, `${t("service")}: ${tm.service || "?"}`, tm.source && `${t("source")}: ${tm.source}`,
-    offTxt && `${t("offset")}: ${offTxt}`, tm.skew_s != null && `${t("clock skew")}: ${tm.skew_s.toFixed(1)} s`].filter(Boolean).join("\n");
+  const off = tm.offset_s,
+    offTxt = off == null ? "" : Math.abs(off) < 1 ? `${Math.round(off * 1000)} ms` : `${off.toFixed(1)} s`;
+  const tip = [
+    `${t("synchronized")}: ${tm.synced ?? "?"}`,
+    `${t("service")}: ${tm.service || "?"}`,
+    tm.source && `${t("source")}: ${tm.source}`,
+    offTxt && `${t("offset")}: ${offTxt}`,
+    tm.skew_s != null && `${t("clock skew")}: ${tm.skew_s.toFixed(1)} s`,
+  ]
+    .filter(Boolean)
+    .join("\n");
   const bad = tm.synced === "no" || (tm.skew_s != null && Math.abs(tm.skew_s) > 30);
   const warn = !bad && ((off != null && Math.abs(off) > 1) || (tm.skew_s != null && Math.abs(tm.skew_s) > 2) || !tm.service_active);
   return [bad ? "bad" : warn ? "wn" : "ok", offTxt || (tm.synced === "yes" ? t("synced") : tm.synced || "?"), tip];
@@ -91,18 +107,38 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
   const [rules, setRules] = useState<string | null>(null);
   const n = name;
   const eh: any = (env.data?.hosts || []).find((h) => h.name === n) || {};
-  const f = rd.facts?.[n] || {}, c = rd.hosts?.[n] || {}, s = hostState(rd, n), last = runIso(lastScan(rd, n)) || rd.meta.finished;
-  const pk = (rd.plan || []).filter((p: any) => p.host === n).sort((a: any, b: any) => (a.priority || "P9").localeCompare(b.priority || "P9") || (a.due || "").localeCompare(b.due || ""));
-  const A = rd.access?.[n], E = rd.exposure?.[n], H = rd.health?.[n];
-  const other = (rd.other || []).filter((o: any) => o.host === n), mod = (m: string) => other.filter((o: any) => o.module === m);
-  const rest = [...other.filter((o: any) => !["access", "exposure", "health"].includes(o.module)), ...(rd.inventory || []).filter((o: any) => o.host === n && o.module !== "access")];
+  const f = rd.facts?.[n] || {},
+    c = rd.hosts?.[n] || {},
+    s = hostState(rd, n),
+    last = runIso(lastScan(rd, n)) || rd.meta.finished;
+  const pk = (rd.plan || [])
+    .filter((p: any) => p.host === n)
+    .sort((a: any, b: any) => (a.priority || "P9").localeCompare(b.priority || "P9") || (a.due || "").localeCompare(b.due || ""));
+  const A = rd.access?.[n],
+    E = rd.exposure?.[n],
+    H = rd.health?.[n];
+  const other = (rd.other || []).filter((o: any) => o.host === n),
+    mod = (m: string) => other.filter((o: any) => o.module === m);
+  const rest = [
+    ...other.filter((o: any) => !["access", "exposure", "health"].includes(o.module)),
+    ...(rd.inventory || []).filter((o: any) => o.host === n && o.module !== "access"),
+  ];
   const ex = (rd.exceptions || []).filter((x: any) => x.host === n);
   const pb = (p?: string) => (p ? <span className={"pb " + p}>{p}</span> : <Mk cls="wn" />);
   const due = (d?: string, p?: string) => (d ? <span className={days(d) < 0 && p !== "P4" ? "late" : ""}>{dueText(d)}</span> : null);
   const denied = (x: any) =>
-    x?.denied?.length ? <Li mark={<Mk cls="mut" />} text={<span className="z">{t("no access to {what}", { what: x.denied.map((d: string) => catMsg(deniedKey(d), d)).join(", ") })}</span>} /> : null;
+    x?.denied?.length ? (
+      <Li
+        mark={<Mk cls="mut" />}
+        text={
+          <span className="z">{t("no access to {what}", { what: x.denied.map((d: string) => catMsg(deniedKey(d), d)).join(", ") })}</span>
+        }
+      />
+    ) : null;
   const pcs = ["P1", "P2", "P3", "P4"].filter((p) => c[p]);
-  const meta = [eh.address, f.os, eh.group && t("group {g}", { g: eh.group }), (eh.exposure === 1 || eh.public) && t("Public")].filter(Boolean);
+  const meta = [eh.address, f.os, eh.group && t("group {g}", { g: eh.group }), (eh.exposure === 1 || eh.public) && t("Public")].filter(
+    Boolean,
+  );
   const reboot = pk.some((p: any) => p.fix_state === "reboot");
   const probl = srv && ["failed", "partial", "not_scanned"].includes(srv.state || "") ? problemText(srv) : "";
   const scannedAt = srv?.last_scan || (s[0] === "mut" ? "" : last);
@@ -110,86 +146,273 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
 
   const fixRows = [
     ...pk.map((p: any, i: number) => (
-      <Li key={k("p" + i)} mark={pb(p.priority)} title={`${p.installed} → ${p.fixed || ""}`} right={due(p.due, p.priority)}
-        text={<>
-          <code>{p.pkg}</code> <span className="z">→</span> {p.fixed || p.repo_version ? <code>{p.repo_version || p.fixed}</code> : <span className="z">{t("no fix yet")}</span>}
-          {p.kev && <> <span className="fl kev">KEV</span></>}
-        </>} />
+      <Li
+        key={k("p" + i)}
+        mark={pb(p.priority)}
+        title={`${p.installed} → ${p.fixed || ""}`}
+        right={due(p.due, p.priority)}
+        text={
+          <>
+            <code>{p.pkg}</code> <span className="z">→</span>{" "}
+            {p.fixed || p.repo_version ? <code>{p.repo_version || p.fixed}</code> : <span className="z">{t("no fix yet")}</span>}
+            {p.kev && (
+              <>
+                {" "}
+                <span className="fl kev">KEV</span>
+              </>
+            )}
+          </>
+        }
+      />
     )),
-    ...rest.filter((o: any) => o.priority).map((o: any, i: number) => <Li key={k("o" + i)} mark={pb(o.priority)} text={L(o)} right={due(o.due, o.priority)} title={o.target} />),
+    ...rest
+      .filter((o: any) => o.priority)
+      .map((o: any, i: number) => (
+        <Li key={k("o" + i)} mark={pb(o.priority)} text={L(o)} right={due(o.due, o.priority)} title={o.target} />
+      )),
   ];
 
   let access: ReactNode = null;
   if (A) {
-    const lg = A.logins || {}, keys = A.keys || [], acc = lg.accepted || [], la = lastAttack(lg);
+    const lg = A.logins || {},
+      keys = A.keys || [],
+      acc = lg.accepted || [],
+      la = lastAttack(lg);
     access = (
-      <Lis rows={[
-        ...mod("access").map((o: any, i: number) => <Li key={"a" + i} mark={pb(o.priority)} text={L(o)} right={o.priority} />),
-        A.password_auth == null ? <Li key="pw" mark={<Mk cls="mut" />} text={t("password login: unknown")} />
-          : A.password_auth ? (mod("access").length ? null : <Li key="pw" mark={<Mk cls={A.users_with_password?.length ? "bad" : "wn"} />} text={t("sshd: password login enabled")} />)
-          : <Li key="pw" mark={<Mk cls="ok" />} text={t("password login off")} />,
-        A.sshd?.permitrootlogin === "yes" ? <Li key="root" mark={<Mk cls="bad" />} text={t("sshd: root login allowed")} /> : null,
-        A.users_with_password?.length ? <Li key="up" mark={<Mk cls="bad" />} text={tx("password set for {users}", { users: <code>{A.users_with_password.join(", ")}</code> })} /> : null,
-        <Li key="keys" mark={<Mk cls="ok" />} title={keys.map((x: any) => `${x.user}: ${x.type} ${x.comment}`).join("\n")}
-          text={<>{t("keys: {n} · users: {u}", { n: keys.length, u: new Set(keys.map((x: any) => x.user)).size })}{keys.some((x: any) => x.user === "root") && <span className="z"> · root</span>}</>} />,
-        acc.length ? <Li key="acc" mark={<Mk cls="mut" />} title={acc.map((x: any) => `${x.user} ${x.ip} ${tsShort(x.last)}`).join("\n")}
-          text={t("{n} logins from {m} addresses, 30 d", { n: fmtN(acc.reduce((m: number, x: any) => m + x.count, 0)), m: new Set(acc.map((x: any) => x.ip)).size })} /> : null,
-        lg.failed_total ? <Li key="fail" mark={<Mk cls="wn" />} text={t("{n} failed logins from {m} addresses", { n: fmtN(lg.failed_total), m: fmtN(lg.failed_ips) })} right={la ? ago(la) : ""} /> : null,
-        denied(A) && <span key="den">{denied(A)}</span>,
-      ]} />
+      <Lis
+        rows={[
+          ...mod("access").map((o: any, i: number) => <Li key={"a" + i} mark={pb(o.priority)} text={L(o)} right={o.priority} />),
+          A.password_auth == null ? (
+            <Li key="pw" mark={<Mk cls="mut" />} text={t("password login: unknown")} />
+          ) : A.password_auth ? (
+            mod("access").length ? null : (
+              <Li key="pw" mark={<Mk cls={A.users_with_password?.length ? "bad" : "wn"} />} text={t("sshd: password login enabled")} />
+            )
+          ) : (
+            <Li key="pw" mark={<Mk cls="ok" />} text={t("password login off")} />
+          ),
+          A.sshd?.permitrootlogin === "yes" ? <Li key="root" mark={<Mk cls="bad" />} text={t("sshd: root login allowed")} /> : null,
+          A.users_with_password?.length ? (
+            <Li
+              key="up"
+              mark={<Mk cls="bad" />}
+              text={tx("password set for {users}", { users: <code>{A.users_with_password.join(", ")}</code> })}
+            />
+          ) : null,
+          <Li
+            key="keys"
+            mark={<Mk cls="ok" />}
+            title={keys.map((x: any) => `${x.user}: ${x.type} ${x.comment}`).join("\n")}
+            text={
+              <>
+                {t("keys: {n} · users: {u}", { n: keys.length, u: new Set(keys.map((x: any) => x.user)).size })}
+                {keys.some((x: any) => x.user === "root") && <span className="z"> · root</span>}
+              </>
+            }
+          />,
+          acc.length ? (
+            <Li
+              key="acc"
+              mark={<Mk cls="mut" />}
+              title={acc.map((x: any) => `${x.user} ${x.ip} ${tsShort(x.last)}`).join("\n")}
+              text={t("{n} logins from {m} addresses, 30 d", {
+                n: fmtN(acc.reduce((m: number, x: any) => m + x.count, 0)),
+                m: new Set(acc.map((x: any) => x.ip)).size,
+              })}
+            />
+          ) : null,
+          lg.failed_total ? (
+            <Li
+              key="fail"
+              mark={<Mk cls="wn" />}
+              text={t("{n} failed logins from {m} addresses", { n: fmtN(lg.failed_total), m: fmtN(lg.failed_ips) })}
+              right={la ? ago(la) : ""}
+            />
+          ) : null,
+          denied(A) && <span key="den">{denied(A)}</span>,
+        ]}
+      />
     );
   }
   let net: ReactNode = null;
   if (E) {
-    const fw = fwState(E.firewall), pub = [...new Set<number>((E.listen || []).filter((y: any) => y.public).map((y: any) => y.port))].sort((a, b) => a - b);
+    const fw = fwState(E.firewall),
+      pub = [...new Set<number>((E.listen || []).filter((y: any) => y.public).map((y: any) => y.port))].sort((a, b) => a - b);
     const fwTxt = `${t("firewall")} ${fw[1]}`;
     net = (
       <>
-        <Lis rows={[
-          ...mod("exposure").map((o: any, i: number) => <Li key={"e" + i} mark={pb(o.priority)} text={L(o)} right={due(o.due, o.priority)} title={o.target} />),
-          <Li key="fw" mark={<Mk cls={fw[0] === "bad" ? "bad" : "ok"} />} title={fw[2]}
-            text={pub.length ? <><code>{pub.map((p) => ":" + p).join(" ")}</code> {t("open")} · {fwTxt}</> : <>{t("nothing open to the outside")} · {fwTxt}</>}
-            right={E.firewall?.readable ? (
-              <button className="lnk" onClick={() => api("/api/hostfile?" + qs({ org, env: envName, run, host: n, name: "exposure" }))
-                .then((x: any) => setRules(Object.entries(x.firewall_raw || {}).filter(([, v]) => v).map(([k2, v]) => `## ${k2}\n${v}`).join("\n\n") || t("No rules.")))
-                .catch((er) => toast(er.message))}>{t("rules")}</button>
-            ) : null} />,
-          E.public?.length ? <Li key="pub" mark={<Mk cls={E.unlisted_public?.length ? "bad" : "mut"} />} title={E.unlisted_public?.length ? t("not in the organization config") : ""}
-            text={<>{t("public IP")} <code>{E.public.join(" ")}</code></>} /> : null,
-          <Li key="in" mark={<Mk cls="mut" />} text={t("{n} listening inside", { n: (E.listen || []).filter((y: any) => !y.public).length })}
-            title={(E.listen || []).filter((y: any) => !y.public).map((y: any) => `${y.port}/${y.proto} ${y.process || "?"} ${y.addr}`).join("\n")} />,
-          denied(E) && <span key="den">{denied(E)}</span>,
-        ]} />
+        <Lis
+          rows={[
+            ...mod("exposure").map((o: any, i: number) => (
+              <Li key={"e" + i} mark={pb(o.priority)} text={L(o)} right={due(o.due, o.priority)} title={o.target} />
+            )),
+            <Li
+              key="fw"
+              mark={<Mk cls={fw[0] === "bad" ? "bad" : "ok"} />}
+              title={fw[2]}
+              text={
+                pub.length ? (
+                  <>
+                    <code>{pub.map((p) => ":" + p).join(" ")}</code> {t("open")} · {fwTxt}
+                  </>
+                ) : (
+                  <>
+                    {t("nothing open to the outside")} · {fwTxt}
+                  </>
+                )
+              }
+              right={
+                E.firewall?.readable ? (
+                  <button
+                    className="lnk"
+                    onClick={() =>
+                      api("/api/hostfile?" + qs({ org, env: envName, run, host: n, name: "exposure" }))
+                        .then((x: any) =>
+                          setRules(
+                            Object.entries(x.firewall_raw || {})
+                              .filter(([, v]) => v)
+                              .map(([k2, v]) => `## ${k2}\n${v}`)
+                              .join("\n\n") || t("No rules."),
+                          ),
+                        )
+                        .catch((er) => toast(er.message))
+                    }
+                  >
+                    {t("rules")}
+                  </button>
+                ) : null
+              }
+            />,
+            E.public?.length ? (
+              <Li
+                key="pub"
+                mark={<Mk cls={E.unlisted_public?.length ? "bad" : "mut"} />}
+                title={E.unlisted_public?.length ? t("not in the organization config") : ""}
+                text={
+                  <>
+                    {t("public IP")} <code>{E.public.join(" ")}</code>
+                  </>
+                }
+              />
+            ) : null,
+            <Li
+              key="in"
+              mark={<Mk cls="mut" />}
+              text={t("{n} listening inside", { n: (E.listen || []).filter((y: any) => !y.public).length })}
+              title={(E.listen || [])
+                .filter((y: any) => !y.public)
+                .map((y: any) => `${y.port}/${y.proto} ${y.process || "?"} ${y.addr}`)
+                .join("\n")}
+            />,
+            denied(E) && <span key="den">{denied(E)}</span>,
+          ]}
+        />
         {rules != null && <pre className="term">{rules}</pre>}
       </>
     );
   }
   let hl: ReactNode = null;
   if (H) {
-    const d = maxUse(H.disks), tm = timeState(H), memFree = H.mem ? Math.round((100 * H.mem.available_mb) / H.mem.total_mb) : null;
-    const sum = [d && `${t("disk")} ${d.mount} ${d.use}%`, memFree != null && t("mem {n}% free", { n: memFree }), H.load && `load ${H.load.load15}/${H.load.cpus}`].filter(Boolean).join(" · ");
+    const d = maxUse(H.disks),
+      tm = timeState(H),
+      memFree = H.mem ? Math.round((100 * H.mem.available_mb) / H.mem.total_mb) : null;
+    const sum = [
+      d && `${t("disk")} ${d.mount} ${d.use}%`,
+      memFree != null && t("mem {n}% free", { n: memFree }),
+      H.load && `load ${H.load.load15}/${H.load.cpus}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
     hl = (
       <>
-        <Lis rows={[
-          ...mod("health").map((o: any, i: number) => <Li key={"h" + i} mark={pb(o.priority)} text={L(o)} right={due(o.due, o.priority)} title={o.target} />),
-          <Li key="sum" mark={<Mk cls={d && d.use >= 95 ? "bad" : d && d.use >= 85 ? "wn" : "ok"} />} text={sum} title={(H.disks || []).map((r: any) => `${r.mount} ${r.use}%`).join("\n")} />,
-          ...(H.disks || []).filter((r: any) => r !== d && r.use >= 85).map((r: any, i: number) => <Li key={"d" + i} mark={<Mk cls="wn" />} text={`${t("disk")} ${r.mount} ${r.use}%`} />),
-          ...(H.inodes || []).filter((r: any) => r.use >= 85).map((r: any, i: number) => <Li key={"i" + i} mark={<Mk cls="wn" />} text={`inodes ${r.mount} ${r.use}%`} />),
-          H.failed_units?.length ? <Li key="fu" mark={<Mk cls="wn" />} text={<>{t("failed units")} <code>{H.failed_units.join(", ")}</code></>} /> : null,
-          H.readonly_mounts?.length ? <Li key="ro" mark={<Mk cls="bad" />} text={<>{t("read-only")} <code>{H.readonly_mounts.join(", ")}</code></>} /> : null,
-          <Li key="tm" mark={<Mk cls={tm[0]} />} title={tm[2]} text={<>{t("time")} {tm[1]}{H.time && <span className="z"> · {[H.time.service, H.time.timezone].filter(Boolean).join(" · ")}</span>}</>} />,
-          ...Object.values(H.dmesg?.classes || {}).map((x: any, i: number) => <Li key={"k" + i} mark={<Mk cls="wn" />} text={`${t("kernel")}: ${catMsg(x.key, x.title)}`} right={x.count} title={x.last} />),
-          H.journal?.errors_7d ? <Li key="j" mark={<Mk cls="mut" />} text={t("{n} journal errors, 7 d", { n: fmtN(H.journal.errors_7d) })} /> : null,
-          denied(H) && <span key="den">{denied(H)}</span>,
-        ]} />
+        <Lis
+          rows={[
+            ...mod("health").map((o: any, i: number) => (
+              <Li key={"h" + i} mark={pb(o.priority)} text={L(o)} right={due(o.due, o.priority)} title={o.target} />
+            )),
+            <Li
+              key="sum"
+              mark={<Mk cls={d && d.use >= 95 ? "bad" : d && d.use >= 85 ? "wn" : "ok"} />}
+              text={sum}
+              title={(H.disks || []).map((r: any) => `${r.mount} ${r.use}%`).join("\n")}
+            />,
+            ...(H.disks || [])
+              .filter((r: any) => r !== d && r.use >= 85)
+              .map((r: any, i: number) => <Li key={"d" + i} mark={<Mk cls="wn" />} text={`${t("disk")} ${r.mount} ${r.use}%`} />),
+            ...(H.inodes || [])
+              .filter((r: any) => r.use >= 85)
+              .map((r: any, i: number) => <Li key={"i" + i} mark={<Mk cls="wn" />} text={`inodes ${r.mount} ${r.use}%`} />),
+            H.failed_units?.length ? (
+              <Li
+                key="fu"
+                mark={<Mk cls="wn" />}
+                text={
+                  <>
+                    {t("failed units")} <code>{H.failed_units.join(", ")}</code>
+                  </>
+                }
+              />
+            ) : null,
+            H.readonly_mounts?.length ? (
+              <Li
+                key="ro"
+                mark={<Mk cls="bad" />}
+                text={
+                  <>
+                    {t("read-only")} <code>{H.readonly_mounts.join(", ")}</code>
+                  </>
+                }
+              />
+            ) : null,
+            <Li
+              key="tm"
+              mark={<Mk cls={tm[0]} />}
+              title={tm[2]}
+              text={
+                <>
+                  {t("time")} {tm[1]}
+                  {H.time && <span className="z"> · {[H.time.service, H.time.timezone].filter(Boolean).join(" · ")}</span>}
+                </>
+              }
+            />,
+            ...Object.values(H.dmesg?.classes || {}).map((x: any, i: number) => (
+              <Li key={"k" + i} mark={<Mk cls="wn" />} text={`${t("kernel")}: ${catMsg(x.key, x.title)}`} right={x.count} title={x.last} />
+            )),
+            H.journal?.errors_7d ? (
+              <Li key="j" mark={<Mk cls="mut" />} text={t("{n} journal errors, 7 d", { n: fmtN(H.journal.errors_7d) })} />
+            ) : null,
+            denied(H) && <span key="den">{denied(H)}</span>,
+          ]}
+        />
         {(H.dmesg?.tail || []).length > 0 && <pre className="term">{H.dmesg.tail.slice(-20).join("\n")}</pre>}
       </>
     );
   }
-  const oth = <Lis rows={rest.filter((o: any) => !o.priority).map((o: any, i: number) => <Li key={i} mark={<Mk cls="mut" />} text={L(o)} title={o.target} />)} />;
-  const exc = <Lis rows={ex.map((x: any, i: number) => (
-    <Li key={i} mark={<Mk cls={x.exception?.expired || x.exception?.fix_available ? "bad" : "ok"} />} text={<><code>{x.pkg}</code> <span className="z">{x.id}</span></>} right={x.exception?.review_by} />
-  ))} />;
+  const oth = (
+    <Lis
+      rows={rest
+        .filter((o: any) => !o.priority)
+        .map((o: any, i: number) => (
+          <Li key={i} mark={<Mk cls="mut" />} text={L(o)} title={o.target} />
+        ))}
+    />
+  );
+  const exc = (
+    <Lis
+      rows={ex.map((x: any, i: number) => (
+        <Li
+          key={i}
+          mark={<Mk cls={x.exception?.expired || x.exception?.fix_available ? "bad" : "ok"} />}
+          text={
+            <>
+              <code>{x.pkg}</code> <span className="z">{x.id}</span>
+            </>
+          }
+          right={x.exception?.review_by}
+        />
+      ))}
+    />
+  );
   const fixes = fixRows.length ? (
     <>
       <div className="lis">{fixRows.slice(0, 12)}</div>
@@ -207,7 +430,9 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
           {probl && srv && (
             <>
               <SrvMark n={srv} />
-              <span>{srv.state === "failed" ? t("not reached") : srv.state === "partial" ? t("partly checked") : t("not scanned yet")}</span>
+              <span>
+                {srv.state === "failed" ? t("not reached") : srv.state === "partial" ? t("partly checked") : t("not scanned yet")}
+              </span>
             </>
           )}
         </div>
@@ -297,7 +522,11 @@ export function ExcDetail({ x }: { x: any }) {
           {t("Back")}
         </button>
         <div className="meta">
-          {e.fix_available ? stl("bad", t("fix in the repositories: back in the plan")) : e.expired ? stl("bad", t("expired: back in the plan")) : stl("ok", t("accepted"))}
+          {e.fix_available
+            ? stl("bad", t("fix in the repositories: back in the plan"))
+            : e.expired
+              ? stl("bad", t("expired: back in the plan"))
+              : stl("ok", t("accepted"))}
         </div>
         <div className="bigmono">{x.pkg}</div>
         <div className="vers">{x.id}</div>

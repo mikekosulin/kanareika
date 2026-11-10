@@ -68,7 +68,7 @@ func TestEveryPageStringTranslated(t *testing.T) {
 }
 
 // TestPageShape: the built page is HTML from its first byte, with the server's placeholders once each, inside
-// the script that hands them to the page; and it is built from the sources (web/: npm run build).
+// the script that hands them to the page; and it is built from the sources (web/: pnpm run build).
 func TestPageShape(t *testing.T) {
 	b, err := gunzip(assets.Web(), "index.html.gz")
 	if err != nil {

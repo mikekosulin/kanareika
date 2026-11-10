@@ -4,7 +4,7 @@
 #   make cover   — tests with coverage, per function (dist/coverage.html)
 #   make lint    — golangci-lint
 #   make check   — test + lint
-#   make web     — the web page, assets/web/index.html.gz, from web/ (needs Node; the binary does not)
+#   make web     — the web page, assets/web/index.html.gz, from web/: lint, format check, build (needs Node and pnpm; the binary does not)
 #   make cross   — release binaries for every platform into dist/
 #   make clean
 
@@ -39,7 +39,7 @@ lint:
 check: test lint
 
 web:
-	cd web && npm ci && npm run build
+	cd web && pnpm install --frozen-lockfile && pnpm run lint && pnpm run fmt:check && pnpm run build
 
 cross:
 	@for p in $(PLATFORMS); do os=$${p%/*}; arch=$${p#*/}; ext=; [ $$os = windows ] && ext=.exe; \

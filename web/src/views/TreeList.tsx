@@ -115,9 +115,23 @@ export function TreeRows(p: {
       {items.map((it) => {
         const r = p.rows[it.index];
         return (
-          <div key={it.key} className="vrow-wrap" data-index={it.index} ref={v.measureElement} style={{ transform: `translateY(${it.start - margin}px)` }}>
+          <div
+            key={it.key}
+            className="vrow-wrap"
+            data-index={it.index}
+            ref={v.measureElement}
+            style={{ transform: `translateY(${it.start - margin}px)` }}
+          >
             {r.type === "node" ? (
-              <NodeRow n={r.n} depth={r.depth} open={open.has(r.n.id)} cur={cur === r.n.id} sel={sel.has(r.n.id)} selectable={p.selectable} onShow={p.onShow} />
+              <NodeRow
+                n={r.n}
+                depth={r.depth}
+                open={open.has(r.n.id)}
+                cur={cur === r.n.id}
+                sel={sel.has(r.n.id)}
+                selectable={p.selectable}
+                onShow={p.onShow}
+              />
             ) : r.type === "sec" ? (
               <div className="node sec">
                 <span />
@@ -161,7 +175,15 @@ export function TreeRows(p: {
   );
 }
 
-function NodeRow(p: { n: TreeNode; depth: number; open: boolean; cur: boolean; sel: boolean; selectable: boolean; onShow: (id: string) => void }) {
+function NodeRow(p: {
+  n: TreeNode;
+  depth: number;
+  open: boolean;
+  cur: boolean;
+  sel: boolean;
+  selectable: boolean;
+  onShow: (id: string) => void;
+}) {
   const { n, depth } = p;
   const has = !!((n.kids && n.kids.length) || n.more);
   return (

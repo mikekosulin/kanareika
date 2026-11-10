@@ -53,7 +53,13 @@ export function App() {
       <div className={"scrim" + (s.sideOpen ? " on" : "")} onClick={() => set({ sideOpen: false })} />
       <main>
         <div className="mbar">
-          <button className="btn icon ghost" aria-label="Menu" aria-controls="side" aria-expanded={s.sideOpen} onClick={() => set({ sideOpen: !s.sideOpen })}>
+          <button
+            className="btn icon ghost"
+            aria-label="Menu"
+            aria-controls="side"
+            aria-expanded={s.sideOpen}
+            onClick={() => set({ sideOpen: !s.sideOpen })}
+          >
             <Icon name="menu" />
           </button>
           <b>kanareika</b>
@@ -77,11 +83,6 @@ export function App() {
 }
 
 function useBoot() {
-  const done = useRef(false);
-  if (!done.current) {
-    done.current = true;
-    readURL();
-  }
   useEffect(() => {
     const pop = () => {
       if (location.pathname.startsWith("/setup")) return;

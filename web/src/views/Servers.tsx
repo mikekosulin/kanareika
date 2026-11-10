@@ -1,6 +1,6 @@
 // Servers: every server of the environment, the most urgent first, clean ones last; a server's fixes under it;
 // other columns for every server (lenses: logins, network, health); the server's card beside.
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { t } from "../lib/i18n";
 import { ago, days, dueText, narrow, pct } from "../lib/format";
@@ -15,8 +15,17 @@ import { Hcell, HostDetail, SrvMark, useText } from "./HostDetail";
 import { NodeDetail } from "./NodeDetail";
 import { Banner, NoRuns } from "./Shell";
 
-const SFILT: [string, string][] = [["front", "Public"], ["kev", "KEV"], ["overdue", "overdue"]];
-const LENS_DEFAULT = [["priorities", "Priorities"], ["logins", "Logins"], ["network", "Network"], ["health", "Health"]].map(([id, title]) => ({ id, title }));
+const SFILT: [string, string][] = [
+  ["front", "Public"],
+  ["kev", "KEV"],
+  ["overdue", "overdue"],
+];
+const LENS_DEFAULT = [
+  ["priorities", "Priorities"],
+  ["logins", "Logins"],
+  ["network", "Network"],
+  ["health", "Health"],
+].map(([id, title]) => ({ id, title }));
 
 let lastP: TreeParams | null = null;
 const params = (s: Parameters<typeof treeParams>[0]) => {
@@ -67,7 +76,13 @@ export function Servers() {
           </div>
           <div className="bar2 vbar">
             <Seg label={t("group")} aria={t("Group by")} items={GROUPS.map(([k, l]) => [k, t(l)])} value="host" onPick={setBy} />
-            <Seg label={t("show")} aria={t("Show")} items={lenses.map((l) => [l.id, t(l.title)])} value={s.lens} onPick={(id) => set({ lens: id, vsel: "" })} />
+            <Seg
+              label={t("show")}
+              aria={t("Show")}
+              items={lenses.map((l) => [l.id, t(l.title)])}
+              value={s.lens}
+              onPick={(id) => set({ lens: id, vsel: "" })}
+            />
             {s.lens === "priorities" && (
               <Chips items={SFILT.map(([k, l]) => [k, t(l)])} on={s.flt} onToggle={(k) => set((st) => ({ flt: toggle(st.flt, k) }))}>
                 <button className="chip" aria-pressed={s.p4} onClick={() => set((st) => ({ p4: !st.p4 }))}>
@@ -83,10 +98,18 @@ export function Servers() {
                 <div className="svh">
                   <span />
                   <span />
-                  <SortHead k="name" asc sort={s.sort} onSort={setSort}>{t("Server")}</SortHead>
-                  <SortHead k="pri" asc sort={s.sort} onSort={setSort}>{t("Priorities")}</SortHead>
-                  <SortHead k="fixes" className="r c-fx" sort={s.sort} onSort={setSort}>{t("Fixes")}</SortHead>
-                  <SortHead k="scanned" className="r c-sc" sort={s.sort} onSort={setSort}>{t("Scanned")}</SortHead>
+                  <SortHead k="name" asc sort={s.sort} onSort={setSort}>
+                    {t("Server")}
+                  </SortHead>
+                  <SortHead k="pri" asc sort={s.sort} onSort={setSort}>
+                    {t("Priorities")}
+                  </SortHead>
+                  <SortHead k="fixes" className="r c-fx" sort={s.sort} onSort={setSort}>
+                    {t("Fixes")}
+                  </SortHead>
+                  <SortHead k="scanned" className="r c-sc" sort={s.sort} onSort={setSort}>
+                    {t("Scanned")}
+                  </SortHead>
                 </div>
                 {!tr ? (
                   <Skeleton />
@@ -128,9 +151,17 @@ function serverList(tr: Tree | undefined, hosts?: { name: string }[]) {
 }
 
 function ServersSub({ tr, list }: { tr: Tree; list: (TreeNode & { target?: boolean })[] }) {
-  const c = tr.counts || {}, sv = tr.servers || {};
+  const c = tr.counts || {},
+    sv = tr.servers || {};
   const servers = list.filter((n) => !n.target).length;
-  const st = ([["clean", "ok", "nothing to fix"], ["failed", "bad", "not reached"], ["partial", "wn", "partly checked"], ["not_scanned", "z", "not scanned yet"]] as const).filter(([k]) => sv[k]);
+  const st = (
+    [
+      ["clean", "ok", "nothing to fix"],
+      ["failed", "bad", "not reached"],
+      ["partial", "wn", "partly checked"],
+      ["not_scanned", "z", "not scanned yet"],
+    ] as const
+  ).filter(([k]) => sv[k]);
   return (
     <span className="mono">
       <span title={t("servers")}>{servers}</span> ·{" "}
@@ -154,7 +185,15 @@ function ServersSub({ tr, list }: { tr: Tree; list: (TreeNode & { target?: boole
   );
 }
 
-function ServerRows({ list, p, scrollRef }: { list: (TreeNode & { target?: boolean })[]; p: TreeParams; scrollRef: React.RefObject<HTMLDivElement | null> }) {
+function ServerRows({
+  list,
+  p,
+  scrollRef,
+}: {
+  list: (TreeNode & { target?: boolean })[];
+  p: TreeParams;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+}) {
   const { open, p4, cur } = useS((s) => ({ open: s.open, p4: s.p4, cur: s.cur }));
   const kp = useMemo(() => ({ ...p, all: 1 }) as TreeParams, [p]);
   // the rows open at any depth (a server, an image in it) whose kids came without them: asked for once each
@@ -182,24 +221,27 @@ function ServerRows({ list, p, scrollRef }: { list: (TreeNode & { target?: boole
     getItemKey: (i) => rows[i].n.id,
   });
   const show = useCallback((id: string) => set({ cur: id, stack: [], detailOpen: narrow() }), []);
-  // j/k move, l/h open and close, Enter shows
+  // j/k move, l/h open and close, Enter shows: the rows as drawn last, the listener added once
+  const onKey = useEffectEvent((e: KeyboardEvent) => {
+    if ((e.target as HTMLElement).matches?.("input, select, textarea") || useApp.getState().palOpen || e.metaKey || e.ctrlKey) return;
+    const s = useApp.getState(),
+      i = rows.findIndex((r) => r.n.id === s.cur),
+      n = rows[i]?.n;
+    if (e.key === "j" || e.key === "ArrowDown") {
+      e.preventDefault();
+      if (rows[i + 1]) show(rows[i + 1].n.id);
+    } else if (e.key === "k" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (rows[i - 1]) show(rows[i - 1].n.id);
+    } else if ((e.key === "l" || e.key === "ArrowRight") && n) set({ open: new Set(s.open).add(n.id) });
+    else if ((e.key === "h" || e.key === "ArrowLeft") && n && s.open.has(n.id)) set({ open: toggle(s.open, n.id) });
+    else if (e.key === "Escape") set({ detailOpen: false });
+  });
   useEffect(() => {
-    const k = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).matches?.("input, select, textarea") || useApp.getState().palOpen || e.metaKey || e.ctrlKey) return;
-      const s = useApp.getState(), i = rows.findIndex((r) => r.n.id === s.cur), n = rows[i]?.n;
-      if (e.key === "j" || e.key === "ArrowDown") {
-        e.preventDefault();
-        if (rows[i + 1]) show(rows[i + 1].n.id);
-      } else if (e.key === "k" || e.key === "ArrowUp") {
-        e.preventDefault();
-        if (rows[i - 1]) show(rows[i - 1].n.id);
-      } else if ((e.key === "l" || e.key === "ArrowRight") && n) set({ open: new Set(s.open).add(n.id) });
-      else if ((e.key === "h" || e.key === "ArrowLeft") && n && s.open.has(n.id)) set({ open: toggle(s.open, n.id) });
-      else if (e.key === "Escape") set({ detailOpen: false });
-    };
+    const k = (e: KeyboardEvent) => onKey(e);
     addEventListener("keydown", k);
     return () => removeEventListener("keydown", k);
-  }, [rows, show]);
+  }, []);
   useEffect(() => {
     const i = rows.findIndex((r) => r.n.id === cur);
     if (i >= 0) v.scrollToIndex(i, { align: "auto" });
@@ -210,8 +252,21 @@ function ServerRows({ list, p, scrollRef }: { list: (TreeNode & { target?: boole
       {v.getVirtualItems().map((it) => {
         const { n, depth } = rows[it.index];
         return (
-          <div key={it.key} className="vrow-wrap" data-index={it.index} ref={v.measureElement} style={{ transform: `translateY(${it.start - margin}px)` }}>
-            <ServerRow n={n} depth={depth} open={open.has(n.id)} cur={cur === n.id} hasKids={!!(n.more || (n.kids || []).some((k) => k.kind !== "section" && (p4 || k.priority !== "P4")))} onShow={show} />
+          <div
+            key={it.key}
+            className="vrow-wrap"
+            data-index={it.index}
+            ref={v.measureElement}
+            style={{ transform: `translateY(${it.start - margin}px)` }}
+          >
+            <ServerRow
+              n={n}
+              depth={depth}
+              open={open.has(n.id)}
+              cur={cur === n.id}
+              hasKids={!!(n.more || (n.kids || []).some((k) => k.kind !== "section" && (p4 || k.priority !== "P4")))}
+              onShow={show}
+            />
           </div>
         );
       })}
@@ -219,11 +274,30 @@ function ServerRows({ list, p, scrollRef }: { list: (TreeNode & { target?: boole
   );
 }
 
-function ServerRow({ n, depth, open, cur, hasKids, onShow }: { n: TreeNode & { target?: boolean }; depth: number; open: boolean; cur: boolean; hasKids: boolean; onShow: (id: string) => void }) {
+function ServerRow({
+  n,
+  depth,
+  open,
+  cur,
+  hasKids,
+  onShow,
+}: {
+  n: TreeNode & { target?: boolean };
+  depth: number;
+  open: boolean;
+  cur: boolean;
+  hasKids: boolean;
+  onShow: (id: string) => void;
+}) {
   const { problemText } = useText();
-  let name, pri, fx = "", sc;
+  let name,
+    pri,
+    fx = "",
+    sc;
   if (n.kind === "host") {
-    const c = n.counts || {}, why = problemText(n), sub = n.state === "failed" || n.state === "partial" || n.state === "not_scanned" ? why : n.os_short || n.os || "";
+    const c = n.counts || {},
+      why = problemText(n),
+      sub = n.state === "failed" || n.state === "partial" || n.state === "not_scanned" ? why : n.os_short || n.os || "";
     name = (
       <>
         <span className="hostn" title={n.label}>
@@ -244,23 +318,29 @@ function ServerRow({ n, depth, open, cur, hasKids, onShow }: { n: TreeNode & { t
       </>
     );
     pri =
-      n.state === "clean" ? t("nothing to fix")
-      : !n.fixes && (n.state === "failed" || n.state === "not_scanned") ? t("not checked")
-      : ["P1", "P2", "P3", "P4"].map((p, i) => (
-          <span key={p}>
-            {i > 0 && <i>•</i>}
-            {c[p] ? <b className={"c" + p}>{c[p]}</b> : "0"}
-          </span>
-        ));
+      n.state === "clean"
+        ? t("nothing to fix")
+        : !n.fixes && (n.state === "failed" || n.state === "not_scanned")
+          ? t("not checked")
+          : ["P1", "P2", "P3", "P4"].map((p, i) => (
+              <span key={p}>
+                {i > 0 && <i>•</i>}
+                {c[p] ? <b className={"c" + p}>{c[p]}</b> : "0"}
+              </span>
+            ));
     fx = n.fixes ? String(n.fixes) : "";
     sc = n.last_scan ? (
       <span className={n.state === "failed" ? "bad" : ""} title={n.last_scan}>
         {ago(n.last_scan)}
       </span>
-    ) : "—";
+    ) : (
+      "—"
+    );
   } else {
     name = <MainText n={n} />; // the row as a whole is indented by its depth (.sv.kid)
-    pri = [n.cves ? `${n.cves} CVE` : "", n.kev ? "KEV" : "", n.kind === "cve" && n.epss ? "EPSS " + pct(n.epss) : ""].filter(Boolean).join(" · ");
+    pri = [n.cves ? `${n.cves} CVE` : "", n.kev ? "KEV" : "", n.kind === "cve" && n.epss ? "EPSS " + pct(n.epss) : ""]
+      .filter(Boolean)
+      .join(" · ");
     sc = n.due ? (
       <span className={days(n.due) < 0 ? "late" : ""} title={n.due}>
         {dueText(n.due)}
@@ -302,7 +382,17 @@ function ServerRow({ n, depth, open, cur, hasKids, onShow }: { n: TreeNode & { t
 }
 
 /** LensTable: other columns for every server, as /api/lens describes them (a new lens needs no change here). */
-function LensTable({ lens, q, byName, scrollRef }: { lens: ReturnType<typeof useLens>; q: string; byName: Map<string, TreeNode>; scrollRef: React.RefObject<HTMLDivElement | null> }) {
+function LensTable({
+  lens,
+  q,
+  byName,
+  scrollRef,
+}: {
+  lens: ReturnType<typeof useLens>;
+  q: string;
+  byName: Map<string, TreeNode>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+}) {
   const cur = useApp((s) => s.cur);
   const d = lens.data;
   const rows = useMemo(() => {
@@ -314,7 +404,8 @@ function LensTable({ lens, q, byName, scrollRef }: { lens: ReturnType<typeof use
   const LV: Record<string, string> = { warn: "wn", bad: "bad" };
   const cols: Col<any>[] = [
     {
-      l: "", w: "28px",
+      l: "",
+      w: "28px",
       v: (r) => {
         const n = byName.get(r.host);
         return n && n.state !== "todo" ? <SrvMark n={n} /> : n?.priority ? <span className={"pb " + n.priority}>{n.priority}</span> : null;
@@ -323,7 +414,13 @@ function LensTable({ lens, q, byName, scrollRef }: { lens: ReturnType<typeof use
     { l: t("Server"), w: "minmax(96px, 1fr)", v: (r) => <Hcell n={r.host} />, s: (r) => r.host },
     ...((d.lens?.columns || []) as any[]).map((c): Col<any> => ({
       l: t(c.title),
-      w: c.width_hint ? (typeof c.width_hint === "number" ? c.width_hint + "px" : c.width_hint) : c.kind === "text" ? "minmax(0, 1fr)" : "80px",
+      w: c.width_hint
+        ? typeof c.width_hint === "number"
+          ? c.width_hint + "px"
+          : c.width_hint
+        : c.kind === "text"
+          ? "minmax(0, 1fr)"
+          : "80px",
       k: c.drop >= 2 ? 3 : c.drop === 1 ? 2 : 1,
       c: c.align === "right" ? "r" : c.kind === "text" ? "d" : "",
       v: (r) => {
@@ -341,8 +438,15 @@ function LensTable({ lens, q, byName, scrollRef }: { lens: ReturnType<typeof use
   ];
   return (
     <div className={lens.isPlaceholderData ? "stale" : ""}>
-      <DataTable id={"lens/" + (d.lens?.id || "")} cols={cols} items={rows} rowKey={(r) => r.host} sel={cur?.startsWith("h:") ? cur.slice(2) : ""}
-        onOpen={(r) => set({ cur: "h:" + r.host, detailOpen: narrow() })} scrollRef={scrollRef} />
+      <DataTable
+        id={"lens/" + (d.lens?.id || "")}
+        cols={cols}
+        items={rows}
+        rowKey={(r) => r.host}
+        sel={cur?.startsWith("h:") ? cur.slice(2) : ""}
+        onOpen={(r) => set({ cur: "h:" + r.host, detailOpen: narrow() })}
+        scrollRef={scrollRef}
+      />
     </div>
   );
 }
@@ -376,11 +480,13 @@ function ServerDetail({ byName, p }: { byName: Map<string, TreeNode>; p: TreePar
         <NodeDetail
           d={node.data}
           onGo={(id) => {
-            const s = useApp.getState(), d = node.data!;
+            const s = useApp.getState(),
+              d = node.data!;
             set({ stack: [...s.stack, { id: d.node.id, label: d.node.label }], cur: id });
           }}
           onBack={() => {
-            const s = useApp.getState(), pr = s.stack[s.stack.length - 1];
+            const s = useApp.getState(),
+              pr = s.stack[s.stack.length - 1];
             if (pr) set({ cur: pr.id, stack: s.stack.slice(0, -1) });
           }}
         />

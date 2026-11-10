@@ -2,8 +2,7 @@
 import { LANG, t } from "./i18n";
 
 export const today = () => new Date().toISOString().slice(0, 10);
-export const days = (d: string) =>
-  Math.round((new Date(d + "T00:00:00Z").getTime() - new Date(today() + "T00:00:00Z").getTime()) / 864e5);
+export const days = (d: string) => Math.round((new Date(d + "T00:00:00Z").getTime() - new Date(today() + "T00:00:00Z").getTime()) / 864e5);
 export const fmtDay = (d: string) =>
   new Date(d + "T00:00:00Z").toLocaleDateString(LANG, { day: "numeric", month: "short", timeZone: "UTC" });
 export const dueText = (d?: string) => {
@@ -11,8 +10,7 @@ export const dueText = (d?: string) => {
   const n = days(d);
   return n < 0 ? t("{n} d late", { n: -n }) : n < 14 ? t("in {n} d", { n }) : fmtDay(d);
 };
-export const pct = (e: number) =>
-  e >= 0.1 ? Math.round(e * 100) + "%" : e >= 0.01 ? (e * 100).toFixed(1) + "%" : e > 0 ? "<1%" : "";
+export const pct = (e: number) => (e >= 0.1 ? Math.round(e * 100) + "%" : e >= 0.01 ? (e * 100).toFixed(1) + "%" : e > 0 ? "<1%" : "");
 export const ago = (iso?: string) => {
   if (!iso) return t("never");
   const h = (Date.now() - new Date(iso).getTime()) / 36e5;
@@ -20,7 +18,11 @@ export const ago = (iso?: string) => {
 };
 export const fmtN = (n?: number | null) => (n ?? 0).toLocaleString(LANG);
 export const runLabel = (id?: string) =>
-  id === "current" ? t("Current state") : String(id || "").replace("_", " ").replace(/(\d\d)(\d\d)(\d\d)$/, "$1:$2");
+  id === "current"
+    ? t("Current state")
+    : String(id || "")
+        .replace("_", " ")
+        .replace(/(\d\d)(\d\d)(\d\d)$/, "$1:$2");
 export const tsShort = (v?: string) => (v || "").replace("T", " ").slice(0, 16);
 export const took = (a?: string, b?: string) => {
   if (!a || !b) return "";

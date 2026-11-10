@@ -16,15 +16,30 @@ import { ExcDetail, Hcell } from "./HostDetail";
 import { Banner, NoRuns } from "./Shell";
 
 export const FILTERS: [string, string][] = [
-  ["kev", "KEV"], ["rce", "pre-auth RCE"], ["epss", "EPSS ≥ 10%"], ["front", "Public"], ["ready", "fix ready"], ["nofix", "no fix yet"], ["overdue", "overdue"],
+  ["kev", "KEV"],
+  ["rce", "pre-auth RCE"],
+  ["epss", "EPSS ≥ 10%"],
+  ["front", "Public"],
+  ["ready", "fix ready"],
+  ["nofix", "no fix yet"],
+  ["overdue", "overdue"],
 ];
-export const GROUPS: [By, string][] = [["host", "server"], ["fix", "fix"], ["cve", "CVE"]];
+export const GROUPS: [By, string][] = [
+  ["host", "server"],
+  ["fix", "fix"],
+  ["cve", "CVE"],
+];
 
 /** useQueryInput: the filter field, asked of the server a moment after the typing stops. */
 export function useQueryInput() {
   const q = useApp((s) => s.q);
   const [text, setText] = useState(q);
-  useEffect(() => setText(q), [q]);
+  const [was, setWas] = useState(q);
+  if (q !== was) {
+    // the filter set elsewhere (cleared, a link): the field shows it
+    setWas(q);
+    setText(q);
+  }
   useEffect(() => {
     if (text === useApp.getState().q) return;
     const id = setTimeout(() => set({ q: text }), 200);
@@ -34,7 +49,19 @@ export function useQueryInput() {
 }
 
 export function Todo() {
-  const s = useS((s) => ({ sort: s.tsort, view: s.view, accepted: s.accepted, flt: s.flt, by: grouping(s), backport: s.backport, sel: s.sel, open: s.open, org: s.org, env: s.env, run: s.run }));
+  const s = useS((s) => ({
+    sort: s.tsort,
+    view: s.view,
+    accepted: s.accepted,
+    flt: s.flt,
+    by: grouping(s),
+    backport: s.backport,
+    sel: s.sel,
+    open: s.open,
+    org: s.org,
+    env: s.env,
+    run: s.run,
+  }));
   const p = useApp(useMemoParams);
   const tree = useTree(p);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -44,7 +71,8 @@ export function Todo() {
   // the rows of pages not loaded yet stand in for them: the scrollbar has its length from the start
   const rest = Math.max(0, (tree.data?.rows ?? nodes.length) - nodes.length);
   const rows = useMemo(
-    () => (rest ? [...loadedRows, ...Array.from({ length: rest }, (_, i): Row => ({ type: "page", depth: 0, key: "page/" + i }))] : loadedRows),
+    () =>
+      rest ? [...loadedRows, ...Array.from({ length: rest }, (_, i): Row => ({ type: "page", depth: 0, key: "page/" + i }))] : loadedRows,
     [loadedRows, rest],
   );
   const show = useCallback((id: string) => set({ cur: id, stack: [], detailOpen: narrow() }), []);
@@ -70,11 +98,15 @@ export function Todo() {
               <div>
                 <h1>{t(s.view === "servers" ? "Servers" : "ToDo")}</h1>
                 <div className="sub">
-                  {s.accepted ? <AcceptedSub /> : tr && (
-                    <>
-                      {t("{f} fixes · {c} CVE · {h} hosts", { f: tr.fixes, c: tr.cves, h: tr.hosts })}
-                      {tr.no_fix ? " · " + t("{n} with nothing to install yet", { n: tr.no_fix }) : ""}
-                    </>
+                  {s.accepted ? (
+                    <AcceptedSub />
+                  ) : (
+                    tr && (
+                      <>
+                        {t("{f} fixes · {c} CVE · {h} hosts", { f: tr.fixes, c: tr.cves, h: tr.hosts })}
+                        {tr.no_fix ? " · " + t("{n} with nothing to install yet", { n: tr.no_fix }) : ""}
+                      </>
+                    )
                   )}
                 </div>
               </div>
@@ -92,7 +124,11 @@ export function Todo() {
           <div className="bar2">
             <Seg label={t("group")} aria={t("Group by")} items={GROUPS.map(([k, l]) => [k, t(l)])} value={s.by} onPick={setBy} />
             <Search value={text} onChange={setText} placeholder={t("Package, CVE, host or group")} />
-            <Chips items={s.accepted ? [] : FILTERS.map(([k, l]) => [k, t(l)])} on={s.flt} onToggle={(k) => set((st) => ({ flt: toggle(st.flt, k) }))}>
+            <Chips
+              items={s.accepted ? [] : FILTERS.map(([k, l]) => [k, t(l)])}
+              on={s.flt}
+              onToggle={(k) => set((st) => ({ flt: toggle(st.flt, k) }))}
+            >
               {s.view === "todo" && (
                 <button
                   className="chip"
@@ -126,14 +162,26 @@ export function Todo() {
                 <div className="thead">
                   <AllButton nodes={nodes} />
                   <span />
-                  <SortHead k="pri" asc sort={s.sort} onSort={setSort}>{t("Pri")}</SortHead>
-                  <SortHead k="name" asc sort={s.sort} onSort={setSort}>{s.by === "fix" ? t("Fix") : s.by === "cve" ? t("Vulnerability") : t("Group / host")}</SortHead>
-                  <SortHead k="hosts" className="c-h" sort={s.sort} onSort={setSort}>{t("Hosts")}</SortHead>
-                  <SortHead k="cve" className="num c-cve" sort={s.sort} onSort={setSort}>CVE</SortHead>
-                  <SortHead k="epss" className="num c-ep" sort={s.sort} onSort={setSort}>EPSS</SortHead>
+                  <SortHead k="pri" asc sort={s.sort} onSort={setSort}>
+                    {t("Pri")}
+                  </SortHead>
+                  <SortHead k="name" asc sort={s.sort} onSort={setSort}>
+                    {s.by === "fix" ? t("Fix") : s.by === "cve" ? t("Vulnerability") : t("Group / host")}
+                  </SortHead>
+                  <SortHead k="hosts" className="c-h" sort={s.sort} onSort={setSort}>
+                    {t("Hosts")}
+                  </SortHead>
+                  <SortHead k="cve" className="num c-cve" sort={s.sort} onSort={setSort}>
+                    CVE
+                  </SortHead>
+                  <SortHead k="epss" className="num c-ep" sort={s.sort} onSort={setSort}>
+                    EPSS
+                  </SortHead>
                   <span className="c-fl">{t("Flags")}</span>
                   <span className="c-st">{t("State")}</span>
-                  <SortHead k="due" asc className="dd" sort={s.sort} onSort={setSort}>{t("Due")}</SortHead>
+                  <SortHead k="due" asc className="dd" sort={s.sort} onSort={setSort}>
+                    {t("Due")}
+                  </SortHead>
                 </div>
                 {!tr ? (
                   <Skeleton />
@@ -200,12 +248,13 @@ function AllButton({ nodes }: { nodes: TreeNode[] }) {
           }
         }
         const ids = new Set<string>();
-        const all = (xs: TreeNode[]) => xs.forEach((n) => {
-          if ((n.kids || []).length) {
-            ids.add(n.id);
-            all(n.kids!);
-          }
-        });
+        const all = (xs: TreeNode[]) =>
+          xs.forEach((n) => {
+            if ((n.kids || []).length) {
+              ids.add(n.id);
+              all(n.kids!);
+            }
+          });
         all(ns);
         set({ open: ids });
       }}
@@ -258,17 +307,21 @@ function Detail({ accepted, waiting }: { accepted: boolean; waiting: boolean }) 
     ref.current?.scrollTo(0, 0);
   }, [node.data?.node.id]);
   const goTo = (id: string) => {
-    const s = useApp.getState(), d = node.data;
+    const s = useApp.getState(),
+      d = node.data;
     set({ stack: d ? [...s.stack, { id: d.node.id, label: d.node.label }] : s.stack, cur: id });
   };
   const back = () => {
-    const s = useApp.getState(), pr = s.stack[s.stack.length - 1];
+    const s = useApp.getState(),
+      pr = s.stack[s.stack.length - 1];
     if (pr) set({ cur: pr.id, stack: s.stack.slice(0, -1) });
   };
   return (
     <aside ref={ref} className={"detail" + (detailOpen ? " open" : "")} aria-label={t("Details")}>
       {accepted ? (
-        vitem?.kind === "exc" ? <ExcDetail x={vitem} /> : null
+        vitem?.kind === "exc" ? (
+          <ExcDetail x={vitem} />
+        ) : null
       ) : !cur && !(waiting && node.data) ? null : node.error ? (
         <div className="nodetail">{(node.error as Error).message}</div>
       ) : !node.data ? (
@@ -286,16 +339,20 @@ function Detail({ accepted, waiting }: { accepted: boolean; waiting: boolean }) 
 function AcceptedSub() {
   const rd = useRunData();
   const ex: any[] = rd.data?.exceptions || [];
-  return <>{t("{n} accepted · {e} expired", { n: ex.length, e: ex.filter((f) => f.exception?.expired || f.exception?.fix_available).length })}</>;
+  return (
+    <>{t("{n} accepted · {e} expired", { n: ex.length, e: ex.filter((f) => f.exception?.expired || f.exception?.fix_available).length })}</>
+  );
 }
 
 function Accepted({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement | null> }) {
   const rd = useRunData();
   const { q, vsel } = useS((s) => ({ q: s.q, vsel: s.vsel }));
-  const ex: any[] = rd.data?.exceptions || [];
+  const ex = useMemo<any[]>(() => rd.data?.exceptions || [], [rd.data]);
   const rows = useMemo(() => {
     const qq = q.trim().toLowerCase();
-    return ex.filter((f) => !qq || `${f.host} ${f.pkg} ${f.id} ${f.exception?.owner || ""} ${f.exception?.reason || ""}`.toLowerCase().includes(qq));
+    return ex.filter(
+      (f) => !qq || `${f.host} ${f.pkg} ${f.id} ${f.exception?.owner || ""} ${f.exception?.reason || ""}`.toLowerCase().includes(qq),
+    );
   }, [ex, q]);
   const key = (f: any) => `${f.host}/${f.id}`;
   const open = (x: any) => set({ vsel: key(x), vitem: { ...x, kind: "exc" }, detailOpen: narrow() });
@@ -305,20 +362,31 @@ function Accepted({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement | n
   if (!rd.data) return <Skeleton />;
   const cols: Col<any>[] = [
     {
-      l: "", w: "28px",
+      l: "",
+      w: "28px",
       v: (x) => {
         const e = x.exception || {};
         return e.fix_available || e.expired ? (
-          <span className="mk bad" title={e.expired ? t("expired: back in the plan") : t("fix in the repositories: back in the plan")}>!</span>
+          <span className="mk bad" title={e.expired ? t("expired: back in the plan") : t("fix in the repositories: back in the plan")}>
+            !
+          </span>
         ) : (
-          <span className="mk ok" title={t("accepted")}>✓</span>
+          <span className="mk ok" title={t("accepted")}>
+            ✓
+          </span>
         );
       },
     },
     { l: t("Package"), w: "minmax(0, .8fr)", c: "pk", v: (x) => x.pkg, s: (x) => x.pkg },
     { l: t("Server"), w: "minmax(84px, .7fr)", v: (x) => <Hcell n={x.host} />, s: (x) => x.host },
     { l: "ID", w: "minmax(0, .8fr)", k: 3, c: "m d", v: (x) => x.id, s: (x) => x.id },
-    { l: t("Until"), w: "96px", c: "m", v: (x) => <span className={x.exception?.expired ? "bad" : ""}>{x.exception?.review_by}</span>, s: (x) => x.exception?.review_by || "" },
+    {
+      l: t("Until"),
+      w: "96px",
+      c: "m",
+      v: (x) => <span className={x.exception?.expired ? "bad" : ""}>{x.exception?.review_by}</span>,
+      s: (x) => x.exception?.review_by || "",
+    },
     { l: t("Who"), w: "minmax(0, .5fr)", k: 2, c: "d", v: (x) => x.exception?.owner, s: (x) => x.exception?.owner || "" },
   ];
   if (!rows.length)
@@ -329,4 +397,3 @@ function Accepted({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement | n
     );
   return <DataTable id="accepted" cols={cols} items={rows} rowKey={key} sel={vsel} onOpen={open} scrollRef={scrollRef} />;
 }
-
