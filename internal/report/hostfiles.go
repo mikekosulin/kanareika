@@ -23,7 +23,8 @@ import (
 // host's file from the run that scanned it, and every aggregate is built one host at a time.
 //
 // Runs written before 0.6 hold one findings.json.gz (or findings.json) for the whole environment. They stay
-// readable as they are; MigrateEnv splits them (a scan does it under the environment's lock).
+// readable as they are; MigrateEnv splits them (a scan does it under the environment's lock; the dashboard
+// splits only current/ and the runs it folds into it).
 
 // OrgHost: the file of the org-level findings; never a host name (config names have no "@").
 const OrgHost = "@org"
@@ -100,11 +101,14 @@ func EachFindingIn(path string, fn func(f *finding.Finding)) error {
 // run (read whole for each host: slow, never large).
 func eachHostFinding(dir, host string, fn func(f *finding.Finding)) error {
 	if p := legacyFile(dir); p != "" {
-		return EachFindingIn(p, func(f *finding.Finding) {
+		err := EachFindingIn(p, func(f *finding.Finding) {
 			if FileHost(f) == host {
 				fn(f)
 			}
 		})
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		} // split by a scan since: the host's file is in place
 	}
 	p := hostFindingsPath(dir, host)
 	if !exists(p) {

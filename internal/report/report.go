@@ -97,17 +97,26 @@ func LoadFindings(dir string) ([]finding.Finding, error) {
 		return nil, err
 	}
 	out := []finding.Finding{}
-	for _, hf := range hfs {
+	for i := 0; i < len(hfs); i++ {
+		hf := hfs[i]
 		r, closeFn, err := openPath(hf.Path)
+		if hf.Host == "" && errors.Is(err, fs.ErrNotExist) {
+			// split by a scan since it was listed: the host files are in place
+			if hfs, err = HostFiles(dir); err != nil {
+				return nil, err
+			}
+			i = -1
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
-		fs, err := decodeFindings(r)
+		batch, err := decodeFindings(r)
 		closeFn()
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", hf.Path, err)
 		}
-		out = append(out, fs...)
+		out = append(out, batch...)
 	}
 	for i := range out {
 		upgradeDenied(&out[i])
@@ -122,8 +131,17 @@ func EachFinding(dir string, fn func(f *finding.Finding)) error {
 	if err != nil {
 		return err
 	}
-	for _, hf := range hfs {
-		if err := EachFindingIn(hf.Path, fn); err != nil {
+	for i := 0; i < len(hfs); i++ {
+		err := EachFindingIn(hfs[i].Path, fn)
+		if hfs[i].Host == "" && errors.Is(err, fs.ErrNotExist) {
+			// split by a scan since it was listed (EachFindingIn fails before the first finding): read the host files
+			if hfs, err = HostFiles(dir); err != nil {
+				return err
+			}
+			i = -1
+			continue
+		}
+		if err != nil {
 			return err
 		}
 	}

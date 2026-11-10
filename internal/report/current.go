@@ -3,6 +3,7 @@ package report
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -70,8 +71,12 @@ func UpdateCurrent(env string, locked, wait bool) (string, error) {
 		}
 		defer l.Unlock()
 	}
-	if err := MigrateEnv(env); err != nil {
-		return "", err
+	// reading needs no split (HostFiles reads an older run's single file as it is): a scan, under the lock, splits
+	// every run once; the dashboard only splits what it folds below, and never pays for the old runs
+	if locked {
+		if err := MigrateEnv(env); err != nil {
+			return "", err
+		}
 	}
 	var cmeta *Meta
 	if exists(filepath.Join(cur, "run.json")) {
@@ -122,6 +127,12 @@ func UpdateCurrent(env string, locked, wait bool) (string, error) {
 	}
 	if err := os.MkdirAll(cur, 0o755); err != nil {
 		return "", err
+	}
+	// folding links and merges host files: current/ and the runs folded in must be split first
+	for _, d := range append([]string{cur}, todo...) {
+		if err := splitLegacy(d); err != nil {
+			return "", fmt.Errorf("%s: %w", d, err)
+		}
 	}
 	changed := map[string]bool{}
 	for _, run := range todo {
