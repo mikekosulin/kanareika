@@ -5,11 +5,11 @@ import { t, tx } from "../lib/i18n";
 import { api, qs } from "../lib/api";
 import { ago, days, dueText, fmtN, runIso, tsShort } from "../lib/format";
 import { deniedKey, makeL } from "../lib/catalog";
-import { go, openServer, set, toast, useS } from "../state";
+import { go, openServer, toast, useS } from "../state";
 import { useCatalog, useEnv, useSession } from "../queries";
 import { startScan } from "./Shell";
 import type { TreeNode } from "../types";
-import { Icon, Kv, Sec } from "../components/ui";
+import { DetailClose, Icon, Kv, Sec } from "../components/ui";
 
 export const Hcell = ({ n }: { n: string }) => (
   <span className="h" title={n}>
@@ -422,10 +422,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
   return (
     <>
       <div className="dh">
-        <button className="btn ghost back" onClick={() => set({ detailOpen: false })}>
-          <Icon name="left" />
-          {t("Back")}
-        </button>
+        <DetailClose />
         <div className="meta">
           {probl && srv && (
             <>
@@ -517,10 +514,7 @@ export function ExcDetail({ x }: { x: any }) {
   return (
     <>
       <div className="dh">
-        <button className="btn ghost back" onClick={() => set({ detailOpen: false })}>
-          <Icon name="left" />
-          {t("Back")}
-        </button>
+        <DetailClose />
         <div className="meta">
           {e.fix_available
             ? stl("bad", t("fix in the repositories: back in the plan"))

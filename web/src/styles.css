@@ -885,6 +885,27 @@ kbd {
 .back {
   display: none;
 }
+/* a wide window: the details panel beside the list while a row is picked, × puts it away */
+.work.solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+.work.solo > .detail {
+  display: none;
+}
+.dh {
+  position: relative;
+  padding-right: 52px;
+}
+.dh .dclose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 6px;
+  color: var(--ink-3);
+}
+.dh .dclose:hover {
+  color: var(--ink);
+}
 .sec {
   padding: 16px 24px;
   border-bottom: 1px solid var(--line);
@@ -1476,6 +1497,9 @@ dialog footer {
   .back {
     display: inline-flex;
     margin: 0 0 8px -8px;
+  }
+  .dh .dclose {
+    display: none;
   }
 }
 @media (max-width: 860px) {

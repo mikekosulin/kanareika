@@ -5,7 +5,7 @@ import { fmtDay, fmtN, pct, webURL } from "../lib/format";
 import { set, toggle, useS } from "../state";
 import type { CVE, NodeDetail as ND } from "../types";
 import { Flags, NOFIX, noFixTxt, Prio, StateCell } from "../components/cells";
-import { copy, Icon } from "../components/ui";
+import { copy, DetailClose, Icon } from "../components/ui";
 
 const WHY: Record<string, string> = {
   kev: "Exploited in the wild: listed in CISA KEV",
@@ -176,10 +176,7 @@ export function NodeDetail({ d, onGo, onBack }: { d: ND; onGo: (id: string) => v
   return (
     <>
       <div className="dh">
-        <button className="btn ghost back" onClick={() => set({ detailOpen: false })}>
-          <Icon name="left" />
-          {t("Back")}
-        </button>
+        <DetailClose />
         {stack.length > 0 && (
           <div className="crumb">
             <button onClick={onBack}>

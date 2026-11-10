@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { t } from "../lib/i18n";
-import { set, toggle, useApp, useS } from "../state";
+import { closeDetail, set, toggle, useApp, useS } from "../state";
 import { client, useKids, type TreeParams } from "../queries";
 import type { TreeNode } from "../types";
 import { Due, EPSS, Flags, HostsCell, KindSlot, MainText, Prio, ST, StateCell } from "../components/cells";
@@ -268,7 +268,7 @@ export function useTreeKeys(rows: Row[], onShow: (id: string) => void, selectabl
       } else if ((e.key === "x" || e.key === " ") && n && selectable) {
         e.preventDefault();
         set({ sel: toggle(s.sel, n.id) });
-      } else if (e.key === "Escape") set({ detailOpen: false });
+      } else if (e.key === "Escape") closeDetail();
     };
     addEventListener("keydown", k);
     return () => removeEventListener("keydown", k);

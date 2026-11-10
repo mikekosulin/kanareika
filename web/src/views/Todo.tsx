@@ -77,12 +77,8 @@ export function Todo() {
   );
   const show = useCallback((id: string) => set({ cur: id, stack: [], detailOpen: narrow() }), []);
   useTreeKeys(rows, show, s.view === "todo");
-  // the first row's details on a wide window, when nothing is picked (or what was picked is gone)
-  const cur = useApp((s) => s.cur);
-  useEffect(() => {
-    if (!tree.data || tree.isPlaceholderData || s.accepted) return;
-    if (!cur && nodes[0] && !narrow()) set({ cur: nodes[0].id });
-  }, [tree.data, tree.isPlaceholderData]); // eslint-disable-line react-hooks/exhaustive-deps
+  // nothing picked: the list alone
+  const solo = useApp((s) => (s.accepted ? s.vitem?.kind !== "exc" : !s.cur));
   useEffect(() => syncURL(), [s.by, s.accepted]);
 
   if (tree.error && (tree.error as any).status === 404) return <NoRuns />;
@@ -91,7 +87,7 @@ export function Todo() {
   return (
     <>
       <Banner />
-      <div className="work">
+      <div className={"work" + (solo ? " solo" : "")}>
         <div className="listcol">
           <div className="work-top">
             <div className="hdr">
@@ -356,9 +352,6 @@ function Accepted({ scrollRef }: { scrollRef: React.RefObject<HTMLDivElement | n
   }, [ex, q]);
   const key = (f: any) => `${f.host}/${f.id}`;
   const open = (x: any) => set({ vsel: key(x), vitem: { ...x, kind: "exc" }, detailOpen: narrow() });
-  useEffect(() => {
-    if (rows[0] && !vsel && !narrow()) open(rows[0]);
-  }, [rows]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!rd.data) return <Skeleton />;
   const cols: Col<any>[] = [
     {

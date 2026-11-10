@@ -2,12 +2,25 @@
 // the empty state, key/value lines and the toast.
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { t } from "../lib/i18n";
-import { set, toast as say, useApp } from "../state";
+import { closeDetail, set, toast as say, useApp } from "../state";
 
 export const Icon = ({ name }: { name: string }) => (
   <svg className="i" aria-hidden="true">
     <use href={"#i-" + name} />
   </svg>
+);
+
+/** DetailClose: the details panel's way out: Back over the list on a narrow window, × beside it on a wide one. */
+export const DetailClose = () => (
+  <>
+    <button className="btn ghost back" onClick={closeDetail}>
+      <Icon name="left" />
+      {t("Back")}
+    </button>
+    <button className="lnk dclose" aria-label={t("Close")} title={t("Close")} onClick={closeDetail}>
+      <Icon name="x" />
+    </button>
+  </>
 );
 
 export const Spin = () => <i className="spin" />;

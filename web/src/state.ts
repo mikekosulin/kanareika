@@ -2,6 +2,7 @@
 // selected. The address bar mirrors it (/servers?org=…&env=…), so a link or a reload lands in the same place.
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
+import { narrow } from "./lib/format";
 import { local } from "./lib/local";
 
 export type View = "servers" | "todo" | "history" | "setup";
@@ -39,7 +40,7 @@ export interface State {
   vsel: string;
   vitem: Item | null;
   vstack: Item[];
-  detailOpen: boolean; // the details panel over the list on a narrow window
+  detailOpen: boolean; // the details panel over the list on a narrow window (on a wide one it shows while a row is picked)
   sideOpen: boolean;
   palOpen: boolean;
   toast: { text: string; at: number } | null;
@@ -104,6 +105,16 @@ export function go(view: View, q?: string) {
   if (q != null) patch.q = q;
   set(patch);
   syncURL(true);
+}
+
+/** closeDetail: the details panel away (its ×, Esc). On a wide window nothing stays picked and the list takes the
+ * page; on a narrow one the panel slides off over the row still picked. */
+export function closeDetail() {
+  const s = get();
+  if (narrow()) set({ detailOpen: false });
+  else if (s.view === "history") set({ vsel: "", vitem: null, vstack: [] });
+  else set({ cur: null, stack: [], ...(s.view === "todo" && s.accepted ? { vsel: "", vitem: null } : {}) });
+  syncURL();
 }
 
 /** setSort: the column the open view's rows are ordered by; the same column again turns the order around. */

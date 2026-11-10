@@ -7,7 +7,7 @@ import { api, qs } from "../lib/api";
 import { ago, fmtN, narrow, runLabel, tsShort, took } from "../lib/format";
 import { set, setScope, useS } from "../state";
 import { useEnv, useJobs, useSession } from "../queries";
-import { Empty, Icon, Kv, Search, Sec, Skeleton, Spin } from "../components/ui";
+import { Empty, DetailClose, Icon, Kv, Search, Sec, Skeleton, Spin } from "../components/ui";
 import { DataTable, type Col } from "../components/DataTable";
 import { Banner, startScan } from "./Shell";
 
@@ -78,9 +78,6 @@ export function History() {
   }, [all, vq]);
   const key = (x: any) => x.id || x.run_id;
   const open = (x: any) => set({ vsel: key(x), vitem: x, detailOpen: narrow() });
-  useEffect(() => {
-    if (items[0] && !vitem && !narrow()) open(items[0]);
-  }, [items.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
   // the item shown follows its row (a running job's output grows)
   const shown = vitem ? all.find((x) => key(x) === key(vitem)) || vitem : null;
   const done = (envd.data?.runs || []).filter((r: any) => r.state === "done");
@@ -131,7 +128,7 @@ export function History() {
   return (
     <>
       <Banner />
-      <div className="work">
+      <div className={"work" + (shown ? "" : " solo")}>
         <div className="listcol">
           <div className="work-top">
             <div className="hdr">
@@ -195,10 +192,7 @@ function RunDetail({ x }: { x: any }) {
   return (
     <>
       <div className="dh">
-        <button className="btn ghost back" onClick={() => set({ detailOpen: false })}>
-          <Icon name="left" />
-          {t("Back")}
-        </button>
+        <DetailClose />
         <div className="meta">
           <RunState x={x} />
         </div>
