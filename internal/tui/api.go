@@ -19,6 +19,7 @@ type runInfo struct {
 	Totals      *totals        `json:"totals"` // what there is to do (runs before 0.5 have none: plan_counts)
 	HostsTotal  int            `json:"hosts_total"`
 	HostsFailed int            `json:"hosts_failed"`
+	Failed      []string       `json:"failed"` // the hosts it could not reach, by name
 	Partial     bool           `json:"partial"`
 }
 

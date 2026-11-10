@@ -1,8 +1,10 @@
 package server
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/mikekosulin/kanareika/internal/pyfmt"
@@ -50,17 +52,18 @@ func status(runDir string) map[string]any {
 
 // runInfo: one line of the run list. Fields come from run.json when the run finished, else from status.json.
 type runInfo struct {
-	RunID       string `json:"run_id"`
-	State       any    `json:"state"`
-	Started     any    `json:"started"`
-	Finished    any    `json:"finished"`
-	Counts      any    `json:"counts"`
-	PlanCounts  any    `json:"plan_counts"`
-	Totals      any    `json:"totals,omitempty"` // fixes to apply and unique CVEs (report.Totals); runs before 0.5 have none
-	HostsTotal  int    `json:"hosts_total"`
-	HostsFailed int    `json:"hosts_failed"`
-	Selection   any    `json:"selection"`
-	Partial     bool   `json:"partial"`
+	RunID       string   `json:"run_id"`
+	State       any      `json:"state"`
+	Started     any      `json:"started"`
+	Finished    any      `json:"finished"`
+	Counts      any      `json:"counts"`
+	PlanCounts  any      `json:"plan_counts"`
+	Totals      any      `json:"totals,omitempty"` // fixes to apply and unique CVEs (report.Totals); runs before 0.5 have none
+	HostsTotal  int      `json:"hosts_total"`
+	HostsFailed int      `json:"hosts_failed"`
+	Failed      []string `json:"failed,omitempty"` // the hosts it could not scan, by name: what a retry scans again
+	Selection   any      `json:"selection"`
+	Partial     bool     `json:"partial"`
 }
 
 func isDir(path string) bool {
@@ -104,11 +107,21 @@ func runs(envDir string) []runInfo {
 			Totals:      pyfmt.Or(meta["totals"], st["totals"]),
 			HostsTotal:  pyfmt.Len(pyfmt.Or(meta["hosts_scanned"], st["hosts"], nil)),
 			HostsFailed: pyfmt.Len(meta["hosts_failed"]),
+			Failed:      failedHosts(meta),
 			Selection:   meta["selection"],
 			Partial:     partial(meta),
 		})
 	}
 	return out
+}
+
+// failedHosts: the names of the hosts a run could not scan (run.json's hosts_failed: host -> error), sorted.
+func failedHosts(meta map[string]any) []string {
+	m := asMap(meta["hosts_failed"])
+	if len(m) == 0 {
+		return nil
+	}
+	return slices.Sorted(maps.Keys(m))
 }
 
 // partial is report.is_partial over the decoded run.json.

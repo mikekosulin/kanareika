@@ -730,3 +730,41 @@ func TestScanLimitsFromTUI(t *testing.T) {
 	h.key("s")
 	h.eventually("‹ 6 ›", "‹ 2 ›")
 }
+
+// TestRescanKey: R on a server scans that server only, with no form; on a run, the hosts it could not reach.
+func TestRescanKey(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
+	h.key("1")
+	h.eventually("Servers")
+	for i := 0; i < 10 && (h.m.curNode() == nil || h.m.curNode().Kind != "host"); i++ {
+		h.key("down")
+	}
+	n := h.m.curNode()
+	if n == nil || n.Kind != "host" {
+		t.Fatalf("cursor on %+v", n)
+	}
+	h.key("R")
+	h.eventually("Scans[1]", "acme/production")
+	h.scan.mu.Lock()
+	r := h.scan.reqs[0]
+	h.scan.mu.Unlock()
+	if len(r.Hosts) != 1 || r.Hosts[0] != n.Label {
+		t.Fatalf("%+v", r)
+	}
+	h.key("x")
+	h.waitJob("cancelled")
+	// History: the run that could not reach dead-01
+	h.key("3")
+	for i := 0; i < 20 && func() bool { l := h.m.runList(); c := h.m.cur[vRuns]; return c >= len(l) || len(l[c].Failed) == 0 }(); i++ {
+		h.key("down")
+	}
+	h.has("retry unreachable")
+	h.key("R")
+	h.eventually("Scans[2]")
+	h.scan.mu.Lock()
+	r = h.scan.reqs[1]
+	h.scan.mu.Unlock()
+	if len(r.Hosts) != 1 || r.Hosts[0] != "dead-01" {
+		t.Fatalf("%+v", r)
+	}
+}

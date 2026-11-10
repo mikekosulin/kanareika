@@ -354,11 +354,15 @@ func sinceGo(got []byte) []byte {
 }
 
 // dropTotals removes "totals" at any depth (0.5: fixes to apply and unique CVEs in view.json, run.json and the run
-// lists; Python had no such key anywhere, and report.TestTotalsAgree checks the numbers).
+// lists; Python had no such key anywhere, and report.TestTotalsAgree checks the numbers), and a run's "failed"
+// (0.6: the names of the hosts it could not scan, for a retry).
 func dropTotals(v any) {
 	switch t := v.(type) {
 	case map[string]any:
 		delete(t, "totals")
+		if _, run := t["run_id"]; run {
+			delete(t, "failed")
+		}
 		for _, x := range t {
 			dropTotals(x)
 		}

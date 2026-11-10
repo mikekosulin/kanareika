@@ -752,7 +752,7 @@ var helpRows = [][2]string{
 	{"Y", "copy the context of the node under the cursor (what, where, why, due, commands, its id) for an AI agent's chat"},
 	{"c, [ ]", "copy the chosen command of the details; choose another"},
 	{"p", "show P4 too"},
-	{"s", "start a scan of this environment"},
+	{"s, R", "start a scan of this environment; R: only the server under the cursor, or a run's unreachable hosts"},
 	{"N", "set up a new organization (hosts, SSH access check, the first scan)"},
 	{"x", "stop the scan under the cursor (Scans)"},
 	{"c", "back to the current state (Runs)"},

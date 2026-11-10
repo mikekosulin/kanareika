@@ -365,6 +365,14 @@ func (m *Model) hints() string {
 		}[m.view]
 		if m.host != "" && m.view == vServers {
 			l = []k{{"↑↓", "scroll"}, {"esc", "back"}}
+			if m.scanOK {
+				l = append(l, k{"R", "rescan"})
+			}
+		}
+		if m.view == vRuns && m.scanOK {
+			if rl := m.runList(); m.cur[vRuns] < len(rl) && len(rl[m.cur[vRuns]].Failed) > 0 {
+				l = append(l, k{"R", "retry unreachable"})
+			}
 		}
 		l = append(l, k{"/", "filter"}, k{":", "jump"})
 	}

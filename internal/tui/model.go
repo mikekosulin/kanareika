@@ -747,6 +747,9 @@ func (m *Model) rows() int {
 }
 
 func (m *Model) viewKey(s string) tea.Cmd {
+	if s == "R" {
+		return m.rescan()
+	}
 	switch m.view {
 	case vServers, vActions:
 		if s == "enter" && m.run == "" && m.org != "" { // no runs yet: check the access, then the first scan
@@ -834,6 +837,35 @@ func (m *Model) post(path string, body any, ok func(any) tea.Msg) tea.Cmd {
 }
 
 func b64(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) }
+
+// rescan: a scan of some hosts only, without the form: the server under the cursor or whose card is open (Servers),
+// or the hosts the run under the cursor could not reach (Runs).
+func (m *Model) rescan() tea.Cmd {
+	var hosts []string
+	switch m.view {
+	case vServers:
+		if m.host != "" {
+			hosts = []string{m.host}
+		} else if n := m.curNode(); n != nil && n.Kind == "host" {
+			hosts = []string{n.Label}
+		}
+	case vRuns:
+		if l := m.runList(); m.cur[vRuns] < len(l) {
+			hosts = l[m.cur[vRuns]].Failed
+		}
+	}
+	if len(hosts) == 0 {
+		return nil
+	}
+	if !m.scanOK {
+		m.say(m.t.T("Scans can't be started here (read-only)"))
+		return nil
+	}
+	return m.post("/api/scan", scanRequest{Org: m.org, Env: m.env, Hosts: hosts}, func(v any) tea.Msg {
+		id, _ := v.(map[string]any)["id"].(string)
+		return startedMsg{id}
+	})
+}
 
 func (m *Model) openForm() tea.Cmd {
 	if !m.scanOK {

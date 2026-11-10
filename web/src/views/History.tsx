@@ -6,10 +6,10 @@ import { t } from "../lib/i18n";
 import { api, qs } from "../lib/api";
 import { ago, fmtN, narrow, runLabel, tsShort, took } from "../lib/format";
 import { set, setScope, useS } from "../state";
-import { useEnv, useJobs } from "../queries";
+import { useEnv, useJobs, useSession } from "../queries";
 import { Empty, Icon, Kv, Search, Sec, Skeleton, Spin } from "../components/ui";
 import { DataTable, type Col } from "../components/DataTable";
-import { Banner } from "./Shell";
+import { Banner, startScan } from "./Shell";
 
 const JOBST: Record<string, [string, string]> = {
   running: ["run", "running"], done: ["ok", "done"], failed: ["bad", "finished with errors"], cancelled: ["mut", "cancelled"], stale: ["wn", "not responding"],
@@ -129,7 +129,9 @@ export function History() {
 
 function RunDetail({ x }: { x: any }) {
   const { org, env, run } = useS((s) => ({ org: s.org, env: s.env, run: s.run }));
+  const scans = useSession().data?.scans;
   const c = x.totals || x.plan_counts, job = x.kind === "job";
+  const failed: string[] = !job && scans ? x.failed || [] : [];
   const full = !job && x.state === "done" && !x.partial;
   const log = useQuery({
     queryKey: ["log", org, env, x.run_id],
@@ -214,11 +216,19 @@ function RunDetail({ x }: { x: any }) {
           </Sec>
         </>
       )}
-      {!job && x.state === "done" && x.run_id !== run && (
+      {!job && ((x.state === "done" && x.run_id !== run) || failed.length > 0) && (
         <div className="dfoot">
-          <button className="btn primary" onClick={() => setScope({ run: x.run_id })}>
-            {t("Show this run's data")}
-          </button>
+          {x.state === "done" && x.run_id !== run && (
+            <button className="btn primary" onClick={() => setScope({ run: x.run_id })}>
+              {t("Show this run's data")}
+            </button>
+          )}
+          {failed.length > 0 && (
+            <button className="btn" title={failed.join(", ")} onClick={() => startScan(org, env, failed)}>
+              <Icon name="scan" />
+              {t("Retry {n} unreachable", { n: failed.length })}
+            </button>
+          )}
         </div>
       )}
     </>

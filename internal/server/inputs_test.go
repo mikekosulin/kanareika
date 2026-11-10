@@ -87,3 +87,17 @@ func TestPrebuild(t *testing.T) {
 		t.Fatalf("%d trees built for a missing org", len(gone.built))
 	}
 }
+
+// TestFailedHosts: a run lists the hosts it could not scan by name, sorted (what a retry scans again); none, no list.
+func TestFailedHosts(t *testing.T) {
+	if got := failedHosts(map[string]any{"hosts_failed": map[string]any{"web-02": "timeout", "db-01": "refused"}}); len(got) != 2 ||
+		got[0] != "db-01" || got[1] != "web-02" {
+		t.Fatalf("%v", got)
+	}
+	if got := failedHosts(map[string]any{"hosts_failed": map[string]any{}}); got != nil {
+		t.Fatalf("%v", got)
+	}
+	if got := failedHosts(nil); got != nil {
+		t.Fatalf("%v", got)
+	}
+}

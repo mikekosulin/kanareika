@@ -6,7 +6,8 @@ import { api, qs } from "../lib/api";
 import { ago, days, dueText, fmtN, runIso, tsShort } from "../lib/format";
 import { deniedKey, makeL } from "../lib/catalog";
 import { go, openServer, set, toast, useS } from "../state";
-import { useCatalog, useEnv } from "../queries";
+import { useCatalog, useEnv, useSession } from "../queries";
+import { startScan } from "./Shell";
 import type { TreeNode } from "../types";
 import { Icon, Kv, Sec } from "../components/ui";
 
@@ -85,6 +86,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
   const env = useEnv();
   const { L, catMsg, problemText } = useText();
   const { org, envName, run } = useS((s) => ({ org: s.org, envName: s.env, run: s.run }));
+  const scans = useSession().data?.scans;
   const [rules, setRules] = useState<string | null>(null);
   const n = name;
   const eh: any = (env.data?.hosts || []).find((h) => h.name === n) || {};
@@ -267,6 +269,12 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
         <button className="btn primary" onClick={() => go("todo", n)}>
           {t("Open in ToDo")}
         </button>
+        {scans && (
+          <button className="btn" onClick={() => startScan(org, envName, [n])}>
+            <Icon name="scan" />
+            {t("Rescan")}
+          </button>
+        )}
       </div>
     </>
   );
