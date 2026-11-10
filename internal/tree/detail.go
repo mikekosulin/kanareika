@@ -215,6 +215,10 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 			c = &CVE{ID: f.C.ID, Title: f.C.Title, Severity: f.C.Severity, CVSS: f.C.CVSSScore, Vector: f.C.Vector, EPSS: f.C.EPSS, KEV: f.C.KEV,
 				KEVDue: f.C.KEVDue, Preauth: f.C.Preauth, RCE: f.C.Preauth && f.C.RCE, Published: f.C.Published, URL: f.C.URL}
 			cves[f.C.ID], cveHosts[f.C.ID] = c, map[string]bool{}
+		} else if sevRank(f.C.Severity) > sevRank(c.Severity) {
+			// one CVE rated differently on different hosts (the distribution's rating, NVD's): the highest, whatever
+			// order the findings come in
+			c.Severity, c.CVSS, c.Vector = f.C.Severity, f.C.CVSSScore, f.C.Vector
 		}
 		cveHosts[f.C.ID][f.Host] = true
 	}
