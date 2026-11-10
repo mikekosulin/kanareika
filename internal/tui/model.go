@@ -856,8 +856,18 @@ func (m *Model) formKey(s string) tea.Cmd {
 		f.cur = max(f.cur-1, 0)
 	case "down", "j", "tab":
 		f.cur = min(f.cur+1, len(f.items)-1)
+	case "left", "h", "-", "right", "l", "+":
+		if it := &f.items[f.cur]; it.kind == itemLimit && !it.fixed {
+			if s == "left" || s == "h" || s == "-" {
+				it.n = max(it.n-1, 1)
+			} else {
+				it.n = min(it.n+1, it.max)
+			}
+		}
 	case " ", "space", "x":
-		if it := &f.items[f.cur]; it.kind != itemHead && it.kind != itemStart {
+		if it := &f.items[f.cur]; it.kind == itemLimit {
+			break
+		} else if it.kind != itemHead && it.kind != itemStart {
 			it.on = !it.on
 		} else if it.kind == itemStart {
 			return m.startScan()
@@ -870,10 +880,27 @@ func (m *Model) formKey(s string) tea.Cmd {
 
 func (m *Model) startScan() tea.Cmd {
 	req := m.form.request()
-	return m.post("/api/scan", req, func(v any) tea.Msg {
+	scan := m.post("/api/scan", req, func(v any) tea.Msg {
 		id, _ := v.(map[string]any)["id"].(string)
 		return startedMsg{id}
 	})
+	// changed limits are saved first (the install's settings), then the scan starts with them
+	limits := map[string]int{}
+	for _, it := range m.form.items {
+		if it.kind == itemLimit && !it.fixed && it.n != it.was {
+			limits[it.value] = it.n
+		}
+	}
+	if len(limits) == 0 {
+		return scan
+	}
+	save := m.post("/api/settings/scan", limits, func(any) tea.Msg { return nil })
+	return func() tea.Msg {
+		if msg := save(); msg != nil {
+			return msg // the error: no scan with limits the user did not get
+		}
+		return scan()
+	}
 }
 
 // --- panel settings -----------------------------------------------------------------------------------------------
@@ -998,13 +1025,16 @@ const (
 	itemStart
 	itemChoice // panel settings: one of several values
 	itemColumn // panel settings: a column on or off
+	itemLimit  // scan form: a number, ←/→ (n; fixed: set by the org file or a flag)
 )
 
 type formItem struct {
-	kind  itemKind
-	label string // text (flags: the English key)
-	value string // host, module or flag name
-	on    bool
+	kind        itemKind
+	label       string // text (flags: the English key)
+	value       string // host, module or flag name
+	on          bool
+	n, was, max int  // itemLimit: the number, as it came, the most
+	fixed       bool // itemLimit: not changed here (org file, flag)
 }
 
 type scanForm struct {
@@ -1022,6 +1052,14 @@ func newForm(org, env string, o scanOptions) *scanForm {
 	f.items = append(f.items, formItem{kind: itemHead, label: "Modules (none selected: all enabled)"})
 	for _, mo := range o.Modules {
 		f.items = append(f.items, formItem{kind: itemModule, label: mo, value: mo})
+	}
+	if len(o.Limits) > 0 {
+		f.items = append(f.items, formItem{kind: itemHead, label: "At once (←/→, kept for later scans)"})
+		for _, k := range []struct{ key, label string }{{"parallel", "hosts"}, {"trivy_parallel", "trivy runs"}} {
+			l := o.Limits[k.key]
+			f.items = append(f.items, formItem{kind: itemLimit, label: k.label, value: k.key, n: l.Value, was: l.Value,
+				max: max(o.LimitsMax, 1), fixed: l.Source == "org" || l.Source == "flag"})
+		}
 	}
 	f.items = append(f.items, formItem{kind: itemHead, label: "Options"},
 		formItem{kind: itemFlag, label: "dry run: show the plan, connect nowhere", value: "dry_run"},

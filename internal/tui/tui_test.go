@@ -711,3 +711,22 @@ func TestFill(t *testing.T) {
 		t.Fatalf("%q", got)
 	}
 }
+
+// TestScanLimitsFromTUI: the scan form shows how many hosts and trivy runs go at once; ←/→ change them, and
+// starting the scan saves them for later scans (the form opened again shows the saved value).
+func TestScanLimitsFromTUI(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
+	h.key("s")
+	h.has("At once (←/→, kept for later scans)", "‹ 8 ›", "‹ 2 ›")
+	for h.m.form.items[h.m.form.cur].value != "parallel" {
+		h.key("down")
+	}
+	h.key("left", "left", "space") // space does nothing on a number
+	h.has("‹ 6 ›")
+	h.key("enter")
+	h.eventually("Scans[1]", "acme/production")
+	h.key("x")
+	h.waitJob("cancelled")
+	h.key("s")
+	h.eventually("‹ 6 ›", "‹ 2 ›")
+}

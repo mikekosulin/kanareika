@@ -699,6 +699,12 @@ func (m *Model) formView(h int) []string {
 			l = " " + sLabel.Render(m.t.T(it.label))
 		case itemStart:
 			l = "   " + sCrumb.Render(m.t.T(it.label))
+		case itemLimit:
+			v := sText.Render(fmt.Sprintf("‹ %d ›", it.n))
+			if it.fixed {
+				v = sMuted.Render(fmt.Sprintf("  %d  ", it.n)) + " " + sMuted.Render(m.t.T("set in the org file or by a flag"))
+			}
+			l = "   " + fit(sText.Render(m.t.T(it.label)), 12, false) + " " + v
 		default:
 			box := sDim.Render("[ ]")
 			if it.on {

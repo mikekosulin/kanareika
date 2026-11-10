@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LANG, LANG_NAMES, t } from "../lib/i18n";
 import { local } from "../lib/local";
-import { post } from "../lib/api";
+import { api, post, qs } from "../lib/api";
+import { useQuery } from "@tanstack/react-query";
 import { ago, runLabel } from "../lib/format";
 import { go, isTree, openServer, set, setBy, setScope, setTheme, syncURL, toast, useApp, useS, type View } from "../state";
 import { client, useDB, useEnv, useJobs, useOrgs, useRunData, useSession } from "../queries";
@@ -174,16 +175,76 @@ export function Sidebar() {
           </div>
         )}
         {scans && e && s.view !== "setup" && (
-          <button className="btn" onClick={() => startScan(s.org, s.env)}>
-            <Icon name="scan" />
-            {t("Scan {env}…", { env: s.env })}
-          </button>
+          <>
+            <button className="btn" onClick={() => startScan(s.org, s.env)}>
+              <Icon name="scan" />
+              {t("Scan {env}…", { env: s.env })}
+            </button>
+            <ScanLimits org={s.org} env={s.env} />
+          </>
         )}
         <div className="foot2">
           <Prefs />
         </div>
       </div>
     </aside>
+  );
+}
+
+type Limit = { value: number; source: "default" | "settings" | "org" | "flag" };
+
+/** ScanLimits: how many hosts a scan reads at once (SSH) and how many trivy matches run at once (memory). Saved in
+ * the install's settings; an org file's or a flag's value is shown, not edited here. */
+function ScanLimits({ org, env }: { org: string; env: string }) {
+  const [open, setOpen] = useState(false);
+  const o = useQuery({
+    queryKey: ["scanopts", org, env],
+    queryFn: ({ signal }) => api<{ limits: Record<"parallel" | "trivy_parallel", Limit>; limits_max: number }>("/api/scan-options?" + qs({ org, env }), signal),
+  });
+  const l = o.data?.limits;
+  if (!l) return null;
+  const save = async (k: "parallel" | "trivy_parallel", v: number) => {
+    try {
+      await post("/api/settings/scan", { [k]: v });
+      client.invalidateQueries({ queryKey: ["scanopts"] });
+    } catch (e: any) {
+      toast(e.message);
+    }
+  };
+  const field = (k: "parallel" | "trivy_parallel", label: string) => {
+    const x = l[k], fixed = x.source === "org" || x.source === "flag";
+    return (
+      <label className="lim" title={fixed ? t(x.source === "org" ? "Set in the org file" : "Set by a flag") : undefined}>
+        <span>{label}</span>
+        <input
+          type="number"
+          min={1}
+          max={o.data!.limits_max}
+          defaultValue={x.value}
+          key={x.value + x.source}
+          disabled={fixed}
+          onBlur={(e) => {
+            const v = Math.round(+e.target.value);
+            if (v >= 1 && v <= o.data!.limits_max && v !== x.value) save(k, v);
+          }}
+          onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+        />
+      </label>
+    );
+  };
+  return (
+    <div className="lims">
+      <button className="row lrow" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <Icon name="chev" />
+        <span>{t("At once: {h} hosts, {n} trivy", { h: l.parallel.value, n: l.trivy_parallel.value })}</span>
+      </button>
+      {open && (
+        <div className="limf">
+          {field("parallel", t("Hosts"))}
+          {field("trivy_parallel", "trivy")}
+        </div>
+      )}
+    </div>
   );
 }
 

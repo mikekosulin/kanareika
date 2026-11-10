@@ -71,6 +71,14 @@ nav.nav { padding: 10px 8px; display: grid; gap: 1px; overflow: auto; }
 .status .row > span:last-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* one line in every language */
 .status .row b { color: var(--ink); font-weight: 550; }
 .status .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+/* how many at once a scan reads hosts and runs trivy: one line, two numbers when open */
+.lims .lrow { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; width: 100%; text-align: left; }
+.lims .lrow svg { width: 12px; height: 12px; flex: none; transform: rotate(-90deg); transition: transform .15s; }
+.lims .lrow[aria-expanded="true"] svg { transform: none; }
+.lims .limf { display: flex; gap: 8px; margin-top: 6px; }
+.lims .lim { display: flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.lims .lim input { width: 52px; padding: 3px 6px; border: 1px solid var(--line-2); border-radius: var(--r-ctl); background: var(--raised); color: var(--ink); font: 12.5px var(--mono); }
+.lims .lim input:disabled { opacity: .6; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: var(--r-ctl); border: 1px solid var(--line-2); background: var(--raised); color: var(--ink); white-space: nowrap; transition: background .12s var(--ease); }
 .btn:hover { background: var(--hover); }
