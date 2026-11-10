@@ -44,13 +44,41 @@ export function SrvMark({ n }: { n: TreeNode }) {
   );
 }
 
-const Li = ({ mark, text, right, title }: { mark: ReactNode; text: ReactNode; right?: ReactNode; title?: string }) => (
-  <div className="li" title={title || undefined}>
-    {mark}
-    <span>{text}</span>
-    <span>{right}</span>
-  </div>
-);
+// a line of the card; one with more to it (keys, addresses, ports, disks, why) opens it below on a click or Enter
+const Li = ({ mark, text, right, more }: { mark: ReactNode; text: ReactNode; right?: ReactNode; more?: string }) => {
+  const [open, setOpen] = useState(false);
+  if (!more)
+    return (
+      <div className="li">
+        {mark}
+        <span>{text}</span>
+        <span>{right}</span>
+      </div>
+    );
+  const flip = (e: React.SyntheticEvent) => {
+    if ((e.target as HTMLElement).closest("button, a")) return; // the line's own button (rules) does its own thing
+    e.preventDefault();
+    setOpen(!open);
+  };
+  return (
+    <>
+      <div
+        className={"li more" + (open ? " open" : "")}
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={flip}
+        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && flip(e)}
+      >
+        {mark}
+        <span>{text}</span>
+        <span>{right}</span>
+        <Icon name="chev" />
+      </div>
+      {open && <pre className="li-more">{more}</pre>}
+    </>
+  );
+};
 const Lis = ({ rows }: { rows: ReactNode[] }) => {
   const xs = rows.filter(Boolean);
   return xs.length ? <div className="lis">{xs}</div> : null;
@@ -149,7 +177,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
       <Li
         key={k("p" + i)}
         mark={pb(p.priority)}
-        title={`${p.installed} → ${p.fixed || ""}`}
+        more={`${p.installed} → ${p.fixed || ""}`}
         right={due(p.due, p.priority)}
         text={
           <>
@@ -167,9 +195,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
     )),
     ...rest
       .filter((o: any) => o.priority)
-      .map((o: any, i: number) => (
-        <Li key={k("o" + i)} mark={pb(o.priority)} text={L(o)} right={due(o.due, o.priority)} title={o.target} />
-      )),
+      .map((o: any, i: number) => <Li key={k("o" + i)} mark={pb(o.priority)} text={L(o)} right={due(o.due, o.priority)} more={o.target} />),
   ];
 
   let access: ReactNode = null;
@@ -202,7 +228,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
           <Li
             key="keys"
             mark={<Mk cls="ok" />}
-            title={keys.map((x: any) => `${x.user}: ${x.type} ${x.comment}`).join("\n")}
+            more={keys.map((x: any) => `${x.user}: ${x.type} ${x.comment}`).join("\n")}
             text={
               <>
                 {t("keys: {n} · users: {u}", { n: keys.length, u: new Set(keys.map((x: any) => x.user)).size })}
@@ -214,7 +240,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
             <Li
               key="acc"
               mark={<Mk cls="mut" />}
-              title={acc.map((x: any) => `${x.user} ${x.ip} ${tsShort(x.last)}`).join("\n")}
+              more={acc.map((x: any) => `${x.user} ${x.ip} ${tsShort(x.last)}`).join("\n")}
               text={t("{n} logins from {m} addresses, 30 d", {
                 n: fmtN(acc.reduce((m: number, x: any) => m + x.count, 0)),
                 m: new Set(acc.map((x: any) => x.ip)).size,
@@ -244,12 +270,12 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
         <Lis
           rows={[
             ...mod("exposure").map((o: any, i: number) => (
-              <Li key={"e" + i} mark={pb(o.priority)} text={L(o)} right={due(o.due, o.priority)} title={o.target} />
+              <Li key={"e" + i} mark={pb(o.priority)} text={L(o)} right={due(o.due, o.priority)} more={o.target} />
             )),
             <Li
               key="fw"
               mark={<Mk cls={fw[0] === "bad" ? "bad" : "ok"} />}
-              title={fw[2]}
+              more={fw[2]}
               text={
                 pub.length ? (
                   <>
@@ -287,7 +313,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
               <Li
                 key="pub"
                 mark={<Mk cls={E.unlisted_public?.length ? "bad" : "mut"} />}
-                title={E.unlisted_public?.length ? t("not in the organization config") : ""}
+                more={E.unlisted_public?.length ? t("not in the organization config") : ""}
                 text={
                   <>
                     {t("public IP")} <code>{E.public.join(" ")}</code>
@@ -299,7 +325,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
               key="in"
               mark={<Mk cls="mut" />}
               text={t("{n} listening inside", { n: (E.listen || []).filter((y: any) => !y.public).length })}
-              title={(E.listen || [])
+              more={(E.listen || [])
                 .filter((y: any) => !y.public)
                 .map((y: any) => `${y.port}/${y.proto} ${y.process || "?"} ${y.addr}`)
                 .join("\n")}
@@ -328,13 +354,13 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
         <Lis
           rows={[
             ...mod("health").map((o: any, i: number) => (
-              <Li key={"h" + i} mark={pb(o.priority)} text={L(o)} right={due(o.due, o.priority)} title={o.target} />
+              <Li key={"h" + i} mark={pb(o.priority)} text={L(o)} right={due(o.due, o.priority)} more={o.target} />
             )),
             <Li
               key="sum"
               mark={<Mk cls={d && d.use >= 95 ? "bad" : d && d.use >= 85 ? "wn" : "ok"} />}
               text={sum}
-              title={(H.disks || []).map((r: any) => `${r.mount} ${r.use}%`).join("\n")}
+              more={(H.disks || []).map((r: any) => `${r.mount} ${r.use}%`).join("\n")}
             />,
             ...(H.disks || [])
               .filter((r: any) => r !== d && r.use >= 85)
@@ -367,7 +393,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
             <Li
               key="tm"
               mark={<Mk cls={tm[0]} />}
-              title={tm[2]}
+              more={tm[2]}
               text={
                 <>
                   {t("time")} {tm[1]}
@@ -376,7 +402,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
               }
             />,
             ...Object.values(H.dmesg?.classes || {}).map((x: any, i: number) => (
-              <Li key={"k" + i} mark={<Mk cls="wn" />} text={`${t("kernel")}: ${catMsg(x.key, x.title)}`} right={x.count} title={x.last} />
+              <Li key={"k" + i} mark={<Mk cls="wn" />} text={`${t("kernel")}: ${catMsg(x.key, x.title)}`} right={x.count} more={x.last} />
             )),
             H.journal?.errors_7d ? (
               <Li key="j" mark={<Mk cls="mut" />} text={t("{n} journal errors, 7 d", { n: fmtN(H.journal.errors_7d) })} />
@@ -393,7 +419,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
       rows={rest
         .filter((o: any) => !o.priority)
         .map((o: any, i: number) => (
-          <Li key={i} mark={<Mk cls="mut" />} text={L(o)} title={o.target} />
+          <Li key={i} mark={<Mk cls="mut" />} text={L(o)} more={o.target} />
         ))}
     />
   );
@@ -436,9 +462,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
         <div className="bigmono hn" title={n}>
           {n}
         </div>
-        <div className="dmeta" title={meta.join(" · ")}>
-          {meta.join(" · ")}
-        </div>
+        <div className="dmeta">{meta.join(" · ")}</div>
         <div className="dkv">
           <Kv k={t("To fix")}>
             {pcs.length ? (
