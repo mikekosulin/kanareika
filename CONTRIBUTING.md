@@ -15,6 +15,17 @@ make cover    # coverage per function, dist/coverage.html
 
 CI also runs `gofmt` and `go test -race`; run `gofmt -l cmd internal assets tools` before pushing. It tests on Windows too, and runs the Linux end-to-end check: `tools/e2e/e2e.sh` (needs Docker; downloads the vulnerability DB, about 1 GB on the host) builds the Linux binary, scans a Debian container over SSH and reads the result through `history` and the web API. Everything in it is made up and removed afterwards.
 
+## Web page
+
+The dashboard is a React app in `web/` (TypeScript, Vite). It is built into one file, `assets/web/index.html`, scripts and styles inlined, which the binary embeds: users need nothing but the binary, and `go build` needs no Node. Change the sources, then rebuild and commit both (CI checks that they match):
+
+```bash
+make web                       # npm ci && npm run build in web/
+cd web && npm run dev          # live reload on :5173, the API from kanareika web on :8088
+```
+
+Every interface string goes through `t("…")` (or `tx("…", {…})` when its arguments are elements) with its English text; `TestEveryPageStringTranslated` fails until each one has a translation in every `assets/locales/*.json`. Text from the server is rendered by React as text: no raw HTML, and links from data only through `webURL` (`TestPageEscapesData`).
+
 ## Screenshots
 
 The README pictures come from tools, from made-up data only (they are published):
