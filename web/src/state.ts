@@ -28,6 +28,7 @@ export interface State {
   p4: boolean;
   open: Set<string>;
   cur: string | null; // the node (or server row) whose details show
+  treeView: View | ""; // the tree view cur, stack and open belong to
   stack: { id: string; label: string }[]; // the details panel's way back
   sel: Set<string>; // nodes in the task for an agent
   wantHost: string; // a server to show once Servers has its rows (from the address, or a link)
@@ -60,6 +61,7 @@ export const useApp = create<State>(() => ({
   p4: false,
   open: new Set(),
   cur: null,
+  treeView: "",
   stack: [],
   sel: new Set(),
   wantHost: "",
@@ -90,7 +92,10 @@ export function go(view: View, q?: string) {
   const patch: Partial<State> = { view, sideOpen: false, detailOpen: false };
   if (view !== s.view) {
     Object.assign(patch, { vq: "", vsel: "", vitem: null, vstack: [] });
-    if (isTree(view) && isTree(s.view)) Object.assign(patch, { open: new Set(), cur: null, stack: [], q: "", flt: new Set() });
+    // the selection is the tree view's it was made in: back to that view it stays, another one starts clean
+    const owner = isTree(s.view) ? s.view : s.treeView;
+    if (isTree(view) && view !== owner) Object.assign(patch, { open: new Set(), cur: null, stack: [], q: "", flt: new Set() });
+    patch.treeView = isTree(view) ? view : owner;
   }
   if (q != null) patch.q = q;
   set(patch);

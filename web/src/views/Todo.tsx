@@ -153,7 +153,7 @@ export function Todo() {
             )}
           </div>
         </div>
-        <Detail accepted={s.accepted} />
+        <Detail accepted={s.accepted} waiting={!tr || tree.isPlaceholderData} />
       </div>
     </>
   );
@@ -243,7 +243,8 @@ function SelBar() {
 }
 
 /** Detail: the panel beside the list: the picked node's details (or, for accepted risks, the exception's). */
-function Detail({ accepted }: { accepted: boolean }) {
+// waiting: the list is being regrouped or filtered; the details shown stay (dimmed) until it picks its first row
+function Detail({ accepted, waiting }: { accepted: boolean; waiting: boolean }) {
   const { cur, detailOpen, vitem } = useS((s) => ({ cur: s.cur, detailOpen: s.detailOpen, vitem: s.vitem }));
   const p = useApp(useMemoParams);
   const node = useNode(p, accepted ? null : cur);
@@ -263,12 +264,12 @@ function Detail({ accepted }: { accepted: boolean }) {
     <aside ref={ref} className={"detail" + (detailOpen ? " open" : "")} aria-label={t("Details")}>
       {accepted ? (
         vitem?.kind === "exc" ? <ExcDetail x={vitem} /> : null
-      ) : !cur ? null : node.error ? (
+      ) : !cur && !(waiting && node.data) ? null : node.error ? (
         <div className="nodetail">{(node.error as Error).message}</div>
       ) : !node.data ? (
         <Skeleton kind="detail" />
       ) : (
-        <div className={node.isPlaceholderData ? "stale" : ""}>
+        <div className={node.isPlaceholderData || !cur ? "stale" : ""}>
           <NodeDetail d={node.data} onGo={goTo} onBack={back} />
         </div>
       )}

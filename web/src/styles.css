@@ -309,9 +309,12 @@ dialog footer { padding: 12px 20px; border-top: 1px solid var(--line); display: 
 
 
 /* ---------- tree prototype additions ---------- */
-.hdr { display: flex; align-items: flex-end; gap: 16px; padding: 16px 24px 0; flex-wrap: wrap; }
+.hdr { display: flex; align-items: flex-end; gap: 16px; padding: 16px 24px 0; }
+/* one line on every view: the counts never wrap under the title, the subtitle gives way (the list does not jump) */
+.hdr > div:first-child { min-width: 0; flex: 1; }
+.hdr .counts { flex: none; }
 .hdr h1 { font-size: 20px; margin: 0; font-weight: 650; letter-spacing: -.015em; }
-.hdr .sub { color: var(--ink-2); font-size: 13px; margin-top: 2px; }
+.hdr .sub { color: var(--ink-2); font-size: 13px; margin-top: 2px; min-height: 1lh; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* empty while loading: the line stays */
 .hdr .sub a { color: var(--ink-2); text-decoration: none; border-bottom: 1px dotted var(--line-2); }
 .hdr .sub .plus { color: var(--p1); } .hdr .sub .minus { color: var(--ok); }
 .hdr .tools { margin-left: auto; display: flex; gap: 6px; align-items: center; }
@@ -404,7 +407,7 @@ dialog footer { padding: 12px 20px; border-top: 1px solid var(--line); display: 
 @media (max-width: 1500px) { .thead, .node { grid-template-columns: 22px 22px 30px minmax(0, 1fr) 170px 44px 84px 96px 60px; } .c-st { display: none !important; } }
 @media (max-width: 1100px) { .thead, .node { grid-template-columns: 22px 22px 30px minmax(0, 1fr) 44px 84px 60px; } .c-h, .c-fl { display: none !important; } }
 @media (max-width: 860px) {
-  .hdr { padding: 12px 16px 0; } .hdr .tools { display: none; } .bar2 { padding: 10px 16px; overflow-x: auto; flex-wrap: nowrap; } .bar2 .right { display: none; }
+  .hdr { padding: 12px 16px 0; flex-wrap: wrap; } .hdr .sub { white-space: normal; } .hdr .tools { display: none; } .bar2 { padding: 10px 16px; overflow-x: auto; flex-wrap: nowrap; } .bar2 .right { display: none; }
   .thead { display: none; }
   .node { grid-template-columns: 22px 22px 30px minmax(0, 1fr) 54px; padding: 6px 12px 6px 6px; row-gap: 2px; }
   .node .c-cve, .node .c-ep { display: none !important; }
@@ -836,10 +839,13 @@ code.copyable { cursor: copy; font-family: var(--mono); color: var(--ink); borde
 .li code { font: 12.5px var(--mono); }
 
 /* ---------- skeletons: the shape of what is loading ---------- */
+/* they fade in after a moment: a fast answer goes straight to the rows, without a flash of grey */
+.skel-rows, .skel-detail { animation: sk-in .2s ease .25s both; }
+@keyframes sk-in { from { opacity: 0; } to { opacity: 1; } }
 .sk { display: block; height: 10px; border-radius: 5px; background: linear-gradient(90deg, var(--line) 25%, var(--line-2, var(--line)) 50%, var(--line) 75%);
   background-size: 200% 100%; animation: sk 1.2s ease-in-out infinite; opacity: .7; }
 @keyframes sk { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
-@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .sk, .skel-rows, .skel-detail { animation: none; } }
 .sk.pill { width: 26px; height: 18px; border-radius: 9px; }
 .sk.big { height: 18px; }
 .sk.w10 { width: 10%; } .sk.w20 { width: 20%; } .sk.w30 { width: 30%; } .sk.w40 { width: 40%; } .sk.w45 { width: 45%; }
