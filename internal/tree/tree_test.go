@@ -300,3 +300,23 @@ func TestLazy(t *testing.T) {
 		t.Fatalf("full under: %+v", k)
 	}
 }
+
+// TestDescribeCapsCVEs: a node closing more than MaxCVEs lists the most urgent MaxCVEs, with their texts, and
+// says how many more there are.
+func TestDescribeCapsCVEs(t *testing.T) {
+	hosts := Hosts{"h": report.Fact{OS: osName("Debian GNU/Linux 12 (bookworm)")}}
+	var fs []finding.Finding
+	for i := range MaxCVEs + 7 {
+		fs = append(fs, finding.Finding{Org: "acme", Host: "h", Group: "g", Module: "os_packages", Kind: finding.Vuln,
+			ID: fmt.Sprintf("CVE-0000-%04d", i), Pkg: "linux-image", Installed: "1", Fixed: "2", Severity: "HIGH", Target: "os",
+			FixState: finding.FixAvailable, Priority: p("P2"), EPSS: e(float64(i) / 100), Description: "text"})
+	}
+	tr := Build(fs, hosts, Opts{})
+	d := Describe(tr.Nodes[0], hosts, &report.View{}, "2026-11-08")
+	if len(d.CVEs) != MaxCVEs || d.More != 7 {
+		t.Fatalf("%d listed, %d more", len(d.CVEs), d.More)
+	}
+	if d.CVEs[0].ID != fmt.Sprintf("CVE-0000-%04d", MaxCVEs+6) || d.CVEs[0].Description != "text" || d.CVEs[MaxCVEs-1].Description != "text" {
+		t.Fatalf("first %s %q, last %q", d.CVEs[0].ID, d.CVEs[0].Description, d.CVEs[MaxCVEs-1].Description)
+	}
+}

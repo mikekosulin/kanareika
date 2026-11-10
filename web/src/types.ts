@@ -82,7 +82,8 @@ export interface NodeDetail {
   node: TreeNode;
   why: { code: string; args?: Record<string, any> }[];
   due: { date?: string; why?: string; overdue?: number; in?: number; clock_start?: string; kev_due?: string; first_seen?: string };
-  cves: CVE[];
+  cves: CVE[]; // the most urgent, at most 50
+  cves_more: number; // left out of cves
   where: { group: string; os: string; exposure: number; hosts: string[]; states: Record<string, number> }[];
   apply?: { os: string; hosts: string[]; command: string; reboot?: boolean; unsafe?: string[] }[];
   actions: string[];

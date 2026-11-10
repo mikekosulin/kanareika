@@ -2,7 +2,6 @@ package tree
 
 import (
 	"cmp"
-	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -69,7 +68,8 @@ type Detail struct {
 	Node    *Node    `json:"node"`
 	Why     []Reason `json:"why"`
 	Due     Due      `json:"due"`
-	CVEs    []CVE    `json:"cves"`
+	CVEs    []CVE    `json:"cves"`      // the most urgent first, at most MaxCVEs
+	More    int      `json:"cves_more"` // CVEs left out of CVEs
 	Where   []Where  `json:"where"`
 	Apply   []Step   `json:"apply,omitempty"`
 	Actions []string `json:"actions"` // ids of the view's actions that cover the node (the agent task is built from them)
@@ -142,6 +142,10 @@ func covers(a *report.Action, f *item) bool {
 	return slices.ContainsFunc(a.Packages, func(p report.Package) bool { return p.Pkg == f.Pkg })
 }
 
+// MaxCVEs: the most CVEs a node's details list. A group of servers can close tens of thousands (megabytes with
+// their texts); the details show the most urgent, the count says how many more.
+const MaxCVEs = 50
+
 // Describe: the details of node n (from tree t, built over findings).
 func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 	d := &Detail{Node: n, Why: []Reason{}, CVEs: []CVE{}, Where: []Where{}, Actions: []string{}}
@@ -209,20 +213,10 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 		if c == nil {
 			parts[f.C.ID] = f.C
 			c = &CVE{ID: f.C.ID, Title: f.C.Title, Severity: f.C.Severity, CVSS: f.C.CVSSScore, Vector: f.C.Vector, EPSS: f.C.EPSS, KEV: f.C.KEV,
-				KEVDue: f.C.KEVDue, Preauth: f.C.Preauth, RCE: f.C.Preauth && f.C.RCE, Published: f.C.Published, Description: f.C.Description, URL: f.C.URL}
+				KEVDue: f.C.KEVDue, Preauth: f.C.Preauth, RCE: f.C.Preauth && f.C.RCE, Published: f.C.Published, URL: f.C.URL}
 			cves[f.C.ID], cveHosts[f.C.ID] = c, map[string]bool{}
 		}
 		cveHosts[f.C.ID][f.Host] = true
-	}
-	ids := slices.Sorted(maps.Keys(parts))
-	ps := make([]*fset.CVE, len(ids))
-	for i, id := range ids {
-		ps[i] = parts[id]
-	}
-	if texts, err := fset.Descriptions(ps); err == nil { // the store's sets leave them out until asked
-		for i, id := range ids {
-			cves[id].Description = texts[i]
-		}
 	}
 	for id, c := range cves {
 		c.Hosts = len(cveHosts[id])
@@ -238,6 +232,19 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 		return cmp.Or(boolFirst(a.KEV, b.KEV), cmp.Compare(epss(b), epss(a)), cmp.Compare(sevRank(b.Severity), sevRank(a.Severity)),
 			strings.Compare(a.ID, b.ID))
 	})
+	if len(d.CVEs) > MaxCVEs {
+		d.More, d.CVEs = len(d.CVEs)-MaxCVEs, d.CVEs[:MaxCVEs:MaxCVEs]
+	}
+	// the texts of the ones listed only (the store's sets leave them out until asked)
+	ps := make([]*fset.CVE, len(d.CVEs))
+	for i, c := range d.CVEs {
+		ps[i] = parts[c.ID]
+	}
+	if texts, err := fset.Descriptions(ps); err == nil {
+		for i := range d.CVEs {
+			d.CVEs[i].Description = texts[i]
+		}
+	}
 	// where
 	byGroup := map[string]*Where{}
 	seen := map[string]bool{}

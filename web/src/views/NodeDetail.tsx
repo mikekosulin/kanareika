@@ -1,7 +1,7 @@
 // A fix's (or CVE's, or group's) details: why its priority, when it is due, what it closes, where it is and the
 // command that fixes it; the way back to the node it was opened from; adding it to the task for an agent.
 import { t } from "../lib/i18n";
-import { fmtDay, pct, webURL } from "../lib/format";
+import { fmtDay, fmtN, pct, webURL } from "../lib/format";
 import { set, toggle, useS } from "../state";
 import type { CVE, NodeDetail as ND } from "../types";
 import { Flags, NOFIX, noFixTxt, Prio, StateCell } from "../components/cells";
@@ -279,6 +279,7 @@ export function NodeDetail({ d, onGo, onBack }: { d: ND; onGo: (id: string) => v
               </tbody>
             </table>
           )}
+          {d.cves_more > 0 && <div className="dnote">{t("+{n} more", { n: fmtN(d.cves_more) })}</div>}
         </div>
       )}
       {d.where.length > 0 && (

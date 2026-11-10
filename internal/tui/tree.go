@@ -123,6 +123,7 @@ type nodeDetail struct {
 	Why     []reason    `json:"why"`
 	Due     dueInfo     `json:"due"`
 	CVEs    []cveInfo   `json:"cves"`
+	More    int         `json:"cves_more"` // CVEs the server left out of CVEs
 	Where   []whereInfo `json:"where"`
 	Apply   []applyStep `json:"apply"`
 	Actions []string    `json:"actions"`
@@ -1353,7 +1354,7 @@ func (m *Model) detailView(w int, full bool) []string {
 		wrap(" ", sText.Render(dt))
 	}
 	if len(d.CVEs) > 0 {
-		head(fmt.Sprintf("CVE (%d)", len(d.CVEs)))
+		head(fmt.Sprintf("CVE (%d)", len(d.CVEs)+d.More))
 		limit := len(d.CVEs)
 		if !full {
 			limit = min(limit, 6)
@@ -1378,7 +1379,9 @@ func (m *Model) detailView(w int, full bool) []string {
 			out = append(out, l)
 		}
 		if limit < len(d.CVEs) {
-			out = append(out, " "+sMuted.Render(m.t.F("{n} more: enter", "n", strconv.Itoa(len(d.CVEs)-limit))))
+			out = append(out, " "+sMuted.Render(m.t.F("{n} more: enter", "n", strconv.Itoa(len(d.CVEs)-limit+d.More))))
+		} else if d.More > 0 {
+			out = append(out, " "+sMuted.Render(m.t.F("+{n} more", "n", strconv.Itoa(d.More))))
 		}
 	}
 	if len(d.Where) > 0 {
