@@ -20,6 +20,8 @@ export interface State {
   // tree views: Servers and ToDo keep their own grouping
   tby: By;
   sby: By;
+  tsort: string; // ToDo's rows ordered by a column ("cve", "-cve": the other way; "": by priority)
+  ssort: string; // Servers' rows
   flt: Set<string>;
   q: string;
   backport: boolean;
@@ -53,6 +55,8 @@ export const useApp = create<State>(() => ({
   theme: local.get("theme", "system"),
   tby: by(local.get("by", "fix"), "fix"),
   sby: by(local.get("sby", "host"), "host"),
+  tsort: "",
+  ssort: "",
   flt: new Set(),
   q: "",
   backport: false,
@@ -100,6 +104,12 @@ export function go(view: View, q?: string) {
   if (q != null) patch.q = q;
   set(patch);
   syncURL(true);
+}
+
+/** setSort: the column the open view's rows are ordered by; the same column again turns the order around. */
+export function setSort(key: string) {
+  const s = get(), k = s.view === "servers" ? "ssort" : "tsort", cur = s[k];
+  set({ [k]: cur === key ? "-" + key : cur === "-" + key ? "" : key } as Partial<State>);
 }
 
 /** setBy: the grouping of the view open, regrouped in place (Servers and ToDo each keep their own). */

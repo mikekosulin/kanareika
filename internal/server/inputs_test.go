@@ -1,8 +1,10 @@
 package server
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/mikekosulin/kanareika/internal/finding"
@@ -99,5 +101,30 @@ func TestFailedHosts(t *testing.T) {
 	}
 	if got := failedHosts(nil); got != nil {
 		t.Fatalf("%v", got)
+	}
+}
+
+// TestTreeSort: ?sort orders all the rows before a page is cut (the first page by name is the first names of all,
+// not of the first page); an unknown column is a 400.
+func TestTreeSort(t *testing.T) {
+	p, _ := fixtureHome(t)
+	_, h := newTest(t, Options{Paths: p})
+	base := "/api/tree?org=acme&env=production&run=2026-11-02_100000&by=cve&levels=0"
+	var all, page tree.Tree
+	must(t, json.Unmarshal([]byte(do(h, "GET", base+"&sort=-name", nil, nil).body), &all))
+	if len(all.Nodes) < 3 {
+		t.Fatalf("%d rows", len(all.Nodes))
+	}
+	for i := 1; i < len(all.Nodes); i++ {
+		if strings.ToLower(all.Nodes[i-1].Label) < strings.ToLower(all.Nodes[i].Label) {
+			t.Fatalf("not Z to A: %s before %s", all.Nodes[i-1].Label, all.Nodes[i].Label)
+		}
+	}
+	must(t, json.Unmarshal([]byte(do(h, "GET", base+"&sort=-name&offset=0&limit=2", nil, nil).body), &page))
+	if len(page.Nodes) != 2 || page.Nodes[0].ID != all.Nodes[0].ID || page.Nodes[1].ID != all.Nodes[1].ID {
+		t.Fatalf("the page is not the start of the sorted rows")
+	}
+	if r := do(h, "GET", base+"&sort=size", nil, nil); r.code != 400 || !strings.Contains(r.body, "unknown sort") {
+		t.Fatal(r.code, r.body)
 	}
 }

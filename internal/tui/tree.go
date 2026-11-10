@@ -216,7 +216,34 @@ func (m *Model) treeQuery() string {
 	if m.flt["backported"] {
 		v.Set("backported", "1")
 	}
+	if m.isTree() && m.sort[m.view] != "" {
+		v.Set("sort", m.sort[m.view])
+	}
 	return v.Encode()
+}
+
+// sortKeys: the columns t goes through, per grouping (the server list has its own); "" is the tree's own order.
+func (m *Model) sortKeys() []string {
+	if m.grouping() == "host" {
+		return []string{"", "fixes", "scanned", "name"}
+	}
+	return []string{"", "cve", "epss", "due", "hosts", "name"}
+}
+
+// sortNames: what the title line calls each column.
+var sortNames = map[string]string{"cve": "CVE", "epss": "EPSS", "due": "due", "hosts": "hosts", "name": "name", "fixes": "fixes", "scanned": "scanned"}
+
+// sortLabel: the order on screen, for the title line ("" when by priority).
+func (m *Model) sortLabel() string {
+	k, rev := strings.CutPrefix(m.sort[m.view], "-")
+	if k == "" {
+		return ""
+	}
+	arrow := "↓"
+	if (k == "due" || k == "name") != rev {
+		arrow = "↑"
+	}
+	return m.t.T(sortNames[k]) + " " + arrow
 }
 
 func (m *Model) wantTree() string { return m.wantKey() + "?" + m.treeQuery() }
@@ -578,6 +605,17 @@ func (m *Model) todoKey(s string) (tea.Cmd, bool) {
 	case "g":
 		m.by[m.view] = groupings[(slices.Index(groupings, m.grouping())+1)%len(groupings)]
 		m.cur[m.view], m.off[m.view], m.curID = 0, 0, ""
+		m.sort[m.view] = "" // the columns differ by grouping
+	case "t": // the next column to order by
+		ks := m.sortKeys()
+		k, _ := strings.CutPrefix(m.sort[m.view], "-")
+		m.sort[m.view] = ks[(max(slices.Index(ks, k), 0)+1)%len(ks)]
+		m.cur[m.view], m.off[m.view], m.curID = 0, 0, ""
+	case "T": // the same column, the other way
+		if k, rev := strings.CutPrefix(m.sort[m.view], "-"); k != "" {
+			m.sort[m.view] = map[bool]string{true: k, false: "-" + k}[rev]
+			m.cur[m.view], m.off[m.view], m.curID = 0, 0, ""
+		}
 	case "G":
 		m.move(1 << 30)
 	case "f":

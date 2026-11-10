@@ -352,6 +352,9 @@ dialog footer { padding: 12px 20px; border-top: 1px solid var(--line); display: 
 .thead, .node { display: grid; grid-template-columns: 22px 22px 30px minmax(0, 1fr) 200px 44px 84px 96px 124px 60px; align-items: center; gap: 10px; padding: 0 16px 0 10px; }
 .thead { position: sticky; top: 0; z-index: 3; height: 32px; font-size: 11.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; background: var(--bg); border-bottom: 1px solid var(--line); }
 .thead .num, .node .num { text-align: right; }
+/* a column heading that sorts: the heading's look, a pointer, the order shown by an arrow */
+.sorth { background: none; border: 0; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; white-space: nowrap; }
+.sorth:hover, [aria-sort] > .sorth { color: var(--ink); }
 .thead button { background: none; border: 0; padding: 0; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; }
 .thead button[aria-sort] { color: var(--ink); }
 .node { min-height: 40px; border-bottom: 1px solid var(--line); cursor: pointer; position: relative; font-size: 13.5px; }

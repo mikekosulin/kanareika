@@ -159,3 +159,18 @@ export async function copy(text: string, what?: string) {
     say(t("Copy failed: select and copy by hand"));
   }
 }
+
+/** SortHead: a column heading that orders the rows by it (asc: its first order is A to Z, earliest, most urgent);
+ * again: the other way; a third time: back to priority. */
+export function SortHead(p: { k: string; sort: string; onSort: (k: string) => void; asc?: boolean; className?: string; children: ReactNode }) {
+  const first = p.sort === p.k, other = p.sort === "-" + p.k;
+  const up = (first && p.asc) || (other && !p.asc);
+  return (
+    <span className={p.className} aria-sort={first || other ? (up ? "ascending" : "descending") : undefined}>
+      <button type="button" className="sorth" onClick={() => p.onSort(p.k)}>
+        {p.children}
+        {first || other ? (up ? " ↑" : " ↓") : ""}
+      </button>
+    </span>
+  );
+}

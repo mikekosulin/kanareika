@@ -95,6 +95,7 @@ type Model struct {
 
 	// ToDo: the tree
 	by      [nViews]string         // the trees' groupings: fix, cve, host (g); Servers by host, ToDo by fix
+	sort    [nViews]string         // the trees' order: a column (t), "-" before it the other way (T); "": by priority
 	flt     map[string]bool        // filters on (f)
 	tree    *treeResp              // nil until it comes
 	treeKey string                 // what the tree on screen is for (wantTree)

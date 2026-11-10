@@ -353,6 +353,9 @@ func (m *Model) tabs() string {
 			})
 		}
 		g += " " + sKey.Render("g") + " "
+		if sl := m.sortLabel(); sl != "" {
+			g = sMuted.Render(m.t.T("sort")) + " " + sCrumb2.Render(sl) + " " + sKey.Render("t") + "  " + g
+		}
 		if m.view == vServers {
 			g = m.showSwitch() + "  " + g
 		}
@@ -744,7 +747,7 @@ var helpRows = [][2]string{
 	{"right/left, l/h", "ToDo: open and close a node; other views: the next and previous view"},
 	{"enter", "open (details of a node, a run, a host card, a scan's output)"},
 	{"/", "filter the list; esc clears"},
-	{"g", "ToDo: group by fix, CVE or host"},
+	{"g, t", "ToDo: group by fix, CVE or host; t: order by the next column, T: the other way"},
 	{"f", "ToDo: filters (KEV, RCE, EPSS, internet-facing, fix ready, no fix, overdue); Network: only ports open to the outside"},
 	{"space, x, a", "select a node and everything under it, select all"},
 	{"v", "only the selected (ToDo)"},

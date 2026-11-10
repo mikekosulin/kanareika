@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { t } from "../lib/i18n";
 import { ago, days, dueText, narrow, pct } from "../lib/format";
-import { set, setBy, syncURL, toggle, useApp, useS } from "../state";
+import { set, setBy, setSort, syncURL, toggle, useApp, useS } from "../state";
 import { client, treeParams, useEnv, useKids, useLens, useNode, useRunData, useTree, type TreeParams } from "../queries";
 import type { Tree, TreeNode } from "../types";
-import { Chips, Empty, Icon, Search, Seg, Skeleton } from "../components/ui";
+import { Chips, Empty, Icon, Search, Seg, Skeleton, SortHead } from "../components/ui";
 import { DataTable, type Col } from "../components/DataTable";
 import { MainText } from "../components/cells";
 import { GROUPS, useQueryInput } from "./Todo";
@@ -28,7 +28,7 @@ const params = (s: Parameters<typeof treeParams>[0]) => {
 type SRow = { n: TreeNode; depth: number };
 
 export function Servers() {
-  const s = useS((s) => ({ lens: s.lens, flt: s.flt, p4: s.p4, q: s.q, open: s.open, cur: s.cur, wantHost: s.wantHost }));
+  const s = useS((s) => ({ sort: s.ssort, lens: s.lens, flt: s.flt, p4: s.p4, q: s.q, open: s.open, cur: s.cur, wantHost: s.wantHost }));
   const p = useApp(params);
   const tree = useTree(p, true);
   const lens = useLens(s.lens);
@@ -83,10 +83,10 @@ export function Servers() {
                 <div className="svh">
                   <span />
                   <span />
-                  <span>{t("Server")}</span>
-                  <span>{t("Priorities")}</span>
-                  <span className="r c-fx">{t("Fixes")}</span>
-                  <span className="r c-sc">{t("Scanned")}</span>
+                  <SortHead k="name" asc sort={s.sort} onSort={setSort}>{t("Server")}</SortHead>
+                  <SortHead k="pri" asc sort={s.sort} onSort={setSort}>{t("Priorities")}</SortHead>
+                  <SortHead k="fixes" className="r c-fx" sort={s.sort} onSort={setSort}>{t("Fixes")}</SortHead>
+                  <SortHead k="scanned" className="r c-sc" sort={s.sort} onSort={setSort}>{t("Scanned")}</SortHead>
                 </div>
                 {!tr ? (
                   <Skeleton />

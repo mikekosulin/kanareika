@@ -36,6 +36,7 @@ export const treeParams = (s: State) => ({
   f: [...s.flt].sort().join(","),
   q: s.q.trim(),
   backported: s.backport ? 1 : "",
+  sort: s.view === "servers" ? s.ssort : s.tsort,
 });
 export type TreeParams = ReturnType<typeof treeParams>;
 
@@ -92,7 +93,8 @@ export async function fullTree(p: TreeParams) {
   return api<Tree>("/api/tree?" + qs(p));
 }
 
-export function useNode(p: TreeParams, id: string | null) {
+export function useNode(tp: TreeParams, id: string | null) {
+  const { sort: _, ...p } = tp; // a node's details don't depend on the order of the rows
   return useQuery({
     queryKey: ["node", p, id],
     queryFn: async ({ signal }) => {

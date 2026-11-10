@@ -768,3 +768,33 @@ func TestRescanKey(t *testing.T) {
 		t.Fatalf("%+v", r)
 	}
 }
+
+// TestSortKey: t orders ToDo's rows by the next column (the title line says which), T turns it around, g starts over.
+func TestSortKey(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, false)
+	h.key("2")
+	h.key("t")
+	if h.m.sort[h.m.view] != "cve" || !strings.Contains(h.m.treeQuery(), "sort=cve") {
+		t.Fatalf("%q %s", h.m.sort[h.m.view], h.m.treeQuery())
+	}
+	h.has("CVE ↓")
+	h.key("T")
+	if h.m.sort[h.m.view] != "-cve" {
+		t.Fatal(h.m.sort[h.m.view])
+	}
+	h.has("CVE ↑")
+	h.key("T")
+	if h.m.sort[h.m.view] != "cve" {
+		t.Fatal(h.m.sort[h.m.view])
+	}
+	for range 5 {
+		h.key("t")
+	}
+	if h.m.sort[h.m.view] != "" {
+		t.Fatalf("back to priority: %q", h.m.sort[h.m.view])
+	}
+	h.key("t", "g")
+	if h.m.sort[h.m.view] != "" {
+		t.Fatal("a new grouping keeps the order")
+	}
+}

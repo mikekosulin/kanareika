@@ -22,6 +22,11 @@ type notFound string
 
 func (e notFound) Error() string { return string(e) }
 
+// badRequest: a parameter the call can't take, answered with 400 {"error": msg}.
+type badRequest string
+
+func (e badRequest) Error() string { return string(e) }
+
 // orgState: the org configs as last loaded; replaced as a whole on reload, so readers need no lock.
 type orgState struct {
 	orgs   []*config.Org

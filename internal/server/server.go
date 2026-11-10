@@ -309,10 +309,15 @@ func (s *Server) api(fn func(query) (any, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		v, err := fn(parseQS(r.URL.RawQuery))
 		var nf notFound
+		var br badRequest
 		switch {
 		case errors.As(err, &nf):
 			b, _ := json.Marshal(map[string]string{"error": nf.Error()})
 			send(w, 404, "application/json", b)
+			return
+		case errors.As(err, &br):
+			b, _ := json.Marshal(map[string]string{"error": br.Error()})
+			send(w, 400, "application/json", b)
 			return
 		case errors.Is(err, errNoPrompt):
 			send(w, 501, "application/json", []byte(`{"error": "prompt builder not configured"}`))

@@ -202,7 +202,8 @@ func (in *treeInput) tree(o tree.Opts) *tree.Tree {
 // ?backported=1, ?all=1 with by=host for every host of the env). ?levels=N: only N levels of kids under the top
 // rows (0: the top rows), the rest counted in each node's "more"; ?under=id: the kids of that node instead, with
 // ?levels as well. ?offset=&limit=: one page of the rows ("rows": how many there are). By CVE the whole tree is
-// over a hundred MB on a few hosts, its top rows a few.
+// over a hundred MB on a few hosts, its top rows a few. ?sort=cve|epss|hosts|fixes|scanned|due|name|pri (- before
+// it: the other way): the rows of each level in that order, before the page is cut.
 func (s *Server) apiTree(q query) (any, error) {
 	in, err := s.treeInput(q)
 	if err != nil {
@@ -219,6 +220,26 @@ func (s *Server) apiTree(q query) (any, error) {
 	offset, _ := strconv.Atoi(q.get("offset"))
 	limit, _ := strconv.Atoi(q.get("limit"))
 	paged := q.get("offset") != "" || q.get("limit") != ""
+	by, err := tree.Sorter(q.get("sort"))
+	if err != nil {
+		return nil, badRequest(err.Error())
+	}
+	// the rows sorted before a page is cut; what the answer copies under them, in the same order
+	answer := func(c *tree.Tree) *tree.Tree {
+		c = c.Sorted(by)
+		if paged {
+			c = c.Page(offset, limit)
+		}
+		if levels >= 0 {
+			c = c.Shallow(levels)
+		} else {
+			c = c.Full()
+		}
+		for _, n := range c.Nodes {
+			tree.SortAll(n.Kids, by)
+		}
+		return c
+	}
 	if id := q.get("under"); id != "" {
 		n := t.Find(id)
 		if n == nil {
@@ -226,23 +247,9 @@ func (s *Server) apiTree(q query) (any, error) {
 		}
 		c := *t
 		c.Nodes = n.Children()
-		if paged {
-			c = *c.Page(offset, limit)
-		}
-		if levels >= 0 {
-			c.Nodes = (&tree.Tree{Nodes: c.Nodes}).Shallow(levels).Nodes
-		} else {
-			c.Nodes = (&tree.Tree{Nodes: c.Nodes}).Full().Nodes
-		}
-		return &c, nil
+		return answer(&c), nil
 	}
-	if paged {
-		t = t.Page(offset, limit)
-	}
-	if levels >= 0 {
-		return t.Shallow(levels), nil
-	}
-	return t.Full(), nil
+	return answer(t), nil
 }
 
 // apiNode: the details of one node (?id=, with the same grouping and filters the tree was built with).

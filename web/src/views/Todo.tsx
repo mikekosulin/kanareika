@@ -4,11 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { t, tx } from "../lib/i18n";
 import { api, qs } from "../lib/api";
 import { LANG } from "../lib/i18n";
-import { narrow } from "../lib/format";
-import { grouping, set, setBy, syncURL, toast, toggle, useApp, useS, type By } from "../state";
+import { fmtN, narrow } from "../lib/format";
+import { grouping, set, setBy, setSort, syncURL, toast, toggle, useApp, useS, type By } from "../state";
 import { client, fullTree, treeParams, useNode, useRunData, useTree } from "../queries";
 import type { TreeNode } from "../types";
-import { Chips, copy, Empty, Icon, Search, Seg, Skeleton } from "../components/ui";
+import { Chips, copy, Empty, Icon, Search, Seg, Skeleton, SortHead } from "../components/ui";
 import { DataTable, type Col } from "../components/DataTable";
 import { TreeRows, useRows, useTreeKeys, type Row } from "./TreeList";
 import { NodeDetail } from "./NodeDetail";
@@ -34,7 +34,7 @@ export function useQueryInput() {
 }
 
 export function Todo() {
-  const s = useS((s) => ({ view: s.view, accepted: s.accepted, flt: s.flt, by: grouping(s), backport: s.backport, sel: s.sel, open: s.open, org: s.org, env: s.env, run: s.run }));
+  const s = useS((s) => ({ sort: s.tsort, view: s.view, accepted: s.accepted, flt: s.flt, by: grouping(s), backport: s.backport, sel: s.sel, open: s.open, org: s.org, env: s.env, run: s.run }));
   const p = useApp(useMemoParams);
   const tree = useTree(p);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -105,6 +105,17 @@ export function Todo() {
                   {t("accepted")}
                 </button>
               )}
+              {!s.accepted && (s.backport || !!tr?.hidden_backported) && (
+                <button
+                  className="chip"
+                  aria-pressed={s.backport}
+                  title={t("Already fixed by a backport: the package's changelog lists the CVE as fixed")}
+                  onClick={() => set((st) => ({ backport: !st.backport }))}
+                >
+                  + {t("backported")}
+                  {!s.backport && tr?.hidden_backported ? " " + fmtN(tr.hidden_backported) : ""}
+                </button>
+              )}
             </Chips>
           </div>
           <div className="scroll" ref={scrollRef}>
@@ -115,14 +126,14 @@ export function Todo() {
                 <div className="thead">
                   <AllButton nodes={nodes} />
                   <span />
-                  <span>{t("Pri")}</span>
-                  <span>{s.by === "fix" ? t("Fix") : s.by === "cve" ? t("Vulnerability") : t("Group / host")}</span>
-                  <span className="c-h">{t("Hosts")}</span>
-                  <span className="num c-cve">CVE</span>
-                  <span className="num c-ep">EPSS</span>
+                  <SortHead k="pri" asc sort={s.sort} onSort={setSort}>{t("Pri")}</SortHead>
+                  <SortHead k="name" asc sort={s.sort} onSort={setSort}>{s.by === "fix" ? t("Fix") : s.by === "cve" ? t("Vulnerability") : t("Group / host")}</SortHead>
+                  <SortHead k="hosts" className="c-h" sort={s.sort} onSort={setSort}>{t("Hosts")}</SortHead>
+                  <SortHead k="cve" className="num c-cve" sort={s.sort} onSort={setSort}>CVE</SortHead>
+                  <SortHead k="epss" className="num c-ep" sort={s.sort} onSort={setSort}>EPSS</SortHead>
                   <span className="c-fl">{t("Flags")}</span>
                   <span className="c-st">{t("State")}</span>
-                  <span className="dd">{t("Due")}</span>
+                  <SortHead k="due" asc className="dd" sort={s.sort} onSort={setSort}>{t("Due")}</SortHead>
                 </div>
                 {!tr ? (
                   <Skeleton />
@@ -139,18 +150,6 @@ export function Todo() {
                 ) : (
                   <div className={tree.isPlaceholderData ? "stale" : ""}>
                     <TreeRows rows={rows} scrollRef={scrollRef} selectable={s.view === "todo"} onShow={show} onEnd={tree.more} />
-                  </div>
-                )}
-                {tr && (
-                  <div className="hidden-note">
-                    {tr.hidden_backported ? (
-                      <>
-                        {t("{n} findings hidden: already fixed by a backport (package changelog).", { n: tr.hidden_backported })}{" "}
-                        <button onClick={() => set({ backport: true })}>{t("Show")}</button>
-                      </>
-                    ) : s.backport ? (
-                      <button onClick={() => set({ backport: false })}>{t("Hide backported")}</button>
-                    ) : null}
                   </div>
                 )}
                 <div className="end" />
