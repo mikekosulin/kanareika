@@ -2,12 +2,15 @@
 
 Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor version may break things; each break is listed under **Breaking** with what to do instead.
 
-## 0.6.0 — 2026-11-10
+## 0.6.0 — 2026-11-11
+
+### Breaking
+
+- **A run's findings are stored per host** (`hosts/<host>/findings.json.gz`). The first scan with 0.6 converts the older runs once; versions before 0.6 can't read them after that: to keep a way back, copy `reports/` before that scan.
 
 ### Changed
 
-- **Processing a scan's results takes a fraction of the memory**, and no longer grows with the size of the environment: gigabytes before, about a hundred megabytes now.
-- **Large vulnerability reports no longer blow up a scan.**
+- Performance fixes.
 
 ## 0.5.1 — 2026-11-09
 
