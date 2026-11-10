@@ -2,10 +2,12 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html"
 	"io"
 	"log"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -101,8 +103,14 @@ func shots(out, home, bin, org, env, size, keys, at string) error {
 				return err
 			}
 		}
-		// the web page grouped by CVE (the most telling view), in both themes: the README picks by the reader's theme
+		// the web page grouped by CVE (the most telling view) with the most urgent one open, in both themes: the README
+		// picks by the reader's theme
 		where := url.Values{"org": {org}, "env": {env}, "by": {"cve"}, "lang": {lang}}
+		if id, err := firstNode(web.URL, org, env); err != nil {
+			return err
+		} else if id != "" {
+			where.Set("node", id)
+		}
 		page2 := web.URL + "/todo?" + where.Encode()
 		if err := shot(bin, page2, filepath.Join(out, "web-"+lang+".png"), webW, webH,
 			"--force-dark-mode", "--blink-settings=preferredColorScheme=0", "--virtual-time-budget=10000"); err != nil {
@@ -220,4 +228,26 @@ func cells(text string) string {
 		}
 	}
 	return b.String()
+}
+
+// firstNode: the id of the first row of ToDo grouped by CVE (the most urgent), for the web shot to open its details.
+func firstNode(base, org, env string) (string, error) {
+	q := url.Values{"org": {org}, "env": {env}, "by": {"cve"}, "levels": {"0"}, "limit": {"1"}}
+	resp, err := http.Get(base + "/api/tree?" + q.Encode())
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	var tr struct {
+		Nodes []struct {
+			ID string `json:"id"`
+		} `json:"nodes"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
+		return "", fmt.Errorf("/api/tree: %w", err)
+	}
+	if len(tr.Nodes) == 0 {
+		return "", nil
+	}
+	return tr.Nodes[0].ID, nil
 }
