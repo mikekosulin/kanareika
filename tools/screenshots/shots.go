@@ -232,12 +232,18 @@ func cells(text string) string {
 
 // firstNode: the id of the first row of ToDo grouped by CVE (the most urgent), for the web shot to open its details.
 func firstNode(base, org, env string) (string, error) {
-	q := url.Values{"org": {org}, "env": {env}, "by": {"cve"}, "levels": {"0"}, "limit": {"1"}}
+	q := url.Values{"org": {org}, "env": {env}, "run": {"current"}, "by": {"cve"}, "levels": {"0"}, "limit": {"1"}}
 	resp, err := http.Get(base + "/api/tree?" + q.Encode())
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound { // no such org or run here: a shot without a pick
+		return "", nil
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("/api/tree: %s", resp.Status)
+	}
 	var tr struct {
 		Nodes []struct {
 			ID string `json:"id"`
