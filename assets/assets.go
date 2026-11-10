@@ -14,7 +14,7 @@ var defaults embed.FS
 //go:embed locales/*.json
 var locales embed.FS
 
-//go:embed web/index.html web/classic.html web/logo.png web/logo.webp
+//go:embed web/index.html.gz web/favicon.png web/logo.webp
 var web embed.FS
 
 //go:embed templates/org.yml
@@ -26,7 +26,7 @@ func Defaults() fs.FS { return defaults }
 // Locales: <lang>.json files.
 func Locales() fs.FS { sub, _ := fs.Sub(locales, "locales"); return sub }
 
-// Web: index.html (the dashboard), classic.html (the 0.4 page, while its views move over) and logo.png.
+// Web: index.html.gz (the dashboard, built from web/), favicon.png and logo.webp.
 func Web() fs.FS { sub, _ := fs.Sub(web, "web"); return sub }
 
 // OrgTemplateID: the placeholder OrgTemplate uses for the org id.

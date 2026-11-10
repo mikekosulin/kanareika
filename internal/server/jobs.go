@@ -330,7 +330,34 @@ func (s *Server) apiScanOptions(q query) (any, error) {
 			groups = append(groups, h.Group)
 		}
 	}
-	return map[string]any{"hosts": hosts, "groups": groups, "modules": config.Modules}, nil
+	return map[string]any{"hosts": hosts, "groups": groups, "modules": config.Modules,
+		"limits": config.ScanLimits(s.paths, o), "limits_max": config.MaxParallel}, nil
+}
+
+// apiScanLimits: POST /api/settings/scan {parallel?, trivy_parallel?} -> the limits now in effect (no org: an org
+// file's access.parallel still wins for its org). Writes policy/settings.yml; 0 = back to the default. Allowed where
+// scans are.
+func (s *Server) apiScanLimits(w http.ResponseWriter, r *http.Request) {
+	if s.jobs == nil {
+		sendErr(w, http.StatusForbidden, "scans are disabled on this dashboard")
+		return
+	}
+	var req struct {
+		Parallel      *int `json:"parallel"`
+		TrivyParallel *int `json:"trivy_parallel"`
+	}
+	dec := json.NewDecoder(io.LimitReader(r.Body, 4<<10))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		sendErr(w, http.StatusBadRequest, "bad request: "+err.Error())
+		return
+	}
+	if err := config.SetScanLimits(s.paths, req.Parallel, req.TrivyParallel); err != nil {
+		sendErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	s.log.Printf("dashboard: scan limits changed")
+	sendJSON(w, http.StatusOK, map[string]any{"limits": config.ScanLimits(s.paths, nil)})
 }
 
 // apiSession: GET /api/session -> {csrf, scans} for API clients other than the page (kanareika tui). Same-origin

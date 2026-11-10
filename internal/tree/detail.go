@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mikekosulin/kanareika/internal/finding"
+	"github.com/mikekosulin/kanareika/internal/fset"
 	"github.com/mikekosulin/kanareika/internal/report"
 )
 
@@ -67,7 +68,8 @@ type Detail struct {
 	Node    *Node    `json:"node"`
 	Why     []Reason `json:"why"`
 	Due     Due      `json:"due"`
-	CVEs    []CVE    `json:"cves"`
+	CVEs    []CVE    `json:"cves"`      // the most urgent first, at most MaxCVEs
+	More    int      `json:"cves_more"` // CVEs left out of CVEs
 	Where   []Where  `json:"where"`
 	Apply   []Step   `json:"apply,omitempty"`
 	Actions []string `json:"actions"` // ids of the view's actions that cover the node (the agent task is built from them)
@@ -127,12 +129,12 @@ func command(fam, pkg string) string {
 }
 
 // covers: the action deals with the finding (same host, and its package, image, or check).
-func covers(a *report.Action, f *finding.Finding) bool {
+func covers(a *report.Action, f *item) bool {
 	if !slices.Contains(a.Hosts, f.Host) {
 		return false
 	}
 	if f.Kind != finding.Vuln {
-		return a.Title == f.Title || a.Msg != "" && a.Msg == f.Msg && a.Target != nil && *a.Target == f.Target
+		return a.Title == f.C.Title || a.Msg != "" && a.Msg == f.Msg && a.Target != nil && *a.Target == f.Target
 	}
 	if a.Image != nil && strings.TrimPrefix(f.Target, "image:") == *a.Image {
 		return true
@@ -140,10 +142,14 @@ func covers(a *report.Action, f *finding.Finding) bool {
 	return slices.ContainsFunc(a.Packages, func(p report.Package) bool { return p.Pkg == f.Pkg })
 }
 
+// MaxCVEs: the most CVEs a node's details list. A group of servers can close tens of thousands (megabytes with
+// their texts); the details show the most urgent, the count says how many more.
+const MaxCVEs = 50
+
 // Describe: the details of node n (from tree t, built over findings).
 func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 	d := &Detail{Node: n, Why: []Reason{}, CVEs: []CVE{}, Where: []Where{}, Actions: []string{}}
-	fs := n.fs
+	fs := n.items()
 	// why
 	front := map[string]bool{}
 	for _, f := range fs {
@@ -180,7 +186,7 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 		d.Why = append(d.Why, Reason{Code: "severity", Args: map[string]any{"severity": n.Severity}})
 	}
 	// due: the finding that sets the earliest date explains it
-	var first *finding.Finding
+	var first *item
 	for _, f := range fs {
 		if f.DueOr() != "" && (first == nil || f.DueOr() < first.DueOr()) {
 			first = f
@@ -188,7 +194,7 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 	}
 	if first != nil {
 		d.Due = Due{Date: first.DueOr(), Why: first.DueWhy, ClockStart: first.ClockStart, FirstSeen: first.FirstSeen,
-			KEVDue: first.KEVDue, In: days(today, first.DueOr())}
+			KEVDue: first.C.KEVDue, In: days(today, first.DueOr())}
 		if d.Due.In < 0 {
 			d.Due.Overdue = -d.Due.In
 		}
@@ -197,18 +203,24 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 	}
 	// CVEs
 	cves := map[string]*CVE{}
+	parts := map[string]*fset.CVE{} // where each row's description is
 	cveHosts := map[string]map[string]bool{}
 	for _, f := range fs {
 		if f.Kind != finding.Vuln {
 			continue
 		}
-		c := cves[f.ID]
+		c := cves[f.C.ID]
 		if c == nil {
-			c = &CVE{ID: f.ID, Title: f.Title, Severity: f.Severity, CVSS: f.CVSSScore, Vector: f.Vector, EPSS: f.EPSS, KEV: f.KEV,
-				KEVDue: f.KEVDue, Preauth: f.Preauth, RCE: f.Preauth && f.RCE, Published: f.Published, Description: f.Description, URL: f.URL}
-			cves[f.ID], cveHosts[f.ID] = c, map[string]bool{}
+			parts[f.C.ID] = f.C
+			c = &CVE{ID: f.C.ID, Title: f.C.Title, Severity: f.C.Severity, CVSS: f.C.CVSSScore, Vector: f.C.Vector, EPSS: f.C.EPSS, KEV: f.C.KEV,
+				KEVDue: f.C.KEVDue, Preauth: f.C.Preauth, RCE: f.C.Preauth && f.C.RCE, Published: f.C.Published, URL: f.C.URL}
+			cves[f.C.ID], cveHosts[f.C.ID] = c, map[string]bool{}
+		} else if sevRank(f.C.Severity) > sevRank(c.Severity) {
+			// one CVE rated differently on different hosts (the distribution's rating, NVD's): the highest, whatever
+			// order the findings come in
+			c.Severity, c.CVSS, c.Vector = f.C.Severity, f.C.CVSSScore, f.C.Vector
 		}
-		cveHosts[f.ID][f.Host] = true
+		cveHosts[f.C.ID][f.Host] = true
 	}
 	for id, c := range cves {
 		c.Hosts = len(cveHosts[id])
@@ -224,13 +236,26 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 		return cmp.Or(boolFirst(a.KEV, b.KEV), cmp.Compare(epss(b), epss(a)), cmp.Compare(sevRank(b.Severity), sevRank(a.Severity)),
 			strings.Compare(a.ID, b.ID))
 	})
+	if len(d.CVEs) > MaxCVEs {
+		d.More, d.CVEs = len(d.CVEs)-MaxCVEs, d.CVEs[:MaxCVEs:MaxCVEs]
+	}
+	// the texts of the ones listed only (the store's sets leave them out until asked)
+	ps := make([]*fset.CVE, len(d.CVEs))
+	for i, c := range d.CVEs {
+		ps[i] = parts[c.ID]
+	}
+	if texts, err := fset.Descriptions(ps); err == nil {
+		for i := range d.CVEs {
+			d.CVEs[i].Description = texts[i]
+		}
+	}
 	// where
 	byGroup := map[string]*Where{}
 	seen := map[string]bool{}
 	for _, f := range fs {
 		w := byGroup[f.Group]
 		if w == nil {
-			w = &Where{Group: f.Group, OS: hosts.os(f.Host), Exposure: f.Exposure, States: map[string]int{}}
+			w = &Where{Group: f.Group, Exposure: f.Exposure, States: map[string]int{}}
 			byGroup[f.Group] = w
 		}
 		if !seen[f.Host] {
@@ -241,6 +266,7 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 	}
 	for _, w := range byGroup {
 		slices.Sort(w.Hosts)
+		w.OS = hosts.common(w.Hosts)
 		d.Where = append(d.Where, *w)
 	}
 	slices.SortFunc(d.Where, func(a, b Where) int { return cmp.Or(len(b.Hosts)-len(a.Hosts), strings.Compare(a.Group, b.Group)) })
@@ -259,7 +285,7 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 			}
 			s := steps[fam]
 			if s == nil {
-				s = &Step{OS: hosts.os(f.Host)}
+				s = &Step{}
 				steps[fam] = s
 				order = append(order, fam)
 			}
@@ -279,6 +305,7 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 		for _, fam := range order {
 			s := steps[fam]
 			slices.Sort(s.Hosts)
+			s.OS = hosts.common(s.Hosts)
 			slices.Sort(pkgs[fam])
 			slices.Sort(s.Unsafe)
 			if len(pkgs[fam]) > 0 {
@@ -291,7 +318,7 @@ func Describe(n *Node, hosts Hosts, view *report.View, today string) *Detail {
 	if view != nil {
 		for i := range view.Actions {
 			a := &view.Actions[i]
-			if slices.ContainsFunc(fs, func(f *finding.Finding) bool { return covers(a, f) }) {
+			if slices.ContainsFunc(fs, func(f *item) bool { return covers(a, f) }) {
 				d.Actions = append(d.Actions, a.ID)
 			}
 		}

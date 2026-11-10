@@ -3,6 +3,8 @@ package server
 import (
 	"encoding/json"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -78,5 +80,56 @@ func TestTreeAPI(t *testing.T) {
 	// cached between requests, rebuilt for another run
 	if r := do(h, "GET", "/api/tree?org=acme&env=production&run=current", nil, nil); r.code != 200 {
 		t.Fatal(r.code, r.body)
+	}
+}
+
+// TestTreePaging: ?offset=&limit= answers one page of the top rows (or of a node's kids) with how many there are;
+// findings come from the store, and the server view follows edits of the org file within the same run.
+func TestTreePaging(t *testing.T) {
+	p, _ := fixtureHome(t)
+	_, h := newTest(t, Options{Paths: p})
+	base := "/api/tree?org=acme&env=production&run=2026-11-02_100000&by=cve&levels=0"
+	var all, page tree.Tree
+	must(t, json.Unmarshal([]byte(do(h, "GET", base, nil, nil).body), &all))
+	if len(all.Nodes) < 3 || all.Rows != 0 {
+		t.Fatalf("unpaged: %d rows, rows=%d", len(all.Nodes), all.Rows)
+	}
+	r := do(h, "GET", base+"&offset=1&limit=2", nil, nil)
+	must(t, json.Unmarshal([]byte(r.body), &page))
+	if r.code != 200 || page.Rows != len(all.Nodes) || len(page.Nodes) != 2 || page.Nodes[0].ID != all.Nodes[1].ID ||
+		page.Fixes != all.Fixes {
+		t.Fatal(r.code, r.body)
+	}
+	var past tree.Tree
+	must(t, json.Unmarshal([]byte(do(h, "GET", base+"&offset=999&limit=10", nil, nil).body), &past))
+	if len(past.Nodes) != 0 || past.Rows != len(all.Nodes) {
+		t.Fatalf("past the end: %+v", past)
+	}
+	top := all.Nodes[0]
+	var kids tree.Tree
+	must(t, json.Unmarshal([]byte(do(h, "GET", base+"&limit=1&under="+url.QueryEscape(top.ID), nil, nil).body), &kids))
+	if len(kids.Nodes) != 1 || kids.Rows != top.More {
+		t.Fatalf("a node's kids, paged: %+v", kids)
+	}
+	var deep tree.Tree // no levels: every level under the node
+	must(t, json.Unmarshal([]byte(do(h, "GET", strings.Replace(base, "&levels=0", "", 1)+"&under="+url.QueryEscape(top.ID), nil, nil).body), &deep))
+	if len(deep.Nodes) != top.More || deep.Nodes[0].More != 0 {
+		t.Fatalf("every level: %+v", deep.Nodes[0])
+	}
+	// the server view: cached, and rebuilt when the org file lists other hosts
+	srv := "/api/tree?org=acme&env=production&run=current&by=host&all=1&levels=0"
+	var before, after tree.Tree
+	must(t, json.Unmarshal([]byte(do(h, "GET", srv, nil, nil).body), &before))
+	org := filepath.Join(p.Orgs, "acme.yml")
+	b, err := os.ReadFile(org)
+	must(t, err)
+	must(t, os.WriteFile(org, []byte(strings.Replace(string(b), "      dead-01:", "      new-01:\n        address: 192.0.2.250\n      dead-01:", 1)), 0o644))
+	do(h, "GET", "/api/orgs", nil, nil) // the page reloads the org files
+	must(t, json.Unmarshal([]byte(do(h, "GET", srv, nil, nil).body), &after))
+	if len(after.Nodes) != len(before.Nodes)+1 || after.Servers[tree.StateNotScanned] != before.Servers[tree.StateNotScanned]+1 {
+		t.Fatalf("a host added to the org file: %d -> %d rows", len(before.Nodes), len(after.Nodes))
+	}
+	if _, err := os.Stat(filepath.Join(p.Reports, "kanareika.db")); err != nil {
+		t.Fatal("findings are read through the store:", err)
 	}
 }

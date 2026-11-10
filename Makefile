@@ -4,6 +4,7 @@
 #   make cover   — tests with coverage, per function (dist/coverage.html)
 #   make lint    — golangci-lint
 #   make check   — test + lint
+#   make web     — the web page, assets/web/index.html.gz, from web/: lint, format check, build (needs Node and pnpm; the binary does not)
 #   make cross   — release binaries for every platform into dist/
 #   make clean
 
@@ -14,7 +15,7 @@ TRIVY_VERSION := $(shell go list -m -f '{{.Version}}' github.com/aquasecurity/tr
 LDFLAGS := -s -w -X main.version=$(VERSION) -X github.com/aquasecurity/trivy/pkg/version/app.ver=$(TRIVY_VERSION)
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64
 
-.PHONY: bin test cover lint check cross clean FORCE
+.PHONY: bin test cover lint check web cross clean FORCE
 
 bin: $(BIN)
 
@@ -36,6 +37,9 @@ lint:
 	golangci-lint run
 
 check: test lint
+
+web:
+	cd web && pnpm install --frozen-lockfile && pnpm run lint && pnpm run fmt:check && pnpm run build
 
 cross:
 	@for p in $(PLATFORMS); do os=$${p%/*}; arch=$${p#*/}; ext=; [ $$os = windows ] && ext=.exe; \

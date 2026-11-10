@@ -201,12 +201,12 @@ func (f *FakeSSH) Stream(_ context.Context, h config.Host, command string, w io.
 }
 
 // TrivyFunc: the signature of the modules' trivyRun hook.
-type TrivyFunc = func(ctx context.Context, args []string, output string, timeout time.Duration) ([]byte, error)
+type TrivyFunc = func(ctx context.Context, args []string, output string, timeout time.Duration) (io.ReadCloser, error)
 
 // FakeTrivy serves the case's recorded reports by output file name and records each call with a digest of its
 // target (files, or a listing of a staged directory).
 func FakeTrivy(here string, c *Replay, n *Norm, calls *[]any) TrivyFunc {
-	return func(_ context.Context, args []string, output string, timeout time.Duration) ([]byte, error) {
+	return func(_ context.Context, args []string, output string, timeout time.Duration) (io.ReadCloser, error) {
 		target := map[string]any{}
 		stage := ""
 		for _, a := range args {
@@ -250,7 +250,7 @@ func FakeTrivy(here string, c *Replay, n *Norm, calls *[]any) TrivyFunc {
 		if len(text) == 0 {
 			text = []byte("{}")
 		}
-		return text, nil
+		return trivy.Bytes(text), nil
 	}
 }
 

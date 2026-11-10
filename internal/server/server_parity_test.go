@@ -21,6 +21,7 @@ import (
 
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/ipinfo"
+	"github.com/mikekosulin/kanareika/internal/report"
 )
 
 // Parity with the former Python dashboard. testdata/parity/golden.json holds its responses for a
@@ -88,7 +89,7 @@ func replay(t *testing.T, home, goldenPath string) {
 					diffs = append(diffs, "body differs (page changed on purpose? go test -run Parity -update-page)")
 				}
 			}
-		} else if d := jsonDiff(c.JSON, sinceGo(pythonLangs(c.JSON, rec.Body.Bytes()))); d != "" {
+		} else if d := jsonDiff(byHostFile(c.JSON), byHostFile(sinceGo(pythonLangs(c.JSON, rec.Body.Bytes())))); d != "" {
 			diffs = append(diffs, d)
 		}
 		if len(diffs) > 0 {
@@ -98,6 +99,60 @@ func replay(t *testing.T, home, goldenPath string) {
 	if *updatePage {
 		must(t, os.WriteFile(goldenPath, b, 0o644))
 	}
+}
+
+// byHostFile: an answer with its lists of per-host rows (objects with a host: findings, an action's
+// detail_parts) in host file order, stably. Their order follows the findings', which since 0.6 are read one host
+// file at a time, not in the order Python wrote them; within a host it is the same, so sorting both sides
+// stably by host file makes equal answers equal.
+func byHostFile(b []byte) []byte {
+	var v any
+	if json.Unmarshal(b, &v) != nil {
+		return b
+	}
+	var walk func(any)
+	walk = func(v any) {
+		switch x := v.(type) {
+		case map[string]any:
+			for _, e := range x {
+				if l, ok := e.([]any); ok && hostRows(l) {
+					file := func(v any) string {
+						m, _ := v.(map[string]any)
+						h, _ := m["host"].(string)
+						if strings.Contains(h, ":") {
+							return report.OrgHost
+						}
+						return h
+					}
+					slices.SortStableFunc(l, func(a, b any) int { return strings.Compare(file(a), file(b)) })
+				}
+				walk(e)
+			}
+		case []any:
+			for _, e := range x {
+				walk(e)
+			}
+		}
+	}
+	walk(v)
+	out, err := json.Marshal(v)
+	if err != nil {
+		return b
+	}
+	return out
+}
+
+func hostRows(l []any) bool {
+	for _, v := range l {
+		m, ok := v.(map[string]any)
+		if !ok {
+			return false
+		}
+		if _, ok := m["host"].(string); !ok {
+			return false
+		}
+	}
+	return len(l) > 1
 }
 
 // pythonLangs: an /api/i18n answer cut to the languages Python had (languages added since are checked by
@@ -299,11 +354,15 @@ func sinceGo(got []byte) []byte {
 }
 
 // dropTotals removes "totals" at any depth (0.5: fixes to apply and unique CVEs in view.json, run.json and the run
-// lists; Python had no such key anywhere, and report.TestTotalsAgree checks the numbers).
+// lists; Python had no such key anywhere, and report.TestTotalsAgree checks the numbers), and a run's "failed"
+// (0.6: the names of the hosts it could not scan, for a retry).
 func dropTotals(v any) {
 	switch t := v.(type) {
 	case map[string]any:
 		delete(t, "totals")
+		if _, run := t["run_id"]; run {
+			delete(t, "failed")
+		}
 		for _, x := range t {
 			dropTotals(x)
 		}

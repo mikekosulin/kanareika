@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -53,7 +54,7 @@ func TestSharedCacheConcurrent(t *testing.T) {
 	var mu sync.Mutex
 	fake := checktest.FakeTrivy(here, c, n, &tcalls)
 	old := trivyRun
-	trivyRun = func(ctx context.Context, args []string, output string, timeout time.Duration) ([]byte, error) {
+	trivyRun = func(ctx context.Context, args []string, output string, timeout time.Duration) (io.ReadCloser, error) {
 		mu.Lock()
 		defer mu.Unlock()
 		return fake(ctx, args, output, timeout)

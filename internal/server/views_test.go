@@ -3,7 +3,7 @@ package server
 import "testing"
 
 // TestViewAddresses: the three places have their own addresses without .html, all of them the page itself; the
-// earlier addresses go where their content went, with their query; the 0.4 page stays at /classic.
+// earlier addresses go where their content went, with their query; the 0.4 page (/classic) goes to the dashboard.
 func TestViewAddresses(t *testing.T) {
 	s, h := newTest(t, Options{})
 	for _, v := range append([]string{"", "setup", "setup/connect"}, views...) {
@@ -28,8 +28,8 @@ func TestViewAddresses(t *testing.T) {
 			t.Errorf("%s: %d to %q, want 301 to %q", path, r.code, r.h.Get("Location"), want)
 		}
 	}
-	if r := do(h, "GET", "/classic", nil, nil); r.code != 200 || r.body != string(s.classic) {
-		t.Errorf("/classic: %d", r.code)
+	if r := do(h, "GET", "/classic", nil, nil); r.code != 301 || r.h.Get("Location") != "/" {
+		t.Errorf("/classic: %d to %q", r.code, r.h.Get("Location"))
 	}
 	for _, p := range []string{"/servers.html", "/servers/web-01", "/nope"} {
 		if r := do(h, "GET", p, nil, nil); r.code != 404 {

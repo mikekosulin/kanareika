@@ -160,7 +160,7 @@ type picture struct {
 
 func main() {
 	out := flag.String("out", "docs/brand", "directory to write the pictures to")
-	logo := flag.String("logo", "assets/web/logo.png", "the canary")
+	logo := flag.String("logo", "docs/brand/logo.png", "the canary, 512 px")
 	pages := flag.String("pages", "tools/brand", "where og.html, banner.html and style.css are")
 	bin := flag.String("chrome", "", "Chrome or Chromium to render with (default: found on its own; none: pages only)")
 	flag.Parse()

@@ -196,9 +196,9 @@ func TestSaveRunFails(t *testing.T) {
 	e := newEnv(t)
 	fakeModules(t)
 	for name := range HostModules {
-		HostModules[name] = func(ctx *check.Ctx, _ config.Host, _ map[string]any, _ string, _ check.Facts) ([]finding.Finding, error) {
-			// a non-empty directory where findings.json.gz goes: the atomic rename onto it fails
-			return nil, os.MkdirAll(filepath.Join(ctx.RunDir, "findings.json.gz", "x"), 0o755)
+		HostModules[name] = func(ctx *check.Ctx, h config.Host, _ map[string]any, _ string, _ check.Facts) ([]finding.Finding, error) {
+			// a non-empty directory where the host's findings.json.gz goes: the atomic rename onto it fails
+			return nil, os.MkdirAll(filepath.Join(ctx.RunDir, "hosts", h.Name, "findings.json.gz", "x"), 0o755)
 		}
 	}
 	o := e.org(nil, e.here())

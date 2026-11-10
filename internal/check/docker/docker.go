@@ -36,6 +36,7 @@ import (
 	"github.com/mikekosulin/kanareika/internal/i18n"
 	"github.com/mikekosulin/kanareika/internal/priv"
 	"github.com/mikekosulin/kanareika/internal/pyfmt"
+	"github.com/mikekosulin/kanareika/internal/report"
 	"github.com/mikekosulin/kanareika/internal/trivy"
 )
 
@@ -57,7 +58,8 @@ type image struct {
 type scan struct {
 	done   chan struct{}
 	host   string
-	result []finding.Finding
+	result []finding.Finding // the image's findings, or in path (check.Ctx.Spool): kept for the whole run, they
+	path   string            // would hold every image of the org in memory
 	err    string
 }
 
@@ -274,7 +276,16 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 			ctx.Log("%s: docker: [%d/%d] %s: FAILED %v", h.Name, i, len(mine), img.label, err)
 			return
 		}
-		s.result = res
+		if ctx.Spool == "" {
+			s.result = res
+		} else {
+			s.path = filepath.Join(ctx.Spool, "docker", short(img.id)+".findings.json.gz")
+			if err := report.WriteFindingsFile(s.path, res); err != nil {
+				s.err = truncate(err.Error(), 300)
+				ctx.Log("%s: docker: [%d/%d] %s: FAILED %v", h.Name, i, len(mine), img.label, err)
+				return
+			}
+		}
 		ctx.Log("%s: docker: [%d/%d] %s: %d vulns (%.0fs)", h.Name, i, len(mine), img.label, len(res),
 			time.Since(t0).Seconds())
 	}
@@ -294,6 +305,10 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 	}
 	close(jobs)
 	wg.Wait()
+	emit := ctx.Sink(h.Name) // image findings go to the scan one at a time when it takes them so
+	if emit == nil {
+		emit = func(f *finding.Finding) { findings = append(findings, *f) }
+	}
 	for _, it := range append(mine, theirs...) {
 		select {
 		case <-it.s.done:
@@ -313,12 +328,19 @@ func Run(ctx *check.Ctx, h config.Host, cfg map[string]any, out string, facts ch
 				i18n.Msg("docker.scan_failed", map[string]any{"name": name}), i18n.Plain(it.s.err)))
 			continue
 		}
-		for _, f := range it.s.result {
-			b := check.Base(h, "docker")
+		b := check.Base(h, "docker")
+		inUse := it.img.running
+		take := func(f *finding.Finding) {
 			f.Org, f.Host, f.Group, f.Exposure, f.Module = b.Org, b.Host, b.Group, b.Exposure, b.Module
-			inUse := it.img.running
 			f.ImageInUse = &inUse
-			findings = append(findings, f)
+			emit(f)
+		}
+		if it.s.path == "" {
+			for _, f := range it.s.result {
+				take(&f)
+			}
+		} else if err := report.EachFindingIn(it.s.path, take); err != nil {
+			return nil, err
 		}
 	}
 	return findings, nil
@@ -385,15 +407,12 @@ func fetchAndScan(ctx *check.Ctx, h config.Host, img *image, mode, imgdir string
 	sid := short(img.id)
 	base := finding.Finding{Target: "image:" + img.label}
 	report := func(args []string) ([]finding.Finding, error) {
-		data, err := trivyRun(ctx, args, filepath.Join(imgdir, sid+".json"), time.Hour)
+		rep, err := trivyRun(ctx, args, filepath.Join(imgdir, sid+".json"), time.Hour)
 		if err != nil {
 			return nil, err
 		}
-		r, err := trivy.ParseReport(data)
-		if err != nil {
-			return nil, err
-		}
-		return trivy.VulnFindings(r, base), nil
+		defer rep.Close()
+		return trivy.ReadFindings(rep, base, nil)
 	}
 	switch mode {
 	case "packages":

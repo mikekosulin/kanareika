@@ -19,6 +19,7 @@ type runInfo struct {
 	Totals      *totals        `json:"totals"` // what there is to do (runs before 0.5 have none: plan_counts)
 	HostsTotal  int            `json:"hosts_total"`
 	HostsFailed int            `json:"hosts_failed"`
+	Failed      []string       `json:"failed"` // the hosts it could not reach, by name
 	Partial     bool           `json:"partial"`
 }
 
@@ -215,6 +216,14 @@ type jobsResp struct {
 type scanOptions struct {
 	Hosts   []string `json:"hosts"`
 	Modules []string `json:"modules"`
+	// Limits: parallel (hosts read at once) and trivy_parallel (trivy matches at once), with where each comes from
+	Limits    map[string]scanLimit `json:"limits"`
+	LimitsMax int                  `json:"limits_max"`
+}
+
+type scanLimit struct {
+	Value  int    `json:"value"`
+	Source string `json:"source"` // default, settings, org, flag
 }
 
 // dbResp: the DBs scans use (GET /api/db) and the update started from here or the web.

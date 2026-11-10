@@ -179,24 +179,7 @@ func PatchPlan(findings []finding.Finding) Plan {
 			g.Due = f.Due
 		}
 	}
-	var plan Plan
-	at := map[string]int{}
-	for _, g := range order {
-		i, ok := at[g.Host]
-		if !ok {
-			i = len(plan)
-			at[g.Host] = i
-			plan = append(plan, HostPlan{Host: g.Host})
-		}
-		plan[i].Groups = append(plan[i].Groups, g)
-	}
-	for _, h := range plan {
-		slices.SortStableFunc(h.Groups, func(a, b *Group) int {
-			return cmp.Or(cmp.Compare(rankPtr(a.Priority), rankPtr(b.Priority)), cmp.Compare(len(b.CVEs), len(a.CVEs)),
-				cmp.Compare(a.Pkg, b.Pkg))
-		})
-	}
-	return plan
+	return planOf(order)
 }
 
 // PlanCounts: packages to update per priority (the unit of work), plus CVE totals.
@@ -299,8 +282,17 @@ func WriteSummary(runDir string, meta *Meta, findings []finding.Finding) error {
 }
 
 func Summary(meta *Meta, findings []finding.Finding) string {
-	tot := TotalsOf(findings)
-	plan := PatchPlan(findings)
+	a := newViewAcc()
+	for i := range findings {
+		a.add(&findings[i])
+	}
+	a.flushHost()
+	return a.summary(meta)
+}
+
+// summary: summary.md of what a holds (flushHost called).
+func (a *viewAcc) summary(meta *Meta) string {
+	tot := a.totals()
 	trivy := "?"
 	if meta.TrivyVersion != nil {
 		trivy = *meta.TrivyVersion
@@ -343,25 +335,25 @@ func Summary(meta *Meta, findings []finding.Finding) string {
 	}
 
 	lines = append(lines, "## Update plan", "")
-	if len(plan) == 0 {
+	if len(a.plan) == 0 {
 		lines = append(lines, "No vulnerable packages found.", "")
 	}
-	hosts := slices.Clone(plan)
-	minRank := func(h HostPlan) int {
+	hosts := slices.Clone(a.plan)
+	minRank := func(h planHost) int {
 		m := len(Prios)
-		for _, g := range h.Groups {
-			m = min(m, rankPtr(g.Priority))
+		for _, r := range h.rows {
+			m = min(m, rankPtr(r.Priority))
 		}
 		return m
 	}
-	slices.SortStableFunc(hosts, func(a, b HostPlan) int { return cmp.Compare(minRank(a), minRank(b)) })
+	slices.SortStableFunc(hosts, func(a, b planHost) int { return cmp.Compare(minRank(a), minRank(b)) })
 	for _, h := range hosts {
-		lines = append(lines, "### "+h.Host, "", "| prio | due | package | where | installed | fixed in | repositories | CVE | KEV |",
+		lines = append(lines, "### "+h.host, "", "| prio | due | package | where | installed | fixed in | repositories | CVE | KEV |",
 			"|---|---|---|---|---|---|---|---:|---|")
-		for _, g := range h.Groups {
+		for _, g := range h.rows {
 			fixed := "no fix"
-			if fv := sortedVersions(g.Fixed); len(fv) > 0 {
-				fixed = fv[len(fv)-1]
+			if g.Fixed != "" {
+				fixed = g.Fixed
 			}
 			repo := repoState[deref(g.FixState)]
 			if deref(g.FixState) == finding.FixVendor && finding.IsESM(fixed) {
@@ -371,12 +363,12 @@ func Summary(meta *Meta, findings []finding.Finding) string {
 				repo += " " + *g.RepoVersion
 			}
 			lines = append(lines, fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %d | %s |", orDash(g.Priority),
-				orDash(g.Due), g.Pkg, g.Target, g.Installed, fixed, repo, len(g.CVEs), yes(g.KEV)))
+				orDash(g.Due), g.Pkg, g.Target, g.Installed, fixed, repo, g.CVEs, yes(g.KEV)))
 		}
 		lines = append(lines, "")
 	}
 
-	other := otherFindings(findings)
+	other := a.otherPtrs()
 	if len(other) > 0 {
 		lines = append(lines, "## Configuration, exposure, health", "", "| prio | host | id | what | details |", "|---|---|---|---|---|")
 		sorted := slices.Clone(other)
@@ -389,39 +381,21 @@ func Summary(meta *Meta, findings []finding.Finding) string {
 		lines = append(lines, "")
 	}
 
-	var accepted []*finding.Finding
-	for i := range findings {
-		if findings[i].Exception != nil {
-			accepted = append(accepted, &findings[i])
-		}
-	}
-	if len(accepted) > 0 {
+	if len(a.exceptions) > 0 {
 		lines = append(lines, "## Exceptions", "", "| host | id | package | until | status | reason |", "|---|---|---|---|---|---|")
-		for _, f := range accepted {
-			ex := f.Exception
+		for _, f := range a.exceptions {
+			ex := f.ex
 			status := "accepted"
 			if ex.FixAvailable {
 				status = "fix arrived in the repositories — back in the plan"
 			} else if ex.Expired {
 				status = "EXPIRED — back in the plan"
 			}
-			lines = append(lines, fmt.Sprintf("| %s | %s | %s | %s | %s | %s |", f.Host, f.ID, f.Pkg, ex.ReviewBy, status, ex.Reason))
+			lines = append(lines, fmt.Sprintf("| %s | %s | %s | %s | %s | %s |", f.host, f.id, f.pkg, ex.ReviewBy, status, ex.Reason))
 		}
 		lines = append(lines, "")
 	}
 	return strings.Join(lines, "\n")
-}
-
-// otherFindings: configuration / exposure / health findings that still need doing.
-func otherFindings(findings []finding.Finding) []*finding.Finding {
-	var out []*finding.Finding
-	for i := range findings {
-		f := &findings[i]
-		if (f.Kind == finding.Misconfig || f.Kind == finding.Exposure || f.Kind == finding.Health) && !f.Accepted {
-			out = append(out, f)
-		}
-	}
-	return out
 }
 
 // --- small helpers -----------------------------------------------------------------------------------------------

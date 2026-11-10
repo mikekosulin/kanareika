@@ -57,7 +57,8 @@ type Options struct {
 	Groups, Hosts, Modules []string
 	DryRun                 bool
 	IgnoreWindow           bool
-	Parallel               int
+	Parallel               int    // hosts collected at once; 0: from the settings (config.ScanLimits)
+	TrivyParallel          int    // trivy matches at once; 0: from the settings
 	Offline                bool   // use the cached vulnerability DBs, never download (isolated networks)
 	Version                string // kanareika version, stored in run.json
 }
@@ -256,6 +257,10 @@ func (s *Scanner) Org(ctx context.Context, o *config.Org, env string, opt Option
 		return refuse(err)
 	}
 	defer lock.Unlock()
+	lim := config.ScanLimits(s.Paths, o)
+	opt.Parallel = lim.Parallel.Override(opt.Parallel).Value
+	opt.TrivyParallel = lim.TrivyParallel.Override(opt.TrivyParallel).Value
+	trivy.SetParallel(opt.TrivyParallel)
 	return s.run(ctx, o, env, selected, opt, p, conn, envDir)
 }
 
@@ -294,32 +299,126 @@ func (s *Scanner) run(ctx context.Context, o *config.Org, env string, selected [
 		}
 	}()
 
-	cctx := &check.Ctx{Context: ctx, Org: o, SSH: conn, RunDir: runDir, Log: s.log}
-	var findings []finding.Finding
+	cctx := &check.Ctx{Context: ctx, Org: o, SSH: conn, RunDir: runDir, Log: s.log, Spool: filepath.Join(runDir, ".spool")}
+	defer os.RemoveAll(cctx.Spool)
 	failed := pyfmt.Ordered[string]{}
 	moduleErrors := pyfmt.Ordered[[]string]{}
 
+	// each finding is prioritized and written into its host's file as it comes: a module that streams (a package
+	// scan) never holds its findings, and no host's findings are gathered. The policy is read with the first
+	// finding, as it was at the end before.
+	var (
+		mu      sync.Mutex
+		applier *priority.Applier
+		prepErr error
+		prepped bool
+		updated string // feeds' date
+		orgF    []finding.Finding
+	)
+	prep := func() (*priority.Applier, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		if !prepped {
+			prepped = true
+			pol, err := priority.LoadPolicy(s.Paths)
+			if err == nil {
+				feeds, _ := priority.LoadFeeds()
+				updated = feeds.Updated
+				applier, err = priority.NewApplier(o, env, pol, feeds, started)
+			}
+			prepErr = err
+		}
+		return applier, prepErr
+	}
+	type hostOut struct {
+		host string
+		w    *report.HostWriter
+		prev priority.Prev
+		err  error
+	}
+	add := func(st *hostOut, f *finding.Finding) {
+		if st.err != nil {
+			return
+		}
+		a, err := prep()
+		if err != nil {
+			st.err = err
+			return
+		}
+		if report.FileHost(f) == report.OrgHost && st.host != report.OrgHost { // a host module's org-level finding
+			mu.Lock()
+			orgF = append(orgF, *f)
+			mu.Unlock()
+			return
+		}
+		if st.w == nil {
+			if st.w, st.err = report.NewHostWriter(runDir, st.host); st.err != nil {
+				return
+			}
+			if p, err := report.HostPrev(envDir, st.host); err != nil {
+				s.log("previous state of %s: %v (due dates count from this scan)", st.host, err)
+			} else {
+				st.prev = p
+			}
+		}
+		a.Apply(f, st.prev)
+		st.err = st.w.Add(f)
+	}
+	finish := func(st *hostOut) error {
+		if st.err == nil && st.w == nil { // nothing found: an empty file says the host was scanned
+			if _, err := prep(); err != nil {
+				st.err = err
+			} else {
+				st.w, st.err = report.NewHostWriter(runDir, st.host)
+			}
+		}
+		if st.err != nil {
+			if st.w != nil {
+				st.w.Abort()
+			}
+			return st.err
+		}
+		return st.w.Commit()
+	}
+	outs := map[string]*hostOut{}
+	cctx.Sinks = map[string]func(*finding.Finding){}
+	for _, h := range selected {
+		st := &hostOut{host: h.Name}
+		outs[h.Name] = st
+		cctx.Sinks[h.Name] = func(f *finding.Finding) { add(st, f) }
+	}
+
 	type result struct {
 		host string
-		f    []finding.Finding
 		err  string
 		merr []string
+		werr error
 	}
 	results := make(chan result)
-	sem := make(chan struct{}, max(1, opt.Parallel))
+	// a queue in the order to start the hosts (longest first), worked by Parallel workers
+	queue := make(chan config.Host, len(selected))
+	for _, h := range longestFirst(selected, hostSeconds(envDir)) {
+		queue <- h
+	}
+	close(queue)
 	var wg sync.WaitGroup
-	for _, h := range selected {
+	for range min(max(1, opt.Parallel), len(selected)) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-			f, e, m := s.host(cctx, h, p.Hosts[h.Name])
-			results <- result{h.Name, f, e, m}
+			for h := range queue {
+				st := outs[h.Name]
+				fs, e, m := s.host(cctx, h, p.Hosts[h.Name])
+				for i := range fs {
+					add(st, &fs[i])
+				}
+				results <- result{h.Name, e, m, finish(st)}
+			}
 		}()
 	}
 	go func() { wg.Wait(); close(results) }()
 	n := 0
+	var saveErr error
 	for r := range results { // completion order: hosts_failed / module_errors keep it, like the Python version
 		n++
 		status := "ok"
@@ -331,13 +430,19 @@ func (s *Scanner) run(ctx context.Context, o *config.Org, env string, selected [
 			extra = fmt.Sprintf(" (%d module errors)", len(r.merr))
 		}
 		s.log("== hosts done %d/%d: %s %s%s", n, len(selected), r.host, status, extra)
-		findings = append(findings, r.f...)
+		if saveErr == nil {
+			saveErr = r.werr
+		}
 		if r.err != "" {
 			failed.Set(r.host, r.err)
 		}
 		if len(r.merr) > 0 {
 			moduleErrors.Set(r.host, r.merr)
 		}
+	}
+	if saveErr != nil {
+		fmt.Fprintln(s.Out, "  !", saveErr)
+		return 1
 	}
 	for _, m := range p.Org {
 		fn := OrgModules[m]
@@ -349,30 +454,28 @@ func (s *Scanner) run(ctx context.Context, o *config.Org, env string, selected [
 		if err != nil {
 			s.log("%s: %v", m, err)
 		}
-		findings = append(findings, f...)
+		orgF = append(orgF, f...)
 		prog.OrgModule(m, "done")
 	}
-
-	pol, err := priority.LoadPolicy(s.Paths)
-	if err != nil {
+	if len(orgF) > 0 || len(p.Org) > 0 {
+		st := &hostOut{host: report.OrgHost}
+		for i := range orgF {
+			add(st, &orgF[i])
+		}
+		if err := finish(st); err != nil {
+			fmt.Fprintln(s.Out, "  !", err)
+			return 1
+		}
+	} else if _, err := prep(); err != nil { // no hosts and no org checks: the policy is still checked
 		fmt.Fprintln(s.Out, "  !", err)
 		return 1
 	}
-	feeds, _ := priority.LoadFeeds()
-	prev, err := report.PrevIndex(envDir)
-	if err != nil {
-		s.log("previous state: %v (due dates count from this scan)", err)
-		prev = nil
-	}
-	if findings, err = priority.Apply(findings, o, env, pol, feeds, started, prev); err != nil {
-		fmt.Fprintln(s.Out, "  !", err)
-		return 1
-	}
+	orgF = nil
 
 	tv := trivy.Version(ctx)
 	var fu *string
-	if feeds.Updated != "" {
-		fu = &feeds.Updated
+	if updated != "" {
+		fu = &updated
 	}
 	mods := map[string]bool{}
 	for _, ms := range p.Hosts {
@@ -395,7 +498,7 @@ func (s *Scanner) run(ctx context.Context, o *config.Org, env string, selected [
 		Modules:   modList, HostsScanned: names, HostsOK: len(selected) - failed.Len(),
 		ModulesByHost: p.Hosts, HostsFailed: failed, ModuleErrors: moduleErrors, FeedsUpdated: fu,
 	}
-	if err := report.SaveRun(runDir, meta, findings); err != nil {
+	if err := report.FinishRun(runDir, meta); err != nil {
 		fmt.Fprintln(s.Out, "  !", err)
 		return 1
 	}

@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/mikekosulin/kanareika/internal/check"
+	"github.com/mikekosulin/kanareika/internal/trivy"
 )
 
 func TestFieldNonString(t *testing.T) {
@@ -77,8 +79,8 @@ func TestRunFailures(t *testing.T) {
 			org, _ := loadOrg(t, cluster, map[string]string{"acme/kubeconfig-prod": "apiVersion: v1\n"})
 			old := trivyRun
 			defer func() { trivyRun = old }()
-			trivyRun = func(context.Context, []string, string, time.Duration) ([]byte, error) {
-				return []byte(c.data), c.err
+			trivyRun = func(context.Context, []string, string, time.Duration) (io.ReadCloser, error) {
+				return trivy.Bytes([]byte(c.data)), c.err
 			}
 			ctx := &check.Ctx{Context: context.Background(), Org: org, RunDir: t.TempDir(), Log: func(string, ...any) {}}
 			f, err := Run(ctx, nil, "production")

@@ -132,7 +132,7 @@ func waitState(t *testing.T, h http.Handler, id, state string) job {
 func TestScanFromDashboard(t *testing.T) {
 	f := &fakeScan{release: make(chan struct{})}
 	s, h := newTest(t, Options{Scan: f.run})
-	if !strings.Contains(string(s.page), `const CSRF = "`+s.csrf+`"`) || len(s.csrf) != 32 {
+	if !strings.Contains(string(s.page), `csrf: "`+s.csrf+`"`) || len(s.csrf) != 32 {
 		t.Fatal("CSRF token not in the page")
 	}
 	req := ScanRequest{Org: "acme", Env: "production", Hosts: []string{"web-01"}, Modules: []string{"os_packages"},

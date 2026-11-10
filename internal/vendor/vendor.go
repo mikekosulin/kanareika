@@ -178,30 +178,35 @@ func Annotate(findings []finding.Finding, changelog Changelog, upgrades map[stri
 	newerKernel string) map[string]int {
 	n := map[string]int{"backported": 0, finding.FixAvailable: 0, finding.FixVendor: 0, finding.FixReboot: 0}
 	for i := range findings {
-		f := &findings[i]
-		if f.Kind != finding.Vuln || f.Inactive {
-			continue
-		}
-		if changelog != nil && changelog[f.Pkg][f.ID] {
-			f.Backported = true
-			n["backported"]++
-			continue
-		}
-		if f.Fixed == "" {
-			continue // no fix anywhere: nothing to look for in the repositories
-		}
-		v, ok := upgrades[f.Pkg]
-		switch {
-		case f.Kernel && newerKernel != "" && Vercmp(newerKernel, f.Fixed) >= 0:
-			f.FixState, f.RepoVersion = finding.FixReboot, newerKernel // the installed kernel already has the fix
-		case upgrades == nil:
-			continue // could not ask the repositories: leave it as trivy says
-		case ok:
-			f.FixState, f.RepoVersion = finding.FixAvailable, v
-		default:
-			f.FixState = finding.FixVendor
-		}
-		n[f.FixState]++
+		AnnotateOne(&findings[i], changelog, upgrades, newerKernel, n)
 	}
 	return n
+}
+
+// AnnotateOne: Annotate of one finding, counted into n (Annotate's map).
+func AnnotateOne(f *finding.Finding, changelog Changelog, upgrades map[string]string, newerKernel string,
+	n map[string]int) {
+	if f.Kind != finding.Vuln || f.Inactive {
+		return
+	}
+	if changelog != nil && changelog[f.Pkg][f.ID] {
+		f.Backported = true
+		n["backported"]++
+		return
+	}
+	if f.Fixed == "" {
+		return // no fix anywhere: nothing to look for in the repositories
+	}
+	v, ok := upgrades[f.Pkg]
+	switch {
+	case f.Kernel && newerKernel != "" && Vercmp(newerKernel, f.Fixed) >= 0:
+		f.FixState, f.RepoVersion = finding.FixReboot, newerKernel // the installed kernel already has the fix
+	case upgrades == nil:
+		return // could not ask the repositories: leave it as trivy says
+	case ok:
+		f.FixState, f.RepoVersion = finding.FixAvailable, v
+	default:
+		f.FixState = finding.FixVendor
+	}
+	n[f.FixState]++
 }

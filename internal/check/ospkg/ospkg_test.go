@@ -25,6 +25,9 @@ func TestMatchesPython(t *testing.T) {
 		t.Fatal("no cases")
 	}
 	set := func(f checktest.TrivyFunc) func() { old := trivyRun; trivyRun = f; return func() { trivyRun = old } }
+	old := partSize
+	partSize = 0 // the recordings are of one trivy run per host; TestPartsReadAsOne covers the split
+	t.Cleanup(func() { partSize = old })
 	for i := range cases {
 		c := &cases[i]
 		t.Run(c.Name, func(t *testing.T) {

@@ -711,3 +711,90 @@ func TestFill(t *testing.T) {
 		t.Fatalf("%q", got)
 	}
 }
+
+// TestScanLimitsFromTUI: the scan form shows how many hosts and trivy runs go at once; ←/→ change them, and
+// starting the scan saves them for later scans (the form opened again shows the saved value).
+func TestScanLimitsFromTUI(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
+	h.key("s")
+	h.has("At once (←/→, kept for later scans)", "‹ 8 ›", "‹ 2 ›")
+	for h.m.form.items[h.m.form.cur].value != "parallel" {
+		h.key("down")
+	}
+	h.key("left", "left", "space") // space does nothing on a number
+	h.has("‹ 6 ›")
+	h.key("enter")
+	h.eventually("Scans[1]", "acme/production")
+	h.key("x")
+	h.waitJob("cancelled")
+	h.key("s")
+	h.eventually("‹ 6 ›", "‹ 2 ›")
+}
+
+// TestRescanKey: R on a server scans that server only, with no form; on a run, the hosts it could not reach.
+func TestRescanKey(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
+	h.key("1")
+	h.eventually("Servers")
+	for i := 0; i < 10 && (h.m.curNode() == nil || h.m.curNode().Kind != "host"); i++ {
+		h.key("down")
+	}
+	n := h.m.curNode()
+	if n == nil || n.Kind != "host" {
+		t.Fatalf("cursor on %+v", n)
+	}
+	h.key("R")
+	h.eventually("Scans[1]", "acme/production")
+	h.scan.mu.Lock()
+	r := h.scan.reqs[0]
+	h.scan.mu.Unlock()
+	if len(r.Hosts) != 1 || r.Hosts[0] != n.Label {
+		t.Fatalf("%+v", r)
+	}
+	h.key("x")
+	h.waitJob("cancelled")
+	// History: the run that could not reach dead-01
+	h.key("3")
+	for i := 0; i < 20 && func() bool { l := h.m.runList(); c := h.m.cur[vRuns]; return c >= len(l) || len(l[c].Failed) == 0 }(); i++ {
+		h.key("down")
+	}
+	h.has("retry unreachable")
+	h.key("R")
+	h.eventually("Scans[2]")
+	h.scan.mu.Lock()
+	r = h.scan.reqs[1]
+	h.scan.mu.Unlock()
+	if len(r.Hosts) != 1 || r.Hosts[0] != "dead-01" {
+		t.Fatalf("%+v", r)
+	}
+}
+
+// TestSortKey: t orders ToDo's rows by the next column (the title line says which), T turns it around, g starts over.
+func TestSortKey(t *testing.T) {
+	h := newHarness(t, Options{Org: "acme", Env: "production"}, false)
+	h.key("2")
+	h.key("t")
+	if h.m.sort[h.m.view] != "cve" || !strings.Contains(h.m.treeQuery(), "sort=cve") {
+		t.Fatalf("%q %s", h.m.sort[h.m.view], h.m.treeQuery())
+	}
+	h.has("CVE ↓")
+	h.key("T")
+	if h.m.sort[h.m.view] != "-cve" {
+		t.Fatal(h.m.sort[h.m.view])
+	}
+	h.has("CVE ↑")
+	h.key("T")
+	if h.m.sort[h.m.view] != "cve" {
+		t.Fatal(h.m.sort[h.m.view])
+	}
+	for range 5 {
+		h.key("t")
+	}
+	if h.m.sort[h.m.view] != "" {
+		t.Fatalf("back to priority: %q", h.m.sort[h.m.view])
+	}
+	h.key("t", "g")
+	if h.m.sort[h.m.view] != "" {
+		t.Fatal("a new grouping keeps the order")
+	}
+}

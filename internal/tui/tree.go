@@ -20,21 +20,22 @@ import (
 
 // tnode: a node of /api/tree.
 type tnode struct {
-	ID        string `json:"id"`
-	Kind      string `json:"kind"`
-	Label     string `json:"label"`
-	Installed string `json:"installed"`
-	Fixed     string `json:"fixed"`
-	Path      string `json:"path"`
-	Runtime   string `json:"runtime"`
-	Title     string `json:"title"`
-	Severity  string `json:"severity"`
-	OS        string `json:"os"`
-	Exposure  int    `json:"exposure"`
-	Priority  string `json:"priority"`
-	Due       string `json:"due"`
-	DueWhy    string `json:"due_why"`
-	Hosts     int    `json:"hosts"`
+	ID        string   `json:"id"`
+	Kind      string   `json:"kind"`
+	Label     string   `json:"label"`
+	Installed string   `json:"installed"`
+	Fixed     string   `json:"fixed"`
+	Path      string   `json:"path"`
+	Parts     []string `json:"parts"`
+	Runtime   string   `json:"runtime"`
+	Title     string   `json:"title"`
+	Severity  string   `json:"severity"`
+	OS        string   `json:"os"`
+	Exposure  int      `json:"exposure"`
+	Priority  string   `json:"priority"`
+	Due       string   `json:"due"`
+	DueWhy    string   `json:"due_why"`
+	Hosts     int      `json:"hosts"`
 	Groups    []struct {
 		Name string `json:"name"`
 		N    int    `json:"n"`
@@ -122,6 +123,7 @@ type nodeDetail struct {
 	Why     []reason    `json:"why"`
 	Due     dueInfo     `json:"due"`
 	CVEs    []cveInfo   `json:"cves"`
+	More    int         `json:"cves_more"` // CVEs the server left out of CVEs
 	Where   []whereInfo `json:"where"`
 	Apply   []applyStep `json:"apply"`
 	Actions []string    `json:"actions"`
@@ -214,7 +216,34 @@ func (m *Model) treeQuery() string {
 	if m.flt["backported"] {
 		v.Set("backported", "1")
 	}
+	if m.isTree() && m.sort[m.view] != "" {
+		v.Set("sort", m.sort[m.view])
+	}
 	return v.Encode()
+}
+
+// sortKeys: the columns t goes through, per grouping (the server list has its own); "" is the tree's own order.
+func (m *Model) sortKeys() []string {
+	if m.grouping() == "host" {
+		return []string{"", "fixes", "scanned", "name"}
+	}
+	return []string{"", "cve", "epss", "due", "hosts", "name"}
+}
+
+// sortNames: what the title line calls each column.
+var sortNames = map[string]string{"cve": "CVE", "epss": "EPSS", "due": "due", "hosts": "hosts", "name": "name", "fixes": "fixes", "scanned": "scanned"}
+
+// sortLabel: the order on screen, for the title line ("" when by priority).
+func (m *Model) sortLabel() string {
+	k, rev := strings.CutPrefix(m.sort[m.view], "-")
+	if k == "" {
+		return ""
+	}
+	arrow := "↓"
+	if (k == "due" || k == "name") != rev {
+		arrow = "↑"
+	}
+	return m.t.T(sortNames[k]) + " " + arrow
 }
 
 func (m *Model) wantTree() string { return m.wantKey() + "?" + m.treeQuery() }
@@ -576,6 +605,17 @@ func (m *Model) todoKey(s string) (tea.Cmd, bool) {
 	case "g":
 		m.by[m.view] = groupings[(slices.Index(groupings, m.grouping())+1)%len(groupings)]
 		m.cur[m.view], m.off[m.view], m.curID = 0, 0, ""
+		m.sort[m.view] = "" // the columns differ by grouping
+	case "t": // the next column to order by
+		ks := m.sortKeys()
+		k, _ := strings.CutPrefix(m.sort[m.view], "-")
+		m.sort[m.view] = ks[(max(slices.Index(ks, k), 0)+1)%len(ks)]
+		m.cur[m.view], m.off[m.view], m.curID = 0, 0, ""
+	case "T": // the same column, the other way
+		if k, rev := strings.CutPrefix(m.sort[m.view], "-"); k != "" {
+			m.sort[m.view] = map[bool]string{true: k, false: "-" + k}[rev]
+			m.cur[m.view], m.off[m.view], m.curID = 0, 0, ""
+		}
 	case "G":
 		m.move(1 << 30)
 	case "f":
@@ -851,12 +891,7 @@ func (m *Model) nodeText(n *tnode, full, styled bool) string {
 		if !full {
 			label = shortImage(label)
 		}
-		var parts []string
-		for _, k := range n.Kids {
-			if k.Kind == "part" && !slices.Contains(parts, k.Label) {
-				parts = append(parts, k.Label)
-			}
-		}
+		parts := n.Parts
 		s := st(sBold, label)
 		if len(parts) > 0 {
 			s += "  " + st(sMuted, m.t.F("rebuild: {parts}", "parts", strings.Join(parts, ", ")))
@@ -1357,7 +1392,7 @@ func (m *Model) detailView(w int, full bool) []string {
 		wrap(" ", sText.Render(dt))
 	}
 	if len(d.CVEs) > 0 {
-		head(fmt.Sprintf("CVE (%d)", len(d.CVEs)))
+		head(fmt.Sprintf("CVE (%d)", len(d.CVEs)+d.More))
 		limit := len(d.CVEs)
 		if !full {
 			limit = min(limit, 6)
@@ -1382,7 +1417,9 @@ func (m *Model) detailView(w int, full bool) []string {
 			out = append(out, l)
 		}
 		if limit < len(d.CVEs) {
-			out = append(out, " "+sMuted.Render(m.t.F("{n} more: enter", "n", strconv.Itoa(len(d.CVEs)-limit))))
+			out = append(out, " "+sMuted.Render(m.t.F("{n} more: enter", "n", strconv.Itoa(len(d.CVEs)-limit+d.More))))
+		} else if d.More > 0 {
+			out = append(out, " "+sMuted.Render(m.t.F("+{n} more", "n", strconv.Itoa(d.More))))
 		}
 	}
 	if len(d.Where) > 0 {

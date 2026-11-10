@@ -14,6 +14,7 @@ import (
 	"github.com/mikekosulin/kanareika/internal/check"
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/sbom"
+	"github.com/mikekosulin/kanareika/internal/trivy"
 	"github.com/mikekosulin/kanareika/internal/vendor"
 )
 
@@ -44,8 +45,8 @@ var centos = map[string]string{"ID": "centos", "VERSION_ID": "9", "PRETTY_NAME":
 func env(t *testing.T, ssh *fakeSSH, report string) (*check.Ctx, *[]string) {
 	t.Helper()
 	old := trivyRun
-	trivyRun = func(_ context.Context, _ []string, _ string, _ time.Duration) ([]byte, error) {
-		return []byte(report), nil
+	trivyRun = func(_ context.Context, _ []string, _ string, _ time.Duration) (io.ReadCloser, error) {
+		return trivy.Bytes([]byte(report)), nil
 	}
 	t.Cleanup(func() { trivyRun = old })
 	var logs []string

@@ -3,6 +3,7 @@ package trivy
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -72,8 +73,10 @@ func TestRunEdges(t *testing.T) {
 	prepared.Store(true)
 	t.Cleanup(func() { prepared.Store(false) })
 	out := filepath.Join(t.TempDir(), "trivy-os.json")
-	data, err := Run(ctx, []string{"rootfs", "/"}, out, time.Minute)
+	rep, err := Run(ctx, []string{"rootfs", "/"}, out, time.Minute)
 	must(t, err)
+	data, _ := io.ReadAll(rep)
+	rep.Close()
 	if string(data) != "{}" {
 		t.Fatal(string(data))
 	}

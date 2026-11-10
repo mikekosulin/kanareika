@@ -12,6 +12,7 @@ package server
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/subtle"
 	"encoding/json"
@@ -24,6 +25,7 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,6 +39,7 @@ import (
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/pyfmt"
 	"github.com/mikekosulin/kanareika/internal/report"
+	"github.com/mikekosulin/kanareika/internal/store"
 )
 
 // Defaults of `kanareika serve`.
@@ -60,19 +63,20 @@ type Options struct {
 	UpdateDB DBUpdateFunc
 	Token    string      // "": no access token (fine on localhost)
 	Log      *log.Logger // errors and panics; nil: the standard logger
+	// Warm: on start, bring every environment's current/ up to date and into the findings database in the
+	// background, so the first look at one doesn't wait for it (after a scan elsewhere, or an upgrade)
+	Warm bool
 }
 
 // Server holds the API state: org configs (reloaded by /api/orgs) and the last few views.
 type Server struct {
-	paths   config.Paths
-	prompt  PromptFunc
-	log     *log.Logger
-	state   atomic.Pointer[orgState]
-	page    []byte // index.html with the UI strings and the CSRF token filled in
-	classic []byte // classic.html, the same way
-	logo    []byte // logo.png: the favicon
-	// logoWebP: logo.webp, the page's images (lossless, less than half the PNG)
-	logoWebP []byte
+	paths    config.Paths
+	prompt   PromptFunc
+	log      *log.Logger
+	state    atomic.Pointer[orgState]
+	page     []byte // index.html with the UI strings and the CSRF token filled in
+	favicon  []byte // favicon.png, 64 px
+	logoWebP []byte // logo.webp: the page's images
 	token    string
 	csrf     string
 	jobs     *jobs       // nil: scans disabled
@@ -81,9 +85,13 @@ type Server struct {
 
 	orgFiles sync.Map // org id -> *sync.Mutex: one setup write (create, add hosts) per org file at a time
 
-	mu    sync.Mutex // view builds and current/ updates, one at a time (each can take seconds on big runs)
-	views []cachedView
-	trees *treeInput // the last tree input (findings + view), by view mtime
+	stopWarm context.CancelFunc // nil: no warm-up (Options.Warm)
+	warmDone chan struct{}
+
+	mu      sync.Mutex // view builds and current/ updates, one at a time (each can take seconds on big runs)
+	views   []cachedView
+	current map[string]checked // per environment directory: current/ was brought up to date (runDir)
+	trees   []*treeInput       // the runs' tree inputs (findings + view), most recently used first
 }
 
 type cachedView struct {
@@ -116,22 +124,50 @@ func New(o Options) (*Server, error) {
 		}
 	}
 	var err error
-	if s.page, err = page("index.html"); err != nil {
+	if s.page, err = page("index.html.gz"); err != nil {
 		return nil, err
 	}
 	s.page = bytes.Replace(s.page, []byte(`/*CSRF*/""`), []byte(`"`+s.csrf+`"`), 1)
-	if s.classic, err = page("classic.html"); err != nil {
-		return nil, err
-	}
-	s.classic = bytes.Replace(s.classic, []byte(`/*CSRF*/""`), []byte(`"`+s.csrf+`"`), 1)
-	if s.logo, err = fs.ReadFile(webFS(), "logo.png"); err != nil {
+	if s.favicon, err = fs.ReadFile(webFS(), "favicon.png"); err != nil {
 		return nil, err
 	}
 	if s.logoWebP, err = fs.ReadFile(webFS(), "logo.webp"); err != nil {
 		return nil, err
 	}
 	s.reload()
+	if o.Warm {
+		ctx, stop := context.WithCancel(context.Background())
+		s.stopWarm, s.warmDone = stop, make(chan struct{})
+		go func() {
+			defer close(s.warmDone)
+			s.warm(ctx)
+		}()
+	}
 	return s, nil
+}
+
+// Close stops what the server does in the background (the warm-up) and waits for it; serve calls it on shutdown.
+func (s *Server) Close() {
+	if s.stopWarm != nil {
+		s.stopWarm()
+		<-s.warmDone
+	}
+}
+
+// warm: every environment's current/, folded and imported, one after the other; errors show when it is opened.
+func (s *Server) warm(ctx context.Context) {
+	for _, o := range s.state.Load().orgs {
+		for _, env := range o.Envs() {
+			if ctx.Err() != nil {
+				return
+			}
+			q := parseQS("org=" + url.QueryEscape(o.ID) + "&env=" + url.QueryEscape(env) + "&run=" + report.Current)
+			if dir, err := s.runDir(q); err == nil {
+				_ = store.Sync(ctx, s.paths.Reports, dir)
+				debug.FreeOSMemory() // an import decodes the JSON: give that back before the next
+			}
+		}
+	}
 }
 
 // webFS and localesFS: where the page and the UI strings come from (variables so tests can break them).
@@ -148,10 +184,10 @@ var moved = map[string]string{
 	"/setup/access": "/setup/connect",
 }
 
-// page: index.html with the /*I18N_UI*/{} placeholder replaced by the UI strings of every language, encoded
-// as Python's json.dumps did ("</" escaped so a string cannot close the script tag).
+// page: the built page (gzipped) with the /*I18N_UI*/{} placeholder replaced by the UI strings of every
+// language, encoded as Python's json.dumps did ("</" escaped so a string cannot close the script tag).
 func page(name string) ([]byte, error) {
-	html, err := fs.ReadFile(webFS(), name)
+	html, err := gunzip(webFS(), name)
 	if err != nil {
 		return nil, err
 	}
@@ -163,6 +199,20 @@ func page(name string) ([]byte, error) {
 	names = strings.ReplaceAll(names, "</", `<\/`)
 	html = bytes.ReplaceAll(html, []byte("/*I18N_UI*/{}"), []byte(ui))
 	return bytes.ReplaceAll(html, []byte("/*I18N_NAMES*/{}"), []byte(names)), nil
+}
+
+// gunzip: a gzipped file of fsys, unpacked.
+func gunzip(fsys fs.FS, name string) ([]byte, error) {
+	f, err := fsys.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+	z, err := gzip.NewReader(f)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", name, err)
+	}
+	return io.ReadAll(z)
 }
 
 // uiJSON: {lang: ui} for the locales that have UI strings, in file name order, keys as in the files; and
@@ -204,7 +254,9 @@ func (s *Server) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer, headers, s.errorLog, s.guard, methods)
 	r.NotFound(func(w http.ResponseWriter, _ *http.Request) { send(w, 404, "text/plain", []byte("not found")) })
-	r.Get("/logo.png", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "image/png", s.logo) })
+	favicon := func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "image/png", s.favicon) }
+	r.Get("/favicon.png", favicon)
+	r.Get("/favicon.ico", favicon) // asked for by browsers on their own; PNG in it is understood
 	r.Get("/logo.webp", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "image/webp", s.logoWebP) })
 	index := func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "text/html; charset=utf-8", s.page) }
 	r.Get("/", index)
@@ -228,7 +280,7 @@ func (s *Server) Handler() http.Handler {
 			http.Redirect(w, r, u, http.StatusMovedPermanently)
 		})
 	}
-	r.Get("/classic", func(w http.ResponseWriter, _ *http.Request) { send(w, 200, "text/html; charset=utf-8", s.classic) })
+	r.Get("/classic", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/", http.StatusMovedPermanently) }) // the 0.4 page, gone in 0.6
 	for path, fn := range map[string]func(query) (any, error){
 		"/api/orgs": s.apiOrgs, "/api/env": s.apiEnv, "/api/run": s.apiRun, "/api/log": s.apiLog,
 		"/api/hostfile": s.apiHostfile, "/api/ipinfo": s.apiIPInfo, "/api/prompt": s.apiPrompt,
@@ -244,6 +296,7 @@ func (s *Server) Handler() http.Handler {
 	r.Get("/api/setup/discover", s.apiSetupDiscover)
 	r.With(s.csrfCheck).Post("/api/db/update", s.apiDBUpdate)
 	r.With(s.csrfCheck).Post("/api/scan", s.apiScan)
+	r.With(s.csrfCheck).Post("/api/settings/scan", s.apiScanLimits)
 	r.With(s.csrfCheck).Post("/api/setup", s.apiSetup)
 	r.With(s.csrfCheck).Post("/api/setup/check", s.apiSetupCheck)
 	r.With(s.csrfCheck).Post("/api/setup/parse", s.apiSetupParse)
@@ -256,10 +309,15 @@ func (s *Server) api(fn func(query) (any, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		v, err := fn(parseQS(r.URL.RawQuery))
 		var nf notFound
+		var br badRequest
 		switch {
 		case errors.As(err, &nf):
 			b, _ := json.Marshal(map[string]string{"error": nf.Error()})
 			send(w, 404, "application/json", b)
+			return
+		case errors.As(err, &br):
+			b, _ := json.Marshal(map[string]string{"error": br.Error()})
+			send(w, 400, "application/json", b)
 			return
 		case errors.Is(err, errNoPrompt):
 			send(w, 501, "application/json", []byte(`{"error": "prompt builder not configured"}`))
@@ -297,11 +355,12 @@ func headers(next http.Handler) http.Handler {
 	})
 }
 
-// methods: GET everywhere, POST to the scan endpoints only.
+// methods: GET everywhere, POST to the scan, setup and settings endpoints only.
 func methods(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		post := r.Method == http.MethodPost && (r.URL.Path == "/api/scan" || r.URL.Path == "/api/db/update" ||
 			r.URL.Path == "/api/setup" || r.URL.Path == "/api/setup/check" || r.URL.Path == "/api/setup/parse" || r.URL.Path == "/api/setup/add" ||
+			r.URL.Path == "/api/settings/scan" ||
 			strings.HasPrefix(r.URL.Path, "/api/jobs/") && strings.HasSuffix(r.URL.Path, "/cancel"))
 		if r.Method != http.MethodGet && !post {
 			send(w, 501, "text/plain", []byte("unsupported method"))
@@ -433,6 +492,7 @@ func (s *Server) serve(ctx context.Context, ln net.Listener, host string, out io
 		defer cancel()
 		done <- srv.Shutdown(sctx)
 	}()
+	defer s.Close()
 	if err := srv.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}

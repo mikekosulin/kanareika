@@ -353,6 +353,9 @@ func (m *Model) tabs() string {
 			})
 		}
 		g += " " + sKey.Render("g") + " "
+		if sl := m.sortLabel(); sl != "" {
+			g = sMuted.Render(m.t.T("sort")) + " " + sCrumb2.Render(sl) + " " + sKey.Render("t") + "  " + g
+		}
 		if m.view == vServers {
 			g = m.showSwitch() + "  " + g
 		}
@@ -699,6 +702,12 @@ func (m *Model) formView(h int) []string {
 			l = " " + sLabel.Render(m.t.T(it.label))
 		case itemStart:
 			l = "   " + sCrumb.Render(m.t.T(it.label))
+		case itemLimit:
+			v := sText.Render(fmt.Sprintf("‹ %d ›", it.n))
+			if it.fixed {
+				v = sMuted.Render(fmt.Sprintf("  %d  ", it.n)) + " " + sMuted.Render(m.t.T("set in the org file or by a flag"))
+			}
+			l = "   " + fit(sText.Render(m.t.T(it.label)), 12, false) + " " + v
 		default:
 			box := sDim.Render("[ ]")
 			if it.on {
@@ -738,7 +747,7 @@ var helpRows = [][2]string{
 	{"right/left, l/h", "ToDo: open and close a node; other views: the next and previous view"},
 	{"enter", "open (details of a node, a run, a host card, a scan's output)"},
 	{"/", "filter the list; esc clears"},
-	{"g", "ToDo: group by fix, CVE or host"},
+	{"g, t", "ToDo: group by fix, CVE or host; t: order by the next column, T: the other way"},
 	{"f", "ToDo: filters (KEV, RCE, EPSS, internet-facing, fix ready, no fix, overdue); Network: only ports open to the outside"},
 	{"space, x, a", "select a node and everything under it, select all"},
 	{"v", "only the selected (ToDo)"},
@@ -746,7 +755,7 @@ var helpRows = [][2]string{
 	{"Y", "copy the context of the node under the cursor (what, where, why, due, commands, its id) for an AI agent's chat"},
 	{"c, [ ]", "copy the chosen command of the details; choose another"},
 	{"p", "show P4 too"},
-	{"s", "start a scan of this environment"},
+	{"s, R", "start a scan of this environment; R: only the server under the cursor, or a run's unreachable hosts"},
 	{"N", "set up a new organization (hosts, SSH access check, the first scan)"},
 	{"x", "stop the scan under the cursor (Scans)"},
 	{"c", "back to the current state (Runs)"},

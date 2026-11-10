@@ -2,6 +2,8 @@ package server
 
 import (
 	"io/fs"
+	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -13,28 +15,38 @@ import (
 )
 
 var (
-	jsT     = regexp.MustCompile(`\btf?\("((?:[^"\\]|\\.)*)"[),]`) // t("…") and tf("…", {…})
-	attrT   = regexp.MustCompile(`data-t(?:-title)?="([^"]+)"`)
+	jsT     = regexp.MustCompile(`\bt[fx]?\("((?:[^"\\]|\\.)*)"[),]`) // t("…"), tx("…", {…})
 	notWord = regexp.MustCompile(`^([A-Z0-9/+-]{1,6}|[^A-Za-z]*|Trivy|Kanareika)$`)
 )
 
-// TestEveryPageStringTranslated: every interface string of the web page (t("...") and data-t attributes) has a
-// translation in every language.
-func TestEveryPageStringTranslated(t *testing.T) {
-	b, err := fs.ReadFile(assets.Web(), "index.html")
-	if err != nil {
-		t.Fatal(err)
-	}
-	seen := map[string]bool{}
-	for _, m := range jsT.FindAllStringSubmatch(string(b), -1) {
-		s, err := strconv.Unquote(`"` + m[1] + `"`)
-		if err == nil && !notWord.MatchString(s) {
-			seen[s] = true
+// webSources: the page's source files (web/src; the built page, assets/web/index.html.gz, is minified).
+func webSources(t *testing.T) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	err := filepath.WalkDir("../../web/src", func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !(strings.HasSuffix(p, ".ts") || strings.HasSuffix(p, ".tsx")) {
+			return err
 		}
+		b, err := os.ReadFile(p)
+		out[p] = string(b)
+		return err
+	})
+	if err != nil || len(out) < 10 {
+		t.Fatalf("web sources: %v (%d files)", err, len(out))
 	}
-	for _, m := range attrT.FindAllStringSubmatch(string(b), -1) {
-		if !notWord.MatchString(m[1]) {
-			seen[strings.ReplaceAll(m[1], "&amp;", "&")] = true
+	return out
+}
+
+// TestEveryPageStringTranslated: every interface string of the web page (t("…") and tx("…") in its sources) has
+// a translation in every language.
+func TestEveryPageStringTranslated(t *testing.T) {
+	seen := map[string]bool{}
+	for _, src := range webSources(t) {
+		for _, m := range jsT.FindAllStringSubmatch(src, -1) {
+			s, err := strconv.Unquote(`"` + m[1] + `"`)
+			if err == nil && !notWord.MatchString(s) {
+				seen[s] = true
+			}
 		}
 	}
 	if len(seen) < 100 {
@@ -55,10 +67,10 @@ func TestEveryPageStringTranslated(t *testing.T) {
 	}
 }
 
-// TestPageShape: the page is HTML from its first byte, and the helpers every view calls are defined inside its
-// script (the tests do not run the page's JavaScript: a helper left outside it breaks the page silently).
+// TestPageShape: the built page is HTML from its first byte, with the server's placeholders once each, inside
+// the script that hands them to the page; and it is built from the sources (web/: pnpm run build).
 func TestPageShape(t *testing.T) {
-	b, err := fs.ReadFile(assets.Web(), "index.html")
+	b, err := gunzip(assets.Web(), "index.html.gz")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,70 +78,68 @@ func TestPageShape(t *testing.T) {
 	if !strings.HasPrefix(page, "<!doctype html>") {
 		t.Fatalf("the page starts with %q", page[:min(len(page), 40)])
 	}
-	open, end := strings.Index(page, "<script>"), strings.LastIndex(page, "</script>")
-	for _, def := range []string{"const t = (s, args) => ", "const LANG_NAMES = ", "const LANG = ", "const UI = "} {
-		i := strings.Index(page, def)
-		if i < open || i > end || strings.Count(page, def) != 1 {
-			t.Errorf("%q: not once inside the script", def)
+	if !strings.Contains(page, `window.KANAREIKA = { csrf: /*CSRF*/"", ui: /*I18N_UI*/{}, names: /*I18N_NAMES*/{} };`) {
+		t.Error("the page lost its placeholders (web/index.html)")
+	}
+	for _, ph := range []string{`/*CSRF*/""`, "/*I18N_UI*/{}", "/*I18N_NAMES*/{}"} {
+		if n := strings.Count(page, ph); n != 1 {
+			t.Errorf("%s: %d times", ph, n)
 		}
+	}
+	if !strings.Contains(page, `<script type="module"`) || strings.Contains(page, `src="/src/main.tsx"`) {
+		t.Error("assets/web/index.html.gz is not the built page: make web")
 	}
 }
 
-// TestLogos: the page's images are the lossless WebP (/logo.webp); the favicon stays PNG (/logo.png).
+// TestLogos: the page's images are the lossless WebP (/logo.webp); the favicon is a small PNG (/favicon.png, and
+// /favicon.ico, which browsers ask for on their own).
 func TestLogos(t *testing.T) {
 	_, h := newTest(t, Options{})
-	png, webp := do(h, "GET", "/logo.png", nil, nil), do(h, "GET", "/logo.webp", nil, nil)
-	if png.code != 200 || png.h.Get("Content-Type") != "image/png" || !strings.HasPrefix(png.body, "\x89PNG") {
-		t.Errorf("png: %d %s", png.code, png.h.Get("Content-Type"))
-	}
-	if webp.code != 200 || webp.h.Get("Content-Type") != "image/webp" || webp.body[:4] != "RIFF" || webp.body[8:12] != "WEBP" ||
-		len(webp.body) >= len(png.body) {
-		t.Errorf("webp: %d %s %d bytes", webp.code, webp.h.Get("Content-Type"), len(webp.body))
-	}
-	for _, name := range []string{"index.html", "classic.html"} {
-		b, err := fs.ReadFile(assets.Web(), name)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if strings.Contains(string(b), `<img src="/logo.png"`) || !strings.Contains(string(b), `<img src="/logo.webp"`) ||
-			!strings.Contains(string(b), `<link rel="icon" type="image/png" href="/logo.png">`) {
-			t.Errorf("%s: images from logo.webp, the favicon from logo.png", name)
+	for _, path := range []string{"/favicon.png", "/favicon.ico"} {
+		png := do(h, "GET", path, nil, nil)
+		if png.code != 200 || png.h.Get("Content-Type") != "image/png" || !strings.HasPrefix(png.body, "\x89PNG") || len(png.body) > 8<<10 {
+			t.Errorf("%s: %d %s %d bytes", path, png.code, png.h.Get("Content-Type"), len(png.body))
 		}
 	}
-}
-
-// TestPageEscapesData:the page writes what the server sends (vulnerability DB texts, what the scanned hosts
-// reported, the org files) through esc(). The tests do not run the page's JavaScript, so this looks for the
-// shapes that let such text through as HTML: a field interpolated straight into an element or an attribute, a
-// field passed raw into t()'s {args}, a link not limited to http(s), and the CVSS vector's parts written unescaped.
-func TestPageEscapesData(t *testing.T) {
-	b, err := fs.ReadFile(assets.Web(), "index.html")
+	if r := do(h, "GET", "/logo.png", nil, nil); r.code != 404 {
+		t.Errorf("/logo.png: %d", r.code)
+	}
+	webp := do(h, "GET", "/logo.webp", nil, nil)
+	if webp.code != 200 || webp.h.Get("Content-Type") != "image/webp" || webp.body[:4] != "RIFF" || webp.body[8:12] != "WEBP" {
+		t.Errorf("webp: %d %s", webp.code, webp.h.Get("Content-Type"))
+	}
+	b, err := gunzip(assets.Web(), "index.html.gz")
 	if err != nil {
 		t.Fatal(err)
 	}
-	page := string(b)
-	const field = `[\w?.\[\]]+\.(?:description|title|label|pkg|reason|owner|note|comment|problem|process|mount|error|message|command|output|installed|fixed|path|address|user|host|name|env|jump|system|os|priority|severity|state|url|vector|id)`
-	risky := map[string]*regexp.Regexp{
-		"a field as element text":           regexp.MustCompile(`>\$\{` + field + `\}`),
-		"a field as an attribute":           regexp.MustCompile(`="\$\{` + field + `\}"`),
-		"a raw field in t() args":           regexp.MustCompile(`\bt\("[^"]*", \{[^}]*?\w+: ` + field + `\b`),
-		"a raw S.env in t() args":           regexp.MustCompile(`\bt\("[^"]*", \{[^}]*?\w+: S\.(?:env|org|run)\b`),
-		"a link not limited to http(s)":     regexp.MustCompile(`href="\$\{(?:esc\((?:c|x|n|d)\.url\)|(?:c|x|n|d)\.url)`),
-		"a translated value left unescaped": regexp.MustCompile(`<b>\$\{t\((?:val|v|txt)\)\}</b>`),
+	if strings.Contains(string(b), "/logo.png") || !regexp.MustCompile("[\"'`]/logo\\.webp[\"'`]").Match(b) ||
+		!strings.Contains(string(b), `<link rel="icon" type="image/png" href="/favicon.png">`) {
+		t.Error("the page: images from logo.webp, the icon from favicon.png")
 	}
-	for i, line := range strings.Split(page, "\n") {
-		if !strings.Contains(line, "<") { // plain text: the palette, the clipboard, filters
-			continue
+}
+
+// TestPageEscapesData: the page shows what the server sends (vulnerability DB texts, what the scanned hosts
+// reported, the org files). React writes text as text; this keeps the ways around it out of the sources: raw
+// HTML, links not limited to http(s), and the CVSS vector's parts taken from anything but the known letters.
+func TestPageEscapesData(t *testing.T) {
+	srcs := webSources(t)
+	all := ""
+	for p, src := range srcs {
+		all += src
+		for _, bad := range []string{"dangerouslySetInnerHTML", ".innerHTML", ".outerHTML", "insertAdjacentHTML", "document.write"} {
+			if strings.Contains(src, bad) {
+				t.Errorf("%s: %s", p, bad)
+			}
 		}
-		for what, re := range risky {
-			for _, m := range re.FindAllString(line, -1) {
-				t.Errorf("line %d: %s: %s", i+1, what, m)
+		// a link from data: only through webURL (http(s))
+		for _, m := range regexp.MustCompile(`href=\{([^}]*)\}`).FindAllStringSubmatch(src, -1) {
+			if !strings.Contains(m[1], "href(") && m[1] != "url" && !strings.HasPrefix(m[1], `"#`) { // the icon sprite
+				t.Errorf("%s: href={%s}: a link not made by webURL", p, m[1])
 			}
 		}
 	}
-	// the vector: only known CVSS 3 metric letters make the table, the rest is shown as escaped text
-	for _, must := range []string{`const CVSS3 = { AV: "NALP"`, `<b>${esc(t(val))}</b>`, `const webURL = `, `href="${esc(webURL(c.url))}"`} {
-		if !strings.Contains(page, must) {
+	for _, must := range []string{`const CVSS3: Record<string, string> = { AV: "NALP"`, `export const webURL = `, `const url = webURL(c.url);`} {
+		if !strings.Contains(all, must) {
 			t.Errorf("the page lost %q", must)
 		}
 	}

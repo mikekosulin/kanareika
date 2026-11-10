@@ -2,6 +2,7 @@ package report
 
 import (
 	"fmt"
+	"iter"
 	"strings"
 
 	"github.com/mikekosulin/kanareika/internal/finding"
@@ -37,16 +38,17 @@ func Installable(f *finding.Finding) bool {
 // host: the package at its path; docker: the image; k8s: the workload's image (the workload when the image is
 // unknown); everything else: the check on its hosts.
 func FixKey(f *finding.Finding) (key, kind string) {
-	switch {
-	case f.Kind != finding.Vuln:
+	switch FixKind(f) {
+	case FixOther:
 		return "other:" + f.Module + ":" + f.ID + ":" + f.Title, FixOther
-	case f.Module == "k8s":
-		img := f.Image
-		if img == "" {
-			img = f.Target
+	case FixImage:
+		if f.Module == "k8s" {
+			img := f.Image
+			if img == "" {
+				img = f.Target
+			}
+			return "image:k8s:" + img, FixImage
 		}
-		return "image:k8s:" + img, FixImage
-	case strings.HasPrefix(f.Target, "image:"):
 		return "image:docker:" + strings.TrimPrefix(f.Target, "image:"), FixImage
 	}
 	where, name := "os", f.Source()
@@ -58,6 +60,17 @@ func FixKey(f *finding.Finding) (key, kind string) {
 		key += ":nofix"
 	}
 	return key, FixPkg
+}
+
+// FixKind: the kind of FixKey's fix, without making the key.
+func FixKind(f *finding.Finding) string {
+	switch {
+	case f.Kind != finding.Vuln:
+		return FixOther
+	case f.Module == "k8s", strings.HasPrefix(f.Target, "image:"):
+		return FixImage
+	}
+	return FixPkg
 }
 
 // Totals: what there is to do, counted the same way wherever it is shown (the scan's last line, summary.md,
@@ -94,14 +107,25 @@ func NewTally() *Tally {
 // Add counts an actionable finding.
 func (t *Tally) Add(f *finding.Finding) {
 	k, _ := FixKey(f)
-	if p, ok := t.prio[k]; !ok || prioRank(f.PriorityOr()) < prioRank(p) {
-		t.prio[k] = f.PriorityOr()
+	t.AddKey(f, k)
+}
+
+// AddKey: Add with the finding's FixKey already known.
+func (t *Tally) AddKey(f *finding.Finding, k string) {
+	t.AddParts(k, f.PriorityOr(), Installable(f), f.Kind == finding.Vuln, f.ID, f.Host)
+}
+
+// AddParts: AddKey with what it takes of the finding (fix k, its priority, whether it is installable, whether it
+// is a vulnerability, its id and host) given apart, for findings not held as finding.Finding (package fset).
+func (t *Tally) AddParts(k, prio string, installable, vuln bool, id, host string) {
+	if p, ok := t.prio[k]; !ok || prioRank(prio) < prioRank(p) {
+		t.prio[k] = prio
 	}
-	t.fixable[k] = t.fixable[k] || Installable(f)
-	if f.Kind == finding.Vuln {
-		t.cves[f.ID] = true
+	t.fixable[k] = t.fixable[k] || installable
+	if vuln {
+		t.cves[id] = true
 	}
-	t.hosts[f.Host] = true
+	t.hosts[host] = true
 	t.findings++
 }
 
@@ -132,37 +156,72 @@ func (c Totals) ByPriority() map[string]int {
 
 // TotalsOf: the totals of a run's (or the current state's) findings.
 func TotalsOf(findings []finding.Finding) Totals {
-	t := NewTally()
-	acc, bp := 0, 0
-	for i := range findings {
-		f := &findings[i]
-		switch {
-		case f.Backported:
-			if Actionable(f) {
-				bp++
+	t, _ := TotalsSeq(func(yield func(*finding.Finding) bool) {
+		for i := range findings {
+			if !yield(&findings[i]) {
+				return
 			}
-		case f.Accepted:
-			acc++
-		case Actionable(f):
-			t.Add(f)
 		}
-	}
-	c := t.Totals()
-	c.Accepted, c.Backported = acc, bp
-	return c
+	}, false)
+	return t
 }
 
 // TotalsByHost: the totals of each host's own findings.
 func TotalsByHost(findings []finding.Finding) map[string]Totals {
-	by := map[string][]finding.Finding{}
-	for _, f := range findings {
-		by[f.Host] = append(by[f.Host], f)
+	_, by := TotalsSeq(func(yield func(*finding.Finding) bool) {
+		for i := range findings {
+			if !yield(&findings[i]) {
+				return
+			}
+		}
+	}, true)
+	return by
+}
+
+// TotalsSeq: TotalsOf of the findings seq gives one at a time (each may be reused), and with byHost TotalsByHost.
+func TotalsSeq(seq iter.Seq[*finding.Finding], byHost bool) (Totals, map[string]Totals) {
+	type counter struct {
+		t       *Tally
+		acc, bp int
 	}
-	out := map[string]Totals{}
-	for h, fs := range by {
-		out[h] = TotalsOf(fs)
+	add := func(c *counter, f *finding.Finding) {
+		switch {
+		case f.Backported:
+			if Actionable(f) {
+				c.bp++
+			}
+		case f.Accepted:
+			c.acc++
+		case Actionable(f):
+			c.t.Add(f)
+		}
 	}
-	return out
+	totals := func(c *counter) Totals {
+		t := c.t.Totals()
+		t.Accepted, t.Backported = c.acc, c.bp
+		return t
+	}
+	all := &counter{t: NewTally()}
+	hosts := map[string]*counter{}
+	for f := range seq {
+		add(all, f)
+		if byHost {
+			c := hosts[f.Host]
+			if c == nil {
+				c = &counter{t: NewTally()}
+				hosts[f.Host] = c
+			}
+			add(c, f)
+		}
+	}
+	var by map[string]Totals
+	if byHost {
+		by = map[string]Totals{}
+		for h, c := range hosts {
+			by[h] = totals(c)
+		}
+	}
+	return totals(all), by
 }
 
 // HighestFix: the highest fixed version (natural version order), "" when none.

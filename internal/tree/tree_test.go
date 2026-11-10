@@ -1,9 +1,11 @@
 package tree
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/mikekosulin/kanareika/internal/finding"
@@ -134,8 +136,8 @@ func TestShallow(t *testing.T) {
 	if labels(kids) != "pkg:openssl image:reg/api:1 image:reg/worker:5" || kids[0].Kids != nil || kids[0].More == 0 {
 		t.Fatalf("its kids: %s %+v", labels(kids), kids[0])
 	}
-	if img := kids[1]; len(img.Kids) == 0 || img.More != 0 {
-		t.Fatalf("an image keeps its parts: %+v", img)
+	if img := kids[1]; img.Kids != nil || img.More != 4 || strings.Join(img.Parts, ",") != "openssl" {
+		t.Fatalf("an image's row names its parts, its kids come when asked: %+v", img)
 	}
 	if tr.Under("nope", 0) != nil || len(tr.Shallow(1).Nodes[0].Kids) == 0 {
 		t.Fatal("unknown node, or one level of kids")
@@ -255,5 +257,66 @@ func TestFamily(t *testing.T) {
 	}
 	if command("", "x") != "" || !strings.HasPrefix(command("dnf", "x"), "dnf") {
 		t.Error("command")
+	}
+}
+
+// TestLazy: BuildSet makes the top rows only; requests reading one cached tree at once get the same kids, made
+// once, and the same answers as the fully built tree.
+func TestLazy(t *testing.T) {
+	fs, hosts := fleet()
+	for _, o := range []Opts{{}, {By: ByCVE}, {By: ByHost}, {By: ByHost, All: true}, {Query: "web 0"}, {Query: "SSL"}} {
+		want, _ := json.Marshal(Build(fs, hosts, o))
+		lz := BuildSet(NewSet(fs), hosts, o)
+		var wg sync.WaitGroup
+		for range 8 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for _, n := range lz.Nodes {
+					lz.Under(n.ID, 1)
+					lz.Find(n.ID + "/nope")
+				}
+				lz.Shallow(2)
+			}()
+		}
+		wg.Wait()
+		if got, _ := json.Marshal(lz.Full()); string(got) != string(want) {
+			t.Fatalf("%+v:\n got %s\nwant %s", o, got, want)
+		}
+		for _, n := range lz.Nodes {
+			if n.lz != nil && n.Kids != nil {
+				t.Fatalf("%+v: the shared node %s was written", o, n.ID)
+			}
+		}
+	}
+	tr := BuildSet(NewSet(fs), hosts, Opts{})
+	if p := tr.Page(1, 2); p.Rows != len(tr.Nodes) || len(p.Nodes) != 2 || p.Nodes[0] != tr.Nodes[1] {
+		t.Fatalf("page: %+v", p)
+	}
+	if p := tr.Page(-5, 0); len(p.Nodes) != len(tr.Nodes) {
+		t.Fatal("page: everything")
+	}
+	if k := tr.FullUnder(tr.Nodes[1].ID); len(k) == 0 || len(k[0].Kids) == 0 || tr.FullUnder("nope") != nil {
+		t.Fatalf("full under: %+v", k)
+	}
+}
+
+// TestDescribeCapsCVEs: a node closing more than MaxCVEs lists the most urgent MaxCVEs, with their texts, and
+// says how many more there are.
+func TestDescribeCapsCVEs(t *testing.T) {
+	hosts := Hosts{"h": report.Fact{OS: osName("Debian GNU/Linux 12 (bookworm)")}}
+	var fs []finding.Finding
+	for i := range MaxCVEs + 7 {
+		fs = append(fs, finding.Finding{Org: "acme", Host: "h", Group: "g", Module: "os_packages", Kind: finding.Vuln,
+			ID: fmt.Sprintf("CVE-0000-%04d", i), Pkg: "linux-image", Installed: "1", Fixed: "2", Severity: "HIGH", Target: "os",
+			FixState: finding.FixAvailable, Priority: p("P2"), EPSS: e(float64(i) / 100), Description: "text"})
+	}
+	tr := Build(fs, hosts, Opts{})
+	d := Describe(tr.Nodes[0], hosts, &report.View{}, "2026-11-08")
+	if len(d.CVEs) != MaxCVEs || d.More != 7 {
+		t.Fatalf("%d listed, %d more", len(d.CVEs), d.More)
+	}
+	if d.CVEs[0].ID != fmt.Sprintf("CVE-0000-%04d", MaxCVEs+6) || d.CVEs[0].Description != "text" || d.CVEs[MaxCVEs-1].Description != "text" {
+		t.Fatalf("first %s %q, last %q", d.CVEs[0].ID, d.CVEs[0].Description, d.CVEs[MaxCVEs-1].Description)
 	}
 }

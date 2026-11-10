@@ -2,3 +2,9 @@
 retention:
   keep_full: 12        # last full runs (trends and "changes" are built from them)
   keep_partial: 30     # last partial runs
+
+# Scan limits. parallel: hosts collected at once over SSH (an org file can set its own, access.parallel);
+# trivy_parallel: vulnerability matches at once, each holds its report in memory (hundreds of MB on a large host).
+scan:
+  parallel: 8
+  trivy_parallel: 2

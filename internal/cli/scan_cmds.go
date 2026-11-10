@@ -35,7 +35,7 @@ func (a *app) scanCmd() *cobra.Command {
 		env                              string
 		all, dryRun, ignoreWindow        bool
 		offline, yes                     bool
-		parallel                         int
+		parallel, trivyParallel          int
 	)
 	c := &cobra.Command{
 		Use:   "scan [org...]",
@@ -47,6 +47,7 @@ report directory and history. An org with several environments needs --env (or -
   kanareika scan acme --dry-run          # what would run; connects nowhere
   kanareika scan --all`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			limitMemory()
 			ids := orgIDs(args, flagOrgs)
 			if !all && len(ids) == 0 {
 				return fail(1, "refusing to scan: name an org (kanareika scan <org>) or use --all")
@@ -103,7 +104,7 @@ report directory and history. An org with several environments needs --env (or -
 				}
 				for _, e := range envList {
 					rc |= runOrg(ctx, s, o, e, scan.Options{Groups: groups, Hosts: hosts, Modules: modules, DryRun: dryRun,
-						IgnoreWindow: ignoreWindow, Parallel: parallel, Offline: offline, Version: a.version})
+						IgnoreWindow: ignoreWindow, Parallel: parallel, TrivyParallel: trivyParallel, Offline: offline, Version: a.version})
 					if ctx.Err() != nil {
 						return fail(130, "interrupted")
 					}
@@ -124,7 +125,8 @@ report directory and history. An org with several environments needs --env (or -
 	f.StringArrayVar(&modules, "module", nil, "only these modules (if enabled in config)")
 	f.BoolVar(&dryRun, "dry-run", false, "show what would run, connect nowhere")
 	f.BoolVar(&ignoreWindow, "ignore-window", false, "scan outside consent.window")
-	f.IntVar(&parallel, "parallel", 4, "hosts in parallel within one org")
+	f.IntVar(&parallel, "parallel", 0, "hosts collected at once over SSH (default: policy/settings.yml or the org file, else 8)")
+	f.IntVar(&trivyParallel, "trivy-parallel", 0, "vulnerability matches at once, each holds its report in memory (default: policy/settings.yml, else 2)")
 	f.BoolVar(&offline, "offline", os.Getenv("KANAREIKA_OFFLINE") != "",
 		"don't download vulnerability DBs, use what db update or db import left (env KANAREIKA_OFFLINE=1)")
 	f.BoolVarP(&yes, "yes", "y", false, "don't ask before downloading the DBs (also KANAREIKA_YES=1, or without a terminal)")
@@ -279,6 +281,7 @@ func (a *app) pruneCmd() *cobra.Command {
 		Use:   "prune [org...]",
 		Short: "delete old runs according to policy/settings.yml (or flags)",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			limitMemory()
 			ids := orgIDs(args, flagOrgs)
 			orgs, _, err := a.load(ids, cmd.ErrOrStderr())
 			if err != nil {

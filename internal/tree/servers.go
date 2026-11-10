@@ -2,6 +2,7 @@ package tree
 
 import (
 	"cmp"
+	"iter"
 	"slices"
 	"strings"
 	"time"
@@ -32,8 +33,8 @@ type HostInfo struct {
 }
 
 // Servers: every host of org's env, with the state of its last scan, from the view and the findings the tree is
-// built from (current/ or a run).
-func Servers(org *config.Org, env string, view *report.View, findings []finding.Finding) []HostInfo {
+// built from (current/ or a run: Set.All, slices.Values of pointers).
+func Servers(org *config.Org, env string, view *report.View, findings iter.Seq[*finding.Finding]) []HostInfo {
 	var meta *report.Meta
 	if view != nil {
 		meta = view.Meta
@@ -43,8 +44,7 @@ func Servers(org *config.Org, env string, view *report.View, findings []finding.
 	}
 	limited := map[string][]string{} // host -> denied keys (from the *-limited findings)
 	why := map[string]i18n.Text{}
-	for i := range findings {
-		f := &findings[i]
+	for f := range findings {
 		if f.Kind != finding.Inventory || !strings.HasSuffix(f.ID, "-limited") {
 			continue
 		}
@@ -132,12 +132,12 @@ func lastScan(meta *report.Meta, host string) string {
 
 // servers: the by-host grouping with every host (Opts.All): one flat row per host, most urgent first, clean ones
 // last. Host rows are counted from all their findings; the filters and the query narrow what is under them.
-func servers(t *Tree, all []*finding.Finding, kept []*finding.Finding, hosts Hosts, o Opts) {
-	allBy := map[string][]*finding.Finding{}
+func servers(t *Tree, all []*item, kept []*item, hosts Hosts, o Opts) {
+	allBy := map[string][]*item{}
 	for _, f := range all {
 		allBy[f.Host] = append(allBy[f.Host], f)
 	}
-	keptBy := map[string][]*finding.Finding{}
+	keptBy := map[string][]*item{}
 	for _, f := range kept {
 		keptBy[f.Host] = append(keptBy[f.Host], f)
 	}
@@ -159,11 +159,13 @@ func servers(t *Tree, all []*finding.Finding, kept []*finding.Finding, hosts Hos
 			n.Priority, n.Hosts, n.Groups = "", 1, []Count{{hi.Group, 1}}
 			n.HostList = []string{hi.Name}
 		}
-		var flat []finding.Finding
+		tally := report.NewTally() // report.TotalsOf: backported findings (shown with Opts.Backported) are not counted
 		for _, f := range hf {
-			flat = append(flat, *f)
+			if !f.Backported {
+				tally.AddParts(f.U.Key, f.PriorityOr(), f.Installable(), f.Kind == finding.Vuln, f.C.ID, f.Host)
+			}
 		}
-		tot := report.TotalsOf(flat)
+		tot := tally.Totals()
 		n.Fixes, n.Counts = tot.Fixes, tot.ByPriority()
 		n.Overdue = n.Due != "" && o.Today != "" && n.Due < o.Today
 		n.State = hi.State
@@ -174,11 +176,9 @@ func servers(t *Tree, all []*finding.Finding, kept []*finding.Finding, hosts Hos
 			}
 		}
 		n.Problem, n.ProblemMsg, n.ProblemArgs = hi.Problem.Text, hi.Problem.Key, hi.Problem.Args
-		uo, us := byKey(keptBy[hi.Name], func(f *finding.Finding) string { k, _ := unit(f); return k })
-		for _, u := range uo {
-			n.Kids = append(n.Kids, unitNode(n.ID+"/"+u, us[u], hosts, false))
+		if kf := keptBy[hi.Name]; len(kf) > 0 {
+			n.lz = units(n.ID, kf, hosts)
 		}
-		slices.SortFunc(n.Kids, urgency)
 		t.Servers[n.State]++
 		t.Nodes = append(t.Nodes, n)
 	}

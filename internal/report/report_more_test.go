@@ -401,7 +401,7 @@ func TestUpdateCurrentMergeErrors(t *testing.T) {
 	t.Run("findings file", func(t *testing.T) {
 		env := filepath.Join(t.TempDir(), "e")
 		fullRun(t, env, "2026-11-01_100000", nil)
-		blockWith(t, filepath.Join(env, Current, "findings.json.gz"))
+		blockWith(t, filepath.Join(env, Current, "hosts", "web-01", "findings.json.gz"))
 		if _, err := UpdateCurrent(env, true, true); err == nil {
 			t.Error("want an error")
 		}
