@@ -1054,6 +1054,24 @@
     "{n} logins from {m} addresses, 30 d": "{n} 次登录，来自 {m} 个地址，30 天",
     "{n} runs · last {ago}": "{n} 次运行 · 最近 {ago}",
     "{n} unreachable": "{n} 台不可达",
-    "{n} with nothing to install yet": "{n} 项暂无可安装的更新"
+    "{n} with nothing to install yet": "{n} 项暂无可安装的更新",
+    "Method": "方式",
+    "Logins": "登录次数",
+    "Type": "类型",
+    "Comment": "注释",
+    "File": "文件",
+    "Attempts": "尝试次数",
+    "Port": "端口",
+    "Process": "进程",
+    "Mount": "挂载点",
+    "Used": "已用",
+    "Setting": "设置",
+    "Value": "值",
+    "Names tried": "尝试的用户名",
+    "Names tried most": "最常尝试的用户名",
+    "Failed logins by day": "每日登录失败",
+    "sshd settings": "sshd 设置",
+    "users with a shell": "有 shell 的用户",
+    "last sessions ({n})": "最近的会话（{n}）"
   }
 }

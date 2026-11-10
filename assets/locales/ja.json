@@ -1054,6 +1054,24 @@
     "{n} logins from {m} addresses, 30 d": "ログイン {n} 回 ({m} 件のアドレスから、30 日間)",
     "{n} runs · last {ago}": "実行 {n} 回 · 最終 {ago}",
     "{n} unreachable": "到達不能 {n} 台",
-    "{n} with nothing to install yet": "まだインストールするものがない: {n} 件"
+    "{n} with nothing to install yet": "まだインストールするものがない: {n} 件",
+    "Method": "方式",
+    "Logins": "ログイン数",
+    "Type": "種類",
+    "Comment": "コメント",
+    "File": "ファイル",
+    "Attempts": "試行",
+    "Port": "ポート",
+    "Process": "プロセス",
+    "Mount": "マウント",
+    "Used": "使用率",
+    "Setting": "設定",
+    "Value": "値",
+    "Names tried": "試された名前",
+    "Names tried most": "よく試された名前",
+    "Failed logins by day": "日別のログイン失敗",
+    "sshd settings": "sshd の設定",
+    "users with a shell": "シェルを持つユーザー",
+    "last sessions ({n})": "最近のセッション（{n}）"
   }
 }

@@ -1054,6 +1054,24 @@
     "{n} logins from {m} addresses, 30 d": "входов за 30 дн.: {n}, адресов: {m}",
     "{n} runs · last {ago}": "прогонов: {n} · последний {ago}",
     "{n} unreachable": "недоступно: {n}",
-    "{n} with nothing to install yet": "пока нечего устанавливать: {n}"
+    "{n} with nothing to install yet": "пока нечего устанавливать: {n}",
+    "Method": "Метод",
+    "Logins": "Входов",
+    "Type": "Тип",
+    "Comment": "Комментарий",
+    "File": "Файл",
+    "Attempts": "Попыток",
+    "Port": "Порт",
+    "Process": "Процесс",
+    "Mount": "Точка монтирования",
+    "Used": "Занято",
+    "Setting": "Параметр",
+    "Value": "Значение",
+    "Names tried": "Пробовали имена",
+    "Names tried most": "Чаще всего пробовали",
+    "Failed logins by day": "Неудачные входы по дням",
+    "sshd settings": "настройки sshd",
+    "users with a shell": "пользователи с оболочкой",
+    "last sessions ({n})": "последние сеансы ({n})"
   }
 }

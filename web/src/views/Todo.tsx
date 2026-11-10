@@ -77,8 +77,15 @@ export function Todo() {
   );
   const show = useCallback((id: string) => set({ cur: id, stack: [], detailOpen: narrow() }), []);
   useTreeKeys(rows, show, s.view === "todo");
-  // nothing picked: the list alone
+  // nothing picked: the list alone; node= in the address picks one once the rows are in
   const solo = useApp((s) => (s.accepted ? s.vitem?.kind !== "exc" : !s.cur));
+  useEffect(() => {
+    const st = useApp.getState();
+    if (!tree.data || tree.isPlaceholderData || !st.wantNode) return;
+    set({ cur: st.wantNode, wantNode: "", stack: [], detailOpen: narrow() });
+  }, [tree.data, tree.isPlaceholderData]); // eslint-disable-line react-hooks/exhaustive-deps
+  const cur = useApp((s) => s.cur);
+  useEffect(() => syncURL(), [cur]);
   useEffect(() => syncURL(), [s.by, s.accepted]);
 
   if (tree.error && (tree.error as any).status === 404) return <NoRuns />;

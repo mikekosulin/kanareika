@@ -1054,6 +1054,24 @@
     "{n} logins from {m} addresses, 30 d": "로그인 {n}회, 주소 {m}개, 30일",
     "{n} runs · last {ago}": "실행 {n}회 · 마지막 {ago}",
     "{n} unreachable": "연결 불가 {n}대",
-    "{n} with nothing to install yet": "아직 설치할 것 없음 {n}개"
+    "{n} with nothing to install yet": "아직 설치할 것 없음 {n}개",
+    "Method": "방식",
+    "Logins": "로그인 수",
+    "Type": "유형",
+    "Comment": "주석",
+    "File": "파일",
+    "Attempts": "시도",
+    "Port": "포트",
+    "Process": "프로세스",
+    "Mount": "마운트",
+    "Used": "사용",
+    "Setting": "설정",
+    "Value": "값",
+    "Names tried": "시도한 이름",
+    "Names tried most": "가장 많이 시도한 이름",
+    "Failed logins by day": "일별 로그인 실패",
+    "sshd settings": "sshd 설정",
+    "users with a shell": "셸이 있는 사용자",
+    "last sessions ({n})": "최근 세션 ({n})"
   }
 }

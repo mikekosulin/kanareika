@@ -414,10 +414,9 @@ function LensTable({
     { l: t("Server"), w: "minmax(96px, 1fr)", v: (r) => <Hcell n={r.host} />, s: (r) => r.host },
     ...((d.lens?.columns || []) as any[]).map((c): Col<any> => ({
       l: t(c.title),
-      // width_hint: characters (the TUI's unit), plus the cell's padding
       w: c.width_hint
         ? typeof c.width_hint === "number"
-          ? `calc(${c.width_hint}ch + 16px)`
+          ? c.width_hint + "px"
           : c.width_hint
         : c.kind === "text"
           ? "minmax(0, 1fr)"

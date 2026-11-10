@@ -45,7 +45,7 @@ export function SrvMark({ n }: { n: TreeNode }) {
 }
 
 // a line of the card; one with more to it (keys, addresses, ports, disks, why) opens it below on a click or Enter
-const Li = ({ mark, text, right, more }: { mark: ReactNode; text: ReactNode; right?: ReactNode; more?: string }) => {
+const Li = ({ mark, text, right, more }: { mark: ReactNode; text: ReactNode; right?: ReactNode; more?: ReactNode }) => {
   const [open, setOpen] = useState(false);
   if (!more)
     return (
@@ -75,10 +75,35 @@ const Li = ({ mark, text, right, more }: { mark: ReactNode; text: ReactNode; rig
         <span>{right}</span>
         <Icon name="chev" />
       </div>
-      {open && <pre className="li-more">{more}</pre>}
+      {open && (typeof more === "string" ? <pre className="li-more">{more}</pre> : <div className="li-more box">{more}</div>)}
     </>
   );
 };
+/** Tbl: what a card line collected, as a table: a heading per column, a row per item. */
+const Tbl = ({ head, rows, r = [] }: { head: string[]; rows: ReactNode[][]; r?: number[] }) => (
+  <table className="tbl">
+    <thead>
+      <tr>
+        {head.map((h, i) => (
+          <th key={i} className={r.includes(i) ? "r" : ""}>
+            {h}
+          </th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((row, i) => (
+        <tr key={i}>
+          {row.map((c, j) => (
+            <td key={j} className={r.includes(j) ? "r" : ""}>
+              {c}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+);
 const Lis = ({ rows }: { rows: ReactNode[] }) => {
   const xs = rows.filter(Boolean);
   return xs.length ? <div className="lis">{xs}</div> : null;
@@ -133,6 +158,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
   const { org, envName, run } = useS((s) => ({ org: s.org, envName: s.env, run: s.run }));
   const scans = useSession().data?.scans;
   const [rules, setRules] = useState<string | null>(null);
+  const [allFixes, setAllFixes] = useState(false);
   const n = name;
   const eh: any = (env.data?.hosts || []).find((h) => h.name === n) || {};
   const f = rd.facts?.[n] || {},
@@ -218,6 +244,35 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
             <Li key="pw" mark={<Mk cls="ok" />} text={t("password login off")} />
           ),
           A.sshd?.permitrootlogin === "yes" ? <Li key="root" mark={<Mk cls="bad" />} text={t("sshd: root login allowed")} /> : null,
+          A.sshd && Object.keys(A.sshd).length ? (
+            <Li
+              key="sshd"
+              mark={<Mk cls="mut" />}
+              text={t("sshd settings")}
+              right={A.sshd_source || ""}
+              more={
+                <Tbl
+                  head={[t("Setting"), t("Value")]}
+                  rows={Object.entries(A.sshd).map(([k2, v]) => [<code key="k">{k2}</code>, String(v)])}
+                />
+              }
+            />
+          ) : null,
+          A.login_users?.length ? (
+            <Li
+              key="lu"
+              mark={<Mk cls="mut" />}
+              text={
+                <>
+                  {t("users with a shell")} <code>{A.login_users.join(", ")}</code>
+                </>
+              }
+              more={A.uid0?.length > 1 ? `uid 0: ${A.uid0.join(", ")}` : undefined}
+            />
+          ) : null,
+          (A.last || []).length ? (
+            <Li key="last" mark={<Mk cls="mut" />} text={t("last sessions ({n})", { n: A.last.length })} more={A.last.join("\n")} />
+          ) : null,
           A.users_with_password?.length ? (
             <Li
               key="up"
@@ -228,7 +283,20 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
           <Li
             key="keys"
             mark={<Mk cls="ok" />}
-            more={keys.map((x: any) => `${x.user}: ${x.type} ${x.comment}`).join("\n")}
+            more={
+              keys.length ? (
+                <Tbl
+                  head={[t("User"), t("Type"), t("Comment"), t("Fingerprint"), t("File")]}
+                  rows={keys.map((x: any) => [
+                    x.user,
+                    x.type,
+                    x.comment || "—",
+                    <code key="fp">{x.fp}</code>,
+                    <code key="f">{x.file}</code>,
+                  ])}
+                />
+              ) : undefined
+            }
             text={
               <>
                 {t("keys: {n} · users: {u}", { n: keys.length, u: new Set(keys.map((x: any) => x.user)).size })}
@@ -240,7 +308,22 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
             <Li
               key="acc"
               mark={<Mk cls="mut" />}
-              more={acc.map((x: any) => `${x.user} ${x.ip} ${tsShort(x.last)}`).join("\n")}
+              more={
+                <Tbl
+                  head={[t("User"), t("Address"), t("Logins"), t("Last"), t("First"), t("Method")]}
+                  r={[2]}
+                  rows={[...acc]
+                    .sort((a: any, b: any) => String(b.last).localeCompare(String(a.last)))
+                    .map((x: any) => [
+                      x.user,
+                      <code key="ip">{x.ip}</code>,
+                      fmtN(x.count),
+                      tsShort(x.last),
+                      tsShort(x.first),
+                      x.method || "—",
+                    ])}
+                />
+              }
               text={t("{n} logins from {m} addresses, 30 d", {
                 n: fmtN(acc.reduce((m: number, x: any) => m + x.count, 0)),
                 m: new Set(acc.map((x: any) => x.ip)).size,
@@ -253,6 +336,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
               mark={<Mk cls="wn" />}
               text={t("{n} failed logins from {m} addresses", { n: fmtN(lg.failed_total), m: fmtN(lg.failed_ips) })}
               right={la ? ago(la) : ""}
+              more={<FailedLogins lg={lg} />}
             />
           ) : null,
           denied(A) && <span key="den">{denied(A)}</span>,
@@ -325,10 +409,21 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
               key="in"
               mark={<Mk cls="mut" />}
               text={t("{n} listening inside", { n: (E.listen || []).filter((y: any) => !y.public).length })}
-              more={(E.listen || [])
-                .filter((y: any) => !y.public)
-                .map((y: any) => `${y.port}/${y.proto} ${y.process || "?"} ${y.addr}`)
-                .join("\n")}
+              more={
+                (E.listen || []).length ? (
+                  <Tbl
+                    head={[t("Port"), t("Address"), t("Process"), ""]}
+                    rows={[...(E.listen || [])]
+                      .sort((a: any, b: any) => Number(b.public) - Number(a.public) || a.port - b.port)
+                      .map((y: any) => [
+                        <code key="p">{`${y.port}/${y.proto}`}</code>,
+                        <code key="a">{y.addr}</code>,
+                        y.process || "?",
+                        y.public ? t("open") : "",
+                      ])}
+                  />
+                ) : undefined
+              }
             />,
             denied(E) && <span key="den">{denied(E)}</span>,
           ]}
@@ -360,7 +455,18 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
               key="sum"
               mark={<Mk cls={d && d.use >= 95 ? "bad" : d && d.use >= 85 ? "wn" : "ok"} />}
               text={sum}
-              more={(H.disks || []).map((r: any) => `${r.mount} ${r.use}%`).join("\n")}
+              more={
+                (H.disks || []).length ? (
+                  <Tbl
+                    head={[t("Mount"), t("Used"), "inodes"]}
+                    r={[1, 2]}
+                    rows={(H.disks || []).map((r: any) => {
+                      const ino = (H.inodes || []).find((x: any) => x.mount === r.mount);
+                      return [<code key="m">{r.mount}</code>, `${r.use}%`, ino ? `${ino.use}%` : "—"];
+                    })}
+                  />
+                ) : undefined
+              }
             />,
             ...(H.disks || [])
               .filter((r: any) => r !== d && r.use >= 85)
@@ -441,8 +547,12 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
   );
   const fixes = fixRows.length ? (
     <>
-      <div className="lis">{fixRows.slice(0, 12)}</div>
-      {fixRows.length > 12 && <div className="dnote">{t("+{n} more", { n: fixRows.length - 12 })}</div>}
+      <div className="lis">{allFixes ? fixRows : fixRows.slice(0, 12)}</div>
+      {!allFixes && fixRows.length > 12 && (
+        <button className="lnk dnote" onClick={() => setAllFixes(true)}>
+          {t("+{n} more", { n: fixRows.length - 12 })}
+        </button>
+      )}
     </>
   ) : null;
   return (
@@ -562,6 +672,55 @@ export function ExcDetail({ x }: { x: any }) {
         <Kv k={t("Who")}>{e.owner}</Kv>
         <Kv k={t("Reason")}>{e.reason}</Kv>
       </div>
+    </>
+  );
+}
+
+/** FailedLogins: who tried and failed (the addresses that tried most, with the names they tried), which names, and when. */
+function FailedLogins({ lg }: { lg: any }) {
+  const att: any[] = [...(lg.attackers || [])].sort((a, b) => b.n - a.n);
+  const users: [string, number][] = lg.failed_top_users || [];
+  const daily = Object.entries(lg.failed_daily || {}) as [string, number][];
+  const peak = Math.max(1, ...daily.map(([, n]) => n));
+  const [all, setAll] = useState(false);
+  const shown = all ? att : att.slice(0, 15);
+  return (
+    <>
+      {att.length > 0 && (
+        <Tbl
+          head={[t("Address"), t("Attempts"), t("When"), t("Names tried")]}
+          r={[1]}
+          rows={shown.map((x) => [
+            <code key="ip">{x.ip}</code>,
+            fmtN(x.n),
+            x.first === x.last
+              ? tsShort(x.first)
+              : `${tsShort(x.first)} – ${tsShort(x.last).slice(String(x.first).slice(0, 10) === String(x.last).slice(0, 10) ? -5 : 0)}`,
+            (x.users || []).map((u: [string, number]) => u[0]).join(", "),
+          ])}
+        />
+      )}
+      {att.length > shown.length && (
+        <button className="lnk" onClick={() => setAll(true)}>
+          {t("+{n} more", { n: att.length - shown.length })}
+        </button>
+      )}
+      {users.length > 0 && (
+        <p className="li-note">
+          {t("Names tried most")}: <code>{users.map(([u, n]) => `${u} ${fmtN(n)}`).join(", ")}</code>
+        </p>
+      )}
+      {daily.length > 0 && (
+        <div className="days" aria-label={t("Failed logins by day")}>
+          {daily.map(([d, n]) => (
+            <div key={d} className="day">
+              <span>{d.slice(5)}</span>
+              <i style={{ width: `${Math.max(2, (100 * n) / peak)}%` }} />
+              <span>{fmtN(n)}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }

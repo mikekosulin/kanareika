@@ -427,7 +427,7 @@ main {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr) clamp(420px, 34vw, 640px);
 }
 .listcol {
   display: flex;
@@ -4551,6 +4551,63 @@ code.to,
 }
 .li.more.open > .i {
   transform: none;
+}
+.li-more.box {
+  white-space: normal;
+  font: 13px/1.4 var(--font);
+  max-height: 420px;
+  overflow: auto;
+}
+.li-more.box .tbl {
+  font-size: 12.5px;
+  width: auto;
+  min-width: 100%;
+}
+.li-more.box .tbl th,
+.li-more.box .tbl td {
+  white-space: nowrap;
+  padding-right: 14px;
+}
+.li-more.box .tbl td:last-child,
+.li-more.box .tbl th:last-child {
+  padding-right: 0;
+}
+.li-more.box .tbl td code {
+  font-size: 12px;
+}
+.li-more.box .lnk,
+.li-more.box .li-note {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+}
+.hostlist {
+  display: block;
+  margin-top: 4px;
+  font: 12px var(--mono);
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.days {
+  display: grid;
+  gap: 3px;
+  margin-top: 10px;
+  font: 12px var(--mono);
+  color: var(--ink-3);
+}
+.day {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 56px;
+  gap: 8px;
+  align-items: center;
+}
+.day i {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--p2);
+}
+.day span:last-child {
+  text-align: right;
 }
 .li-more {
   margin: 0 0 8px 38px;

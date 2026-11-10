@@ -35,6 +35,7 @@ export interface State {
   stack: { id: string; label: string }[]; // the details panel's way back
   sel: Set<string>; // nodes in the task for an agent
   wantHost: string; // a server to show once Servers has its rows (from the address, or a link)
+  wantNode: string; // a fix, CVE or group to show once ToDo has its rows (node= in the address)
   // History
   vq: string;
   vsel: string;
@@ -70,6 +71,7 @@ export const useApp = create<State>(() => ({
   stack: [],
   sel: new Set(),
   wantHost: "",
+  wantNode: "",
   vq: "",
   vsel: "",
   vitem: null,
@@ -169,6 +171,7 @@ export function syncURL(push = false) {
   const show = s.view === "servers" && s.lens !== "priorities" ? s.lens : "";
   const f = s.view === "todo" && s.accepted ? "accepted" : "";
   const b = s.view === "todo" && s.tby !== "fix" ? s.tby : s.view === "servers" && s.sby !== "host" ? s.sby : "";
+  const node = s.view === "todo" && !s.accepted ? s.wantNode || s.cur || "" : "";
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries({
     org: s.org,
@@ -178,6 +181,7 @@ export function syncURL(push = false) {
     show,
     f,
     host,
+    node,
     lang: keep || "",
   }))
     if (v) p.set(k, v);
@@ -195,6 +199,7 @@ export function readURL() {
   if (p.get("env")) patch.env = p.get("env")!;
   patch.run = p.get("run") || "current";
   patch.wantHost = view === "servers" || view === "history" ? p.get("host") || "" : "";
+  patch.wantNode = view === "todo" ? p.get("node") || "" : "";
   if (view === "todo" && p.get("by")) patch.tby = by(p.get("by"), get().tby);
   if (view === "servers") patch.sby = p.get("by") === "fix" || p.get("by") === "cve" ? (p.get("by") as By) : "host";
   set(patch);

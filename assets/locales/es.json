@@ -1054,6 +1054,24 @@
     "{n} logins from {m} addresses, 30 d": "{n} accesos desde {m} direcciones, 30 d",
     "{n} runs · last {ago}": "{n} ejecuciones · última {ago}",
     "{n} unreachable": "{n} inaccesibles",
-    "{n} with nothing to install yet": "{n} aún sin nada que instalar"
+    "{n} with nothing to install yet": "{n} aún sin nada que instalar",
+    "Method": "Método",
+    "Logins": "Accesos",
+    "Type": "Tipo",
+    "Comment": "Comentario",
+    "File": "Archivo",
+    "Attempts": "Intentos",
+    "Port": "Puerto",
+    "Process": "Proceso",
+    "Mount": "Montaje",
+    "Used": "Usado",
+    "Setting": "Ajuste",
+    "Value": "Valor",
+    "Names tried": "Nombres probados",
+    "Names tried most": "Nombres más probados",
+    "Failed logins by day": "Accesos fallidos por día",
+    "sshd settings": "ajustes de sshd",
+    "users with a shell": "usuarios con shell",
+    "last sessions ({n})": "últimas sesiones ({n})"
   }
 }
