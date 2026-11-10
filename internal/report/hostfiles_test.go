@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -66,6 +67,9 @@ func readIDs(t *testing.T, path string) []string {
 }
 
 func TestHostFilesErrors(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows lists a file as a directory that is not there")
+	}
 	dir := t.TempDir()
 	writeText(t, filepath.Join(dir, "hosts"), "x")
 	if _, err := HostFiles(dir); err == nil {
@@ -126,7 +130,7 @@ func TestWriteFindingsFileRoundTrip(t *testing.T) {
 	if got := readIDs(t, p); !slices.Equal(got, []string{"web-01/CVE-1", "web-02/CVE-2"}) {
 		t.Fatalf("read back %v", got)
 	}
-	if st, err := os.Stat(p); err != nil || st.Mode().Perm() != 0o644 {
+	if st, err := os.Stat(p); err != nil || runtime.GOOS != "windows" && st.Mode().Perm() != 0o644 {
 		t.Fatalf("mode %v %v", st, err)
 	}
 	if l := tmpFiles(t, filepath.Dir(p)); l != nil {
@@ -148,6 +152,9 @@ func TestWriteFindingsErrors(t *testing.T) {
 		}
 	})
 	t.Run("read-only dir", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("no read-only directories by mode on Windows")
+		}
 		dir := t.TempDir()
 		readOnly(t, dir)
 		if err := WriteFindingsFile(filepath.Join(dir, "x.json.gz"), nil); err == nil {

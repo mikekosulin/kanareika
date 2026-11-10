@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -115,7 +116,7 @@ func TestFilesThatFail(t *testing.T) {
 	if _, err := Load(ctx, reports, dir); err == nil {
 		t.Fatal("a broken findings file read as findings")
 	}
-	// hosts/ that is a file: the host files can't be listed
+	// hosts/ that is a file: the host files can't be listed (Windows reads it as no directory: no hosts)
 	bad := filepath.Join(reports, "acme", "staging", "current")
 	if err := os.MkdirAll(bad, 0o755); err != nil {
 		t.Fatal(err)
@@ -123,7 +124,7 @@ func TestFilesThatFail(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(bad, "hosts"), nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := Sync(ctx, reports, bad); err == nil {
+	if err := Sync(ctx, reports, bad); err == nil && runtime.GOOS != "windows" {
 		t.Fatal("hosts/ as a file synced")
 	}
 	// the reports directory is a file: no database

@@ -143,11 +143,13 @@ func goneHost(t *testing.T, reports, run, _ string) string {
 // TestDescriptionsThatFail: the query for descriptions failing is the error of the fetch.
 func TestDescriptionsThatFail(t *testing.T) {
 	reports := t.TempDir()
-	if _, err := Open(context.Background(), reports); err != nil {
+	db, err := Open(context.Background(), reports)
+	if err != nil {
 		t.Fatal(err)
 	}
+	_ = db.Close() // an open file can't be removed on Windows
 	hook(t, &failQuery{match: `FROM "descs"`})
-	_, err := descriptions(reports, []int64{1<<32 | 2})
+	_, err = descriptions(reports, []int64{1<<32 | 2})
 	canceled(t, "descriptions", err)
 }
 

@@ -87,12 +87,12 @@ func TestRunSpoolWriteFails(t *testing.T) {
 		}
 	}
 	slices.Sort(failed)
-	if len(failed) != 2 || !strings.HasPrefix(failed[0], "app:1: ") || !strings.Contains(failed[0], "not a directory") ||
+	if len(failed) != 2 || !strings.HasPrefix(failed[0], "app:1: ") || !strings.Contains(failed[0], "mkdir ") ||
 		failed[1] != "b: trivy image: unauthorized" {
 		t.Errorf("failed %q", failed)
 	}
 	if !slices.ContainsFunc(*logs, func(l string) bool {
-		return strings.HasPrefix(l, "web-01: docker: [") && strings.Contains(l, "app:1: FAILED") && strings.Contains(l, "not a directory")
+		return strings.HasPrefix(l, "web-01: docker: [") && strings.Contains(l, "app:1: FAILED mkdir ")
 	}) {
 		t.Errorf("logs %q", *logs)
 	}
