@@ -1085,6 +1085,10 @@
     "Kernel log": "Registro del kernel",
     "All packages": "Todos los paquetes",
     "Authorized keys": "Claves autorizadas",
-    "Firewall rules": "Reglas del cortafuegos"
+    "Firewall rules": "Reglas del cortafuegos",
+    "Full width": "A todo el ancho",
+    "Beside the list": "Junto a la lista",
+    "Collapse the sidebar": "Contraer el panel",
+    "Expand the sidebar": "Expandir el panel"
   }
 }

@@ -151,6 +151,57 @@ svg.i {
 .brand kbd {
   margin-left: auto;
 }
+.minibtn {
+  padding: 4px;
+  color: var(--ink-3);
+  display: inline-flex;
+}
+.minibtn:hover {
+  color: var(--ink);
+}
+/* the navigation as a strip of icons: what's here stays, the words go; the views count on their icons */
+@media (min-width: 861px) {
+  .app.mini {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+  .mini .brand {
+    flex-direction: column;
+    padding: 14px 0 10px;
+    gap: 12px;
+  }
+  .mini .brandname,
+  .mini .palbtn,
+  .mini .scope2,
+  .mini .navl,
+  .mini .navnote,
+  .mini .status .row > span:last-child,
+  .mini .status .btn,
+  .mini .lim,
+  .mini .foot2 {
+    display: none;
+  }
+  .mini .nav {
+    padding: 8px 6px;
+  }
+  .mini .side::before {
+    display: none;
+  }
+  .mini .nav a {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 8px 0 6px;
+  }
+  .mini .nav a .n {
+    margin: 0;
+    font-size: 10.5px;
+    line-height: 1;
+  }
+  .mini .status {
+    padding: 12px 0;
+    justify-items: center;
+  }
+}
 .brand img {
   width: 22px;
   height: 22px;
@@ -885,6 +936,24 @@ kbd {
 .back {
   display: none;
 }
+/* full width: the picked row's details take the page; the list is back on Esc, × or the same button */
+.work.wide:not(.solo) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.work.wide:not(.solo) > .listcol {
+  display: none;
+}
+.work.wide > .detail {
+  border-left: 0;
+}
+.work.wide > .detail > * {
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.work.wide .li-more.box {
+  max-height: none;
+}
 /* a wide window: the details panel beside the list while a row is picked, × puts it away */
 .work.solo {
   grid-template-columns: minmax(0, 1fr);
@@ -894,7 +963,7 @@ kbd {
 }
 .dh {
   position: relative;
-  padding-right: 52px;
+  padding-right: 88px;
 }
 .dh .dclose {
   position: absolute;
@@ -903,6 +972,14 @@ kbd {
   padding: 6px;
   color: var(--ink-3);
 }
+.dh .dwide {
+  position: absolute;
+  top: 14px;
+  right: 48px;
+  padding: 6px;
+  color: var(--ink-3);
+}
+.dh .dwide:hover,
 .dh .dclose:hover {
   color: var(--ink);
 }
@@ -1498,7 +1575,8 @@ dialog footer {
     display: inline-flex;
     margin: 0 0 8px -8px;
   }
-  .dh .dclose {
+  .dh .dclose,
+  .dh .dwide {
     display: none;
   }
 }
@@ -1899,9 +1977,24 @@ dialog footer {
 .node.kid {
   min-height: 34px;
   font-size: 13px;
-} /* nested: shown by the indent, not a tint */
+} /* nested: a tint, a guide beside the name and a quieter priority (it is usually the row above's) */
+.node.kid,
+.node.cloud {
+  background: color-mix(in srgb, var(--solid) 55%, transparent);
+}
+.node.kid:hover {
+  background: var(--hover);
+}
+.node.kid[aria-selected="true"] {
+  background: var(--sel);
+}
 .node.kid .main {
   padding-left: 18px;
+  box-shadow: inset 2px 0 0 var(--line-2);
+  margin-left: 4px;
+}
+.node.kid .pb {
+  opacity: 0.45;
 }
 .node.sec {
   min-height: 26px;

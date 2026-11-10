@@ -79,6 +79,7 @@ export function Todo() {
   useTreeKeys(rows, show, s.view === "todo");
   // nothing picked: the list alone; node= in the address picks one once the rows are in
   const solo = useApp((s) => (s.accepted ? s.vitem?.kind !== "exc" : !s.cur));
+  const wide = useApp((s) => s.detailWide);
   useEffect(() => {
     const st = useApp.getState();
     if (!tree.data || tree.isPlaceholderData || !st.wantNode) return;
@@ -94,7 +95,7 @@ export function Todo() {
   return (
     <>
       <Banner />
-      <div className={"work" + (solo ? " solo" : "")}>
+      <div className={"work" + (solo ? " solo" : "") + (wide ? " wide" : "")}>
         <div className="listcol">
           <div className="work-top">
             <div className="hdr">
@@ -165,7 +166,7 @@ export function Todo() {
                 <div className="thead">
                   <AllButton nodes={nodes} />
                   <span />
-                  <SortHead k="pri" asc sort={s.sort} onSort={setSort}>
+                  <SortHead k="pri" sort={s.sort || "pri"} onSort={setSort}>
                     {t("Pri")}
                   </SortHead>
                   <SortHead k="name" asc sort={s.sort} onSort={setSort}>

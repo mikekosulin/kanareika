@@ -1085,6 +1085,10 @@
     "Kernel log": "커널 로그",
     "All packages": "모든 패키지",
     "Authorized keys": "허용된 키",
-    "Firewall rules": "방화벽 규칙"
+    "Firewall rules": "방화벽 규칙",
+    "Full width": "전체 너비",
+    "Beside the list": "목록 옆에",
+    "Collapse the sidebar": "사이드바 접기",
+    "Expand the sidebar": "사이드바 펼치기"
   }
 }

@@ -6,13 +6,13 @@ import { local } from "../lib/local";
 import { api, post, qs } from "../lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { ago, runLabel } from "../lib/format";
-import { go, isTree, openServer, set, setBy, setScope, setTheme, syncURL, toast, useApp, useS, type View } from "../state";
+import { go, isTree, openServer, set, setBy, setScope, setTheme, syncURL, toast, toggleMini, useApp, useS, type View } from "../state";
 import { client, useDB, useEnv, useJobs, useOrgs, useRunData, useSession } from "../queries";
 import { Icon } from "../components/ui";
 
 const NAV: [View, string, string][] = [
   ["servers", "Servers", "server"],
-  ["todo", "ToDo", "list"],
+  ["todo", "ToDo", "plan"],
   ["history", "History", "clock"],
 ];
 
@@ -84,7 +84,7 @@ export function Prefs() {
 }
 
 export function Sidebar() {
-  const s = useS((s) => ({ view: s.view, org: s.org, env: s.env, run: s.run, sideOpen: s.sideOpen }));
+  const s = useS((s) => ({ view: s.view, org: s.org, env: s.env, run: s.run, sideOpen: s.sideOpen, mini: s.sideMini }));
   const orgs = useOrgs().data?.orgs || [];
   const env = useEnv().data;
   const scans = useSession().data?.scans;
@@ -109,14 +109,22 @@ export function Sidebar() {
   return (
     <aside className={"side" + (s.sideOpen ? " open" : "")} id="side" aria-label="Navigation">
       <div className="brand">
-        <img src="/logo.webp" alt="" /> kanareika
+        <img src="/logo.webp" alt="" /> <span className="brandname">kanareika</span>
         <button
-          className="btn ghost"
+          className="btn ghost palbtn"
           style={{ marginLeft: "auto", height: 26, padding: "0 6px" }}
           aria-label="Command palette"
           onClick={() => set({ palOpen: true })}
         >
           <kbd>⌘K</kbd>
+        </button>
+        <button
+          className="lnk minibtn"
+          aria-label={s.mini ? t("Expand the sidebar") : t("Collapse the sidebar")}
+          aria-pressed={s.mini}
+          onClick={toggleMini}
+        >
+          <Icon name="sidebar" />
         </button>
       </div>
       <div className="scope2">
@@ -182,7 +190,7 @@ export function Sidebar() {
               }}
             >
               <Icon name={i} />
-              {t(l)}
+              <span className="navl">{t(l)}</span>
               {v === "servers" && e ? (
                 <span className="n">{e.hosts}</span>
               ) : v === "todo" && fixes != null ? (

@@ -1085,6 +1085,10 @@
     "Kernel log": "内核日志",
     "All packages": "全部软件包",
     "Authorized keys": "授权密钥",
-    "Firewall rules": "防火墙规则"
+    "Firewall rules": "防火墙规则",
+    "Full width": "全宽",
+    "Beside the list": "在列表旁",
+    "Collapse the sidebar": "收起侧栏",
+    "Expand the sidebar": "展开侧栏"
   }
 }

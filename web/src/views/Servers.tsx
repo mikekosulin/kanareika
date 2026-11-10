@@ -59,12 +59,13 @@ export function Servers() {
     }
   }, [tr, tree.isPlaceholderData]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => syncURL(), [s.lens]);
+  const wide = useApp((st) => st.detailWide);
 
   if (tree.error && (tree.error as any).status === 404) return <NoRuns />;
   return (
     <>
       <Banner />
-      <div className={"work" + (s.cur ? "" : " solo")}>
+      <div className={"work" + (s.cur ? "" : " solo") + (wide ? " wide" : "")}>
         <div className="listcol">
           <div className="work-top">
             <div className="hdr">
@@ -101,7 +102,7 @@ export function Servers() {
                   <SortHead k="name" asc sort={s.sort} onSort={setSort}>
                     {t("Server")}
                   </SortHead>
-                  <SortHead k="pri" asc sort={s.sort} onSort={setSort}>
+                  <SortHead k="pri" sort={s.sort || "pri"} onSort={setSort}>
                     {t("Priorities")}
                   </SortHead>
                   <SortHead k="fixes" className="r c-fx" sort={s.sort} onSort={setSort}>

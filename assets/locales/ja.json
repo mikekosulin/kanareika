@@ -1085,6 +1085,10 @@
     "Kernel log": "カーネルログ",
     "All packages": "すべてのパッケージ",
     "Authorized keys": "許可された鍵",
-    "Firewall rules": "ファイアウォールのルール"
+    "Firewall rules": "ファイアウォールのルール",
+    "Full width": "全幅で表示",
+    "Beside the list": "リストの横に表示",
+    "Collapse the sidebar": "サイドバーをたたむ",
+    "Expand the sidebar": "サイドバーを広げる"
   }
 }

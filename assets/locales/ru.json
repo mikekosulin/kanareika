@@ -1085,6 +1085,10 @@
     "Kernel log": "Журнал ядра",
     "All packages": "Все пакеты",
     "Authorized keys": "Ключи доступа",
-    "Firewall rules": "Правила файрвола"
+    "Firewall rules": "Правила файрвола",
+    "Full width": "Во всю ширину",
+    "Beside the list": "Рядом со списком",
+    "Collapse the sidebar": "Свернуть панель",
+    "Expand the sidebar": "Развернуть панель"
   }
 }

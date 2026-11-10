@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { t } from "../lib/i18n";
 import { api, qs } from "../lib/api";
 import { ago, fmtN, narrow, runLabel, tsShort, took } from "../lib/format";
-import { set, setScope, useS } from "../state";
+import { set, setScope, useApp, useS } from "../state";
 import { useEnv, useJobs, useSession } from "../queries";
 import { Empty, DetailClose, Icon, Kv, Search, Sec, Skeleton, Spin } from "../components/ui";
 import { DataTable, type Col } from "../components/DataTable";
@@ -80,6 +80,7 @@ export function History() {
   const open = (x: any) => set({ vsel: key(x), vitem: x, detailOpen: narrow() });
   // the item shown follows its row (a running job's output grows)
   const shown = vitem ? all.find((x) => key(x) === key(vitem)) || vitem : null;
+  const wide = useApp((s) => s.detailWide);
   const done = (envd.data?.runs || []).filter((r: any) => r.state === "done");
   const cols: Col<any>[] = [
     {
@@ -128,7 +129,7 @@ export function History() {
   return (
     <>
       <Banner />
-      <div className={"work" + (shown ? "" : " solo")}>
+      <div className={"work" + (shown ? "" : " solo") + (wide ? " wide" : "")}>
         <div className="listcol">
           <div className="work-top">
             <div className="hdr">

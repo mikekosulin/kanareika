@@ -46,9 +46,10 @@ export function App() {
     if (s.env) local.set("env", s.env);
   }, [s.org, s.env]);
   const setup = s.view === "setup" || (orgs.data && !orgs.data.orgs.length);
+  const mini = useApp((st) => st.sideMini);
   if (!orgs.data) return <div className="app" />;
   return (
-    <div className={"app" + (setup ? " setupmode" : "")}>
+    <div className={"app" + (setup ? " setupmode" : "") + (mini ? " mini" : "")}>
       <Sidebar />
       <div className={"scrim" + (s.sideOpen ? " on" : "")} onClick={() => set({ sideOpen: false })} />
       <main>

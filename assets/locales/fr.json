@@ -1085,6 +1085,10 @@
     "Kernel log": "Journal du noyau",
     "All packages": "Tous les paquets",
     "Authorized keys": "Clés autorisées",
-    "Firewall rules": "Règles du pare-feu"
+    "Firewall rules": "Règles du pare-feu",
+    "Full width": "Pleine largeur",
+    "Beside the list": "À côté de la liste",
+    "Collapse the sidebar": "Réduire le panneau",
+    "Expand the sidebar": "Déplier le panneau"
   }
 }

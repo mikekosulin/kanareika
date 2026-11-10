@@ -1085,6 +1085,10 @@
     "Kernel log": "Registro do kernel",
     "All packages": "Todos os pacotes",
     "Authorized keys": "Chaves autorizadas",
-    "Firewall rules": "Regras do firewall"
+    "Firewall rules": "Regras do firewall",
+    "Full width": "Largura total",
+    "Beside the list": "Ao lado da lista",
+    "Collapse the sidebar": "Recolher o painel",
+    "Expand the sidebar": "Expandir o painel"
   }
 }

@@ -110,6 +110,7 @@ func shots(out, home, bin, org, env, size, keys, at string) error {
 			return err
 		} else if id != "" {
 			where.Set("node", id)
+			where.Set("wide", "0") // the details beside the list: both in one picture
 		}
 		page2 := web.URL + "/todo?" + where.Encode()
 		if err := shot(bin, page2, filepath.Join(out, "web-"+lang+".png"), webW, webH,
