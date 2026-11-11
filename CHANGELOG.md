@@ -11,6 +11,16 @@ Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor ve
 ### Changed
 
 - Performance fixes.
+- **Web: what a scan collects is on the page, not in tooltips.** A server's logins (each address and user), failed logins (who tried, which names, per day), keys with fingerprints, sshd settings, sessions, ports, disks, firewall and kernel open on a click; long lists open in full.
+- **Web: a server's or a fix's details take the whole page** (Esc or × goes back to the list); the button beside × puts them next to the list instead. Nothing is picked on opening. The sidebar folds to icons.
+- **TUI: the host card shows everything a run read:** every key, login and attacker, sessions, the kernel log, firewall rules and accepted risks.
+- A link can open a fix or CVE in ToDo (`node=` in the address).
+
+### Fixed
+
+- Web: sorting by priority put P4 first; the most urgent are first now, a click turns it around. Nested rows look nested.
+- Web: the Logins, Network and Health columns were a letter wide.
+- Adding hosts to an organization from several tabs at once could answer "unknown org" on Windows.
 
 ## 0.5.1 — 2026-11-09
 

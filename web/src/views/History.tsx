@@ -1,13 +1,13 @@
 // History: the environment's runs and the scans started here; a run's details: what it found, what changed
 // against the full run before it, its log.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { t } from "../lib/i18n";
 import { api, qs } from "../lib/api";
 import { ago, fmtN, narrow, runLabel, tsShort, took } from "../lib/format";
-import { set, setScope, useS } from "../state";
+import { set, setScope, useApp, useS } from "../state";
 import { useEnv, useJobs, useSession } from "../queries";
-import { Empty, Icon, Kv, Search, Sec, Skeleton, Spin } from "../components/ui";
+import { Empty, DetailClose, Icon, Kv, Search, Sec, Skeleton, Spin } from "../components/ui";
 import { DataTable, type Col } from "../components/DataTable";
 import { Banner, startScan } from "./Shell";
 
@@ -78,11 +78,9 @@ export function History() {
   }, [all, vq]);
   const key = (x: any) => x.id || x.run_id;
   const open = (x: any) => set({ vsel: key(x), vitem: x, detailOpen: narrow() });
-  useEffect(() => {
-    if (items[0] && !vitem && !narrow()) open(items[0]);
-  }, [items.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
   // the item shown follows its row (a running job's output grows)
   const shown = vitem ? all.find((x) => key(x) === key(vitem)) || vitem : null;
+  const wide = useApp((s) => s.detailWide);
   const done = (envd.data?.runs || []).filter((r: any) => r.state === "done");
   const cols: Col<any>[] = [
     {
@@ -131,7 +129,7 @@ export function History() {
   return (
     <>
       <Banner />
-      <div className="work">
+      <div className={"work" + (shown ? "" : " solo") + (wide ? " wide" : "")}>
         <div className="listcol">
           <div className="work-top">
             <div className="hdr">
@@ -195,10 +193,7 @@ function RunDetail({ x }: { x: any }) {
   return (
     <>
       <div className="dh">
-        <button className="btn ghost back" onClick={() => set({ detailOpen: false })}>
-          <Icon name="left" />
-          {t("Back")}
-        </button>
+        <DetailClose />
         <div className="meta">
           <RunState x={x} />
         </div>
@@ -234,6 +229,7 @@ function RunDetail({ x }: { x: any }) {
             <>
               {x.hosts_total - (x.hosts_failed || 0)} / {x.hosts_total}
               {x.hosts_failed ? <span className="bad"> · {t("{n} unreachable", { n: x.hosts_failed })}</span> : null}
+              {(x.failed || []).length > 0 && <code className="hostlist">{x.failed.join(", ")}</code>}
             </>
           ) : null}
         </Kv>
@@ -277,7 +273,7 @@ function RunDetail({ x }: { x: any }) {
             </button>
           )}
           {failed.length > 0 && (
-            <button className="btn" title={failed.join(", ")} onClick={() => startScan(org, env, failed)}>
+            <button className="btn" onClick={() => startScan(org, env, failed)}>
               <Icon name="scan" />
               {t("Retry {n} unreachable", { n: failed.length })}
             </button>
@@ -292,21 +288,7 @@ function RunDetail({ x }: { x: any }) {
 function Changes({ d, loading }: { d: any; loading: boolean }) {
   if (loading || !d) return <Spin />;
   if (!d.new) return <div className="dnote">{d.error || t("No previous full run.")}</div>;
-  const row = (r: any, plus: boolean, i: number) => (
-    <div key={i} className="li" title={(r.ids || []).join(", ")}>
-      <span className={"mk " + (plus ? "bad" : "ok")}>{plus ? "+" : "−"}</span>
-      <span>
-        {r.priority && <span className={"pb " + r.priority}>{r.priority}</span>} <code>{r.pkg}</code> <span className="z">{r.host}</span>
-      </span>
-      <span>{r.count ? fmtN(r.count) + " CVE" : ""}</span>
-    </div>
-  );
-  const part = (rows: any[], plus: boolean) => (
-    <>
-      <div className="lis">{rows.slice(0, 20).map((r, i) => row(r, plus, i))}</div>
-      {rows.length > 20 && <div className="dnote">{t("+{n} more", { n: rows.length - 20 })}</div>}
-    </>
-  );
+  const part = (rows: any[], plus: boolean) => <ChangeList rows={rows} plus={plus} />;
   const nw = d.new.rows || [],
     rs = d.resolved?.rows || [];
   return (
@@ -318,6 +300,60 @@ function Changes({ d, loading }: { d: any; loading: boolean }) {
       {nw.length > 0 && part(nw, true)}
       {rs.length > 0 && part(rs, false)}
       {!nw.length && !rs.length && <div className="dnote">{t("Nothing changed")}</div>}
+    </>
+  );
+}
+
+/** ChangeList: a run's new or resolved fixes; a line opens its CVEs, the rest of the list opens on +N more. */
+function ChangeList({ rows, plus }: { rows: any[]; plus: boolean }) {
+  const [all, setAll] = useState(false);
+  const [open, setOpen] = useState<number | null>(null);
+  const shown = all ? rows : rows.slice(0, 20);
+  return (
+    <>
+      <div className="lis">
+        {shown.map((r, i) => {
+          const ids: string[] = r.ids || [];
+          const line = (
+            <>
+              <span className={"mk " + (plus ? "bad" : "ok")}>{plus ? "+" : "−"}</span>
+              <span>
+                {r.priority && <span className={"pb " + r.priority}>{r.priority}</span>} <code>{r.pkg}</code>{" "}
+                <span className="z">{r.host}</span>
+              </span>
+              <span>{r.count ? fmtN(r.count) + " CVE" : ""}</span>
+            </>
+          );
+          if (!ids.length)
+            return (
+              <div key={i} className="li">
+                {line}
+              </div>
+            );
+          const flip = () => setOpen(open === i ? null : i);
+          return (
+            <Fragment key={i}>
+              <div
+                className={"li more" + (open === i ? " open" : "")}
+                role="button"
+                tabIndex={0}
+                aria-expanded={open === i}
+                onClick={flip}
+                onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), flip())}
+              >
+                {line}
+                <Icon name="chev" />
+              </div>
+              {open === i && <pre className="li-more">{ids.join(", ")}</pre>}
+            </Fragment>
+          );
+        })}
+      </div>
+      {!all && rows.length > 20 && (
+        <button className="lnk dnote" onClick={() => setAll(true)}>
+          {t("+{n} more", { n: rows.length - 20 })}
+        </button>
+      )}
     </>
   );
 }

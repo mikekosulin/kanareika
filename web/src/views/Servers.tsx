@@ -4,7 +4,7 @@ import { useCallback, useEffect, useEffectEvent, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { t } from "../lib/i18n";
 import { ago, days, dueText, narrow, pct } from "../lib/format";
-import { set, setBy, setSort, syncURL, toggle, useApp, useS } from "../state";
+import { closeDetail, set, setBy, setSort, syncURL, toggle, useApp, useS } from "../state";
 import { client, treeParams, useEnv, useKids, useLens, useNode, useRunData, useTree, type TreeParams } from "../queries";
 import type { Tree, TreeNode } from "../types";
 import { Chips, Empty, Icon, Search, Seg, Skeleton, SortHead } from "../components/ui";
@@ -49,22 +49,23 @@ export function Servers() {
   const byName = useMemo(() => new Map(list.map((n) => [n.label, n])), [list]);
   const lenses = (lens.data?.lenses?.length ? lens.data.lenses : LENS_DEFAULT) as { id: string; title: string }[];
 
-  // the card: the server in the address, the one picked, or the first on a wide window
+  // the card: the server in the address, or the one picked; with none, the list alone
   useEffect(() => {
     if (!tr || tree.isPlaceholderData) return;
     const st = useApp.getState();
     if (st.wantHost) {
       set({ cur: "h:" + st.wantHost, wantHost: "", detailOpen: narrow() });
       syncURL();
-    } else if (!st.cur && list[0] && !narrow()) set({ cur: list[0].id });
+    }
   }, [tr, tree.isPlaceholderData]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => syncURL(), [s.lens]);
+  const wide = useApp((st) => st.detailWide);
 
   if (tree.error && (tree.error as any).status === 404) return <NoRuns />;
   return (
     <>
       <Banner />
-      <div className="work">
+      <div className={"work" + (s.cur ? "" : " solo") + (wide ? " wide" : "")}>
         <div className="listcol">
           <div className="work-top">
             <div className="hdr">
@@ -101,7 +102,7 @@ export function Servers() {
                   <SortHead k="name" asc sort={s.sort} onSort={setSort}>
                     {t("Server")}
                   </SortHead>
-                  <SortHead k="pri" asc sort={s.sort} onSort={setSort}>
+                  <SortHead k="pri" sort={s.sort || "pri"} onSort={setSort}>
                     {t("Priorities")}
                   </SortHead>
                   <SortHead k="fixes" className="r c-fx" sort={s.sort} onSort={setSort}>
@@ -235,7 +236,7 @@ function ServerRows({
       if (rows[i - 1]) show(rows[i - 1].n.id);
     } else if ((e.key === "l" || e.key === "ArrowRight") && n) set({ open: new Set(s.open).add(n.id) });
     else if ((e.key === "h" || e.key === "ArrowLeft") && n && s.open.has(n.id)) set({ open: toggle(s.open, n.id) });
-    else if (e.key === "Escape") set({ detailOpen: false });
+    else if (e.key === "Escape") closeDetail();
   });
   useEffect(() => {
     const k = (e: KeyboardEvent) => onKey(e);
@@ -414,14 +415,21 @@ function LensTable({
     { l: t("Server"), w: "minmax(96px, 1fr)", v: (r) => <Hcell n={r.host} />, s: (r) => r.host },
     ...((d.lens?.columns || []) as any[]).map((c): Col<any> => ({
       l: t(c.title),
-      w: c.width_hint
-        ? typeof c.width_hint === "number"
-          ? c.width_hint + "px"
-          : c.width_hint
-        : c.kind === "text"
-          ? "minmax(0, 1fr)"
-          : "80px",
-      k: c.drop >= 2 ? 3 : c.drop === 1 ? 2 : 1,
+      // width_hint: characters (the TUI's columns); a heading wraps rather than cut its words
+      w:
+        typeof c.width_hint === "number"
+          ? c.kind === "text"
+            ? `minmax(${c.width_hint + 2}ch, 1fr)`
+            : `${
+                Math.max(
+                  c.width_hint,
+                  ...String(t(c.title))
+                    .split(/\s+/)
+                    .map((w: string) => w.length),
+                ) + 3
+              }ch`
+          : c.width_hint || (c.kind === "text" ? "minmax(0, 1fr)" : "11ch"),
+      k: c.drop >= 3 ? 3 : c.drop === 2 ? 2 : 1, // the TUI's drop order: 0 and 1 always, 2 from a medium list, 3 from a wide one
       c: c.align === "right" ? "r" : c.kind === "text" ? "d" : "",
       v: (r) => {
         const x = r.cells?.[c.key];

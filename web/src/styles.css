@@ -151,6 +151,57 @@ svg.i {
 .brand kbd {
   margin-left: auto;
 }
+.minibtn {
+  padding: 4px;
+  color: var(--ink-3);
+  display: inline-flex;
+}
+.minibtn:hover {
+  color: var(--ink);
+}
+/* the navigation as a strip of icons: what's here stays, the words go; the views count on their icons */
+@media (min-width: 861px) {
+  .app.mini {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+  .mini .brand {
+    flex-direction: column;
+    padding: 14px 0 10px;
+    gap: 12px;
+  }
+  .mini .brandname,
+  .mini .palbtn,
+  .mini .scope2,
+  .mini .navl,
+  .mini .navnote,
+  .mini .status .row > span:last-child,
+  .mini .status .btn,
+  .mini .lim,
+  .mini .foot2 {
+    display: none;
+  }
+  .mini .nav {
+    padding: 8px 6px;
+  }
+  .mini .side::before {
+    display: none;
+  }
+  .mini .nav a {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 8px 0 6px;
+  }
+  .mini .nav a .n {
+    margin: 0;
+    font-size: 10.5px;
+    line-height: 1;
+  }
+  .mini .status {
+    padding: 12px 0;
+    justify-items: center;
+  }
+}
 .brand img {
   width: 22px;
   height: 22px;
@@ -427,7 +478,7 @@ main {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr) clamp(420px, 34vw, 640px);
 }
 .listcol {
   display: flex;
@@ -884,6 +935,53 @@ kbd {
 }
 .back {
   display: none;
+}
+/* full width: the picked row's details take the page; the list is back on Esc, × or the same button */
+.work.wide:not(.solo) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.work.wide:not(.solo) > .listcol {
+  display: none;
+}
+.work.wide > .detail {
+  border-left: 0;
+}
+.work.wide > .detail > * {
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.work.wide .li-more.box {
+  max-height: none;
+}
+/* a wide window: the details panel beside the list while a row is picked, × puts it away */
+.work.solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+.work.solo > .detail {
+  display: none;
+}
+.dh {
+  position: relative;
+  padding-right: 88px;
+}
+.dh .dclose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 6px;
+  color: var(--ink-3);
+}
+.dh .dwide {
+  position: absolute;
+  top: 14px;
+  right: 48px;
+  padding: 6px;
+  color: var(--ink-3);
+}
+.dh .dwide:hover,
+.dh .dclose:hover {
+  color: var(--ink);
 }
 .sec {
   padding: 16px 24px;
@@ -1477,6 +1575,10 @@ dialog footer {
     display: inline-flex;
     margin: 0 0 8px -8px;
   }
+  .dh .dclose,
+  .dh .dwide {
+    display: none;
+  }
 }
 @media (max-width: 860px) {
   .app {
@@ -1875,9 +1977,24 @@ dialog footer {
 .node.kid {
   min-height: 34px;
   font-size: 13px;
-} /* nested: shown by the indent, not a tint */
+} /* nested: a tint, a guide beside the name and a quieter priority (it is usually the row above's) */
+.node.kid,
+.node.cloud {
+  background: color-mix(in srgb, var(--solid) 55%, transparent);
+}
+.node.kid:hover {
+  background: var(--hover);
+}
+.node.kid[aria-selected="true"] {
+  background: var(--sel);
+}
 .node.kid .main {
   padding-left: 18px;
+  box-shadow: inset 2px 0 0 var(--line-2);
+  margin-left: 4px;
+}
+.node.kid .pb {
+  opacity: 0.45;
 }
 .node.sec {
   min-height: 26px;
@@ -3994,7 +4111,10 @@ code.to,
   position: sticky;
   top: 0;
   z-index: 3;
-  height: 32px;
+  min-height: 32px; /* a heading longer than its column takes two lines */
+  padding-top: 4px;
+  padding-bottom: 4px;
+  line-height: 1.25;
   font-size: 11.5px;
   color: var(--ink-3);
   text-transform: uppercase;
@@ -4011,9 +4131,7 @@ code.to,
   letter-spacing: inherit;
   text-transform: inherit;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-align: inherit;
 }
 .vhead button:hover,
 .vhead button[aria-sort] {
@@ -4038,6 +4156,9 @@ code.to,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.vhead > span {
+  white-space: normal; /* a heading wraps at its spaces to a second line instead of losing its end */
 }
 .vrow .r,
 .vhead .r {
@@ -4474,9 +4595,7 @@ code.to,
   color: var(--ink-3);
   font-size: 12.5px;
   margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .dkv {
   margin-top: 12px;
@@ -4510,6 +4629,92 @@ code.to,
 }
 .li code {
   font: 12.5px var(--mono);
+}
+/* a line with more to it: the whole line opens it */
+.li.more {
+  grid-template-columns: 28px minmax(0, 1fr) auto 14px;
+  cursor: pointer;
+}
+.li.more:hover > span:nth-child(2),
+.li.more:focus-visible > span:nth-child(2) {
+  color: var(--ink);
+}
+.li.more > .i {
+  width: 14px;
+  height: 14px;
+  color: var(--ink-3);
+  transform: rotate(-90deg);
+  transition: transform 0.15s var(--ease);
+}
+.li.more.open > .i {
+  transform: none;
+}
+.li-more.box {
+  white-space: normal;
+  font: 13px/1.4 var(--font);
+  max-height: 420px;
+  overflow: auto;
+}
+.li-more.box .tbl {
+  font-size: 12.5px;
+  width: auto;
+  min-width: 100%;
+}
+.li-more.box .tbl th,
+.li-more.box .tbl td {
+  white-space: nowrap;
+  padding-right: 14px;
+}
+.li-more.box .tbl td:last-child,
+.li-more.box .tbl th:last-child {
+  padding-right: 0;
+}
+.li-more.box .tbl td code {
+  font-size: 12px;
+}
+.li-more.box .lnk,
+.li-more.box .li-note {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+}
+.hostlist {
+  display: block;
+  margin-top: 4px;
+  font: 12px var(--mono);
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.days {
+  display: grid;
+  gap: 3px;
+  margin-top: 10px;
+  font: 12px var(--mono);
+  color: var(--ink-3);
+}
+.day {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 56px;
+  gap: 8px;
+  align-items: center;
+}
+.day i {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--p2);
+}
+.day span:last-child {
+  text-align: right;
+}
+.li-more {
+  margin: 0 0 8px 38px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm, 6px);
+  background: var(--raised);
+  font: 12px/1.55 var(--mono);
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* ---------- skeletons: the shape of what is loading ---------- */

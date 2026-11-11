@@ -2,6 +2,7 @@
 // selected. The address bar mirrors it (/servers?org=…&env=…), so a link or a reload lands in the same place.
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
+import { narrow } from "./lib/format";
 import { local } from "./lib/local";
 
 export type View = "servers" | "todo" | "history" | "setup";
@@ -34,13 +35,16 @@ export interface State {
   stack: { id: string; label: string }[]; // the details panel's way back
   sel: Set<string>; // nodes in the task for an agent
   wantHost: string; // a server to show once Servers has its rows (from the address, or a link)
+  wantNode: string; // a fix, CVE or group to show once ToDo has its rows (node= in the address)
   // History
   vq: string;
   vsel: string;
   vitem: Item | null;
   vstack: Item[];
-  detailOpen: boolean; // the details panel over the list on a narrow window
+  detailOpen: boolean; // the details panel over the list on a narrow window (on a wide one it shows while a row is picked)
   sideOpen: boolean;
+  detailWide: boolean; // a wide window: the picked row's details take the page instead of sitting beside the list
+  sideMini: boolean; // the navigation as a strip of icons
   palOpen: boolean;
   toast: { text: string; at: number } | null;
 }
@@ -69,12 +73,15 @@ export const useApp = create<State>(() => ({
   stack: [],
   sel: new Set(),
   wantHost: "",
+  wantNode: "",
   vq: "",
   vsel: "",
   vitem: null,
   vstack: [],
   detailOpen: false,
   sideOpen: false,
+  detailWide: local.get("wide", "1") === "1",
+  sideMini: local.get("mini", "") === "1",
   palOpen: false,
   toast: null,
 }));
@@ -106,12 +113,37 @@ export function go(view: View, q?: string) {
   syncURL(true);
 }
 
+/** closeDetail: the details panel away (its ×, Esc). On a wide window nothing stays picked and the list takes the
+ * page; on a narrow one the panel slides off over the row still picked. */
+export function closeDetail() {
+  const s = get();
+  if (narrow()) set({ detailOpen: false });
+  else if (s.view === "history") set({ vsel: "", vitem: null, vstack: [] });
+  else set({ cur: null, stack: [], ...(s.view === "todo" && s.accepted ? { vsel: "", vitem: null } : {}) });
+  syncURL();
+}
+
+/** toggleWide: the details on the whole page, or beside the list again; remembered. */
+export function toggleWide() {
+  const w = !get().detailWide;
+  local.set("wide", w ? "1" : "");
+  set({ detailWide: w });
+}
+
+/** toggleMini: the navigation as a strip of icons, or whole again; remembered. */
+export function toggleMini() {
+  const m = !get().sideMini;
+  local.set("mini", m ? "1" : "");
+  set({ sideMini: m });
+}
+
 /** setSort: the column the open view's rows are ordered by; the same column again turns the order around. */
 export function setSort(key: string) {
   const s = get(),
     k = s.view === "servers" ? "ssort" : "tsort",
-    cur = s[k];
-  set({ [k]: cur === key ? "-" + key : cur === "-" + key ? "" : key } as Partial<State>);
+    cur = s[k] || "pri"; // no sort is by priority, the most urgent first: the first click on it turns it around
+  const next = cur === key ? "-" + key : cur === "-" + key ? "" : key;
+  set({ [k]: next === "pri" ? "" : next } as Partial<State>);
 }
 
 /** setBy: the grouping of the view open, regrouped in place (Servers and ToDo each keep their own). */
@@ -158,6 +190,7 @@ export function syncURL(push = false) {
   const show = s.view === "servers" && s.lens !== "priorities" ? s.lens : "";
   const f = s.view === "todo" && s.accepted ? "accepted" : "";
   const b = s.view === "todo" && s.tby !== "fix" ? s.tby : s.view === "servers" && s.sby !== "host" ? s.sby : "";
+  const node = s.view === "todo" && !s.accepted ? s.wantNode || s.cur || "" : "";
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries({
     org: s.org,
@@ -167,6 +200,7 @@ export function syncURL(push = false) {
     show,
     f,
     host,
+    node,
     lang: keep || "",
   }))
     if (v) p.set(k, v);
@@ -184,6 +218,8 @@ export function readURL() {
   if (p.get("env")) patch.env = p.get("env")!;
   patch.run = p.get("run") || "current";
   patch.wantHost = view === "servers" || view === "history" ? p.get("host") || "" : "";
+  patch.wantNode = view === "todo" ? p.get("node") || "" : "";
+  if (p.get("wide") === "0" || p.get("wide") === "1") patch.detailWide = p.get("wide") === "1"; // this page only, not remembered
   if (view === "todo" && p.get("by")) patch.tby = by(p.get("by"), get().tby);
   if (view === "servers") patch.sby = p.get("by") === "fix" || p.get("by") === "cve" ? (p.get("by") as By) : "host";
   set(patch);

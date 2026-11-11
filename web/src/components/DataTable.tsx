@@ -2,7 +2,7 @@
 // by a column, only the rows on screen in the page, j/k to move.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useApp } from "../state";
+import { closeDetail, useApp } from "../state";
 
 export interface Col<T> {
   l: string; // label
@@ -54,10 +54,11 @@ export function DataTable<T>(p: {
     scrollMargin: listRef.current?.offsetTop ?? 0,
     getItemKey: (i) => p.rowKey(xs[i]),
   });
-  // j/k (arrows): the next or previous row
+  // j/k (arrows): the next or previous row; Esc puts the details away
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).matches?.("input, select, textarea") || useApp.getState().palOpen) return;
+      if (e.key === "Escape") return closeDetail();
       const step = e.key === "j" || e.key === "ArrowDown" ? 1 : e.key === "k" || e.key === "ArrowUp" ? -1 : 0;
       if (!step || !xs.length) return;
       e.preventDefault();
