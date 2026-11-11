@@ -119,6 +119,9 @@ func load(p string) ([]byte, error) {
 	if strings.EqualFold(filepath.Ext(p), ".png") {
 		return pngText(b), nil // pixels are compressed bytes: a short name "found" there is chance, not data
 	}
+	if strings.EqualFold(filepath.Ext(p), ".webp") {
+		return webpText(b), nil // the same for WebP: its metadata, not its pixels
+	}
 	if strings.HasSuffix(p, ".gz") {
 		if r, err := gzip.NewReader(bytes.NewReader(b)); err == nil {
 			if x, err := io.ReadAll(r); err == nil {
@@ -430,4 +433,52 @@ func pngText(b []byte) []byte {
 		i += 12 + n
 	}
 	return out
+}
+
+// webpText: what a WebP says in words: its EXIF, XMP and other chunks, not the image data (VP8, VP8L, ALPH, ANMF).
+func webpText(b []byte) []byte {
+	if len(b) < 12 || string(b[:4]) != "RIFF" || string(b[8:12]) != "WEBP" {
+		return b // not a WebP after all: every byte is looked at
+	}
+	var out []byte
+	for i := 12; i+8 <= len(b); {
+		typ := string(b[i : i+4])
+		n := int(binary.LittleEndian.Uint32(b[i+4:]))
+		if n < 0 || i+8+n > len(b) {
+			break
+		}
+		switch typ {
+		case "VP8 ", "VP8L", "ALPH", "ANMF", "VP8X", "ANIM":
+		default:
+			out = append(out, b[i+8:i+8+n]...)
+			out = append(out, '\n')
+		}
+		i += 8 + n + n%2
+	}
+	return out
+}
+
+// TestWebpText: a name in a WebP's metadata is found, the same bytes in its image data are not.
+func TestWebpText(t *testing.T) {
+	chunk := func(typ, data string) []byte {
+		b := append([]byte(typ), 0, 0, 0, 0)
+		binary.LittleEndian.PutUint32(b[4:], uint32(len(data)))
+		b = append(b, data...)
+		if len(data)%2 == 1 {
+			b = append(b, 0)
+		}
+		return b
+	}
+	body := append([]byte("WEBP"), chunk("VP8L", "pixels-acme-secret")...)
+	body = append(body, chunk("EXIF", "made by example-org")...)
+	b := append([]byte("RIFF"), 0, 0, 0, 0)
+	binary.LittleEndian.PutUint32(b[4:], uint32(len(body)))
+	b = append(b, body...)
+	got := string(webpText(b))
+	if !strings.Contains(got, "example-org") || strings.Contains(got, "secret") {
+		t.Errorf("%q", got)
+	}
+	if string(webpText([]byte("not a webp"))) != "not a webp" {
+		t.Error("a file that is not a WebP is read whole")
+	}
 }

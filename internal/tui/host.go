@@ -1,11 +1,14 @@
 package tui
 
 import (
+	"context"
 	"fmt"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -42,6 +45,14 @@ func (m *Model) hostCard(name string, w int) []string {
 	}
 	kv := func(k, v string) {
 		out = append(out, " "+sLabel.Render(fit(m.t.T(k), 20, false))+" "+v)
+	}
+
+	// a section shows its first lines and "+n more ↓"; the whole lists go last, after the summaries
+	var tail []func()
+	more := func(n, shown int) {
+		if n > shown {
+			out = append(out, " "+fit("", 20, false)+" "+sMuted.Render(m.t.F("+{n} more", "n", strconv.Itoa(n-shown))+" ↓"))
+		}
 	}
 
 	// overview
@@ -85,18 +96,26 @@ func (m *Model) hostCard(name string, w int) []string {
 		}
 	}
 	if len(pk) > 0 {
-		section("Packages")
-		for i, p := range pk {
-			if i == 8 {
-				out = append(out, " "+sMuted.Render(m.t.F("+{n} more", "n", strconv.Itoa(len(pk)-8)))+" "+sKey.Render("<4>"))
-				break
-			}
+		pkgLine := func(p planRow) string {
 			kev := ""
 			if p.KEV {
 				kev = " " + sErr.Render("KEV")
 			}
-			out = append(out, fmt.Sprintf(" %s %s %s %s %s%s%s", prio(p.Priority), sBold.Render(fit(p.Pkg, 22, false)),
-				sMuted.Render(p.Installed), sMuted.Render("->"), sOK.Render(p.Fixed), sMuted.Render(fmt.Sprintf("  %d CVE", p.CVEs)), kev))
+			return fmt.Sprintf(" %s %s %s %s %s%s%s", prio(p.Priority), sBold.Render(fit(p.Pkg, 22, false)),
+				sMuted.Render(p.Installed), sMuted.Render("->"), sOK.Render(p.Fixed), sMuted.Render(fmt.Sprintf("  %d CVE", p.CVEs)), kev)
+		}
+		section("Packages")
+		for _, p := range pk[:min(len(pk), 8)] {
+			out = append(out, pkgLine(p))
+		}
+		if len(pk) > 8 {
+			out = append(out, " "+sMuted.Render(m.t.F("+{n} more", "n", strconv.Itoa(len(pk)-8))+" ↓"))
+			tail = append(tail, func() {
+				section("All packages")
+				for _, p := range pk {
+					out = append(out, pkgLine(p))
+				}
+			})
 		}
 	}
 
@@ -123,6 +142,12 @@ func (m *Model) hostCard(name string, w int) []string {
 		if u := arr(a["users_with_password"]); len(u) > 0 {
 			kv("users with password", sErr.Render(joinAny(u)))
 		}
+		if u := arr(a["login_users"]); len(u) > 0 {
+			kv("login users", sText.Render(joinAny(u)))
+		}
+		if u := arr(a["uid0"]); len(u) > 1 || (len(u) == 1 && str(u[0]) != "root") {
+			kv("root accounts", sErr.Render(joinAny(u)))
+		}
 		if keys := arr(a["keys"]); keys != nil {
 			root := 0
 			for _, k := range keys {
@@ -130,33 +155,82 @@ func (m *Model) hostCard(name string, w int) []string {
 					root++
 				}
 			}
-			kv("authorized keys", sText.Render(fmt.Sprintf("%d", len(keys)))+sMuted.Render(fmt.Sprintf(" (root: %d)", root)))
+			down := ""
+			if len(keys) > 0 {
+				down = " ↓"
+			}
+			kv("authorized keys", sText.Render(fmt.Sprintf("%d", len(keys)))+sMuted.Render(fmt.Sprintf(" (root: %d)", root)+down))
+			if len(keys) > 0 {
+				// each key: whose, what kind, its fingerprint and comment (who it belongs to)
+				tail = append(tail, func() {
+					section("Authorized keys")
+					for _, x := range keys {
+						k := obj(x)
+						fp := str(k["fp"])
+						if _, after, ok := strings.Cut(fp, ":"); ok && len(after) > 12 {
+							fp = after[:12] + "…"
+						}
+						opts := ""
+						if o := str(k["options"]); o != "" {
+							opts = sMuted.Render(" [" + o + "]")
+						}
+						out = append(out, " "+sText.Render(fit(str(k["user"]), 10, false))+" "+sMuted.Render(fit(str(k["type"]), 20, false))+
+							" "+sMuted.Render(fp)+" "+sText.Render(str(k["comment"]))+opts)
+					}
+				})
+			}
 		}
 		lg := obj(a["logins"])
-		for i, x := range arr(lg["accepted"]) {
-			if i == 5 {
-				break
-			}
+		if p := arr(lg["period"]); len(p) == 2 {
+			kv("login period", sMuted.Render(strings.Replace(str(p[0]), "T", " ", 1)+" — "+strings.Replace(str(p[1]), "T", " ", 1)))
+		}
+		accLine := func(label string, x any) string {
 			e := obj(x)
 			n := str(e["count"])
 			if n == "" {
 				n = str(e["n"])
 			}
+			last := strings.Replace(str(e["last"]), "T", " ", 1)
+			return " " + sLabel.Render(fit(m.t.T(label), 20, false)) + " " + sText.Render(str(e["user"])) + sMuted.Render(" @ ") +
+				sText.Render(str(e["ip"])) + sMuted.Render(" ×"+n+" "+str(e["method"])+" "+last)
+		}
+		acc := arr(lg["accepted"])
+		for i, x := range acc[:min(len(acc), 5)] {
 			label := ""
 			if i == 0 {
 				label = "logged in"
 			}
-			last := strings.Replace(str(e["last"]), "T", " ", 1)
-			out = append(out, " "+sLabel.Render(fit(m.t.T(label), 20, false))+" "+sText.Render(str(e["user"]))+sMuted.Render(" @ ")+
-				sText.Render(str(e["ip"]))+sMuted.Render(" ×"+n+" "+str(e["method"])+" "+last))
+			out = append(out, accLine(label, x))
+		}
+		if len(acc) > 5 {
+			more(len(acc), 5)
+			tail = append(tail, func() {
+				section("Logins")
+				for _, x := range acc {
+					out = append(out, accLine("", x))
+				}
+			})
 		}
 		if ft := num(lg["failed_total"]); ft > 0 {
-			kv("failed logins", sErr.Render(str(lg["failed_total"]))+sMuted.Render(fmt.Sprintf(" %s %s", str(lg["failed_ips"]), m.t.T("IPs"))))
-		}
-		for i, x := range arr(lg["attackers"]) {
-			if i == 5 {
-				break
+			s := sErr.Render(str(lg["failed_total"])) + sMuted.Render(fmt.Sprintf(" %s %s", str(lg["failed_ips"]), m.t.T("IPs")))
+			if v := str(lg["failed_last"]); v != "" {
+				s += sMuted.Render(", " + m.t.T("last attack") + " " + strings.Replace(v, "T", " ", 1))
 			}
+			kv("failed logins", s)
+		}
+		if n := num(lg["invalid_users"]); n > 0 {
+			kv("unknown user names", sText.Render(str(lg["invalid_users"])))
+		}
+		if tu := arr(lg["failed_top_users"]); len(tu) > 0 {
+			var us []string
+			for _, x := range tu {
+				if p := arr(x); len(p) == 2 {
+					us = append(us, str(p[0])+sMuted.Render(" ×"+str(p[1])))
+				}
+			}
+			kv("usernames tried", sText.Render(strings.Join(us, sMuted.Render(", "))))
+		}
+		attLine := func(label string, x any) string {
 			e := obj(x)
 			var users []string
 			for _, u := range arr(e["users"]) {
@@ -164,16 +238,39 @@ func (m *Model) hostCard(name string, w int) []string {
 					users = append(users, str(p[0]))
 				}
 			}
-			label := ""
-			if i == 0 {
-				label = "password guessing"
-			}
 			n := ""
 			if v := str(e["n"]); v != "" {
 				n = " ×" + v
 			}
-			out = append(out, " "+sLabel.Render(fit(m.t.T(label), 20, false))+" "+sErr.Render(str(e["ip"]))+sMuted.Render(n+" "+
-				strings.Join(users, ",")))
+			when := strings.Replace(str(e["last"]), "T", " ", 1)
+			return " " + sLabel.Render(fit(m.t.T(label), 20, false)) + " " + sErr.Render(fit(str(e["ip"]), 16, false)) + sMuted.Render(n+" "+
+				when+" ") + sText.Render(strings.Join(users, ","))
+		}
+		att := arr(lg["attackers"])
+		for i, x := range att[:min(len(att), 5)] {
+			label := ""
+			if i == 0 {
+				label = "password guessing"
+			}
+			out = append(out, attLine(label, x))
+		}
+		if len(att) > 5 {
+			more(len(att), 5)
+			tail = append(tail, func() {
+				section("Password guessing")
+				for _, x := range att {
+					out = append(out, attLine("", x))
+				}
+			})
+		}
+		if sessions := arr(a["last"]); len(sessions) > 0 {
+			// the sessions as `last` lists them: who, from where, when, how long
+			tail = append(tail, func() {
+				section("Sessions")
+				for _, x := range sessions {
+					out = append(out, " "+sMuted.Render(strings.Join(strings.Fields(str(x)), " ")))
+				}
+			})
 		}
 		m.denied(&out, a)
 	}
@@ -238,6 +335,15 @@ func (m *Model) hostCard(name string, w int) []string {
 				parts = []string{sMuted.Render(m.t.T("not readable without root"))}
 			}
 			kv("firewall", strings.Join(parts, sMuted.Render(" · ")))
+			if rules := m.fwRules[m.fwKey(name)]; rules != "" {
+				out[len(out)-1] += sMuted.Render(" ↓")
+				tail = append(tail, func() {
+					section("Firewall rules")
+					for _, l := range strings.Split(strings.TrimRight(rules, "\n"), "\n") {
+						out = append(out, " "+sMuted.Render(l))
+					}
+				})
+			}
 		}
 		m.denied(&out, e)
 	}
@@ -292,7 +398,17 @@ func (m *Model) hostCard(name string, w int) []string {
 			kv("read-only", sErr.Render(joinAny(r)))
 		}
 		if j := obj(hl["journal"]); j != nil && num(j["errors_7d"]) > 0 {
-			kv("journal errors", sText.Render(str(j["errors_7d"]))+sMuted.Render(" / 7 "+m.t.T("days")))
+			s := sText.Render(str(j["errors_7d"])) + sMuted.Render(" / 7 "+m.t.T("days"))
+			var top []string // who writes them
+			for _, x := range arr(j["top"]) {
+				if p := arr(x); len(p) == 2 {
+					top = append(top, str(p[0])+" ×"+str(p[1]))
+				}
+			}
+			if len(top) > 0 {
+				s += sMuted.Render("  " + strings.Join(top, ", "))
+			}
+			kv("journal errors", s)
 		}
 		if t := obj(hl["time"]); t != nil {
 			s := sText.Render(str(t["service"]))
@@ -305,7 +421,39 @@ func (m *Model) hostCard(name string, w int) []string {
 			if v := t["skew_s"]; v != nil && num(v) != 0 {
 				s += sMuted.Render(fmt.Sprintf(", %s %.2f s", m.t.T("clock skew"), num(v)))
 			}
+			if z := str(t["timezone"]); z != "" {
+				s += sMuted.Render(", " + m.t.T("time zone") + " " + z)
+			}
 			kv("time", s)
+		}
+		// the kernel log: what kinds of trouble, how often, the last line of each
+		cls := obj(obj(hl["dmesg"])["classes"])
+		keys := make([]string, 0, len(cls))
+		for k := range cls {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for i, k := range keys {
+			c := obj(cls[k])
+			label := ""
+			if i == 0 {
+				label = "kernel log"
+			}
+			key := str(c["key"])
+			if key == "" {
+				key = k
+			}
+			name, _, _ := strings.Cut(m.t.cat(key), " (")
+			out = append(out, " "+sLabel.Render(fit(m.t.T(label), 20, false))+" "+lipgloss.NewStyle().Foreground(cP["P2"]).Render(name)+
+				sMuted.Render(" ×"+str(c["count"])+"  "+str(c["last"])))
+		}
+		if kernel := arr(obj(hl["dmesg"])["tail"]); len(kernel) > 0 {
+			tail = append(tail, func() {
+				section("Kernel log")
+				for _, l := range kernel {
+					out = append(out, " "+sMuted.Render(str(l)))
+				}
+			})
 		}
 		m.denied(&out, hl)
 	}
@@ -325,7 +473,93 @@ func (m *Model) hostCard(name string, w int) []string {
 			out = append(out, " "+prio(p)+" "+sText.Render(title)+sMuted.Render("  "+str(o["target"])))
 		}
 	}
+	// accepted risks on it: what, whose, until when, why
+	var exc []map[string]any
+	for _, e := range rd.Exceptions {
+		if str(e["host"]) == name {
+			exc = append(exc, e)
+		}
+	}
+	if len(exc) > 0 {
+		section("Exceptions")
+		for _, f := range exc {
+			ex := obj(f["exception"])
+			st := sOK.Render("✓")
+			if b, _ := ex["fix_available"].(bool); b {
+				st = sErr.Render("✗")
+			} else if b, _ := ex["expired"].(bool); b {
+				st = sErr.Render("✗")
+			}
+			out = append(out, " "+st+" "+sBold.Render(str(f["id"]))+" "+sText.Render(str(f["pkg"]))+sMuted.Render("  "+m.t.T("owner")+" ")+
+				sText.Render(str(ex["owner"]))+sMuted.Render("  "+m.t.T("review by")+" "+str(ex["review_by"])))
+			if r := str(ex["reason"]); r != "" {
+				out = append(out, "   "+sMuted.Render(r))
+			}
+		}
+	}
+	for _, f := range tail {
+		f()
+	}
 	return out
+}
+
+// fwMsg: a host's firewall rules, as its exposure file has them.
+type fwMsg struct{ key, rules string }
+
+// cardHost: the host whose card is on screen: opened on its own, or a host row's details in the tree.
+func (m *Model) cardHost() string {
+	if m.host != "" {
+		return m.host
+	}
+	if m.isTree() {
+		if n := m.curNode(); n != nil && n.Kind == "host" {
+			return n.Label
+		}
+	}
+	return ""
+}
+
+func (m *Model) fwKey(host string) string { return m.org + "/" + m.env + "/" + m.run + "/" + host }
+
+// fetchFirewall: the rules of the firewall of the host on screen, when the run could read them; once per host.
+func (m *Model) fetchFirewall() tea.Cmd {
+	host := m.cardHost()
+	if host == "" || m.rund == nil || m.pending["fw"] != "" {
+		return nil
+	}
+	if r, ok := obj(m.rund.Exposure[host]["firewall"])["readable"].(bool); !ok || !r {
+		return nil
+	}
+	k := m.fwKey(host)
+	if _, ok := m.fwRules[k]; ok {
+		return nil
+	}
+	m.pending["fw"] = k
+	c := m.c
+	q := "/api/hostfile?org=" + url.QueryEscape(m.org) + "&env=" + url.QueryEscape(m.env) + "&run=" + url.QueryEscape(m.run) +
+		"&host=" + url.QueryEscape(host) + "&name=exposure"
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		var d struct {
+			Raw map[string]string `json:"firewall_raw"`
+		}
+		if err := c.Get(ctx, q, &d); err != nil {
+			return fwMsg{k, ""} // none: the card says what it knows without them
+		}
+		names := make([]string, 0, len(d.Raw))
+		for n, v := range d.Raw {
+			if strings.TrimSpace(v) != "" {
+				names = append(names, n)
+			}
+		}
+		sort.Strings(names)
+		var b strings.Builder
+		for _, n := range names {
+			fmt.Fprintf(&b, "## %s\n%s\n", n, strings.TrimRight(d.Raw[n], "\n"))
+		}
+		return fwMsg{k, b.String()}
+	}
 }
 
 // denied: what a module could not read without more rights.
