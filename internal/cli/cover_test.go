@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/dbget"
@@ -252,8 +254,25 @@ func TestRealTUI(t *testing.T) {
 	s, err := server.New(server.Options{Paths: config.PathsAt(home()), Prompt: prompt.Build})
 	must(t, err)
 	m := tui.New(tui.Options{Client: tui.Local(s.Handler()), Settings: filepath.Join(t.TempDir(), "tui.json")})
+	// Ctrl+C again every 50 ms until the program ends: one sent before it reads its input can be lost (Windows)
+	in, keys := io.Pipe()
+	done := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-done:
+				_ = keys.Close()
+				return
+			case <-time.After(50 * time.Millisecond):
+				_, _ = keys.Write([]byte("\x03"))
+			}
+		}
+	}()
 	var out bytes.Buffer
-	if err := runTUI(m, strings.NewReader("\x03"), &out); err != nil {
+	err = runTUI(m, in, &out)
+	close(done)
+	_ = in.Close() // a Ctrl+C still being written gives up
+	if err != nil {
 		t.Fatal(err)
 	}
 	if out.Len() == 0 {
