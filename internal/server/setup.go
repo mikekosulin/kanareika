@@ -79,13 +79,19 @@ func (s *Server) apiSetupAdd(w http.ResponseWriter, r *http.Request) {
 		sendErr(w, http.StatusBadRequest, "bad request: "+err.Error())
 		return
 	}
+	// the org's file is read under its lock: another add renaming it into place (on Windows not atomic for a reader)
+	// would make the org look gone for a moment
+	unlock := s.lockOrgFile(req.Org)
 	s.reload()
 	if s.state.Load().byID[req.Org] == nil {
+		unlock()
 		sendErr(w, http.StatusNotFound, "unknown org")
 		return
 	}
-	unlock := s.lockOrgFile(req.Org)
 	added, skipped, problems, err := onboard.AddWithSkipped(s.paths, req.Org, req.Request)
+	if err == nil && len(problems) == 0 {
+		s.reload() // still under the lock: the next add renames the file only after it is read
+	}
 	unlock()
 	switch {
 	case err != nil:
@@ -95,7 +101,6 @@ func (s *Server) apiSetupAdd(w http.ResponseWriter, r *http.Request) {
 		sendJSON(w, http.StatusBadRequest, map[string]any{"errors": problems})
 		return
 	}
-	s.reload()
 	s.log.Printf("dashboard: %d hosts added to %s", len(added), req.Org)
 	if skipped == nil {
 		skipped = []string{}
