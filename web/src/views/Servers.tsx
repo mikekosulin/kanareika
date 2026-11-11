@@ -414,14 +414,21 @@ function LensTable({
     { l: t("Server"), w: "minmax(96px, 1fr)", v: (r) => <Hcell n={r.host} />, s: (r) => r.host },
     ...((d.lens?.columns || []) as any[]).map((c): Col<any> => ({
       l: t(c.title),
-      w: c.width_hint
-        ? typeof c.width_hint === "number"
-          ? c.width_hint + "px"
-          : c.width_hint
-        : c.kind === "text"
-          ? "minmax(0, 1fr)"
-          : "80px",
-      k: c.drop >= 2 ? 3 : c.drop === 1 ? 2 : 1,
+      // width_hint: characters (the TUI's columns); a heading wraps rather than cut its words
+      w:
+        typeof c.width_hint === "number"
+          ? c.kind === "text"
+            ? `minmax(${c.width_hint + 2}ch, 1fr)`
+            : `${
+                Math.max(
+                  c.width_hint,
+                  ...String(t(c.title))
+                    .split(/\s+/)
+                    .map((w: string) => w.length),
+                ) + 3
+              }ch`
+          : c.width_hint || (c.kind === "text" ? "minmax(0, 1fr)" : "11ch"),
+      k: c.drop >= 3 ? 3 : c.drop === 2 ? 2 : 1, // the TUI's drop order: 0 and 1 always, 2 from a medium list, 3 from a wide one
       c: c.align === "right" ? "r" : c.kind === "text" ? "d" : "",
       v: (r) => {
         const x = r.cells?.[c.key];
