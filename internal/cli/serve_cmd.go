@@ -16,6 +16,7 @@ import (
 	"github.com/mikekosulin/kanareika/internal/prompt"
 	"github.com/mikekosulin/kanareika/internal/scan"
 	"github.com/mikekosulin/kanareika/internal/server"
+	"github.com/mikekosulin/kanareika/internal/update"
 )
 
 // newServer is server.New; tests replace it.
@@ -87,7 +88,7 @@ The TUI can connect to it too: kanareika tui --url http://<SERVER>:8088 --token 
 			if port < 0 || port > 65535 {
 				return fmt.Errorf("--port %d: a port number 0-65535 is required", port)
 			}
-			opts := server.Options{Paths: a.paths, Prompt: prompt.Build, Warm: true, Token: token}
+			opts := server.Options{Paths: a.paths, Prompt: prompt.Build, Warm: true, Token: token, Version: a.version, UpdatePath: update.DefaultPath()}
 			if !noScans { // read-only: no scans, no downloads, no outbound size lookups
 				opts.Scan, opts.UpdateDB = a.dashboardScan, a.updateDBFunc
 			}

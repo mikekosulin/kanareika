@@ -14,6 +14,7 @@ import (
 	"github.com/mikekosulin/kanareika/internal/prompt"
 	"github.com/mikekosulin/kanareika/internal/server"
 	"github.com/mikekosulin/kanareika/internal/tui"
+	"github.com/mikekosulin/kanareika/internal/update"
 )
 
 // isTerminal: stdin and stdout are a terminal (the TUI can run); tests replace it.
@@ -49,7 +50,7 @@ func (a *app) tuiRun(cmd *cobra.Command, f tuiFlags) error {
 	if f.url != "" {
 		c = tui.Remote(f.url, f.token)
 	} else {
-		s, err := newServer(server.Options{Paths: a.paths, Prompt: prompt.Build, Warm: true, Scan: a.dashboardScan, UpdateDB: a.updateDBFunc,
+		s, err := newServer(server.Options{Paths: a.paths, Prompt: prompt.Build, Warm: true, Scan: a.dashboardScan, UpdateDB: a.updateDBFunc, Version: a.version, UpdatePath: update.DefaultPath(),
 			Log: log.New(io.Discard, "", 0)}) // nothing may write to the terminal under the TUI
 		if err != nil {
 			return err

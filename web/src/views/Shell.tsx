@@ -5,9 +5,9 @@ import { LANG, LANG_NAMES, t } from "../lib/i18n";
 import { local } from "../lib/local";
 import { api, post, qs } from "../lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { ago, runLabel } from "../lib/format";
+import { ago, runLabel, webURL } from "../lib/format";
 import { go, isTree, openServer, set, setBy, setScope, setTheme, syncURL, toast, toggleMini, useApp, useS, type View } from "../state";
-import { client, useDB, useEnv, useJobs, useOrgs, useRunData, useSession } from "../queries";
+import { client, useDB, useEnv, useJobs, useOrgs, useRunData, useSession, useVersion } from "../queries";
 import { Icon } from "../components/ui";
 
 const NAV: [View, string, string][] = [
@@ -89,6 +89,7 @@ export function Sidebar() {
   const env = useEnv().data;
   const scans = useSession().data?.scans;
   const db = useDB().data;
+  const newer = useVersion().data;
   const rd = useRunData(isTree(s.view) || s.view === "history").data;
   const o = orgs.find((x) => x.id === s.org),
     e = o?.envs.find((x) => x.env === s.env);
@@ -219,6 +220,7 @@ export function Sidebar() {
             </span>
           </div>
         )}
+        {newer?.latest && <Newer v={newer.latest} link={newer.url} />}
         {scans && e && s.view !== "setup" && (
           <>
             <button className="btn" onClick={() => startScan(s.org, s.env)}>
@@ -240,6 +242,19 @@ type Limit = { value: number; source: "default" | "settings" | "org" | "flag" };
 
 /** ScanLimits: how many hosts a scan reads at once (SSH) and how many trivy matches run at once (memory). Saved in
  * the install's settings; an org file's or a flag's value is shown, not edited here. */
+/** Newer: a newer kanareika release, linked to its page. */
+function Newer({ v, link }: { v: string; link?: string }) {
+  const url = webURL(link);
+  return url ? (
+    <div className="row">
+      <span className="dot warn" />
+      <a href={url} target="_blank" rel="noreferrer">
+        {t("Update: {v}", { v })}
+      </a>
+    </div>
+  ) : null;
+}
+
 function ScanLimits({ org, env }: { org: string; env: string }) {
   const [open, setOpen] = useState(false);
   const o = useQuery({

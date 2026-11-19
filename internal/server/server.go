@@ -66,6 +66,9 @@ type Options struct {
 	// Warm: on start, bring every environment's current/ up to date and into the findings database in the
 	// background, so the first look at one doesn't wait for it (after a scan elsewhere, or an upgrade)
 	Warm bool
+	// Version: the running kanareika's; UpdatePath: where update checks are kept ("" or a build that is not a release:
+	// no checks; internal/update)
+	Version, UpdatePath string
 }
 
 // Server holds the API state: org configs (reloaded by /api/orgs) and the last few views.
@@ -92,6 +95,8 @@ type Server struct {
 	views   []cachedView
 	current map[string]checked // per environment directory: current/ was brought up to date (runDir)
 	trees   []*treeInput       // the runs' tree inputs (findings + view), most recently used first
+
+	version, updatePath string // Options.Version, Options.UpdatePath
 }
 
 type cachedView struct {
@@ -101,7 +106,8 @@ type cachedView struct {
 
 // New loads the org configs and prepares the page; config errors are not fatal (they are shown in the page).
 func New(o Options) (*Server, error) {
-	s := &Server{paths: o.Paths, prompt: o.Prompt, log: o.Log, token: o.Token, csrf: newID() + newID()}
+	s := &Server{paths: o.Paths, prompt: o.Prompt, log: o.Log, token: o.Token, csrf: newID() + newID(), version: o.Version,
+		updatePath: o.UpdatePath}
 	if s.log == nil {
 		s.log = log.Default()
 	}
@@ -292,6 +298,7 @@ func (s *Server) Handler() http.Handler {
 	r.Get("/api/session", s.apiSession)
 	r.Get("/api/jobs", s.apiJobs)
 	r.Get("/api/db", s.apiDB)
+	r.Get("/api/version", s.apiVersion)
 	r.Get("/api/db/size", s.apiDBSize)
 	r.Get("/api/setup/discover", s.apiSetupDiscover)
 	r.With(s.csrfCheck).Post("/api/db/update", s.apiDBUpdate)

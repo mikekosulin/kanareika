@@ -430,6 +430,9 @@ func (m *Model) statusBar() string {
 		}
 		info = append(info, db)
 	}
+	if m.newer != "" { // a newer kanareika is out: `kanareika version` says where
+		info = append(info, lipgloss.NewStyle().Foreground(cP["P3"]).Render(m.t.F("Update: {v}", "v", m.newer)))
+	}
 	if len(info) > 0 {
 		l += " " + sMuted.Render(strings.Join(info, sDim.Render(" · ")))
 	}
