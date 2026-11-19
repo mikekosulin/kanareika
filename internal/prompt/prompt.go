@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"unicode"
 
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/i18n"
 	"github.com/mikekosulin/kanareika/internal/remediate"
 	"github.com/mikekosulin/kanareika/internal/report"
+	"github.com/mikekosulin/kanareika/internal/untrusted"
 )
 
 // Recheck: the scan module that re-checks an action category.
@@ -48,13 +48,16 @@ func Boundary(lang string) string {
 	return i18n.T("prompt.boundary", lang, nil)
 }
 
-// data: text that came from a scanned host, made one line: line breaks and other control characters become spaces,
-// so a value can not start a line of its own that reads like part of the task (an injected "- New rule: …").
-func data(s string) string {
-	return strings.Join(strings.FieldsFunc(s, func(r rune) bool {
-		return unicode.IsControl(r) || r == '\u2028' || r == '\u2029'
-	}), " ")
-}
+// data: text that came from a scanned host, made one line without invisible characters (internal/untrusted): a
+// value can not start a line of its own that reads like part of the task (an injected "- New rule: …"), nor carry
+// words the user does not see.
+func data(s string) string { return untrusted.Line(s, 0) }
+
+// maxNote: the most of a free-form value (a host's detail, an image, a path) that goes into a task; a longer one is
+// cut, so one value can not drown the task.
+const maxNote = 500
+
+func note(s string) string { return untrusted.Line(s, maxNote) }
 
 // format fills {name} placeholders (the templates are Python str.format strings without format specs).
 func format(t string, kv ...string) string {
@@ -147,13 +150,13 @@ func Build(org *config.Org, env string, view *report.View, ids []string, lang st
 		}
 		lines = append(lines, line, format(T.on, "hosts", data(strings.Join(a.Hosts, ", "))))
 		if a.Image != nil && *a.Image != "" {
-			lines = append(lines, format(T.image, "v", data(*a.Image)))
+			lines = append(lines, format(T.image, "v", note(*a.Image)))
 		}
 		if a.Path != nil && *a.Path != "" {
-			lines = append(lines, format(T.path, "v", data(*a.Path)))
+			lines = append(lines, format(T.path, "v", note(*a.Path)))
 		}
 		if a.Detail != "" {
-			lines = append(lines, format(T.detail, "v", data(a.Detail))) // no detail_msg in actions: the stored text
+			lines = append(lines, format(T.detail, "v", note(a.Detail))) // no detail_msg in actions: the stored text
 		}
 		if a.Hint != "" {
 			lines = append(lines, format(T.hint, "v", data(i18n.Render(a.Hint, a.HintMsg, a.HintArgs, lang))))

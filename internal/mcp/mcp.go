@@ -16,6 +16,7 @@ import (
 
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/pyfmt"
+	"github.com/mikekosulin/kanareika/internal/untrusted"
 )
 
 // DefaultProtocol: answered when the client does not say which protocol version it speaks.
@@ -112,6 +113,8 @@ func (s *Server) handle(line []byte) (any, error) {
 }
 
 // call runs a tool; its failures (and panics on unexpected data) are tool errors the agent sees, not protocol errors.
+// Every answer, an error too, leaves without invisible characters (internal/untrusted): the agent reads what the
+// scanned hosts reported exactly as a person would see it, with no hidden words in a host or package name.
 func (s *Server) call(fn func(args) (any, error), a args) (result any) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -130,11 +133,11 @@ func (s *Server) call(fn func(args) (any, error), a args) (result any) {
 		}
 		text = string(b)
 	}
-	return pyfmt.O("content", []any{pyfmt.O("type", "text", "text", text)})
+	return pyfmt.O("content", []any{pyfmt.O("type", "text", "text", untrusted.Strip(text))})
 }
 
 func toolError(err error) pyfmt.Obj {
-	return pyfmt.O("content", []any{pyfmt.O("type", "text", "text", "Error: "+err.Error())}, "isError", true)
+	return pyfmt.O("content", []any{pyfmt.O("type", "text", "text", untrusted.Strip("Error: "+err.Error()))}, "isError", true)
 }
 
 // Serve reads requests from in and writes responses to out until EOF or ctx is done. Blank lines are skipped;
