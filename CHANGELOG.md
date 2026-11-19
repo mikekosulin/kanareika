@@ -2,6 +2,17 @@
 
 Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor version may break things; each break is listed under **Breaking** with what to do instead.
 
+## 0.6.1 — 2026-11-19
+
+### Security
+
+- **Built with Go 1.27.4**, which fixes security issues in `net/http` (the web page and `serve`), cgo, the go command, the compiler and the linker. 0.6.0 was built with 1.27.3.
+- **What a host reported reaches an AI agent without hidden text.** Host names, packages, paths, banners and log lines can carry characters a person does not see but a model reads: Unicode tag characters that spell a whole sentence, zero-width and bidi characters, variation selectors. They are dropped from the agent task (`/api/prompt`, MCP `fix_prompt`), from every MCP answer and from the context the TUI (`Y`) and the web page copy; a host's detail, an image or a path is cut at 500 characters in a task.
+
+### Fixed
+
+- Web: the context copied for an agent kept line breaks from host data, so a value could start a line of its own; each fact is one line now, as in the TUI.
+
 ## 0.6.0 — 2026-11-11
 
 ### Breaking
