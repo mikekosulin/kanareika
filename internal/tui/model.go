@@ -72,6 +72,7 @@ type Model struct {
 	jobs   jobsResp
 	scanOK bool
 	db     *dbResp // nil until the first answer
+	newer  string  // a newer kanareika release (GET /api/version), "" when none or checks are off
 	loaded bool
 
 	cur     [nViews]int
@@ -228,6 +229,25 @@ func (m *Model) fetchDB() tea.Cmd {
 	return m.get("/api/db", func(v any) tea.Msg { return dbMsg(*v.(*dbResp)) }, &dbResp{})
 }
 
+// versionMsg: GET /api/version — asked once per session (the server asks GitHub at most once a day).
+type versionMsg struct {
+	Latest string `json:"latest"`
+}
+
+// fetchVersion: quiet when it fails (a server before 0.7 has no /api/version): nothing to tell then.
+func (m *Model) fetchVersion() tea.Cmd {
+	c := m.c
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		var v versionMsg
+		if c.Get(ctx, "/api/version", &v) != nil {
+			return nil
+		}
+		return v
+	}
+}
+
 func (m *Model) refresh() tea.Cmd {
 	return tea.Batch(m.fetchOrgs(), m.fetchEnv(), m.fetchJobs(), m.fetchDB())
 }
@@ -301,7 +321,7 @@ func (m *Model) tick() tea.Cmd {
 }
 
 func (m *Model) Init() tea.Cmd {
-	return tea.Batch(m.fetchI18n(), m.refresh(), m.tick(), m.mouseCmd())
+	return tea.Batch(m.fetchI18n(), m.refresh(), m.tick(), m.mouseCmd(), m.fetchVersion())
 }
 
 func (m *Model) say(s string) { m.toast, m.toastAt = s, m.now() }
@@ -336,6 +356,8 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		}
 	case dbMsg:
 		return m.onDB(dbResp(msg))
+	case versionMsg:
+		m.newer = msg.Latest
 	case jobsMsg:
 		was := m.busy()
 		m.jobs, m.scanOK = jobsResp(msg), msg.Enabled

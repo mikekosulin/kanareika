@@ -16,6 +16,7 @@ import (
 	"github.com/mikekosulin/kanareika/assets"
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/trivy"
+	"github.com/mikekosulin/kanareika/internal/update"
 )
 
 // orgIDRE: what an org id may be (it names files and directories).
@@ -140,7 +141,12 @@ func (a *app) versionCmd() *cobra.Command {
 		Short: "versions of kanareika and the embedded trivy",
 		Args:  cobra.NoArgs,
 		Run: func(cmd *cobra.Command, _ []string) {
-			fmt.Fprintf(cmd.OutOrStdout(), "kanareika %s\ntrivy %s\n%s %s/%s\n\n%s  (a star helps)\nissues: %s\n", a.version,
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "kanareika %s\n", a.version)
+			if i := update.Check(cmd.Context(), update.DefaultPath(), a.version, time.Now()); i.Newer(a.version) != "" {
+				fmt.Fprintf(out, "  %s is out: %s\n", i.Latest, i.URL)
+			}
+			fmt.Fprintf(out, "trivy %s\n%s %s/%s\n\n%s  (a star helps)\nissues: %s\n",
 				orNone(trivy.Embedded()), runtime.Version(), runtime.GOOS, runtime.GOARCH, assets.Repo, assets.Issues)
 		},
 	}

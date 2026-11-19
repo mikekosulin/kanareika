@@ -165,6 +165,16 @@ export function useDB() {
   });
 }
 
+/** useVersion: a newer kanareika release, if one is out (the server asks GitHub at most once a day). */
+export function useVersion() {
+  return useQuery({
+    queryKey: ["version"],
+    queryFn: () => api<{ version: string; latest?: string; url?: string; check: boolean }>("/api/version").catch(() => null),
+    staleTime: 6 * 3600_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
 /** refresh: everything about the environment's data asked again (a scan finished). */
 export function refresh() {
   for (const k of ["orgs", "env", "tree", "kids", "node", "run", "lens"]) client.invalidateQueries({ queryKey: [k] });

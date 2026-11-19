@@ -2,6 +2,12 @@
 
 Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor version may break things; each break is listed under **Breaking** with what to do instead.
 
+## 0.7.0 — 2026-11-19
+
+### Added
+
+- **A newer release is named where you look.** At most once a day kanareika asks GitHub's releases API which release is the latest (it sees your address and the version in the User-Agent; nothing else is sent, nothing is downloaded or installed): `kanareika version` says when a newer one is out, and the page and the TUI get it from `/api/version`. Off with `KANAREIKA_UPDATE_CHECK=off` or `KANAREIKA_OFFLINE=1`; builds that are not a release never ask.
+
 ## 0.6.1 — 2026-11-19
 
 ### Security

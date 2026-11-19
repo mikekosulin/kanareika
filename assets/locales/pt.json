@@ -959,6 +959,7 @@
     "SSH key": "Chave SSH",
     "Scan {env}": "Escanear {env}",
     "Scan {env}…": "Escanear {env}…",
+    "Update: {v}": "Atualização: {v}",
     "ToDo: group by fix, CVE or host; t: order by the next column, T: the other way": "A fazer: agrupar por correção, CVE ou host; t: ordenar pela próxima coluna, T: ao contrário",
     "sort": "ordem",
     "backported": "com backport",

@@ -3,6 +3,8 @@ package cli
 import (
 	"context"
 	"io/fs"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,6 +17,7 @@ import (
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/priv"
 	"github.com/mikekosulin/kanareika/internal/scan"
+	"github.com/mikekosulin/kanareika/internal/update"
 )
 
 // home returns the sandbox's KANAREIKA_HOME.
@@ -363,5 +366,30 @@ func TestUnknownCommand(t *testing.T) {
 	sandbox(t)
 	if code, _, errs := cli(t, "frobnicate"); code != 1 || !strings.HasPrefix(errs, "error: unknown command") {
 		t.Fatal(code, errs)
+	}
+}
+
+// TestVersionNewer: `kanareika version` names a newer release and its page when one is out, asking GitHub once a
+// day (the answer kept in the user's cache dir).
+func TestVersionNewer(t *testing.T) {
+	sandbox(t)
+	t.Setenv("LocalAppData", filepath.Join(t.TempDir(), "AppData")) // the cache dir on Windows
+	t.Setenv("KANAREIKA_UPDATE_CHECK", "on")
+	hits := 0
+	gh := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hits++
+		_, _ = w.Write([]byte(`{"tag_name": "v10.0.0", "html_url": "https://github.com/mikekosulin/kanareika/releases/tag/v10.0.0"}`))
+	}))
+	defer gh.Close()
+	defer func(u string) { update.LatestURL = u }(update.LatestURL)
+	update.LatestURL = gh.URL
+	for range 2 {
+		code, out, _ := cli(t, "version")
+		if code != 0 || !strings.HasPrefix(out, "kanareika v9.9.9-test\n  v10.0.0 is out: https://github.com/mikekosulin/kanareika/releases/tag/v10.0.0\ntrivy") {
+			t.Fatal(code, out)
+		}
+	}
+	if hits != 1 {
+		t.Fatalf("%d requests", hits)
 	}
 }
