@@ -143,8 +143,8 @@ func (a *app) versionCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, _ []string) {
 			out := cmd.OutOrStdout()
 			fmt.Fprintf(out, "kanareika %s\n", a.version)
-			if v := update.Check(cmd.Context(), update.DefaultPath(), a.version, time.Now()).Newer(a.version); v != "" {
-				fmt.Fprintf(out, "  %s is out: %s\n", v, update.Load(update.DefaultPath()).URL)
+			if i := update.Check(cmd.Context(), update.DefaultPath(), a.version, time.Now()); i.Newer(a.version) != "" {
+				fmt.Fprintf(out, "  %s is out: %s\n", i.Latest, i.URL)
 			}
 			fmt.Fprintf(out, "trivy %s\n%s %s/%s\n\n%s  (a star helps)\nissues: %s\n",
 				orNone(trivy.Embedded()), runtime.Version(), runtime.GOOS, runtime.GOARCH, assets.Repo, assets.Issues)

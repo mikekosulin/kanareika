@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"sync/atomic"
 	"testing"
@@ -128,5 +129,41 @@ func TestCheckRejectsOddAnswers(t *testing.T) {
 	i := Check(context.Background(), filepath.Join(t.TempDir(), "u.json"), "v0.6.1", time.Now())
 	if i.URL != "https://github.com/mikekosulin/kanareika/releases/tag/v0.7.0" {
 		t.Errorf("url %q", i.URL)
+	}
+}
+
+// TestPaths: the cache file is in the user's cache dir; without one, there is none (and so no check). A cache
+// that can't be written is an error of save, never of Check.
+func TestPaths(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(home, ".cache"))
+	t.Setenv("LocalAppData", filepath.Join(home, "AppData", "Local"))
+	if p := DefaultPath(); p == "" || filepath.Base(p) != "update.json" || filepath.Base(filepath.Dir(p)) != "kanareika" {
+		t.Fatalf("DefaultPath %q", p)
+	}
+	t.Setenv("HOME", "")
+	t.Setenv("XDG_CACHE_HOME", "")
+	t.Setenv("LocalAppData", "")
+	if p := DefaultPath(); p != "" {
+		t.Fatalf("no cache dir: %q", p)
+	}
+	dir := t.TempDir()
+	file := filepath.Join(dir, "file")
+	must(t, os.WriteFile(file, nil, 0o600))
+	if save(filepath.Join(file, "kanareika", "update.json"), Info{}) == nil {
+		t.Error("a file in the way of the dir")
+	}
+	path := filepath.Join(dir, "update.json")
+	must(t, os.Mkdir(path+".tmp", 0o700)) // the temporary file can't be written
+	if save(path, Info{}) == nil {
+		t.Error("an unwritable temporary file")
+	}
+}
+
+func must(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
 	}
 }
