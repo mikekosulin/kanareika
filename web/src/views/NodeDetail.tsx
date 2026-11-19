@@ -1,7 +1,7 @@
 // A fix's (or CVE's, or group's) details: why its priority, when it is due, what it closes, where it is and the
 // command that fixes it; the way back to the node it was opened from; adding it to the task for an agent.
 import { t } from "../lib/i18n";
-import { fmtDay, fmtN, pct, webURL } from "../lib/format";
+import { agentLine, fmtDay, fmtN, pct, webURL } from "../lib/format";
 import { set, toggle, useS } from "../state";
 import type { CVE, NodeDetail as ND } from "../types";
 import { Flags, NOFIX, noFixTxt, Prio, StateCell } from "../components/cells";
@@ -150,7 +150,7 @@ function CveFull({ c }: { c: CVE }) {
   );
 }
 
-/** context: the node as text to paste into an agent chat. */
+/** context: the node as text to paste into an agent chat, a line per fact whatever the hosts reported. */
 export function context(d: ND, org: string, env: string) {
   const n = d.node;
   const lines = [
@@ -165,7 +165,7 @@ export function context(d: ND, org: string, env: string) {
     );
   (d.apply || []).forEach((s) => lines.push(`apply on ${s.hosts.join(", ")}: ${s.command}`));
   lines.push(`MCP: get_fix org=${org} env=${env} id=${n.id}`);
-  return lines.join("\n");
+  return lines.map(agentLine).join("\n");
 }
 
 export function NodeDetail({ d, onGo, onBack }: { d: ND; onGo: (id: string) => void; onBack: () => void }) {

@@ -37,4 +37,10 @@ export const runIso = (id?: string) =>
 /** webURL: a link from the vulnerability DB, http(s) only: no javascript: or data: URL becomes clickable. */
 export const webURL = (u?: string) => (/^https?:\/\//i.test(String(u || "")) ? String(u) : "");
 /** narrow: the window is too narrow for the details beside the list (they open over it). */
+// agentLine: text for an agent's chat, as the server's prompts make it (internal/untrusted.Line): what a scanned host
+// reported can not start a line of its own (controls and line breaks become one space) nor hide words (format
+// characters: zero-width, bidi, Unicode tags; variation selectors).
+const INVISIBLE = /[\p{Cf}\u{FE00}-\u{FE0F}\u{E0100}-\u{E01EF}]/gu;
+const BREAKS = /[\p{Cc}\u2028\u2029]+/u;
+export const agentLine = (s: string) => s.replace(INVISIBLE, "").split(BREAKS).filter(Boolean).join(" ");
 export const narrow = () => matchMedia("(max-width: 1240px)").matches;

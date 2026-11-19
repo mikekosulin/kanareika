@@ -5,8 +5,9 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"unicode"
 	"unicode/utf8"
+
+	"github.com/mikekosulin/kanareika/internal/untrusted"
 )
 
 // Text from the server (host names, package names, job output: what scanned hosts reported) reaches the terminal
@@ -132,13 +133,9 @@ func safeFrame(l string) string {
 	return b.String()
 }
 
-// oneLine: s as one line of text for an agent: controls and line breaks (also U+2028/9) as single spaces, as the
-// server's prompts do (internal/prompt's data).
-func oneLine(s string) string {
-	return strings.Join(strings.FieldsFunc(s, func(r rune) bool {
-		return unicode.IsControl(r) || r == '\u2028' || r == '\u2029'
-	}), " ")
-}
+// oneLine: s as one line of text for an agent, as the server's prompts make it (internal/untrusted.Line): controls
+// and line breaks as single spaces, invisible characters dropped.
+func oneLine(s string) string { return untrusted.Line(s, 0) }
 
 // SyncWriter: w for the program's frames and the clipboard sequence alike, one write at a time: a copy never lands
 // inside a frame. A terminal stays a terminal (Fd, Read, Close): bubbletea learns the window's size only from one,
