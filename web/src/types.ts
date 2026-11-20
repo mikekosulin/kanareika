@@ -59,6 +59,7 @@ export interface Tree {
   hidden_backported: number;
   servers?: Record<string, number>;
   rows?: number;
+  facets?: Record<string, number>; // per filter: the fixes there would be with it on
 }
 
 export interface CVE {

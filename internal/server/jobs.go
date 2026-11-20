@@ -38,6 +38,7 @@ type ScanFunc func(ctx context.Context, o *config.Org, req ScanRequest, out io.W
 
 // Job states.
 const (
+	JobQueued    = "queued" // waits for the scan before it ("scan everything": one after another)
 	JobRunning   = "running"
 	JobDone      = "done"      // exit code 0
 	JobFailed    = "failed"    // non-zero exit code: refused, hosts failed, ...
@@ -112,15 +113,25 @@ func newID() string {
 var errBusy = errors.New("a scan of this org/env is already running")
 
 func (js *jobs) start(o *config.Org, req ScanRequest) (*job, error) {
+	return js.startAfter(o, req, nil)
+}
+
+// startAfter: start, but run only once prev has finished (nil: at once). Queued, it counts as running for its
+// org/env; cancelled while it waits, it never runs.
+func (js *jobs) startAfter(o *config.Org, req ScanRequest, prev *job) (*job, error) {
 	js.mu.Lock()
 	defer js.mu.Unlock()
 	for _, j := range js.list {
-		if j.State == JobRunning && j.Request.Org == req.Org && j.Request.Env == req.Env {
+		if (j.State == JobRunning || j.State == JobQueued) && j.Request.Org == req.Org && j.Request.Env == req.Env {
 			return nil, errBusy
 		}
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	j := &job{ID: newID(), Request: req, State: JobRunning, Started: js.now().UTC(), Output: []string{},
+	state := JobRunning
+	if prev != nil {
+		state = JobQueued
+	}
+	j := &job{ID: newID(), Request: req, State: state, Started: js.now().UTC(), Output: []string{},
 		cancel: cancel, done: make(chan struct{})}
 	js.list = append(js.list, j)
 	js.trim()
@@ -129,7 +140,21 @@ func (js *jobs) start(o *config.Org, req ScanRequest) (*job, error) {
 		defer js.wg.Done()
 		defer close(j.done)
 		defer cancel()
-		code := js.run(ctx, o, req, j)
+		if prev != nil {
+			select {
+			case <-prev.done:
+			case <-ctx.Done():
+			}
+			js.mu.Lock()
+			if ctx.Err() == nil {
+				j.State, j.Started = JobRunning, js.now().UTC()
+			}
+			js.mu.Unlock()
+		}
+		code := 130 // cancelled while it waited
+		if ctx.Err() == nil {
+			code = js.run(ctx, o, req, j)
+		}
 		js.mu.Lock()
 		defer js.mu.Unlock()
 		if len(j.partial) > 0 {
@@ -171,7 +196,7 @@ func (js *jobs) run(ctx context.Context, o *config.Org, req ScanRequest, j *job)
 // trim forgets the oldest finished jobs beyond maxJobs (running ones always stay).
 func (js *jobs) trim() {
 	for len(js.list) > maxJobs {
-		i := slices.IndexFunc(js.list, func(j *job) bool { return j.State != JobRunning })
+		i := slices.IndexFunc(js.list, func(j *job) bool { return j.State != JobRunning && j.State != JobQueued })
 		if i < 0 {
 			return
 		}
@@ -184,7 +209,7 @@ func (js *jobs) cancel(id string) bool {
 	defer js.mu.Unlock()
 	for _, j := range js.list {
 		if j.ID == id {
-			if j.State == JobRunning {
+			if j.State == JobRunning || j.State == JobQueued {
 				j.cancelled = true
 				j.cancel()
 			}
@@ -294,6 +319,65 @@ func (s *Server) apiScan(w http.ResponseWriter, r *http.Request) {
 	}
 	s.log.Printf("dashboard: scan %s/%s started (job %s)", req.Org, req.Env, j.ID)
 	sendJSON(w, http.StatusAccepted, map[string]any{"id": j.ID})
+}
+
+// scanAll: what POST /api/scan/all asks: every environment of org, or of every org when it is "".
+type scanAll struct {
+	Org string `json:"org"`
+}
+
+// apiScanAll: POST /api/scan/all {org?} -> {ids, skipped: [{org, env, reason}]}: a scan of every environment (of
+// one org, or of all), queued one after another so they don't all load the network and memory at once. An
+// environment already being scanned, without hosts, or that a scan may not start in (config errors, outside the
+// consent window) is skipped with the reason.
+func (s *Server) apiScanAll(w http.ResponseWriter, r *http.Request) {
+	if s.jobs == nil {
+		sendErr(w, http.StatusForbidden, "scans are disabled on this dashboard")
+		return
+	}
+	var req scanAll
+	dec := json.NewDecoder(io.LimitReader(r.Body, 4<<10))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		sendErr(w, http.StatusBadRequest, "bad request: "+err.Error())
+		return
+	}
+	s.reload()
+	st := s.state.Load()
+	if req.Org != "" && st.byID[req.Org] == nil {
+		sendErr(w, http.StatusBadRequest, fmt.Sprintf("unknown org %q", req.Org))
+		return
+	}
+	type skip struct{ Org, Env, Reason string }
+	ids, skipped := []string{}, []skip{}
+	var prev *job
+	for _, o := range st.orgs {
+		if req.Org != "" && o.ID != req.Org {
+			continue
+		}
+		for _, env := range o.Envs() {
+			sr := ScanRequest{Org: o.ID, Env: env}
+			org, err := validate(st, &sr)
+			if err == nil {
+				var j *job
+				if j, err = s.jobs.startAfter(org, sr, prev); err == nil {
+					ids, prev = append(ids, j.ID), j
+					continue
+				}
+			}
+			skipped = append(skipped, skip{o.ID, env, err.Error()})
+		}
+	}
+	scope := "every org"
+	if req.Org != "" {
+		scope = req.Org
+	}
+	s.log.Printf("dashboard: scan of %s: %d queued, %d skipped", scope, len(ids), len(skipped))
+	out := []map[string]string{}
+	for _, k := range skipped {
+		out = append(out, map[string]string{"org": k.Org, "env": k.Env, "reason": k.Reason})
+	}
+	sendJSON(w, http.StatusAccepted, map[string]any{"ids": ids, "skipped": out})
 }
 
 // apiJobs: GET /api/jobs -> {enabled, modules, jobs: newest first}.

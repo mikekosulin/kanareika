@@ -4,22 +4,17 @@ import { useCallback, useEffect, useEffectEvent, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { t } from "../lib/i18n";
 import { ago, days, dueText, narrow, pct } from "../lib/format";
-import { closeDetail, set, setBy, setSort, syncURL, toggle, useApp, useS } from "../state";
+import { closeDetail, set, setSort, syncURL, toggle, useApp, useS } from "../state";
 import { client, treeParams, useEnv, useKids, useLens, useNode, useRunData, useTree, type TreeParams } from "../queries";
 import type { Tree, TreeNode } from "../types";
-import { Chips, Empty, Icon, Search, Seg, Skeleton, SortHead } from "../components/ui";
+import { Empty, Icon, Search, Seg, Skeleton, SortHead } from "../components/ui";
 import { DataTable, type Col } from "../components/DataTable";
 import { MainText } from "../components/cells";
-import { GROUPS, useQueryInput } from "./Todo";
+import { useQueryInput } from "./Todo";
 import { Hcell, HostDetail, SrvMark, useText } from "./HostDetail";
 import { NodeDetail } from "./NodeDetail";
 import { Banner, NoRuns } from "./Shell";
 
-const SFILT: [string, string][] = [
-  ["front", "Public"],
-  ["kev", "KEV"],
-  ["overdue", "overdue"],
-];
 const LENS_DEFAULT = [
   ["priorities", "Priorities"],
   ["logins", "Logins"],
@@ -76,21 +71,13 @@ export function Servers() {
             </div>
           </div>
           <div className="bar2 vbar">
-            <Seg label={t("group")} aria={t("Group by")} items={GROUPS.map(([k, l]) => [k, t(l)])} value="host" onPick={setBy} />
             <Seg
-              label={t("show")}
+              label=""
               aria={t("Show")}
               items={lenses.map((l) => [l.id, t(l.title)])}
               value={s.lens}
               onPick={(id) => set({ lens: id, vsel: "" })}
             />
-            {s.lens === "priorities" && (
-              <Chips items={SFILT.map(([k, l]) => [k, t(l)])} on={s.flt} onToggle={(k) => set((st) => ({ flt: toggle(st.flt, k) }))}>
-                <button className="chip" aria-pressed={s.p4} onClick={() => set((st) => ({ p4: !st.p4 }))}>
-                  + P4
-                </button>
-              </Chips>
-            )}
             <Search value={text} onChange={setText} placeholder={t("Filter")} />
           </div>
           <div className="scroll" ref={scrollRef}>

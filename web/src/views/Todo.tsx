@@ -4,11 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { t, tx } from "../lib/i18n";
 import { api, qs } from "../lib/api";
 import { LANG } from "../lib/i18n";
-import { fmtN, narrow } from "../lib/format";
-import { grouping, set, setBy, setSort, syncURL, toast, toggle, useApp, useS, type By } from "../state";
+import { narrow } from "../lib/format";
+import { grouping, set, setBy, setSort, syncURL, toast, useApp, useS, type By } from "../state";
 import { client, fullTree, treeParams, useNode, useRunData, useTree } from "../queries";
 import type { TreeNode } from "../types";
-import { Chips, copy, Empty, Icon, Search, Seg, Skeleton, SortHead } from "../components/ui";
+import { copy, Empty, Icon, Search, Seg, Skeleton, SortHead } from "../components/ui";
 import { DataTable, type Col } from "../components/DataTable";
 import { TreeRows, useRows, useTreeKeys, type Row } from "./TreeList";
 import { NodeDetail } from "./NodeDetail";
@@ -23,6 +23,11 @@ export const FILTERS: [string, string][] = [
   ["ready", "fix ready"],
   ["nofix", "no fix yet"],
   ["overdue", "overdue"],
+];
+// Fixes is grouped by fix or by CVE (the servers have their own place)
+const VIEWS: [By, string][] = [
+  ["fix", "By fix"],
+  ["cve", "By CVE"],
 ];
 export const GROUPS: [By, string][] = [
   ["host", "server"],
@@ -100,7 +105,7 @@ export function Todo() {
           <div className="work-top">
             <div className="hdr">
               <div>
-                <h1>{t(s.view === "servers" ? "Servers" : "ToDo")}</h1>
+                <h1>{t(s.view === "servers" ? "Servers" : "Fixes")}</h1>
                 <div className="sub">
                   {s.accepted ? (
                     <AcceptedSub />
@@ -126,37 +131,18 @@ export function Todo() {
             </div>
           </div>
           <div className="bar2">
-            <Seg label={t("group")} aria={t("Group by")} items={GROUPS.map(([k, l]) => [k, t(l)])} value={s.by} onPick={setBy} />
+            {s.view === "todo" ? (
+              <Seg
+                aria={t("Group by")}
+                label=""
+                items={VIEWS.map(([k, l]) => [k, t(l)])}
+                value={s.by === "cve" ? "cve" : "fix"}
+                onPick={setBy}
+              />
+            ) : (
+              <Seg label={t("group")} aria={t("Group by")} items={GROUPS.map(([k, l]) => [k, t(l)])} value={s.by} onPick={setBy} />
+            )}
             <Search value={text} onChange={setText} placeholder={t("Package, CVE, host or group")} />
-            <Chips
-              items={s.accepted ? [] : FILTERS.map(([k, l]) => [k, t(l)])}
-              on={s.flt}
-              onToggle={(k) => set((st) => ({ flt: toggle(st.flt, k) }))}
-            >
-              {s.view === "todo" && (
-                <button
-                  className="chip"
-                  aria-pressed={s.accepted}
-                  onClick={() => {
-                    set((st) => ({ accepted: !st.accepted, cur: null, vitem: null, vsel: "" }));
-                    syncURL();
-                  }}
-                >
-                  {t("accepted")}
-                </button>
-              )}
-              {!s.accepted && (s.backport || !!tr?.hidden_backported) && (
-                <button
-                  className="chip"
-                  aria-pressed={s.backport}
-                  title={t("Already fixed by a backport: the package's changelog lists the CVE as fixed")}
-                  onClick={() => set((st) => ({ backport: !st.backport }))}
-                >
-                  + {t("backported")}
-                  {!s.backport && tr?.hidden_backported ? " " + fmtN(tr.hidden_backported) : ""}
-                </button>
-              )}
-            </Chips>
           </div>
           <div className="scroll" ref={scrollRef}>
             {s.accepted ? (
@@ -218,7 +204,7 @@ export function Todo() {
 
 // the tree's question, as one object that changes only when the question does
 let lastP: ReturnType<typeof treeParams> | null = null;
-function useMemoParams(s: Parameters<typeof treeParams>[0]) {
+export function useMemoParams(s: Parameters<typeof treeParams>[0]) {
   const p = treeParams(s);
   if (lastP && JSON.stringify(lastP) === JSON.stringify(p)) return lastP;
   lastP = p;

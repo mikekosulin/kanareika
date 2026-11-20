@@ -4848,3 +4848,335 @@ code.to,
   right: 0;
   top: 0;
 }
+
+/* ===== the frame (0.8): the top bar, the tabs, the rail with the scope and the filters ===== */
+.app {
+  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.app > .topbar,
+.app > .tabbar {
+  grid-column: 1 / -1;
+}
+.app > .side,
+.app > main {
+  grid-row: 3;
+  min-height: 0;
+}
+.app > main {
+  grid-column: 2;
+}
+.app.mini,
+.app.setupmode {
+  grid-template-columns: minmax(0, 1fr);
+}
+.app.mini > .side {
+  display: none;
+}
+.app.mini > main,
+.app.setupmode > main {
+  grid-column: 1;
+}
+.app.setupmode > .topbar {
+  display: none;
+}
+.app.setupmode > main {
+  grid-row: 1 / -1;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 46px;
+  padding: 0 14px;
+  background: var(--solid);
+  border-bottom: 1px solid var(--line);
+}
+.brand2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin-right: 10px;
+}
+.brand2 img {
+  width: 22px;
+  height: 22px;
+}
+.menubtn {
+  display: none;
+}
+.app.mini .menubtn {
+  display: inline-flex;
+}
+.tstat {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  min-width: 0;
+}
+.tstat .tsi,
+.tstat .row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.tstat .row a {
+  color: var(--ink);
+}
+.dot.warn {
+  background: var(--p2);
+}
+.pop {
+  position: relative;
+  display: flex;
+}
+.menu.right {
+  right: 0;
+  top: calc(100% + 6px);
+}
+.topbar .menu {
+  min-width: 260px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.topbar .menu .foot2 {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 0 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.tabbar a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 10px;
+  color: var(--ink-2);
+  text-decoration: none;
+  box-shadow: inset 0 -2px 0 transparent;
+}
+.tabbar a:hover {
+  color: var(--ink);
+}
+.tabbar a[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent-line);
+}
+.tabbar a.off {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.tabbar a .n {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.tabbar a .n.hot {
+  color: var(--p1);
+}
+.tabbar .scanbtn {
+  margin-left: auto;
+  gap: 1px;
+  padding: 6px 0;
+}
+.scanbtn .btn.more {
+  padding: 0 7px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.scanbtn .btn:first-child:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.app > .side.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow-y: auto;
+  padding: 14px 14px 10px;
+  gap: 4px;
+}
+.rail > * {
+  width: 100%;
+  box-sizing: border-box;
+}
+.rsec {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 14px;
+  font-size: 13px;
+}
+.rsec + .rsec {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.scope3 label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.scope3 label > span,
+.rsec h4 {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+  margin: 0;
+}
+.rsec h4 {
+  margin: 12px 0 4px;
+}
+.scope3 select {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line-2);
+  background: var(--raised);
+  color: var(--ink);
+  border-radius: var(--r-ctl);
+  font: inherit;
+}
+.rhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 600;
+}
+.rhead .lnk {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent-line);
+}
+.pills {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+.pills button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 5px 0;
+  border: 1px solid var(--line-2);
+  background: var(--raised);
+  border-radius: var(--r-ctl);
+  font: 12px var(--mono);
+  color: var(--ink-2);
+}
+.pills button[aria-pressed="true"] {
+  border-color: var(--accent-line);
+  background: var(--sel);
+  color: var(--ink);
+}
+.pc.p1 {
+  color: var(--p1);
+}
+.pc.p2 {
+  color: var(--p2);
+}
+.pc.p3 {
+  color: var(--accent-line);
+}
+.pc.p4 {
+  color: var(--ink-2);
+}
+.fck {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+.fck .n {
+  margin-left: auto;
+  color: var(--ink-3);
+  font: 12px var(--mono);
+}
+.fck.zero {
+  color: var(--ink-3);
+}
+.railhide {
+  margin-top: auto;
+  align-self: flex-start;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.ovw {
+  padding: 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: auto;
+}
+.ovw .hdr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ovw h1 {
+  margin: 0;
+  font-size: 20px;
+}
+.ovw .sub {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.ovw .ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.tblwrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+}
+.ovt td,
+.ovt th {
+  padding: 10px 14px;
+}
+.ovt td.r,
+.ovt th.r {
+  text-align: right;
+  font-family: var(--mono);
+}
+@media (max-width: 860px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app > main {
+    grid-column: 1;
+  }
+  .menubtn {
+    display: inline-flex;
+  }
+  .tstat .tsi {
+    display: none;
+  }
+  .rail {
+    padding-top: 18px;
+  }
+}

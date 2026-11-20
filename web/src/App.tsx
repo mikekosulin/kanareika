@@ -1,11 +1,14 @@
-// The page: the sidebar and the view the address names; setup when there is nothing yet.
+// The page: the top bar, the tabs, the rail (scope and filters) and the view the address names; setup when there is
+// nothing yet.
 import { useEffect, useRef } from "react";
 import { t } from "./lib/i18n";
 import { local } from "./lib/local";
 import { readURL, set, syncURL, toast, useApp, useS } from "./state";
 import { refresh, useEnv, useJobs, useOrgs } from "./queries";
-import { Icon, Toast } from "./components/ui";
-import { Palette, Sidebar } from "./views/Shell";
+import { Toast } from "./components/ui";
+import { Palette } from "./views/Shell";
+import { Rail, TabBar, TopBar } from "./views/Frame";
+import { Overview } from "./views/Overview";
 import { Servers } from "./views/Servers";
 import { Todo } from "./views/Todo";
 import { History } from "./views/History";
@@ -50,32 +53,22 @@ export function App() {
   if (!orgs.data) return <div className="app" />;
   return (
     <div className={"app" + (setup ? " setupmode" : "") + (mini ? " mini" : "")}>
-      <Sidebar />
+      <TopBar />
+      {!setup && <TabBar />}
+      <Rail />
       <div className={"scrim" + (s.sideOpen ? " on" : "")} onClick={() => set({ sideOpen: false })} />
       <main>
-        <div className="mbar">
-          <button
-            className="btn icon ghost"
-            aria-label="Menu"
-            aria-controls="side"
-            aria-expanded={s.sideOpen}
-            onClick={() => set({ sideOpen: !s.sideOpen })}
-          >
-            <Icon name="menu" />
-          </button>
-          <b>kanareika</b>
-        </div>
-        <div style={{ display: "contents" }}>
-          {setup ? (
-            <Setup />
-          ) : s.view === "history" ? (
-            <History key={s.org + "|" + s.env} />
-          ) : s.view === "servers" && s.sby === "host" ? (
-            <Servers key={s.org + "|" + s.env + "|" + s.run} />
-          ) : (
-            <Todo key={s.view + "|" + s.org + "|" + s.env + "|" + s.run} />
-          )}
-        </div>
+        {setup ? (
+          <Setup />
+        ) : s.view === "overview" ? (
+          <Overview />
+        ) : s.view === "history" ? (
+          <History key={s.org + "|" + s.env} />
+        ) : s.view === "servers" && s.sby === "host" ? (
+          <Servers key={s.org + "|" + s.env + "|" + s.run} />
+        ) : (
+          <Todo key={s.view + "|" + s.org + "|" + s.env + "|" + s.run} />
+        )}
       </main>
       <Palette />
       <Toast />

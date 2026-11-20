@@ -9,6 +9,7 @@ import (
 	"iter"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -47,11 +48,21 @@ const (
 	FReady   = "ready"   // an installable fix exists
 	FNoFix   = "nofix"   // no fix in the repositories yet
 	FOverdue = "overdue" // due before today
+	// priorities: any of those chosen (P1 or P2: the fixes of either)
+	FP1 = "p1"
+	FP2 = "p2"
+	FP3 = "p3"
+	FP4 = "p4"
 )
+
+// Facets: every filter, in the order the interfaces list them; Tree.Facets counts the fixes each would leave.
+var Facets = []string{FP1, FP2, FP3, FP4, FKEV, FRCE, FEPSS, FFront, FReady, FNoFix, FOverdue}
+
+func isPrio(x string) bool { return x == FP1 || x == FP2 || x == FP3 || x == FP4 }
 
 type Opts struct {
 	By         string   // fix (default), cve, host
-	Filters    []string // all must match
+	Filters    []string // all must match (of the priorities, any)
 	Query      string   // substring of host, group, package, CVE id, title
 	Backported bool     // include findings the package changelog says are fixed
 	Today      string   // YYYY-MM-DD, for "overdue"
@@ -159,6 +170,49 @@ type Tree struct {
 	Servers map[string]int `json:"servers,omitempty"`
 	// Rows: the top rows there are, when Nodes is one page of them (Page)
 	Rows int `json:"rows,omitempty"`
+	// Facets: per filter (Facets), the fixes there would be with it on, the other filters as they are (the
+	// counts beside the filters)
+	Facets map[string]int `json:"facets"`
+}
+
+// facets: Tree.Facets over the set's items that match the query. A priority's count: the fixes of that priority
+// under the other filters; another filter's: the fixes it would leave with the filters on (and, with priorities
+// chosen, of those priorities).
+func facets(s *Set, o Opts, match func(*item) bool) map[string]int {
+	var rest []string // the filters on but the priorities
+	for _, x := range o.Filters {
+		if !isPrio(x) {
+			rest = append(rest, x)
+		}
+	}
+	chosen := prios(o.Filters)
+	out := make(map[string]int, len(Facets))
+	base := unitPrios(s, o, rest, match)
+	for _, k := range Facets {
+		if isPrio(k) {
+			for _, r := range base {
+				if r == prioRank(strings.ToUpper(k)) {
+					out[k]++
+				}
+			}
+			continue
+		}
+		with := append(slices.DeleteFunc(slices.Clone(rest), func(x string) bool { return x == k }), k)
+		for _, r := range unitPrios(s, o, with, match) {
+			if chosen == nil || chosen[rankPrio(r)] {
+				out[k]++
+			}
+		}
+	}
+	return out
+}
+
+// rankPrio: prioRank's way back ("" for none).
+func rankPrio(r int) string {
+	if r >= 1 && r <= 4 {
+		return "P" + strconv.Itoa(r)
+	}
+	return ""
 }
 
 // Key: a finding's selection key, stable between runs (the report key).
@@ -271,42 +325,68 @@ func state(f *item) string {
 	return finding.FixAvailable
 }
 
-// keep: whether the filters (the query apart: Set.matcher) keep the item.
-func (o Opts) keep(f *item) bool {
+// keep: whether the filters (the query apart: Set.matcher; the priorities apart: a fix's priority, see BuildSet)
+// keep the item.
+func (o Opts) keep(f *item) bool { return o.keepWith(f, o.Filters) }
+
+// keepWith: keep with these filters instead of o's; priority filters are left to the fix (unitPrios).
+func (o Opts) keepWith(f *item, filters []string) bool {
 	if !actionable(f) || (f.Backported && !o.Backported) {
 		return false
 	}
-	for _, x := range o.Filters {
-		switch x {
-		case FKEV:
-			if !f.C.KEV {
-				return false
+	for _, x := range filters {
+		if !isPrio(x) && !o.one(f, x) {
+			return false
+		}
+	}
+	return true
+}
+
+// prios: the priorities among filters, as a set of "P1".."P4" (nil: none chosen).
+func prios(filters []string) map[string]bool {
+	var out map[string]bool
+	for _, x := range filters {
+		if isPrio(x) {
+			if out == nil {
+				out = map[string]bool{}
 			}
-		case FRCE:
-			if !(f.C.Preauth && f.C.RCE) {
-				return false
-			}
-		case FEPSS:
-			if f.C.EPSS == nil || *f.C.EPSS < 0.1 {
-				return false
-			}
-		case FFront:
-			if f.Exposure != 1 {
-				return false
-			}
-		case FReady:
-			if !installable(f) {
-				return false
-			}
-		case FNoFix:
-			if installable(f) {
-				return false
-			}
-		case FOverdue:
-			if f.DueOr() == "" || o.Today == "" || f.DueOr() >= o.Today {
-				return false
+			out[strings.ToUpper(x)] = true
+		}
+	}
+	return out
+}
+
+// unitPrios: each fix's priority (its most urgent item) over the items the filters keep and the query matches.
+func unitPrios(s *Set, o Opts, filters []string, match func(*item) bool) map[string]int {
+	out := map[string]int{}
+	for i := range s.fs.Items {
+		f := &s.fs.Items[i]
+		if o.keepWith(f, filters) && match(f) {
+			if r, ok := out[f.U.Key]; !ok || prioRank(f.PriorityOr()) < r {
+				out[f.U.Key] = prioRank(f.PriorityOr())
 			}
 		}
+	}
+	return out
+}
+
+// one: f passes filter x on its own (a priority filter: f is of that priority).
+func (o Opts) one(f *item, x string) bool {
+	switch x {
+	case FKEV:
+		return f.C.KEV
+	case FRCE:
+		return f.C.Preauth && f.C.RCE
+	case FEPSS:
+		return f.C.EPSS != nil && *f.C.EPSS >= 0.1
+	case FFront:
+		return f.Exposure == 1
+	case FReady:
+		return installable(f)
+	case FNoFix:
+		return !installable(f)
+	case FOverdue:
+		return f.DueOr() != "" && o.Today != "" && f.DueOr() < o.Today
 	}
 	return true
 }
@@ -628,6 +708,10 @@ func BuildSet(s *Set, hosts Hosts, o Opts) *Tree {
 	tally := report.NewTally()
 	match := s.matcher(strings.ToLower(strings.TrimSpace(o.Query)))
 	kept := func(f *item) bool { return o.keep(f) && match(f) }
+	if chosen := prios(o.Filters); chosen != nil { // the fixes of those priorities, whole
+		up := unitPrios(s, o, o.Filters, match)
+		kept = func(f *item) bool { return o.keep(f) && match(f) && chosen[rankPrio(up[f.U.Key])] }
+	}
 	for i := range s.fs.Items {
 		f := &s.fs.Items[i]
 		if actionable(f) && f.Backported && !o.Backported {
@@ -644,6 +728,7 @@ func BuildSet(s *Set, hosts Hosts, o Opts) *Tree {
 	}
 	tot := tally.Totals()
 	t.Counts, t.Fixes, t.NoFix, t.CVEs, t.Hosts = tot.ByPriority(), tot.Fixes, tot.NoFix, tot.CVEs, tot.Hosts
+	t.Facets = facets(s, o, match)
 	recipes := map[*Node]recipe{}
 	add := func(n *Node, r recipe) {
 		recipes[n] = r

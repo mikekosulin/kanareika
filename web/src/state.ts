@@ -5,7 +5,7 @@ import { useShallow } from "zustand/react/shallow";
 import { narrow } from "./lib/format";
 import { local } from "./lib/local";
 
-export type View = "servers" | "todo" | "history" | "setup";
+export type View = "overview" | "servers" | "todo" | "history" | "setup";
 export type By = "fix" | "cve" | "host";
 export const TREE_VIEWS: View[] = ["servers", "todo"];
 export const isTree = (v: View) => v === "servers" || v === "todo";
@@ -212,7 +212,7 @@ const cardHost = (s: State) => (serverList(s) && s.cur?.startsWith("h:") && !s.c
 export function readURL() {
   const p = new URLSearchParams(location.search);
   const v = location.pathname.replace(/^\/+|\/+$/g, "").split("/")[0];
-  const view: View = v === "servers" || v === "todo" || v === "history" ? v : v === "setup" ? "setup" : "servers";
+  const view: View = v === "overview" || v === "servers" || v === "todo" || v === "history" ? v : v === "setup" ? "setup" : "servers";
   const patch: Partial<State> = { view, lens: p.get("show") || "priorities", accepted: view === "todo" && p.get("f") === "accepted" };
   if (p.get("org")) patch.org = p.get("org")!;
   if (p.get("env")) patch.env = p.get("env")!;
