@@ -780,10 +780,18 @@ func addDays(date string, days float64) string {
 	return t.AddDate(0, 0, int(days)).Format(time.DateOnly)
 }
 
-// clock sets FirstSeen, FixSince, ClockStart, DueWhy and Due of a prioritized finding (see DueRules).
+// dateBefore: s is a date before today; anything else (after it, not a date at all) is not counted from.
+func dateBefore(s, today string) bool {
+	_, err := time.Parse(time.DateOnly, s)
+	return err == nil && s < today
+}
+
+// clock sets FirstSeen, FixSince, ClockStart, DueWhy and Due of a prioritized finding (see DueRules). Dates of the
+// state before that are not dates start again today, an advisory's that is not one counts as none: the clock
+// always has a start, and CISA's date always applies.
 func clock(f *finding.Finding, p *finding.Finding, d DueRules, kevDue map[string]string, today string) {
 	f.FirstSeen, f.FixSince, f.ClockStart, f.DueWhy, f.KEVDue, f.Due = today, "", "", "", "", nil
-	if p != nil && p.FirstSeen != "" && p.FirstSeen < today {
+	if p != nil && dateBefore(p.FirstSeen, today) {
 		f.FirstSeen = p.FirstSeen
 	}
 	if fixKnown(f) {
@@ -791,7 +799,7 @@ func clock(f *finding.Finding, p *finding.Finding, d DueRules, kevDue map[string
 		switch {
 		case f.Kind != finding.Vuln:
 			f.FixSince = f.FirstSeen
-		case p != nil && p.FixSince != "" && p.FixSince < today:
+		case p != nil && dateBefore(p.FixSince, today):
 			f.FixSince = p.FixSince
 		}
 	}
@@ -813,7 +821,7 @@ func clock(f *finding.Finding, p *finding.Finding, d DueRules, kevDue map[string
 		}
 		start, why = f.FixSince, finding.DueFixSince
 	case finding.DuePublished:
-		if f.Published != "" {
+		if _, err := time.Parse(time.DateOnly, f.Published); err == nil {
 			start, why = f.Published, finding.DuePublished
 		}
 	}
