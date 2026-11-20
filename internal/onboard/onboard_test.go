@@ -292,6 +292,44 @@ func TestAddJumpNameTaken(t *testing.T) {
 	}
 }
 
+// TestCreateJumpNameTaken: a new org's jump hosts named alike (the form's bastion and pasted ones whose first DNS
+// label is bastion) each get a name of their own, as Add names them.
+func TestCreateJumpNameTaken(t *testing.T) {
+	p := config.PathsAt(t.TempDir())
+	r := req()
+	r.Jump = "jumper@203.0.113.10"
+	r.Hosts = "ssh -J ops@bastion.example.org admin@10.0.0.7\nssh -J other@bastion.example.net admin@10.0.0.9"
+	path, errs, err := Create(p, r, time.Now())
+	if err != nil || len(errs) > 0 {
+		t.Fatal(errs, err)
+	}
+	l, _ := config.NewLoader(p)
+	o, lerrs := l.LoadOrg(path)
+	if len(lerrs) > 0 {
+		t.Fatal(lerrs)
+	}
+	by := map[string]config.Host{}
+	for _, h := range o.Hosts {
+		by[h.Name] = h
+	}
+	js := o.Jumps()
+	if js["bastion"]["address"] != "203.0.113.10" || js["bastion"]["user"] != "jumper" {
+		t.Fatalf("the form's bastion: %v", js)
+	}
+	if by["10-0-0-7"].Jump != "bastion-2" || js["bastion-2"]["address"] != "bastion.example.org" || js["bastion-2"]["user"] != "ops" {
+		t.Fatalf("another machine named bastion: %+v %v", by["10-0-0-7"], js)
+	}
+	if by["10-0-0-9"].Jump != "bastion-3" || js["bastion-3"]["address"] != "bastion.example.net" || len(js) != 3 {
+		t.Fatalf("a third: %+v %v", by["10-0-0-9"], js)
+	}
+	// without the form's jump: two pasted ones named alike
+	r = req()
+	r.ID, r.Hosts = "beta", "ssh -J ops@bastion.example.org admin@10.0.0.7\nssh -J other@bastion.example.net admin@10.0.0.9"
+	if _, errs, err := Create(p, r, time.Now()); err != nil || len(errs) > 0 {
+		t.Fatal(errs, err)
+	}
+}
+
 // TestIPv6WithPort: "[v6]:port" is a YAML flow sequence when written plain; Create and Add quote it, whichever way
 // it was pasted (name address, user@host, an ssh command, CSV, an Ansible line).
 func TestIPv6WithPort(t *testing.T) {

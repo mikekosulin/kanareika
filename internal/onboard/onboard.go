@@ -390,6 +390,16 @@ access:
 	if r.Port != 0 && r.Port != 22 {
 		fmt.Fprintf(&b, "  port: %d\n", r.Port)
 	}
+	// jumps: the names taken so far, as Add's freeJump reads them (two machines never share one)
+	jumps := mapping()
+	addJump := func(name, addr, user string) {
+		j := mapping()
+		set(j, "address", scalar(addr))
+		if user != "" {
+			set(j, "user", scalar(user))
+		}
+		set(jumps, name, j)
+	}
 	if r.Jump != "" {
 		ju, jh, ok := strings.Cut(r.Jump, "@")
 		if !ok {
@@ -400,6 +410,7 @@ access:
 		if ju != "" {
 			fmt.Fprintf(&b, "      user: %s\n", ys(ju))
 		}
+		addJump("bastion", jh, ju)
 	}
 	// jump hosts named by hosts: another pasted host (by name) or an address of their own
 	jumpName := map[string]string{}
@@ -412,27 +423,28 @@ access:
 		if h.Jump == "" || jumpName[h.Jump] != "" {
 			continue
 		}
-		n := slug(hostOnly(h.Jump))
+		addr, user, n := h.Jump, "", slug(hostOnly(h.Jump))
 		if j, ok := byName[strings.ToLower(h.Jump)]; ok {
-			n = j.Name
+			addr, user, n = j.Address, j.User, j.Name
+		} else if u, a, ok := strings.Cut(h.Jump, "@"); ok {
+			user, addr = u, a
 		}
+		n = freeJump(jumps, n, addr, user)
 		jumpName[h.Jump] = n
-		jumpOrder = append(jumpOrder, h.Jump)
+		if get(jumps, n) == nil {
+			addJump(n, addr, user)
+			jumpOrder = append(jumpOrder, n)
+		}
 	}
 	if len(jumpOrder) > 0 {
 		if r.Jump == "" {
 			b.WriteString("  jumps:                         # reached first, the servers through them\n")
 		}
-		for _, raw := range jumpOrder {
-			addr, user := raw, ""
-			if j, ok := byName[strings.ToLower(raw)]; ok {
-				addr, user = j.Address, j.User
-			} else if u, a, ok := strings.Cut(raw, "@"); ok {
-				user, addr = u, a
-			}
-			fmt.Fprintf(&b, "    %s:\n      address: %s\n", ys(jumpName[raw]), ys(addr))
-			if user != "" {
-				fmt.Fprintf(&b, "      user: %s\n", ys(user))
+		for _, n := range jumpOrder {
+			j := get(jumps, n)
+			fmt.Fprintf(&b, "    %s:\n      address: %s\n", ys(n), ys(get(j, "address").Value))
+			if u := get(j, "user"); u != nil {
+				fmt.Fprintf(&b, "      user: %s\n", ys(u.Value))
 			}
 		}
 	}
