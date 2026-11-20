@@ -73,6 +73,7 @@ type treeResp struct {
 	Hidden  int            `json:"hidden_backported"`
 	NoFix   int            `json:"no_fix"`
 	Servers map[string]int `json:"servers"` // hosts per state
+	Facets  map[string]int `json:"facets"`  // per filter: the fixes there would be with it on
 }
 
 type reason struct {
@@ -168,6 +169,10 @@ func (m *Model) grouping() string {
 var (
 	groupings   = []string{"host", "fix", "cve"}
 	treeFilters = []struct{ key, label string }{
+		{key: "p1", label: "P1"}, // a fix's priority: any of those chosen
+		{key: "p2", label: "P2"},
+		{key: "p3", label: "P3"},
+		{key: "p4", label: "P4"},
 		{key: "kev", label: "in CISA KEV"},
 		{key: "rce", label: "remote code execution"},
 		{key: "epss", label: "EPSS 10% or more"},

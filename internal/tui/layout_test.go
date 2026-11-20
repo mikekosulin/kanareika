@@ -30,7 +30,7 @@ func TestNarrow(t *testing.T) {
 	h.has("HOSTS", "EPSS", "DUE BY", "openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10", "? all keys", "Details")
 
 	h.size(60, 18)
-	h.has("ToDo(acme/production)[26]", "HOSTS", "DUE BY", "? all keys", " acme  production ")
+	h.has("Fixes(acme/production)[26]", "HOSTS", "DUE BY", "? all keys", " acme  production ")
 	h.hasNot("CVE EPSS", "Details")
 	h.size(40, 18)
 	h.has(" acme  production ", "? all keys", "openssl")
@@ -66,7 +66,7 @@ func TestHelpScrolls(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(60, 12)
 	h.key("?")
-	h.has("1, 2, 3, tab", "Servers, ToDo, History")
+	h.has("1, 2, 3, tab", "Servers, Fixes, History")
 	h.hasNot("any key closes this")
 	for i := 0; i < 100; i++ {
 		h.key("down")
@@ -75,7 +75,7 @@ func TestHelpScrolls(t *testing.T) {
 	h.hasNot("1, 2, 3, tab")
 	h.key("up", "k", "j", "x")
 	h.hasNot("any key closes this")
-	h.has("ToDo(")
+	h.has("Fixes(")
 }
 
 // TestPanels: the panel settings change the tabs, P4, the mouse and the columns and are kept for the next session.
@@ -122,9 +122,9 @@ func TestPanels(t *testing.T) {
 	}
 	// the columns of ToDo can be switched off too
 	h2.key("2", "o")
-	h2.has("Panels(ToDo)", "[x] hosts", "[x] EPSS", "[x] due by")
+	h2.has("Panels(Fixes)", "[x] hosts", "[x] EPSS", "[x] due by")
 	h2.key("space", "o") // tabs off
-	h2.hasNot(" 2 ToDo ")
+	h2.hasNot(" 2 Fixes ")
 	h2.has("┌")
 }
 
@@ -179,7 +179,7 @@ func TestTabsAndZone(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production", Settings: path, Zone: time.FixedZone("MSK", 3*3600)}, true)
 	h.size(120, 30)
 	h.key("3")
-	h.has("1 Servers", " 2 ToDo ", " 3 History ", "2026-11-02 14:00") // the run of 11:00 UTC, in MSK
+	h.has("1 Servers", " 2 Fixes ", " 3 History ", "2026-11-02 14:00") // the run of 11:00 UTC, in MSK
 	h.size(44, 20)
 	h.has(" 3 History ")
 	h.size(120, 30)

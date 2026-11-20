@@ -57,7 +57,7 @@ func TestMouseTree(t *testing.T) {
 	if h.m.view != vServers {
 		t.Fatal("tab", h.m.view)
 	}
-	h.click("2 ToDo")
+	h.click("2 Fixes")
 	h.click(" CVE ")
 	if h.m.by[vActions] != "cve" {
 		t.Fatal("group by", h.m.by)

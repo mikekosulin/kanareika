@@ -150,6 +150,10 @@ func TestKeysMore(t *testing.T) {
 	if h.m.view != vServers {
 		t.Fatal("shift+tab: the previous view", h.m.view)
 	}
+	h.key("shift+tab") // more than one org/env: Overview is a place, before Servers
+	if h.m.view != vOverview {
+		t.Fatal("shift+tab from Servers: Overview", h.m.view)
+	}
 	h.key("shift+tab", "h") // from History (not a tree) h goes to the place before
 	if h.m.view != vActions {
 		t.Fatal("h", h.m.view)
@@ -314,7 +318,7 @@ func TestNarrowCursor(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(40, 12)
 	h.key("G")
-	h.has("ToDo(acme/production)")
+	h.has("Fixes(acme/production)")
 	if h.m.off[vActions] == 0 {
 		t.Fatal("the cursor's row not scrolled into view")
 	}

@@ -27,14 +27,15 @@ const (
 	vExceptions
 	vRuns
 	vScans
-	vLens // a lens of Servers the server draws (GET /api/lens)
+	vLens     // a lens of Servers the server draws (GET /api/lens)
+	vOverview // every org/env (place 0, with more than one)
 	nViews
 )
 
 // viewNames: tab titles (English keys of the web page's translations where it has them). Organizations and
 // environments are chosen with O and E.
-var viewNames = [nViews]string{"Servers", "ToDo", "Packages", "Changes", "Access", "Network", "Health",
-	"Exceptions", "History", "Scans", "Servers"}
+var viewNames = [nViews]string{"Servers", "Fixes", "Packages", "Changes", "Access", "Network", "Health",
+	"Exceptions", "History", "Scans", "Servers", "Overview"}
 
 // Options of a TUI session.
 type Options struct {
@@ -105,6 +106,7 @@ type Model struct {
 	fwRules map[string]string      // a host's firewall rules as read (GET /api/hostfile), by org/env/run/host
 	// hostData: a host's fixes with their details and its runs (GET /api/host, /api/host/history), by org/env/run/host
 	hostData map[string]*hostMsg
+	askAll   time.Time       // Overview: when s first asked to scan everything (a second s within seconds starts it)
 	opened   map[string]bool // expanded nodes
 	sel      map[string]bool // selected nodes (a node selects everything under it)
 	onlySel  bool            // only the selected (v)
@@ -622,6 +624,14 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.copyTask()
 		}
 	}
+	if m.view == vOverview && !m.help {
+		switch s {
+		case "enter":
+			return m, m.openScope()
+		case "s":
+			return m, m.scanEverything()
+		}
+	}
 	if m.help {
 		switch s {
 		case "up", "k":
@@ -649,6 +659,10 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.goPlace(-1)
 	case "1", "2", "3":
 		m.toPlace(places[s[0]-'1'])
+	case "0":
+		if m.multiScope() {
+			m.toPlace(vOverview)
+		}
 	case "S":
 		m.setView(vScans)
 	case "w":
@@ -760,6 +774,8 @@ func (m *Model) page() int { return max(m.bodyHeight()-2, 1) }
 // rows: how many rows the current view lists.
 func (m *Model) rows() int {
 	switch m.view {
+	case vOverview:
+		return len(m.ovRows())
 	case vServers, vActions:
 		return len(m.treeRows())
 	case vPackages:

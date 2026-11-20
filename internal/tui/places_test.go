@@ -11,7 +11,7 @@ func TestPlaces(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(160, 40)
 	h.key("1")
-	h.has(" 1 Servers ", "2 ToDo", "3 History", "show  priorities  logins  network  health  w", "group by  server")
+	h.has(" 1 Servers ", "2 Fixes", "3 History", "show  priorities  logins  network  health  w", "group by  server")
 	h.key("w")
 	h.has("Servers(acme/production)", "show  priorities  logins  network  health  w") // the server's own lenses
 	if h.m.lens != "logins" {
@@ -49,7 +49,7 @@ func TestPlaces(t *testing.T) {
 		h.key("down")
 	}
 	h.key("space", "esc")
-	h.has("ToDo(acme/production)", "accepted risks", "UNTIL", "WHO", "REASON", "no internet")
+	h.has("Fixes(acme/production)", "accepted risks", "UNTIL", "WHO", "REASON", "no internet")
 }
 
 // TestLens: a lens the server draws: its columns as the table rules lay them out, colour where it needs

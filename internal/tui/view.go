@@ -304,7 +304,10 @@ func (m *Model) tabLines() []string {
 // scan running shows on the Scans tab; ToDo's grouping (g) at the right.
 func (m *Model) tabs() string {
 	label := func(v view, full bool) string {
-		n := strconv.Itoa(slices.Index(places, v) + 1)
+		n := strconv.Itoa(slices.Index(places, v) + 1) // Overview: 0
+		if v == vOverview {
+			n = "0"
+		}
 		name := m.t.T(viewNames[v])
 		if v == vRuns && m.busy() {
 			name += " ●"
@@ -322,8 +325,9 @@ func (m *Model) tabs() string {
 		full bool
 		sep  string
 	}{{true, "  "}, {true, " "}, {false, "  "}} {
-		parts := make([]string, len(places))
-		for i, v := range places {
+		ps := m.tabList()
+		parts := make([]string, len(ps))
+		for i, v := range ps {
 			parts[i] = m.zone(fmt.Sprintf("tab:%d", v), label(v, f.full), func(int) tea.Cmd { m.toPlace(v); return nil })
 		}
 		if l = " " + strings.Join(parts, f.sep); ansi.StringWidth(l) <= m.w {
@@ -526,6 +530,8 @@ func (m *Model) body(w, h int) (string, []string) {
 		}
 		l := m.runList()
 		return m.title(viewNames[vRuns], len(l), true), m.historyView(w, h)
+	case vOverview:
+		return m.title(viewNames[vOverview], len(m.ovRows()), false), m.overviewView(w, h)
 	case vLens:
 		n := 0
 		if m.lensData != nil {
@@ -538,6 +544,9 @@ func (m *Model) body(w, h int) (string, []string) {
 
 // viewCols: the columns of each view, in the order of its cells. drop: what goes first on a narrow terminal.
 var viewCols = [nViews][]col{
+	vOverview: {{title: "organization", width: 22, min: 10}, {title: "environment", width: 16}, {title: "servers", right: true, drop: 2},
+		{title: "P1", right: true}, {title: "P2", right: true}, {title: "P3", right: true, drop: 3}, {title: "P4", right: true, drop: 4},
+		{title: "last scan", width: 36, drop: 1}},
 	vPackages: {{width: 2}, {title: "host", width: 20, drop: 3}, {title: "where", width: 24, min: 8, drop: 4},
 		{title: "package", width: 32, min: 14}, {title: "installed", width: 28, right: true, drop: 5}, {title: "fixed in", width: 28},
 		{title: "CVE", right: true, drop: 2}, {title: "KEV", drop: 1}, {title: "due by", width: 10, drop: 6}},
@@ -738,17 +747,17 @@ func (m *Model) formView(h int) []string {
 }
 
 var helpRows = [][2]string{
-	{"1, 2, 3, tab", "Servers, ToDo, History"},
+	{"1, 2, 3, tab", "Servers, Fixes, History"},
 	{"w", "Servers: what to show (priorities, logins, network, health)"},
 	{"n, S", "History: what changed; the scans started here"},
 	{"O, E", "organization, environment (popup lists; type to narrow them)"},
 	{":, ctrl+k", "jump to a fix, a CVE, a host or a view"},
 	{"up/down, j/k, pgup/pgdn, g/G", "move (ToDo: home/end, G)"},
-	{"right/left, l/h", "ToDo: open and close a node; other views: the next and previous view"},
+	{"right/left, l/h", "Fixes: open and close a node; other views: the next and previous view"},
 	{"enter", "open (details of a node, a run, a host card, a scan's output)"},
 	{"/", "filter the list; esc clears"},
-	{"g, t", "ToDo: group by fix, CVE or host; t: order by the next column, T: the other way"},
-	{"f", "ToDo: filters (KEV, RCE, EPSS, internet-facing, fix ready, no fix, overdue); Network: only ports open to the outside"},
+	{"g, t", "Fixes: group by fix, CVE or host; t: order by the next column, T: the other way"},
+	{"f", "Fixes: filters (KEV, RCE, EPSS, internet-facing, fix ready, no fix, overdue); Network: only ports open to the outside"},
 	{"space, x, a", "select a node and everything under it, select all"},
 	{"v", "only the selected (ToDo)"},
 	{"y", "copy the fix task for the selected nodes (terminal clipboard, OSC 52): paste it into an AI agent"},
