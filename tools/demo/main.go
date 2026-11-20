@@ -31,13 +31,14 @@ import (
 	"github.com/mikekosulin/kanareika/internal/report"
 )
 
-// seams for tests: main's fatal exit, and the file system and loaders failing midway
+// seams for tests: main's fatal exit, and the file system, loaders and priorities failing midway
 var (
 	fatal         = log.Fatal
 	mkdirAll      = os.MkdirAll
 	writeFile     = os.WriteFile
 	newLoader     = config.NewLoader
 	loadPolicy    = priority.LoadPolicy
+	applyPriority = priority.Apply
 	updateCurrent = report.UpdateCurrent
 )
 
@@ -470,7 +471,7 @@ func saveRun(r *rand.Rand, envDir string, org *config.Org, env string, day, days
 	if env == "production" {
 		fs = append(fs, containerFindings(names, failed)...)
 	}
-	fs, err := priority.Apply(fs, org, env, pol, feeds, started, prev)
+	fs, err := applyPriority(fs, org, env, pol, feeds, started, prev)
 	if err != nil {
 		return err
 	}
@@ -501,6 +502,9 @@ const (
 	downHost    = "db-10"
 	newHost     = "mon-05"
 )
+
+// failedUnitHost: the host whose celery worker has failed (the health lens's failed units).
+const failedUnitHost = "worker-02"
 
 // containerFindings: what the docker and k8s modules would report for the images that run (failed hosts report
 // nothing).
@@ -616,7 +620,7 @@ func writeHostFiles(r *rand.Rand, dir string, h host, day int) error {
 		"failed_units": []any{}, "readonly_mounts": []any{}, "journal": map[string]any{"errors_7d": r.IntN(40)},
 		"time":   map[string]any{"timezone": "Etc/UTC", "synced": "yes", "service": "chronyd", "service_active": true, "offset_s": float64(r.IntN(9)) / 1000, "skew_s": 0.1},
 		"denied": []any{}}
-	if h.name == "app-02" {
+	if h.name == failedUnitHost {
 		health["failed_units"] = []any{"celery-worker.service"}
 	}
 	facts := map[string]any{"os_release": map[string]any{"PRETTY_NAME": h.os}, "uname": "Linux " + h.kernel + " x86_64", "hostname": h.name}

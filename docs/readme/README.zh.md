@@ -12,7 +12,7 @@
 
 ### 终端界面
 
-运行 `kanareika`。默认打开“待办”：最紧急的排在最前面。
+运行 `kanareika`。默认打开“修复”：最紧急的排在最前面。
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-zh.webp"><img alt="演示数据，均为虚构。" src="../screenshots/tui-zh-light.webp"></picture>
 

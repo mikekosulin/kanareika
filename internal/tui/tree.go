@@ -73,6 +73,7 @@ type treeResp struct {
 	Hidden  int            `json:"hidden_backported"`
 	NoFix   int            `json:"no_fix"`
 	Servers map[string]int `json:"servers"` // hosts per state
+	Facets  map[string]int `json:"facets"`  // per filter: the fixes there would be with it on
 }
 
 type reason struct {
@@ -156,18 +157,33 @@ func (n *tnode) hasKids() bool { return len(n.Kids) > 0 || n.More > 0 }
 // isTree: the view on screen is a tree (Servers, ToDo).
 func (m *Model) isTree() bool { return m.view == vServers || m.view == vActions }
 
-// grouping: the tree's grouping in the view on screen (ToDo's when it is not a tree).
+// grouping: the tree's grouping in the view on screen (Fixes' when it is not a tree): Servers lists servers, Fixes
+// is grouped by fix or by CVE, as on the web page.
 func (m *Model) grouping() string {
-	if m.isTree() {
-		return m.by[m.view]
+	if m.view == vServers {
+		return "host"
 	}
-	return m.by[vActions]
+	if b := m.by[vActions]; b == "fix" || b == "cve" {
+		return b
+	}
+	return "fix"
+}
+
+// groupingsHere: what g goes through in the view on screen (none on Servers).
+func (m *Model) groupingsHere() []string {
+	if m.view == vActions {
+		return []string{"fix", "cve"}
+	}
+	return nil
 }
 
 // Groupings and filters, in the order g and the filter menu go through them.
 var (
-	groupings   = []string{"host", "fix", "cve"}
 	treeFilters = []struct{ key, label string }{
+		{key: "p1", label: "P1"}, // a fix's priority: any of those chosen
+		{key: "p2", label: "P2"},
+		{key: "p3", label: "P3"},
+		{key: "p4", label: "P4"},
 		{key: "kev", label: "in CISA KEV"},
 		{key: "rce", label: "remote code execution"},
 		{key: "epss", label: "EPSS 10% or more"},
@@ -255,6 +271,9 @@ func (m *Model) sync() tea.Cmd {
 			return c
 		}
 		if c := m.fetchFirewall(); c != nil {
+			return c
+		}
+		if c := m.fetchHost(); c != nil {
 			return c
 		}
 	}
@@ -606,7 +625,11 @@ func (m *Model) todoKey(s string) (tea.Cmd, bool) {
 			m.full, m.detOff = true, 0
 		}
 	case "g":
-		m.by[m.view] = groupings[(slices.Index(groupings, m.grouping())+1)%len(groupings)]
+		gs := m.groupingsHere()
+		if len(gs) == 0 {
+			return nil, true
+		}
+		m.by[m.view] = gs[(slices.Index(gs, m.grouping())+1)%len(gs)]
 		m.cur[m.view], m.off[m.view], m.curID = 0, 0, ""
 		m.sort[m.view] = "" // the columns differ by grouping
 	case "t": // the next column to order by
@@ -710,6 +733,11 @@ func (m *Model) copyText(msg copyMsg) {
 // copyTask: the agent task for the selected nodes (or the one under the cursor), built by the server from the
 // actions under them (GET /api/prompt?nodes=).
 func (m *Model) copyTask() tea.Cmd {
+	if m.host != "" { // a server's card: its task, about that server only
+		if c := m.hostTask(m.host); c != nil {
+			return c
+		}
+	}
 	var ids []string
 	for _, n := range m.picked() {
 		ids = append(ids, n.ID)

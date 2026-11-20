@@ -1,5 +1,6 @@
 // The cells of a tree row (ToDo, Servers grouped by fix or CVE): what it is, where, how urgent, in what state.
 import { t } from "../lib/i18n";
+import { Icon } from "./ui";
 import { days, dueText, pct } from "../lib/format";
 import type { TreeNode } from "../types";
 
@@ -40,19 +41,20 @@ export function KindSlot({ n }: { n: TreeNode }) {
 }
 
 export function MainText({ n }: { n: TreeNode }) {
+  // the versions together: on a phone they take a line of their own under the package
   const ver = n.fixed ? (
-    <>
+    <span className="ver">
       <code className="from" title={n.installed}>
         {n.installed}
       </code>
       <code className="arr">→</code>
       <code className="to">{n.fixed}</code>
-    </>
+    </span>
   ) : n.installed ? (
-    <>
+    <span className="ver">
       <code className="from">{n.installed}</code>
       <span className="ttl">{noFixTxt(n.no_fix)}</span>
-    </>
+    </span>
   ) : null;
   switch (n.kind) {
     case "pkg":
@@ -130,6 +132,7 @@ export function HostsCell({ n }: { n: TreeNode }) {
   const txt = n.host_list && n.host_list.length <= 2 ? n.host_list.join(", ") : groups.join(" · ");
   return (
     <>
+      <Icon name="server" />
       <b>{n.hosts}</b>
       <span title={groups.join(", ")}>{txt}</span>
     </>

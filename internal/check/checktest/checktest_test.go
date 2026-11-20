@@ -399,6 +399,20 @@ func TestCompareFindings(t *testing.T) {
 	})
 }
 
+// TestUpgradeFindings: a recorded denied-keys finding reads in the current words; a recording that is no JSON is
+// passed on as it is, for CompareFindings to report.
+func TestUpgradeFindings(t *testing.T) {
+	h := config.Host{Name: "web-01", User: "audit"}
+	if got := upgradeFindings(h, `[{`); got != `[{` {
+		t.Errorf("broken recording: %q", got)
+	}
+	got := upgradeFindings(h, `[{"id":"limited","msg":"health.limited","args":{"what":"denied.shadow, denied.keys"}}]`)
+	if !strings.Contains(got, `"what_keys":["denied.shadow","denied.keys"]`) || strings.Contains(got, "health.limited") ||
+		!strings.Contains(got, `"user":"audit"`) {
+		t.Errorf("upgraded: %s", got)
+	}
+}
+
 func TestCanon(t *testing.T) {
 	if got := canon(map[string]any{"b": 1, "a": "x"}); got != `a="x" b=1 ` {
 		t.Errorf("%q", got)

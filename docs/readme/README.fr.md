@@ -12,7 +12,7 @@ Audit de sécurité de serveurs Linux via SSH, sans agent et en lecture seule. I
 
 ### Interface terminal
 
-Lancez `kanareika`. Il s'ouvre sur « À faire » : ce qu'il faut corriger en premier, le plus urgent en haut.
+Lancez `kanareika`. Il s'ouvre sur « Correctifs » : ce qu'il faut corriger en premier, le plus urgent en haut.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-fr.webp"><img alt="Données de démo, fictives." src="../screenshots/tui-fr-light.webp"></picture>
 

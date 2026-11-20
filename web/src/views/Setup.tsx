@@ -345,9 +345,10 @@ function ServersForm(p: {
       await client.invalidateQueries({ queryKey: ["orgs"] });
       const fresh = (client.getQueryData<any>(["orgs"])?.orgs || []).find((x: any) => x.id === org.id);
       const st = useApp.getState();
+      const sent = (body as { env?: string }).env;
       p.onDone({
         org: org.id,
-        env: (fresh?.envs.find((e: any) => e.env === st.env) || fresh?.envs[0])?.env || "production",
+        env: sent || (fresh?.envs.find((e: any) => e.env === st.env) || fresh?.envs[0])?.env || "production",
         file: "",
         only: r.added,
         skipped: r.skipped || [],
@@ -381,7 +382,12 @@ function ServersForm(p: {
       internet: false,
       confirmed: f.confirmed,
     };
-    if (kind === "add") return addHosts(p.cur!, { hosts: f.hosts, user: f.user });
+    // added to the environment on screen when it is the org's (else the server picks the org's own)
+    if (kind === "add") {
+      const env = useApp.getState().env;
+      const ours = orgs.find((o) => o.id === p.cur!.id)?.envs.some((e) => e.env === env);
+      return addHosts(p.cur!, { hosts: f.hosts, user: f.user, ...(ours ? { env } : {}) });
+    }
     if (kind === "personal") {
       const mine = orgs.find((o) => o.id === "servers");
       if (mine) return addHosts(mine, { hosts: f.hosts, user: f.user });

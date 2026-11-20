@@ -87,7 +87,7 @@ export function TreeRows(p: {
   const listRef = useRef<HTMLDivElement>(null);
   const v = useVirtualizer({
     count: p.rows.length,
-    getScrollElement: () => p.scrollRef.current,
+    getScrollElement: () => p.scrollRef.current ?? (listRef.current?.closest(".scroll") as HTMLDivElement | null) ?? null, // as DataTable's
     estimateSize: (i) => (p.rows[i].type === "sec" ? 27 : p.rows[i].depth ? 35 : 41),
     overscan: 16,
     scrollMargin: listRef.current?.offsetTop ?? 0,

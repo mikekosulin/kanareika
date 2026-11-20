@@ -275,7 +275,7 @@ func (h *harness) waitJob(state string) {
 
 func TestBrowse(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.has("ToDo(acme/production)[26] P1 6 • P2 10 • P3 10 • P4 4", "openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10", "group by  server  fix  CVE  g",
+	h.has("Fixes(acme/production)[26] P1 6 • P2 10 • P3 10 • P4 4", "openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10", "group by  fix  CVE  g",
 		"space select", "? all keys", " acme  production ", "4 hosts", "DB ok", "12:00 UTC")
 	h.hasNot("P4 os")
 	h.key("p") // P4 too
@@ -284,7 +284,7 @@ func TestBrowse(t *testing.T) {
 	h.has("Details(openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10)", "WHY P1", "in CISA KEV: exploited in the wild", "due 2026-11-08 · in 1 d",
 		"CVE-2026-0002    high   91% KEV openssl issue", "web    2 CentOS Stream 9  ● ready 2 internet-facing", "$ dnf update openssl",
 		"node: pkg:os:openssl:3.0.1", "esc back")
-	h.key("esc", "1")
+	h.key("esc", "2")
 	h.has("Servers(acme/production)", "web-01")
 	h.show(vPackages)
 	h.has("Packages(acme/production)", "nginx", "1.25.5")
@@ -292,20 +292,23 @@ func TestBrowse(t *testing.T) {
 	h.has("History(acme/production)[5]", "2026-11-02 11:00", "partial")
 	// open an older run, then back to the current state
 	h.key("G", "enter")
-	h.has("ToDo(acme/production@2026-11-01 10:00)", "run 2026-11-01 10:00")
+	h.has("Fixes(acme/production@2026-11-01 10:00)", "run 2026-11-01 10:00")
 	h.key("3", "c")
-	h.has("ToDo(acme/production)[")
+	h.has("Fixes(acme/production)[")
 	// the environments: another one, no runs yet, with the hints
 	h.key("E")
 	h.has("Environments", "production  4 hosts", "staging     1 host", "no runs")
 	h.key("down", "enter")
 	h.has(" acme  staging ", "kanareika scan acme --env staging", "or press <s>", "<enter> checks SSH access", "enter check access, first scan")
-	h.key("tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab") // around all views and one more
-	h.has(" 1 Servers ", " acme  staging ")
+	h.key("tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab", "tab") // around the four places three times
+	if h.m.view != vActions {
+		t.Fatal("twelve tabs from Fixes", h.m.view)
+	}
+	h.has(" 1 Fixes ", " acme  staging ")
 	h.key("?")
 	h.has("Hotkeys", "OSC 52", "list_fixes · get_fix")
 	h.key("x")
-	h.has("Servers(acme/staging)")
+	h.has("Fixes(acme/staging)")
 }
 
 // TestTree: open and close, the cursor to the parent, grouping, a node's selection covering what is under it.
@@ -343,16 +346,11 @@ func TestTree(t *testing.T) {
 	if len(h.m.sel) != 0 {
 		t.Fatal(h.m.sel)
 	}
-	// group by CVE, then host, then fix again
+	// group by CVE, then by fix again (servers have their own place)
 	h.key("esc", "g")
-	h.has("ToDo(acme/production)[", "CVE-2026-0002", "group by  server  fix  CVE")
+	h.has("Fixes(acme/production)[", "CVE-2026-0002", "group by  fix  CVE")
 	if h.m.by[vActions] != "cve" || h.m.tree.By != "cve" {
 		t.Fatal(h.m.by)
-	}
-	h.key("g")
-	h.has("web-01", "CentOS Stream 9")
-	if h.m.tree.By != "host" {
-		t.Fatal(h.m.tree.By)
 	}
 	h.key("l", "down")
 	h.key("g")
@@ -399,23 +397,31 @@ func TestKidsOnOpen(t *testing.T) {
 func TestFilters(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.key("f")
-	h.has("Filters", "[ ] in CISA KEV", "[ ] fixed by a backport too")
-	h.key("space") // KEV
+	h.has("Filters", "[ ] P1", "[ ] in CISA KEV", "[ ] fixed by a backport too")
+	if fc := h.m.tree.Facets; fc == nil || !strings.Contains(h.screen(), "in CISA KEV") {
+		t.Fatal("no counts beside the filters")
+	}
+	h.key("j", "j", "j", "j", "space") // KEV (after P1..P4)
 	h.has("[x] in CISA KEV")
 	h.key("esc")
-	h.has("ToDo(acme/production)[3]", " in CISA KEV ")
+	h.has("Fixes(acme/production)[3]", " in CISA KEV ")
 	if !strings.Contains(h.m.treeKey, "f=kev") {
 		t.Fatal(h.m.treeKey)
 	}
-	h.key("f", "j", "j", "j", "j", "j", "j", "x", "f") // overdue too (what is overdue depends on the server's clock)
+	h.key("f", "j", "j", "j", "j", "j", "j", "j", "j", "j", "j", "x", "f") // overdue too (what is overdue depends on the server's clock)
 	h.has(" overdue ")
 	if !strings.Contains(h.m.treeKey, "kev%2Coverdue") {
 		t.Fatal(h.m.treeKey)
 	}
-	h.key("f", "k", "x", "j", "j", "j", "j", "j", "j", "x", "q")
-	h.has("ToDo(acme/production)[26]")
+	h.key("f", "j", "j", "j", "j", "x", "j", "j", "j", "j", "j", "j", "x", "q")
+	h.has("Fixes(acme/production)[26]")
+	h.key("f", "space", "q") // P1: the fixes of that priority
+	if !strings.Contains(h.m.treeKey, "f=p1") {
+		t.Fatal(h.m.treeKey)
+	}
+	h.key("f", "space", "q")
 	h.key("/", "k", "e", "r", "n", "e", "l")
-	h.has("</kernel_>", "ToDo(acme/production)[2]")
+	h.has("</kernel_>", "Fixes(acme/production)[2]")
 	h.key("backspace", "enter")
 	h.has("</kerne>")
 	if h.m.typing {
@@ -569,7 +575,7 @@ func TestSizes(t *testing.T) {
 			h.show(v)
 			h.screen()
 		}
-		h.key("2", "pgdown", "G", "g")
+		h.key("1", "pgdown", "G", "g")
 		h.screen()
 	}
 	if New(Options{}).View() != "" {
@@ -693,7 +699,7 @@ func TestLiveScan(t *testing.T) {
 	h.has("Config errors: 1")
 	// no organizations at all
 	h.m.org, h.m.orgs.Orgs, h.m.rund = "", nil, nil
-	h.key("2")
+	h.key("1")
 	h.has("no organizations", "kanareika org new <id>")
 }
 
@@ -734,7 +740,7 @@ func TestScanLimitsFromTUI(t *testing.T) {
 // TestRescanKey: R on a server scans that server only, with no form; on a run, the hosts it could not reach.
 func TestRescanKey(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.key("1")
+	h.key("2")
 	h.eventually("Servers")
 	for i := 0; i < 10 && (h.m.curNode() == nil || h.m.curNode().Kind != "host"); i++ {
 		h.key("down")
@@ -772,7 +778,7 @@ func TestRescanKey(t *testing.T) {
 // TestSortKey: t orders ToDo's rows by the next column (the title line says which), T turns it around, g starts over.
 func TestSortKey(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, false)
-	h.key("2")
+	h.key("1")
 	h.key("t")
 	if h.m.sort[h.m.view] != "cve" || !strings.Contains(h.m.treeQuery(), "sort=cve") {
 		t.Fatalf("%q %s", h.m.sort[h.m.view], h.m.treeQuery())

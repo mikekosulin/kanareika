@@ -2,16 +2,16 @@ package tui
 
 import "testing"
 
-// TestServers: the view the TUI opens on: every server with its fixes per priority, its state and scan age; one the
+// TestServers: every server with its fixes per priority, its state and scan age; one the
 // scan did not reach says why (in the interface's language); Enter opens the host card; g goes on to fix and CVE.
 func TestServers(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	if New(Options{}).view != vServers {
-		t.Fatal("the TUI opens on Servers")
+	if New(Options{}).view != vActions {
+		t.Fatal("the TUI opens on Fixes: what to fix first")
 	}
 	h.size(160, 40)
-	h.key("1")
-	h.has("Servers(acme/production)[5]", "· 1 ! · 1 ✗", "group by  server  fix  CVE",
+	h.key("2")
+	h.has("Servers(acme/production)[5]", "· 1 ! · 1 ✗",
 		"app-01", "Ubuntu 18.04", "2 • 1 • 3 • 0",
 		"web-01              CentOS Stream 9  Public  3 • 4 • 2 • 4", "✗  dead-01             The last scan did not reach it", "not checked")
 	// the details of the server under the cursor: its card
@@ -25,9 +25,10 @@ func TestServers(t *testing.T) {
 	n := h.m.curNode()
 	n.Problem, n.ProblemMsg = "", ""
 	h.has("✗ failed")
-	h.key("esc", "g")
-	if h.m.by[vServers] != "fix" || h.m.by[vActions] != "fix" {
-		t.Fatal(h.m.by)
+	h.key("esc", "g") // Servers lists servers: g does not regroup them
+	if h.m.grouping() != "host" {
+		t.Fatal(h.m.grouping())
 	}
 	h.has("Servers(acme/production)")
+	h.hasNot("group by")
 }

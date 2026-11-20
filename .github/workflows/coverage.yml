@@ -26,7 +26,9 @@ jobs:
           go-version-file: go.mod
       - name: coverage
         run: |
-          go test -count=1 -coverpkg=./... -coverprofile=cover.out ./... > /dev/null
+          # quiet when it passes; a failure shows what failed (a flaky test included), not just "exit code 1"
+          go test -count=1 -coverpkg=./... -coverprofile=cover.out ./... > "$RUNNER_TEMP/test.log" 2>&1 ||
+            { grep -vE '^(ok |go: downloading|\?)' "$RUNNER_TEMP/test.log" | tail -300; exit 1; }
           pct="$(go tool cover -func=cover.out | awk '/^total:/ {sub("%", "", $3); print int($3 + 0.5)}')"
           color=red; [ "$pct" -ge 70 ] && color=yellow; [ "$pct" -ge 85 ] && color=brightgreen
           printf '{"schemaVersion":1,"label":"coverage","message":"%s%%","color":"%s"}\n' "$pct" "$color" > "$RUNNER_TEMP/coverage.json"

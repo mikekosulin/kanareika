@@ -66,13 +66,44 @@ func (m *Model) hostCard(name string, w int) []string {
 	if len(f.Kernel) > 0 {
 		kv("kernel", sText.Render(strings.Join(f.Kernel, ", ")))
 	}
+	hd := m.hostFixes(name) // the fixes the web page lists too (/api/host); the run's own lists until they come
+	fixTail := func() {}
+	counts := c
+	if hd != nil {
+		counts = map[string]int{"cves": c["cves"]}
+		for _, n := range hd.d.Fixes {
+			counts[n.Priority]++
+		}
+	}
 	var pc []string
 	for _, p := range []string{"P1", "P2", "P3", "P4"} {
-		pc = append(pc, prio(p)+" "+count(p, c[p], true))
+		pc = append(pc, prio(p)+" "+count(p, counts[p], true))
 	}
 	kv("priorities", strings.Join(pc, "  ")+sMuted.Render(fmt.Sprintf("   %d CVE", c["cves"])))
 
-	// to do on it
+	if hd != nil && len(hd.d.Fixes) > 0 {
+		section("Fixes")
+		for _, n := range hd.d.Fixes[:min(len(hd.d.Fixes), 10)] {
+			out = append(out, m.fixLine(n))
+		}
+		more(len(hd.d.Fixes), 10)
+		out = append(out, " "+sMuted.Render("↓ "+m.t.T("Fix details")))
+		fixTail = func() { // last: the longest list, after the others' whole lists
+			section("Fix details")
+			for i, n := range hd.d.Fixes {
+				var d *nodeDetail
+				if i < len(hd.d.Details) {
+					d = hd.d.Details[i]
+				}
+				if i > 0 {
+					out = append(out, "")
+				}
+				out = append(out, m.fixDetail(n, d)...)
+			}
+		}
+	}
+
+	// to do on it (the run's actions and packages, until the fixes above come)
 	var acts []action
 	for _, a := range rd.Actions {
 		for _, h := range a.Hosts {
@@ -81,8 +112,8 @@ func (m *Model) hostCard(name string, w int) []string {
 			}
 		}
 	}
-	if len(acts) > 0 {
-		section("ToDo")
+	if hd == nil && len(acts) > 0 {
+		section("Fixes")
 		for _, a := range acts {
 			out = append(out, " "+prio(a.Priority)+" "+sMuted.Render(fit(a.Due, 10, false))+" "+sText.Render(m.t.title(a)))
 		}
@@ -95,7 +126,7 @@ func (m *Model) hostCard(name string, w int) []string {
 			pk = append(pk, p)
 		}
 	}
-	if len(pk) > 0 {
+	if hd == nil && len(pk) > 0 {
 		pkgLine := func(p planRow) string {
 			kev := ""
 			if p.KEV {
@@ -497,9 +528,16 @@ func (m *Model) hostCard(name string, w int) []string {
 			}
 		}
 	}
+	if hd != nil {
+		if h := m.historyLines(hd.runs); len(h) > 0 {
+			section("History")
+			out = append(out, h...)
+		}
+	}
 	for _, f := range tail {
 		f()
 	}
+	fixTail()
 	return out
 }
 

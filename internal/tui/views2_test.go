@@ -117,11 +117,11 @@ func m0() *Model { return New(Options{}) }
 func TestOnlySelected(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.key("v")
-	h.has("Nothing selected yet", "ToDo(acme/production)[0]", "<v> selected only")
+	h.has("Nothing selected yet", "Fixes(acme/production)[0]", "<v> selected only")
 	h.key("v", "space", "down", "space") // two selected
 	h.has("2 selected")
 	h.key("v")
-	h.has("ToDo(acme/production)[2]", "<v> selected only")
+	h.has("Fixes(acme/production)[2]", "<v> selected only")
 	h.key("v")
-	h.has("ToDo(acme/production)[26]", "2 selected")
+	h.has("Fixes(acme/production)[26]", "2 selected")
 }

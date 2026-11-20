@@ -2,7 +2,7 @@
 // the empty state, key/value lines and the toast.
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { t } from "../lib/i18n";
-import { closeDetail, set, toast as say, toggleWide, useApp } from "../state";
+import { closeDetail, openRail, set, toast as say, toggleWide, useApp } from "../state";
 
 export const Icon = ({ name }: { name: string }) => (
   <svg className="i" aria-hidden="true">
@@ -212,4 +212,15 @@ export function useNow(active: boolean): number {
     return () => clearInterval(id);
   }, [active]);
   return now;
+}
+
+/** FilterBtn: the filters when the rail is not on screen, with how many are on. */
+export function FilterBtn({ n }: { n: number }) {
+  return (
+    <button className="btn fltbtn" aria-controls="side" onClick={openRail}>
+      <Icon name="filter" />
+      <span className="fl-l">{t("Filters")}</span>
+      {n > 0 && <span className="cnum">{n}</span>}
+    </button>
+  );
 }

@@ -5,7 +5,7 @@ import { useShallow } from "zustand/react/shallow";
 import { narrow } from "./lib/format";
 import { local } from "./lib/local";
 
-export type View = "servers" | "todo" | "history" | "setup";
+export type View = "overview" | "servers" | "todo" | "history" | "setup";
 export type By = "fix" | "cve" | "host";
 export const TREE_VIEWS: View[] = ["servers", "todo"];
 export const isTree = (v: View) => v === "servers" || v === "todo";
@@ -42,7 +42,8 @@ export interface State {
   vitem: Item | null;
   vstack: Item[];
   detailOpen: boolean; // the details panel over the list on a narrow window (on a wide one it shows while a row is picked)
-  sideOpen: boolean;
+  sideOpen: boolean; // the filters as a sheet over the page (a narrow window)
+  scopeOpen: boolean; // which org, environment and data: a sheet over the page (a narrow window)
   detailWide: boolean; // a wide window: the picked row's details take the page instead of sitting beside the list
   sideMini: boolean; // the navigation as a strip of icons
   palOpen: boolean;
@@ -52,7 +53,7 @@ export interface State {
 const by = (v: string | null, d: By): By => (v === "fix" || v === "cve" || v === "host" ? v : d);
 
 export const useApp = create<State>(() => ({
-  view: "servers",
+  view: "todo",
   org: local.get("org", ""),
   env: local.get("env", ""),
   run: "current",
@@ -80,6 +81,7 @@ export const useApp = create<State>(() => ({
   vstack: [],
   detailOpen: false,
   sideOpen: false,
+  scopeOpen: false,
   detailWide: local.get("wide", "1") === "1",
   sideMini: local.get("mini", "") === "1",
   palOpen: false,
@@ -100,7 +102,7 @@ export const toast = (text: string) => set({ toast: { text, at: Date.now() } });
 /** go: another view; a tree view's filters, query and open rows stay with the view they were set in. */
 export function go(view: View, q?: string) {
   const s = get();
-  const patch: Partial<State> = { view, sideOpen: false, detailOpen: false };
+  const patch: Partial<State> = { view, sideOpen: false, scopeOpen: false, detailOpen: false };
   if (view !== s.view) {
     Object.assign(patch, { vq: "", vsel: "", vitem: null, vstack: [] });
     // the selection is the tree view's it was made in: back to that view it stays, another one starts clean
@@ -135,6 +137,12 @@ export function toggleMini() {
   const m = !get().sideMini;
   local.set("mini", m ? "1" : "");
   set({ sideMini: m });
+}
+
+/** openRail: the scope and the filters: a sheet over the page on a narrow screen, the column back on a wide one. */
+export function openRail() {
+  if (matchMedia("(max-width: 860px)").matches) set({ sideOpen: true });
+  else if (get().sideMini) toggleMini();
 }
 
 /** setSort: the column the open view's rows are ordered by; the same column again turns the order around. */
@@ -212,7 +220,7 @@ const cardHost = (s: State) => (serverList(s) && s.cur?.startsWith("h:") && !s.c
 export function readURL() {
   const p = new URLSearchParams(location.search);
   const v = location.pathname.replace(/^\/+|\/+$/g, "").split("/")[0];
-  const view: View = v === "servers" || v === "todo" || v === "history" ? v : v === "setup" ? "setup" : "servers";
+  const view: View = v === "overview" || v === "servers" || v === "todo" || v === "history" ? v : v === "setup" ? "setup" : "todo";
   const patch: Partial<State> = { view, lens: p.get("show") || "priorities", accepted: view === "todo" && p.get("f") === "accepted" };
   if (p.get("org")) patch.org = p.get("org")!;
   if (p.get("env")) patch.env = p.get("env")!;

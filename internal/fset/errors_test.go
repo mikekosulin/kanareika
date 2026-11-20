@@ -3,6 +3,7 @@ package fset
 import (
 	"encoding/binary"
 	"errors"
+	"math"
 	"strings"
 	"testing"
 
@@ -22,6 +23,20 @@ func TestUnencodable(t *testing.T) {
 		}
 	}()
 	Of([]finding.Finding{f})
+}
+
+// TestUnencodableScore: a score JSON can't hold (NaN, made in code) is an error to Add as well: the vulnerability's
+// part is not kept half-made.
+func TestUnencodableScore(t *testing.T) {
+	nan := math.NaN()
+	b := NewBuilder()
+	f := finding.Finding{Host: "h", Kind: finding.Vuln, ID: "CVE-1", Pkg: "p", EPSS: &nan}
+	if err := b.Add(&f); err == nil {
+		t.Fatal("added")
+	}
+	if s := b.Set(); s.Len() != 0 || len(s.CVEs) != 0 || len(s.Rests) != 0 {
+		t.Fatalf("kept %d items, %d CVEs, %d rests", s.Len(), len(s.CVEs), len(s.Rests))
+	}
 }
 
 // TestBrokenEncoded: stored parts that don't read back are errors, whatever is wrong with them.

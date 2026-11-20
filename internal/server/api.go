@@ -373,7 +373,24 @@ func (s *Server) apiPrompt(q query) (any, error) {
 			}
 		}
 	}
+	if h := q.get("host"); h != "" { // one server's page: its task is about that server only
+		ids = onHost(&v, ids, h)
+	}
 	return map[string]string{"text": s.prompt(o, env, &v, ids, lang)}, nil
+}
+
+// onHost: the actions of ids that are on host, each narrowed to that host (an image's update covers every host that
+// runs it); the view's actions are changed in place.
+func onHost(v *report.View, ids []string, host string) []string {
+	var out []string
+	for i := range v.Actions {
+		a := &v.Actions[i]
+		if slices.Contains(ids, a.ID) && slices.Contains(a.Hosts, host) {
+			a.Hosts = []string{host}
+			out = append(out, a.ID)
+		}
+	}
+	return out
 }
 
 var errNoPrompt = errors.New("prompt builder not configured")

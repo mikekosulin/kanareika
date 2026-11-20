@@ -23,22 +23,22 @@ func TestHostCard(t *testing.T) {
 	h.size(110, 70)
 	card(h)
 	h.has("Host(web-01)", "CentOS Stream 9", "5.14.0-575.el9.x86_64", "19 CVE",
-		"ToDo", "Update OS packages (2)", "Packages", "openssl", "KEV", "+8 more",
+		"Fixes", "openssl", "KEV", "↓ Fix details",
 		"SSH and logins", "port", "logged in", "10.77.0.24", "failed logins", "password guessing", "198.51.100.0",
 		"Network", "public IPs", "192.0.2.1", "listening", "tcp *:22",
 		"Health", "disks", "50% /", "load", "Other findings", "SSH password guessing")
 	h.size(110, 20) // scrolls
 	h.has("CentOS Stream 9")
-	h.key("G") // the end: the whole lists after the summaries
+	h.key("G") // the end: the whole lists after the summaries, each fix with its CVEs and command last
 	h.hasNot("CentOS Stream 9")
-	h.has("198.51.100.99")
+	h.has("CVE-")
 	h.key("g", "down", "up", "pgdown", "pgup")
 	h.has("CentOS Stream 9")
 	h.key("esc")
 	h.has("Servers(acme/production)")
 	card(h)
-	h.key("2") // another view closes the card
-	h.key("1")
+	h.key("1") // another view closes the card
+	h.key("2")
 	h.has("Servers(acme/production)")
 	h.hasNot("Host(web-01)")
 }
@@ -94,7 +94,7 @@ func TestHostCardSections(t *testing.T) {
 // the letters typed.
 func TestOtherLayout(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.key("1") // Servers
+	h.key("2") // Servers
 	runes := func(s string) {
 		for _, r := range s {
 			_, cmd := h.m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
@@ -120,8 +120,8 @@ func TestOtherLayout(t *testing.T) {
 	runes("щ")
 	h.has("Panels(Servers)")
 	h.key("esc")
-	// Korean 2-set: ㅓ is j, ㅃ (shift+q) is Q; French AZERTY: é is 2 (ToDo), à is 0 (Scans)
-	h.key("1")
+	// Korean 2-set: ㅓ is j, ㅃ (shift+q) is Q; French AZERTY: é is 2 (Servers), à is 0 (Scans)
+	h.key("2")
 	before := h.m.cur[vServers]
 	runes("ㅓ")
 	if h.m.cur[vServers] != before+1 {
@@ -130,9 +130,9 @@ func TestOtherLayout(t *testing.T) {
 	if latin['ㅃ'] != 'Q' || latin['ㅖ'] != 'P' {
 		t.Fatal("shifted jamo")
 	}
-	h.key("2")
+	h.key("1")
 	runes("é")
-	if h.m.view != vActions {
+	if h.m.view != vServers {
 		t.Fatalf("é is not 2: view %d", h.m.view)
 	}
 	runes("\"") // 3 on AZERTY: History

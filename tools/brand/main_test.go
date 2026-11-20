@@ -93,9 +93,9 @@ func TestPictures(t *testing.T) {
 	}
 	for name, want := range map[string][]string{
 		"og":        {"What to patch first.", "History", "■ 2 P1", "■ 3 P3", "■ 2 P4", "openssl 3.0.13 → 3.0.15", "kernel 5.14.0-427"},
-		"banner-en": {`lang="en"`, "What to patch first.", "ToDo"},
-		"banner-ru": {`lang="ru"`, "Начните с главного.", "Что делать", "Серверы", "История"},
-		"banner-zh": {`lang="zh"`, "从最重要的开始", "待办", "服务器", "历史"},
+		"banner-en": {`lang="en"`, "What to patch first.", `<span class="on">Fixes</span>`, "2 CVE"},
+		"banner-ru": {`lang="ru"`, "Начните с главного.", `<span class="on">Исправления</span>`, "Серверы", "История"},
+		"banner-zh": {`lang="zh"`, "从最重要的开始", `<span class="on">修复</span>`, "服务器", "历史"},
 	} {
 		for _, w := range want {
 			if !strings.Contains(page[name], w) {
@@ -116,11 +116,11 @@ func TestPictures(t *testing.T) {
 	if strings.Contains(page["og"], `class="light"`) {
 		t.Error("og: light")
 	}
-	if strings.Contains(page["banner-en"], "CVE-0000-90210") {
+	if strings.Contains(page["banner-en"], "curl · low") {
 		t.Error("banner shows more than its rows")
 	}
 	// the social preview is read at ~450px wide: few tabs, few rows, no CVE column
-	for _, w := range []string{"Network", "NTP drift", "CVE-0000-90017"} {
+	for _, w := range []string{"Network", "NTP drift", "2 CVE"} {
 		if strings.Contains(page["og"], w) {
 			t.Errorf("og shows more than it can at preview size: %q", w)
 		}
@@ -128,17 +128,16 @@ func TestPictures(t *testing.T) {
 }
 
 // TestDemoData: what the pictures show is invented: CVE ids of the year 0000, which the CVE program never
-// assigns (made-up ids of the current year turn real as its numbers come up), and the demo's hosts.
+// assigns (made-up ids of the current year turn real as its numbers come up); each fix is on some hosts.
 func TestDemoData(t *testing.T) {
 	cve := regexp.MustCompile(`^CVE-0000-\d{4,}$`)
-	hosts := map[string]bool{"web-01": true, "web-02": true, "db-01": true, "stage-web-01": true}
 	for _, l := range langs {
 		for _, r := range l.Rows {
 			if strings.HasPrefix(r.Kind, "CVE-") && !cve.MatchString(r.Kind) {
 				t.Errorf("%s: %s is not a made-up id", l.Code, r.Kind)
 			}
-			if !hosts[r.Host] {
-				t.Errorf("%s: %s is not a demo host", l.Code, r.Host)
+			if r.Hosts < 1 {
+				t.Errorf("%s: %s on no host", l.Code, r.Text)
 			}
 		}
 	}
@@ -161,6 +160,23 @@ func TestNoChrome(t *testing.T) {
 		t.Error("a picture without Chrome")
 	}
 	if _, err := os.Stat(filepath.Join(out, "og.html")); err != nil {
+		t.Error(err)
+	}
+}
+
+// TestWebPFails: a banner that cannot be made WebP stops the run with the reason; the social preview, PNG, is not
+// converted and stays.
+func TestWebPFails(t *testing.T) {
+	calls := fakeChrome(t)
+	webp.Encode = func(png, out string) error { return errors.New("cwebp crashed") }
+	out := t.TempDir()
+	if err := run(out, logo(t), ".", "chrome"); err == nil || !strings.Contains(err.Error(), "cwebp crashed") {
+		t.Fatalf("got %v", err)
+	}
+	if len(*calls) != 2 {
+		t.Errorf("%d renders: none after the failed banner", len(*calls))
+	}
+	if _, err := os.Stat(filepath.Join(out, "og.png")); err != nil {
 		t.Error(err)
 	}
 }

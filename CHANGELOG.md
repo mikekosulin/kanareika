@@ -2,6 +2,33 @@
 
 Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor version may break things; each break is listed under **Breaking** with what to do instead.
 
+## 0.8.0 — 2026-11-20
+
+A layout that says where you are and what you look at: the organization and environment at the top, the places under them, the filters on the left; on a phone too. Every server has a page of its own. With more than one organization or environment, an overview of all of them and a scan of everything.
+
+### Changed
+
+- **The organization and environment at the top, the places under them, the filters on the left.** Next to the name: the organization and the environment with its servers, each a menu to switch; the environment's menu also shows the data as of an earlier run. The places are Fixes, Servers and History, plus Overview when there is more than one organization or environment; kanareika now opens on **Fixes**, what to fix first (it was called ToDo). On the left, the page's filters, each with the number of fixes it would leave: priority (P1–P4, any of those chosen), risk (KEV, pre-auth RCE, EPSS ≥ 10%, public), state (fix ready, no fix yet, overdue), accepted risks and backported ones; "Clear" undoes them. Fixes is grouped by fix or by CVE; Servers lists the servers. The scan button names what it scans; language, theme and scan limits are behind ⚙.
+- **On a phone or a narrow window.** The organization and environment are one button that opens lists to tap; the filters open from a Filters button by the list; on a phone the places sit at the bottom and the scan is a button at the top. A fix's line shows what to update, the versions under it, then on how many servers and how bad; Overview shows a card per environment.
+- **Overview and "Scan everything".** Every organization and environment on one page: servers, fixes by priority, the last scan and how many servers it did not reach; a row opens its fixes. "Scan everything" (also in the scan button's menu, with "every environment of" one organization) scans them one after another, not all at once.
+- **A server's page has everything about it in one place.** Its fixes as Fixes groups them (a package update, an image to rebuild with what inside it needs the update, a setting), each opening in place with its CVEs (severity, KEV, EPSS, advisory link), why its priority and the command for this server's OS; the priorities at the top count the same fixes. Its history: the runs that changed something on it (+ appeared, − went) or did not reach it. "Copy task for agent" for the server, or for one of its fixes, is about that server only.
+- **TUI:** ToDo is Fixes, and the TUI opens on it; the tabs are in the web page's order: `1` Fixes, `2` Servers, `3` History. `f` filters by priority too, with each filter's count beside it. `0` opens Overview when there is more than one organization or environment (`s`, then `s` again: scan everything). The host card lists the same fixes as the web page, each one's CVEs and command at its end, the server's history, and `y` copies the server's task.
+
+### Fixed
+
+- The server card listed the packages inside a container image as the host's own (an Ubuntu host showed `openssl → 3.0.15-1~deb12u1`); they are under the image to rebuild now.
+- The server card showed empty "Other" and "Exceptions" headings, and "in 0 d" where it meant today.
+- Adding servers while looking at an environment other than the organization's first put them in production, and in the terminal the connection check then stayed on "loading"; they go to the environment on screen now, and a check with nothing to connect to says "No servers".
+- In the terminal setup, starting the first scan while another scan of that environment was running did nothing; it says why it was refused now.
+- Creating an organization whose jump hosts share a name (the form's jump host and a pasted `ssh -J ops@bastion.a.example …`, or jumps through `bastion.a.example` and `bastion.b.example`) failed with a YAML error; they are named `bastion`, `bastion-2`, … now.
+- A mistake in an environment's due-date rules in the org file (an unknown key under `due: envs: production:`) made every scan of that environment fail; the file is refused when it loads and by `kanareika validate` now, saying where.
+- An ssh config entry pasted with a quoted name (`Host "web-01"`) lost its line in the setup preview.
+- Adding servers to a group whose environment is written as a YAML alias (`env: *env`) created a second group such as `db-production`.
+- A vulnerability database download that failed because of a broken file read "connection closed mid-download"; the error names the file now. Errors from a bad registry address say which address.
+- Findings whose first-seen, fix or publication date was malformed had no due date; the clock starts that day, and CISA's KEV deadline still applies.
+- A scan cancelled the moment it started could end without a word of output.
+- The demo data shows a failed service in the health view, as it was meant to.
+
 ## 0.7.0 — 2026-11-19
 
 ### Added

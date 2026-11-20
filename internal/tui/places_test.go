@@ -10,8 +10,9 @@ import (
 func TestPlaces(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(160, 40)
-	h.key("1")
-	h.has(" 1 Servers ", "2 ToDo", "3 History", "show  priorities  logins  network  health  w", "group by  server")
+	h.key("2")
+	h.has(" 2 Servers ", "1 Fixes", "3 History", "show  priorities  logins  network  health  w")
+	h.hasNot("group by") // Servers lists servers; grouping is Fixes
 	h.key("w")
 	h.has("Servers(acme/production)", "show  priorities  logins  network  health  w") // the server's own lenses
 	if h.m.lens != "logins" {
@@ -29,7 +30,7 @@ func TestPlaces(t *testing.T) {
 	if h.m.lens != "health" {
 		t.Fatal(h.m.lens)
 	}
-	h.key("2", "1") // the lens stays
+	h.key("1", "2") // the lens stays
 	h.has("Servers(acme/production)", "show  priorities  logins  network  health  w")
 	if h.m.lens != "health" {
 		t.Fatal(h.m.lens)
@@ -43,13 +44,13 @@ func TestPlaces(t *testing.T) {
 	h.has("History(acme/production)")
 	h.key("S")
 	h.has("Scans[")
-	h.key("esc", "2", "f")
+	h.key("esc", "1", "f")
 	// ToDo: the accepted risks
 	for h.m.menuItems(h.m.menu)[h.m.menu.cur].id != "accepted" {
 		h.key("down")
 	}
 	h.key("space", "esc")
-	h.has("ToDo(acme/production)", "accepted risks", "UNTIL", "WHO", "REASON", "no internet")
+	h.has("Fixes(acme/production)", "accepted risks", "UNTIL", "WHO", "REASON", "no internet")
 }
 
 // TestLens: a lens the server draws: its columns as the table rules lay them out, colour where it needs
@@ -63,7 +64,7 @@ func TestLens(t *testing.T) {
 		"rows":[{"host":"web-01","cells":{"use":{"v":96,"level":"bad"},"mount":{"s":"/"}}},
 		        {"host":"dead-01","state":"failed","cells":{}}]}`), &d))
 	h.m.lensAPI = true
-	h.key("1")
+	h.key("2")
 	h.m.lens = "disks"
 	h.m.lensData, h.m.lensFor = &d, h.m.lensKey()
 	h.m.setLens("disks")

@@ -53,11 +53,11 @@ func (h *harness) wheel(text string, down bool) {
 func TestMouseTree(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(160, 40)
-	h.click("1 Servers")
+	h.click("2 Servers")
 	if h.m.view != vServers {
 		t.Fatal("tab", h.m.view)
 	}
-	h.click("2 ToDo")
+	h.click("1 Fixes")
 	h.click(" CVE ")
 	if h.m.by[vActions] != "cve" {
 		t.Fatal("group by", h.m.by)
@@ -165,7 +165,7 @@ func TestMouseBars(t *testing.T) {
 		t.Fatal("mouse command")
 	}
 	h.key("esc")
-	h.click("1 Servers")
+	h.click("2 Servers")
 	if h.m.view != vActions {
 		t.Fatal("a click with the mouse off")
 	}

@@ -181,7 +181,7 @@ var webFS, localesFS = assets.Web, assets.Locales
 
 // views: the page's three places, each at its own address (/servers?org=…&env=…), all the same page; / lands on
 // Servers.
-var views = []string{"servers", "todo", "history"}
+var views = []string{"overview", "servers", "todo", "history"}
 
 // moved: where the earlier addresses went (their query is kept, after the target's own).
 var moved = map[string]string{
@@ -291,6 +291,7 @@ func (s *Server) Handler() http.Handler {
 		"/api/orgs": s.apiOrgs, "/api/env": s.apiEnv, "/api/run": s.apiRun, "/api/log": s.apiLog,
 		"/api/hostfile": s.apiHostfile, "/api/ipinfo": s.apiIPInfo, "/api/prompt": s.apiPrompt,
 		"/api/i18n": s.apiI18n, "/api/tree": s.apiTree, "/api/node": s.apiNode, "/api/lens": s.apiLens, "/api/history": s.apiHistory,
+		"/api/host": s.apiHost, "/api/host/history": s.apiHostHistory,
 	} {
 		r.Get(path, s.api(fn))
 	}
@@ -303,6 +304,7 @@ func (s *Server) Handler() http.Handler {
 	r.Get("/api/setup/discover", s.apiSetupDiscover)
 	r.With(s.csrfCheck).Post("/api/db/update", s.apiDBUpdate)
 	r.With(s.csrfCheck).Post("/api/scan", s.apiScan)
+	r.With(s.csrfCheck).Post("/api/scan/all", s.apiScanAll)
 	r.With(s.csrfCheck).Post("/api/settings/scan", s.apiScanLimits)
 	r.With(s.csrfCheck).Post("/api/setup", s.apiSetup)
 	r.With(s.csrfCheck).Post("/api/setup/check", s.apiSetupCheck)
@@ -365,7 +367,7 @@ func headers(next http.Handler) http.Handler {
 // methods: GET everywhere, POST to the scan, setup and settings endpoints only.
 func methods(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		post := r.Method == http.MethodPost && (r.URL.Path == "/api/scan" || r.URL.Path == "/api/db/update" ||
+		post := r.Method == http.MethodPost && (r.URL.Path == "/api/scan" || r.URL.Path == "/api/scan/all" || r.URL.Path == "/api/db/update" ||
 			r.URL.Path == "/api/setup" || r.URL.Path == "/api/setup/check" || r.URL.Path == "/api/setup/parse" || r.URL.Path == "/api/setup/add" ||
 			r.URL.Path == "/api/settings/scan" ||
 			strings.HasPrefix(r.URL.Path, "/api/jobs/") && strings.HasSuffix(r.URL.Path, "/cancel"))

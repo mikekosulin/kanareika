@@ -27,14 +27,15 @@ const (
 	vExceptions
 	vRuns
 	vScans
-	vLens // a lens of Servers the server draws (GET /api/lens)
+	vLens     // a lens of Servers the server draws (GET /api/lens)
+	vOverview // every org/env (place 0, with more than one)
 	nViews
 )
 
 // viewNames: tab titles (English keys of the web page's translations where it has them). Organizations and
 // environments are chosen with O and E.
-var viewNames = [nViews]string{"Servers", "ToDo", "Packages", "Changes", "Access", "Network", "Health",
-	"Exceptions", "History", "Scans", "Servers"}
+var viewNames = [nViews]string{"Servers", "Fixes", "Packages", "Changes", "Access", "Network", "Health",
+	"Exceptions", "History", "Scans", "Servers", "Overview"}
 
 // Options of a TUI session.
 type Options struct {
@@ -103,14 +104,17 @@ type Model struct {
 	nodes   map[string]*nodeDetail // details by treeKey#node id
 	pending map[string]string      // requests on the way: "tree" -> its key, a node's key -> itself
 	fwRules map[string]string      // a host's firewall rules as read (GET /api/hostfile), by org/env/run/host
-	opened  map[string]bool        // expanded nodes
-	sel     map[string]bool        // selected nodes (a node selects everything under it)
-	onlySel bool                   // only the selected (v)
-	curID   string                 // the node under the cursor, kept when the tree is rebuilt
-	jumpTo  string                 // the node to put the cursor on when the next tree comes (:)
-	full    bool                   // the details full screen (enter)
-	detOff  int
-	cmdCur  int // the command of the details c copies ([ ])
+	// hostData: a host's fixes with their details and its runs (GET /api/host, /api/host/history), by org/env/run/host
+	hostData map[string]*hostMsg
+	askAll   time.Time       // Overview: when s first asked to scan everything (a second s within seconds starts it)
+	opened   map[string]bool // expanded nodes
+	sel      map[string]bool // selected nodes (a node selects everything under it)
+	onlySel  bool            // only the selected (v)
+	curID    string          // the node under the cursor, kept when the tree is rebuilt
+	jumpTo   string          // the node to put the cursor on when the next tree comes (:)
+	full     bool            // the details full screen (enter)
+	detOff   int
+	cmdCur   int // the command of the details c copies ([ ])
 
 	menu         *menuDlg // filters (f), organizations (O), environments (E), jump (:)
 	setup        *wizard  // first-run setup (no organization yet, N) and the first scan of an env
@@ -151,7 +155,7 @@ func New(o Options) *Model {
 	if o.Zone == nil {
 		o.Zone = time.Local
 	}
-	m := &Model{c: o.Client, now: o.Now, every: o.Tick, clip: o.Clip, org: o.Org, env: o.Env, view: vServers, sel: map[string]bool{},
+	m := &Model{c: o.Client, now: o.Now, every: o.Tick, clip: o.Clip, org: o.Org, env: o.Env, view: vActions, sel: map[string]bool{},
 		t: &tr{lang: "en", ui: i18n.UI()}, set: loadSettings(o.Settings), setPath: o.Settings, sysZone: o.Zone,
 		lens: "priorities", by: [nViews]string{vServers: "host", vActions: "fix"}, flt: map[string]bool{}, nodes: map[string]*nodeDetail{}, pending: map[string]string{}, opened: map[string]bool{}}
 	m.applyZone()
@@ -372,6 +376,12 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		m.onTree(msg)
 	case lensMsg:
 		m.onLens(msg)
+	case hostMsg:
+		delete(m.pending, "host")
+		if m.hostData == nil {
+			m.hostData = map[string]*hostMsg{}
+		}
+		m.hostData[msg.key] = &msg
 	case fwMsg:
 		delete(m.pending, "fw")
 		if m.fwRules == nil {
@@ -610,6 +620,16 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "esc", "enter", "backspace":
 			m.host, m.hostOff = "", 0
 			return m, nil
+		case "y": // the task for this server
+			return m, m.copyTask()
+		}
+	}
+	if m.view == vOverview && !m.help {
+		switch s {
+		case "enter":
+			return m, m.openScope()
+		case "s":
+			return m, m.scanEverything()
 		}
 	}
 	if m.help {
@@ -639,6 +659,10 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.goPlace(-1)
 	case "1", "2", "3":
 		m.toPlace(places[s[0]-'1'])
+	case "0":
+		if m.multiScope() {
+			m.toPlace(vOverview)
+		}
 	case "S":
 		m.setView(vScans)
 	case "w":
@@ -750,6 +774,8 @@ func (m *Model) page() int { return max(m.bodyHeight()-2, 1) }
 // rows: how many rows the current view lists.
 func (m *Model) rows() int {
 	switch m.view {
+	case vOverview:
+		return len(m.ovRows())
 	case vServers, vActions:
 		return len(m.treeRows())
 	case vPackages:

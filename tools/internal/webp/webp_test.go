@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -25,6 +26,22 @@ func TestFromPNG(t *testing.T) {
 	}
 	if _, err := os.Stat(p); !os.IsNotExist(err) {
 		t.Error("the PNG stays")
+	}
+}
+
+// TestEncodeWithoutCwebp: no cwebp on the PATH says how to install it, and the PNG stays.
+func TestEncodeWithoutCwebp(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	dir := t.TempDir()
+	p := filepath.Join(dir, "a.png")
+	if err := os.WriteFile(p, []byte("png"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := FromPNG(p); err == nil || !strings.Contains(err.Error(), "cwebp not found") {
+		t.Fatalf("got %v", err)
+	}
+	if _, err := os.Stat(p); err != nil {
+		t.Error("the PNG is gone")
 	}
 }
 

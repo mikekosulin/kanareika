@@ -9,7 +9,7 @@ import (
 func TestJump(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.key(":")
-	h.has("Jump to", "> _", "ToDo", "view")
+	h.has("Jump to", "> _", "Fixes", "view")
 	h.key("3", ".", "2", ".", "7")
 	h.has("rsync 3.2.3 → 3.2.7", "P2 fix")
 	h.key("enter")
@@ -89,7 +89,7 @@ func TestDetails(t *testing.T) {
 	if h.m.full {
 		t.Fatal("details of a section")
 	}
-	// hosts grouping: a group's details
-	h.key("esc", "g", "g", "enter")
-	h.has("Details(", "to fix", "scanned")
+	// a server's details: on Servers
+	h.key("esc", "2")
+	h.has("Details", "to fix", "scanned")
 }

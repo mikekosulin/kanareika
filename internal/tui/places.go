@@ -14,15 +14,26 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// Three places: Servers (with lenses: what to show of each server), ToDo (what to fix; accepted risks as a
-// filter), History (runs, what changed, running scans). The views behind them are the place's sub-views.
+// Three places, in the web page's order: Fixes (what to fix; accepted risks as a filter), Servers (with lenses: what
+// to show of each server), History (runs, what changed, running scans). The views behind them are the place's
+// sub-views.
 
 // places: the tabs, their keys 1, 2, 3.
-var places = []view{vServers, vActions, vRuns}
+var places = []view{vActions, vServers, vRuns}
+
+// tabs: the places on screen: Overview first when there is more than one org/env.
+func (m *Model) tabList() []view {
+	if m.multiScope() {
+		return append([]view{vOverview}, places...)
+	}
+	return places
+}
 
 // place: the tab a view belongs to.
 func place(v view) view {
 	switch v {
+	case vOverview:
+		return vOverview
 	case vActions, vPackages, vExceptions:
 		return vActions
 	case vRuns, vScans, vChanges:
@@ -125,8 +136,9 @@ func (m *Model) toPlace(v view) {
 
 // goPlace: the next or previous tab.
 func (m *Model) goPlace(d int) {
-	i := slices.Index(places, place(m.view))
-	m.toPlace(places[(i+d+len(places))%len(places)])
+	ps := m.tabList()
+	i := slices.Index(ps, place(m.view))
+	m.toPlace(ps[(i+d+len(ps))%len(ps)])
 }
 
 func (m *Model) nextLens() {

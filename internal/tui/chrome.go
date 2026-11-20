@@ -71,8 +71,16 @@ func (m *Model) menuItems(d *menuDlg) []menuItem {
 	var all []menuItem
 	switch d.kind {
 	case "filters":
+		var fc map[string]int // the count beside each filter: the fixes it would leave (GET /api/tree's facets)
+		if m.tree != nil {
+			fc = m.tree.Facets
+		}
 		for _, f := range treeFilters {
-			all = append(all, menuItem{kind: "filter", id: f.key, label: m.t.T(f.label), on: m.flt[f.key]})
+			it := menuItem{kind: "filter", id: f.key, label: m.t.T(f.label), on: m.flt[f.key]}
+			if n, ok := fc[f.key]; ok {
+				it.cols = []string{sMuted.Render(strconv.Itoa(n))}
+			}
+			all = append(all, it)
 		}
 		return all
 	case "orgs":
@@ -358,13 +366,14 @@ func (m *Model) hints() string {
 			vNetwork:    {{"enter", "host card"}, {"f", "outside only"}, {"w", "show"}},
 			vHealth:     {{"enter", "host card"}, {"w", "show"}},
 			vLens:       {{"enter", "host card"}, {"w", "show"}},
+			vOverview:   {{"enter", "open"}, {"s", "scan everything"}},
 			vRuns:       {{"enter", "open"}, {"n", "changes"}, {"i", "errors and log"}, {"S", "scans"}, {"c", "current state"}},
 			vScans:      {{"enter", "output"}, {"x", "stop"}, {"esc", "back"}},
 			vChanges:    {{"esc", "back"}},
 			vExceptions: {},
 		}[m.view]
 		if m.host != "" && m.view == vServers {
-			l = []k{{"↑↓", "scroll"}, {"esc", "back"}}
+			l = []k{{"↑↓", "scroll"}, {"y", "copy task"}, {"esc", "back"}}
 			if m.scanOK {
 				l = append(l, k{"R", "rescan"})
 			}

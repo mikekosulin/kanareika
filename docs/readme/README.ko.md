@@ -12,7 +12,7 @@
 
 ### 터미널 인터페이스
 
-`kanareika`를 실행하면 **할 일** 화면이 열립니다. 먼저 고칠 항목이 나오고, 가장 긴급한 항목이 맨 위에 있습니다.
+`kanareika`를 실행하면 **패치** 화면이 열립니다. 먼저 고칠 항목이 나오고, 가장 긴급한 항목이 맨 위에 있습니다.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-ko.webp"><img alt="데모 데이터(가상)." src="../screenshots/tui-ko-light.webp"></picture>
 

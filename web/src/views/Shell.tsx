@@ -1,19 +1,20 @@
-// The frame around the views: the sidebar (org, environment, data; the views; the data's age; language and
-// theme), the running scan's banner, the page for an environment never scanned, the ⌘K palette.
+// Pieces of the frame (Frame.tsx lays it out): language and theme, scan limits, a newer release, the running scan's
+// banner, the page for an environment never scanned, the ⌘K palette.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LANG, LANG_NAMES, t } from "../lib/i18n";
 import { local } from "../lib/local";
 import { api, post, qs } from "../lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { ago, runLabel, webURL } from "../lib/format";
-import { go, isTree, openServer, set, setBy, setScope, setTheme, syncURL, toast, toggleMini, useApp, useS, type View } from "../state";
-import { client, useDB, useEnv, useJobs, useOrgs, useRunData, useSession, useVersion } from "../queries";
+import { webURL } from "../lib/format";
+import { go, isTree, openServer, set, setBy, setTheme, syncURL, toast, useApp, useS, type View } from "../state";
+import { client, useEnv, useJobs, useSession } from "../queries";
 import { Icon } from "../components/ui";
 
-const NAV: [View, string, string][] = [
-  ["servers", "Servers", "server"],
-  ["todo", "ToDo", "plan"],
-  ["history", "History", "clock"],
+// the places the palette goes to (Frame's tabs; Overview is reached from the tabs)
+const PLACES: [View, string][] = [
+  ["todo", "Fixes"],
+  ["servers", "Servers"],
+  ["history", "History"],
 ];
 
 export async function startScan(org: string, env: string, hosts?: string[]) {
@@ -26,22 +27,6 @@ export async function startScan(org: string, env: string, hosts?: string[]) {
     toast(e.message);
     return null;
   }
-}
-
-function Sel(p: { id: string; label: string; opts: [string, string][]; value: string; onChange: (v: string) => void }) {
-  return (
-    <label className="srow">
-      <span className="sl">{p.label}</span>
-      <select id={p.id} aria-label={p.label} value={p.value} onChange={(e) => p.onChange(e.target.value)}>
-        {p.opts.map(([v, txt]) => (
-          <option key={v} value={v}>
-            {txt}
-          </option>
-        ))}
-      </select>
-      <Icon name="chev" />
-    </label>
-  );
 }
 
 export function Prefs() {
@@ -83,167 +68,12 @@ export function Prefs() {
   );
 }
 
-export function Sidebar() {
-  const s = useS((s) => ({ view: s.view, org: s.org, env: s.env, run: s.run, sideOpen: s.sideOpen, mini: s.sideMini }));
-  const orgs = useOrgs().data?.orgs || [];
-  const env = useEnv().data;
-  const scans = useSession().data?.scans;
-  const db = useDB().data;
-  const newer = useVersion().data;
-  const rd = useRunData(isTree(s.view) || s.view === "history").data;
-  const o = orgs.find((x) => x.id === s.org),
-    e = o?.envs.find((x) => x.env === s.env);
-  const orgOpts: [string, string][] = orgs.map((x) => [x.id, x.name || x.id]);
-  if (scans) orgOpts.push(["__new", "+ " + t("Add servers…")]);
-  const runs = env?.runs || [];
-  const dbOld = db && (db.dbs || []).some((d: any) => d.outdated),
-    feedsOld = db?.feeds_outdated;
-  const dbAt =
-    db &&
-    (db.dbs || [])
-      .map((d: any) => d.updated)
-      .filter(Boolean)
-      .sort()[0];
-  const off = !orgs.length || (s.view === "setup" && !e?.last);
-  const href = (v: View) => "/" + v + "?" + new URLSearchParams({ org: s.org, env: s.env });
-  const fixes = rd?.totals?.fixes;
-  return (
-    <aside className={"side" + (s.sideOpen ? " open" : "")} id="side" aria-label="Navigation">
-      <div className="brand">
-        <img src="/logo.webp" alt="" /> <span className="brandname">kanareika</span>
-        <button
-          className="btn ghost palbtn"
-          style={{ marginLeft: "auto", height: 26, padding: "0 6px" }}
-          aria-label="Command palette"
-          onClick={() => set({ palOpen: true })}
-        >
-          <kbd>⌘K</kbd>
-        </button>
-        <button
-          className="lnk minibtn"
-          aria-label={s.mini ? t("Expand the sidebar") : t("Collapse the sidebar")}
-          aria-pressed={s.mini}
-          onClick={toggleMini}
-        >
-          <Icon name="sidebar" />
-        </button>
-      </div>
-      <div className="scope2">
-        {orgs.length > 0 && (
-          <>
-            <Sel
-              id="org"
-              label={t("Org")}
-              opts={orgOpts}
-              value={s.org}
-              onChange={(v) => {
-                if (v === "__new") {
-                  set({ view: "setup" });
-                  return;
-                }
-                setScope({ org: v, env: orgs.find((x) => x.id === v)?.envs[0]?.env || "", run: "current" });
-              }}
-            />
-            <Sel
-              id="env"
-              label={t("Env")}
-              value={s.env}
-              opts={(o?.envs || []).map((x) => [x.env, `${x.env} · ${x.hosts}${x.last ? "" : " · " + t("no scans")}`])}
-              onChange={(v) => setScope({ env: v, run: "current" })}
-            />
-            <Sel
-              id="run"
-              label={t("Data")}
-              value={s.run}
-              opts={[
-                ["current", t("Current state")],
-                ...runs
-                  .slice(-20)
-                  .reverse()
-                  .map((r: any): [string, string] => [r.run_id, runLabel(r.run_id) + (r.partial ? " · " + t("partial") : "")]),
-              ]}
-              onChange={(v) => setScope({ run: v })}
-            />
-          </>
-        )}
-      </div>
-      <nav className="nav">
-        {off ? (
-          <>
-            {NAV.map(([v, l, i]) => (
-              <a key={v} className="off" aria-disabled="true" title={t("Available after the first scan")}>
-                <Icon name={i} />
-                {t(l)}
-              </a>
-            ))}
-            <div className="navnote">{t("Available after the first scan")}</div>
-          </>
-        ) : (
-          NAV.map(([v, l, i]) => (
-            <a
-              key={v}
-              href={href(v)}
-              aria-current={s.view === v ? "page" : undefined}
-              onClick={(ev) => {
-                if (ev.metaKey || ev.ctrlKey || ev.shiftKey) return;
-                ev.preventDefault();
-                go(v);
-              }}
-            >
-              <Icon name={i} />
-              <span className="navl">{t(l)}</span>
-              {v === "servers" && e ? (
-                <span className="n">{e.hosts}</span>
-              ) : v === "todo" && fixes != null ? (
-                <span className="n hot">{fixes}</span>
-              ) : null}
-            </a>
-          ))
-        )}
-      </nav>
-      <div className="status">
-        {e && (
-          <div className="row">
-            <span className={"dot " + (e.last ? "" : "warn")} />
-            <span>
-              {t("Data")} <b>{e.last ? ago(e.last.finished) : t("none yet")}</b>
-              {e.last ? ` · ${e.last.hosts_total - (e.last.hosts_failed || 0)}/${e.last.hosts_total} ${t("hosts")}` : ""}
-            </span>
-          </div>
-        )}
-        {db && (
-          <div className="row">
-            <span className={"dot " + (dbOld || feedsOld ? "warn" : "")} />
-            <span>
-              {t("Vulnerability list")} <b>{db.updating ? t("downloading…") : dbAt ? ago(dbAt) : t("not downloaded")}</b>
-              {feedsOld && dbAt ? " · " + t("exploit data old") : ""}
-            </span>
-          </div>
-        )}
-        {newer?.latest && <Newer v={newer.latest} link={newer.url} />}
-        {scans && e && s.view !== "setup" && (
-          <>
-            <button className="btn" onClick={() => startScan(s.org, s.env)}>
-              <Icon name="scan" />
-              {t("Scan {env}…", { env: s.env })}
-            </button>
-            <ScanLimits org={s.org} env={s.env} />
-          </>
-        )}
-        <div className="foot2">
-          <Prefs />
-        </div>
-      </div>
-    </aside>
-  );
-}
-
 type Limit = { value: number; source: "default" | "settings" | "org" | "flag" };
 
 /** ScanLimits: how many hosts a scan reads at once (SSH) and how many trivy matches run at once (memory). Saved in
  * the install's settings; an org file's or a flag's value is shown, not edited here. */
 /** Newer: a newer kanareika release, linked to its page. */
-function Newer({ v, link }: { v: string; link?: string }) {
+export function Newer({ v, link }: { v: string; link?: string }) {
   const url = webURL(link);
   return url ? (
     <div className="row">
@@ -255,7 +85,7 @@ function Newer({ v, link }: { v: string; link?: string }) {
   ) : null;
 }
 
-function ScanLimits({ org, env }: { org: string; env: string }) {
+export function ScanLimits({ org, env }: { org: string; env: string }) {
   const [open, setOpen] = useState(false);
   const o = useQuery({
     queryKey: ["scanopts", org, env],
@@ -416,7 +246,7 @@ export function Palette() {
         if (depth < 2) walk(n.kids || [], depth + 1);
       });
     if (view !== "servers") walk(tr?.nodes || [], 0);
-    NAV.forEach(([v, l]) => it.push({ g: t("Go to"), label: t(l), hint: v === "todo" ? "/" : "/" + v, go: () => go(v) }));
+    PLACES.forEach(([v, l]) => it.push({ g: t("Go to"), label: t(l), hint: "/" + v, go: () => go(v) }));
     [
       ["priorities", "Priorities"],
       ["logins", "Logins"],

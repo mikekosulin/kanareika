@@ -14,7 +14,7 @@ Kanareika проверяет безопасность Linux-серверов п�
 
 ### Терминальный интерфейс
 
-Запустите `kanareika` — откроется список задач, самое срочное сверху.
+Запустите `kanareika` — откроются «Исправления»: что исправить первым, самое срочное сверху.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-ru.webp"><img alt="Терминальный интерфейс на вымышленных данных" src="../screenshots/tui-ru-light.webp"></picture>
 

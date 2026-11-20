@@ -73,6 +73,29 @@ func TestDueClock(t *testing.T) {
 	}
 }
 
+// TestDueBadDates: a date the clock can't count from (a hand-edited state, an advisory's odd date) is not trusted,
+// as one after today is not: the finding still gets a due date, from today (published: from first seen, as with
+// none), and CISA's date still comes first.
+func TestDueBadDates(t *testing.T) {
+	bad := finding.Finding{Priority: ptr("P2"), FirstSeen: "2026-09-01T03:00:00Z", FixSince: "2026-9-15"}
+	got := prioritized(t, f("CVE-KEV", nil), prevOf(&bad), "2026-11-01")
+	if due(got) != "2026-11-05 kev 2026-11-01" || got.FirstSeen != "2026-11-01" {
+		t.Fatalf("KEV: %s %q", due(got), got.FirstSeen)
+	}
+	high := f("CVE-1", nil)
+	if got := prioritized(t, high, prevOf(&bad), "2026-11-08"); due(got) != "2026-12-08 first_seen 2026-11-08" {
+		t.Fatalf("first seen: %s", due(got))
+	}
+	if got := prioritized(t, high, prevOf(&bad), "2026-11-08", start("fix_available")); due(got) != "2026-12-08 fix_available 2026-11-08" ||
+		got.FixSince != "2026-11-08" {
+		t.Fatalf("fix available: %s %q", due(got), got.FixSince)
+	}
+	pub := f("CVE-1", func(x *finding.Finding) { x.Published = "2026-13-01" })
+	if got := prioritized(t, pub, nil, "2026-11-08", start("published")); due(got) != "2026-12-08 first_seen 2026-11-08" {
+		t.Fatalf("published: %s", due(got))
+	}
+}
+
 // TestDueEscalation: going up restarts the clock with the new SLA, never later than before; it sticks while the
 // priority stays.
 func TestDueEscalation(t *testing.T) {

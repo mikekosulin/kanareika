@@ -147,7 +147,7 @@
       "allOf": [{"$ref": "#/$defs/due"}],
       "properties": {
         "sla_days": true, "start": true, "kev": true, "escalation": true, "after_exception": true,
-        "envs": {"type": "object", "propertyNames": {"$ref": "#/$defs/slug"}, "additionalProperties": {"$ref": "#/$defs/due"}}
+        "envs": {"type": "object", "propertyNames": {"$ref": "#/$defs/slug"}, "additionalProperties": {"$ref": "#/$defs/envDue"}}
       },
       "additionalProperties": false
     },
@@ -179,6 +179,12 @@
         "escalation": {"enum": ["restart", "keep"], "description": "priority went up: restart = the new SLA from that day, never later than before (default)"},
         "after_exception": {"enum": ["restart", "keep"], "description": "an accepted risk expired: restart = the clock starts again that day (default)"}
       }
+    },
+    "envDue": {
+      "description": "due.envs.<env>: the keys of due but envs; no other key",
+      "allOf": [{"$ref": "#/$defs/due"}],
+      "properties": {"sla_days": true, "start": true, "kev": true, "escalation": true, "after_exception": true},
+      "additionalProperties": false
     },
     "targets": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "slug": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
