@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -536,6 +537,43 @@ func TestSetupAddedElsewhere(t *testing.T) {
 	must(t, err)
 	if !strings.Contains(string(b), "192.0.2.55") {
 		t.Fatal("not added")
+	}
+}
+
+// TestSetupAddToOtherEnv: servers added on an env other than the org's first go to that env (the server is told
+// which), and are checked there; a paste that puts them all in another env checks nothing and says so instead of
+// loading for ever.
+func TestSetupAddToOtherEnv(t *testing.T) {
+	demoSSH(t)
+	p := fixture(t)
+	h := newHarnessAt(t, p, Options{Org: "acme", Env: "staging"}, true)
+	h.size(120, 40)
+	h.key("N", "left")
+	h.has("(•) Add to ACME Corp")
+	h.focus("hosts")
+	h.typeText("web-05 192.0.2.55")
+	h.focus("confirmed")
+	h.key("space", "ctrl+s")
+	h.has("Connecting", "192.0.2.55")
+	if w := h.m.setup; w.env != "staging" || len(w.hosts) != 1 || w.hosts[0].name != "web-05" {
+		t.Fatalf("%s %+v", w.env, w.hosts)
+	}
+	b, err := os.ReadFile(filepath.Join(p.Orgs, "acme.yml"))
+	must(t, err)
+	if !regexp.MustCompile(`env: staging\n(.*\n)*?\s+web-05:`).Match(b) {
+		t.Fatalf("not in staging:\n%s", b)
+	}
+	// the line names production: nothing of staging to check
+	h.key("esc")
+	h.focus("hosts")
+	h.m.setup.fields[h.m.setup.cur].val, h.m.setup.fields[h.m.setup.cur].pos = nil, 0
+	h.typeText("web-06,192.0.2.56,app,production")
+	h.focus("confirmed")
+	h.key("ctrl+s")
+	h.has("Connecting", "No servers", "r Check again")
+	h.hasNot("loading")
+	if w := h.m.setup; w.hosts == nil || len(w.hosts) != 0 {
+		t.Fatalf("%+v", w.hosts)
 	}
 }
 

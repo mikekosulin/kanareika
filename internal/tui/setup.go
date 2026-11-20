@@ -404,7 +404,7 @@ func (m *Model) setupUpdate(msg tea.Msg) tea.Cmd {
 		if msg.gen != w.gen {
 			return nil
 		}
-		w.hosts = nil
+		w.hosts = []hostRef{} // read: none to check is not "loading"
 		for _, h := range msg.hosts {
 			if w.only == nil || slices.Contains(w.only, h.name) {
 				w.hosts = append(w.hosts, h)
@@ -615,14 +615,16 @@ func (m *Model) submit() tea.Cmd {
 	}
 	switch {
 	case target != nil:
-		path, org = "/api/setup/add", target.ID // env: the first one, production when the org has none yet
+		// env: the one on screen, else the org's first, production when it has none yet; sent, so the hosts are
+		// written where they are checked
+		path, org = "/api/setup/add", target.ID
 		if len(target.Envs) > 0 {
 			env = target.Envs[0].Env
 		}
 		if w.kind == "add" && slices.ContainsFunc(target.Envs, func(e envRow) bool { return e.Env == m.env }) {
 			env = m.env
 		}
-		body = map[string]any{"org": org, "hosts": w.value("hosts"), "user": w.value("user")}
+		body = map[string]any{"org": org, "hosts": w.value("hosts"), "user": w.value("user"), "env": env}
 	case w.kind == "personal":
 		org = "servers"
 		base.ID, base.Name, base.Consent = org, m.t.T("Personal"), m.t.F("Confirmed in the setup on {d}", "d", m.now().Format(time.DateOnly))
@@ -1446,6 +1448,9 @@ func (m *Model) checkView(w int) []string {
 	}
 	if wz.hosts == nil {
 		return append(out, " "+sRun.Render(m.spinChar())+" "+sMuted.Render(m.t.T("loading")))
+	}
+	if len(wz.hosts) == 0 { // the env has none of them (a pasted line named another one)
+		out = append(out, " "+sMuted.Render(m.t.T("No servers")), "")
 	}
 	lw := 0
 	for _, h := range wz.hosts {
