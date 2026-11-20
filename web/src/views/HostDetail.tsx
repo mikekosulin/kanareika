@@ -8,8 +8,9 @@ import { deniedKey, makeL } from "../lib/catalog";
 import { go, openServer, toast, useS } from "../state";
 import { useCatalog, useEnv, useSession } from "../queries";
 import { startScan } from "./Shell";
+import { HostFixes, HostHistory, useHostFixes } from "./HostFixes";
 import type { TreeNode } from "../types";
-import { DetailClose, Icon, Kv, Sec } from "../components/ui";
+import { copy, DetailClose, Icon, Kv, Sec } from "../components/ui";
 
 export const Hcell = ({ n }: { n: string }) => (
   <span className="h" title={n}>
@@ -158,7 +159,6 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
   const { org, envName, run } = useS((s) => ({ org: s.org, envName: s.env, run: s.run }));
   const scans = useSession().data?.scans;
   const [rules, setRules] = useState<string | null>(null);
-  const [allFixes, setAllFixes] = useState(false);
   const n = name;
   const eh: any = (env.data?.hosts || []).find((h) => h.name === n) || {};
   const f = rd.facts?.[n] || {},
@@ -189,40 +189,18 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
         }
       />
     ) : null;
-  const pcs = ["P1", "P2", "P3", "P4"].filter((p) => c[p]);
+  // the counts of the fixes listed below (/api/host), so the header and the list agree; the run's own counts until then
+  const hf = useHostFixes(n).data;
+  const cnt: Record<string, number> = hf
+    ? hf.fixes.reduce((m: Record<string, number>, x) => ({ ...m, [x.priority]: (m[x.priority] || 0) + 1 }), {})
+    : c;
+  const pcs = ["P1", "P2", "P3", "P4"].filter((p) => cnt[p]);
   const meta = [eh.address, f.os, eh.group && t("group {g}", { g: eh.group }), (eh.exposure === 1 || eh.public) && t("Public")].filter(
     Boolean,
   );
   const reboot = pk.some((p: any) => p.fix_state === "reboot");
   const probl = srv && ["failed", "partial", "not_scanned"].includes(srv.state || "") ? problemText(srv) : "";
   const scannedAt = srv?.last_scan || (s[0] === "mut" ? "" : last);
-  const k = (key: string) => key;
-
-  const fixRows = [
-    ...pk.map((p: any, i: number) => (
-      <Li
-        key={k("p" + i)}
-        mark={pb(p.priority)}
-        more={`${p.installed} → ${p.fixed || ""}`}
-        right={due(p.due, p.priority)}
-        text={
-          <>
-            <code>{p.pkg}</code> <span className="z">→</span>{" "}
-            {p.fixed || p.repo_version ? <code>{p.repo_version || p.fixed}</code> : <span className="z">{t("no fix yet")}</span>}
-            {p.kev && (
-              <>
-                {" "}
-                <span className="fl kev">KEV</span>
-              </>
-            )}
-          </>
-        }
-      />
-    )),
-    ...rest
-      .filter((o: any) => o.priority)
-      .map((o: any, i: number) => <Li key={k("o" + i)} mark={pb(o.priority)} text={L(o)} right={due(o.due, o.priority)} more={o.target} />),
-  ];
 
   let access: ReactNode = null;
   if (A) {
@@ -520,16 +498,15 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
       </>
     );
   }
-  const oth = (
+  const othRows = rest.filter((o: any) => !o.priority);
+  const oth = othRows.length ? (
     <Lis
-      rows={rest
-        .filter((o: any) => !o.priority)
-        .map((o: any, i: number) => (
-          <Li key={i} mark={<Mk cls="mut" />} text={L(o)} more={o.target} />
-        ))}
+      rows={othRows.map((o: any, i: number) => (
+        <Li key={i} mark={<Mk cls="mut" />} text={L(o)} more={o.target} />
+      ))}
     />
-  );
-  const exc = (
+  ) : null;
+  const exc = ex.length ? (
     <Lis
       rows={ex.map((x: any, i: number) => (
         <Li
@@ -544,17 +521,9 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
         />
       ))}
     />
-  );
-  const fixes = fixRows.length ? (
-    <>
-      <div className="lis">{allFixes ? fixRows : fixRows.slice(0, 12)}</div>
-      {!allFixes && fixRows.length > 12 && (
-        <button className="lnk dnote" onClick={() => setAllFixes(true)}>
-          {t("+{n} more", { n: fixRows.length - 12 })}
-        </button>
-      )}
-    </>
   ) : null;
+  // what is open on the server: package updates, image rebuilds and settings, each opening with its CVEs (HostFixes)
+  const fixes = <HostFixes host={n} />;
   return (
     <>
       <div className="dh">
@@ -580,7 +549,7 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
                 <span key={p}>
                   {i > 0 && <span className="z"> • </span>}
                   <span className={"c" + p}>
-                    {p} {c[p]}
+                    {p} {cnt[p]}
                   </span>
                 </span>
               ))
@@ -616,16 +585,29 @@ export function HostDetail({ rd, name, srv }: { rd: any; name: string; srv?: Tre
           ) : null}
         </div>
       </div>
-      <Sec title={t("Fixes")}>{fixes}</Sec>
+      {fixes}
+      <Sec title={t("Exceptions")}>{exc}</Sec>
       <Sec title={t("Access")}>{access}</Sec>
       <Sec title={t("Network")}>{net}</Sec>
       <Sec title={t("Health")}>{hl}</Sec>
       <Sec title={t("Other")}>{oth}</Sec>
-      <Sec title={t("Exceptions")}>{exc}</Sec>
+      <HostHistory host={n} />
       <div className="dfoot">
         <button className="btn primary" onClick={() => go("todo", n)}>
           {t("Its fixes in ToDo")}
         </button>
+        {hf?.id && (
+          <button
+            className="btn"
+            onClick={async () => {
+              const r = await api<{ text: string }>("/api/prompt?" + qs({ org, env: envName, run, by: "host", nodes: hf.id, host: n }));
+              copy(r.text, t("Task copied: paste it into your agent"));
+            }}
+          >
+            <Icon name="copy" />
+            {t("Copy task for agent")}
+          </button>
+        )}
         {scans && (
           <button className="btn" onClick={() => startScan(org, envName, [n])}>
             <Icon name="scan" />

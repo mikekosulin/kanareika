@@ -257,6 +257,9 @@ func (m *Model) sync() tea.Cmd {
 		if c := m.fetchFirewall(); c != nil {
 			return c
 		}
+		if c := m.fetchHost(); c != nil {
+			return c
+		}
 	}
 	if m.setup != nil {
 		if c := tea.Batch(m.fetchDBSize(), m.fetchFound()); c != nil {
@@ -710,6 +713,11 @@ func (m *Model) copyText(msg copyMsg) {
 // copyTask: the agent task for the selected nodes (or the one under the cursor), built by the server from the
 // actions under them (GET /api/prompt?nodes=).
 func (m *Model) copyTask() tea.Cmd {
+	if m.host != "" { // a server's card: its task, about that server only
+		if c := m.hostTask(m.host); c != nil {
+			return c
+		}
+	}
 	var ids []string
 	for _, n := range m.picked() {
 		ids = append(ids, n.ID)
