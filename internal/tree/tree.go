@@ -925,6 +925,24 @@ func shallow(ns []*Node, levels int) []*Node {
 	return out
 }
 
+// Host: the node of host name in a tree grouped by host (at the top, or under its host group); nil when the host has
+// nothing in the tree.
+func (t *Tree) Host(name string) *Node {
+	for _, n := range t.Nodes {
+		switch {
+		case n.Kind == KindHost && n.Label == name:
+			return n
+		case n.Kind == KindGroup:
+			for _, k := range n.Children() {
+				if k.Kind == KindHost && k.Label == name {
+					return k
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // Find: the node with id anywhere in the tree, nil if none. Only the levels on the way to it are made: a node's
 // kids' ids start with its own and "/" (but a host group's under a fix: its hosts' ids start with the fix's).
 func (t *Tree) Find(id string) *Node {

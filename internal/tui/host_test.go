@@ -23,15 +23,15 @@ func TestHostCard(t *testing.T) {
 	h.size(110, 70)
 	card(h)
 	h.has("Host(web-01)", "CentOS Stream 9", "5.14.0-575.el9.x86_64", "19 CVE",
-		"ToDo", "Update OS packages (2)", "Packages", "openssl", "KEV", "+8 more",
+		"Fixes", "openssl", "KEV", "↓ Fix details",
 		"SSH and logins", "port", "logged in", "10.77.0.24", "failed logins", "password guessing", "198.51.100.0",
 		"Network", "public IPs", "192.0.2.1", "listening", "tcp *:22",
 		"Health", "disks", "50% /", "load", "Other findings", "SSH password guessing")
 	h.size(110, 20) // scrolls
 	h.has("CentOS Stream 9")
-	h.key("G") // the end: the whole lists after the summaries
+	h.key("G") // the end: the whole lists after the summaries, each fix with its CVEs and command last
 	h.hasNot("CentOS Stream 9")
-	h.has("198.51.100.99")
+	h.has("CVE-")
 	h.key("g", "down", "up", "pgdown", "pgup")
 	h.has("CentOS Stream 9")
 	h.key("esc")

@@ -8,7 +8,7 @@ export const fmtDay = (d: string) =>
 export const dueText = (d?: string) => {
   if (!d) return "";
   const n = days(d);
-  return n < 0 ? t("{n} d late", { n: -n }) : n < 14 ? t("in {n} d", { n }) : fmtDay(d);
+  return n < 0 ? t("{n} d late", { n: -n }) : n === 0 ? t("today") : n < 14 ? t("in {n} d", { n }) : fmtDay(d);
 };
 export const pct = (e: number) => (e >= 0.1 ? Math.round(e * 100) + "%" : e >= 0.01 ? (e * 100).toFixed(1) + "%" : e > 0 ? "<1%" : "");
 export const ago = (iso?: string) => {

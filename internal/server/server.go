@@ -291,6 +291,7 @@ func (s *Server) Handler() http.Handler {
 		"/api/orgs": s.apiOrgs, "/api/env": s.apiEnv, "/api/run": s.apiRun, "/api/log": s.apiLog,
 		"/api/hostfile": s.apiHostfile, "/api/ipinfo": s.apiIPInfo, "/api/prompt": s.apiPrompt,
 		"/api/i18n": s.apiI18n, "/api/tree": s.apiTree, "/api/node": s.apiNode, "/api/lens": s.apiLens, "/api/history": s.apiHistory,
+		"/api/host": s.apiHost, "/api/host/history": s.apiHostHistory,
 	} {
 		r.Get(path, s.api(fn))
 	}

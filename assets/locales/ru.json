@@ -960,6 +960,7 @@
     "Scan {env}": "Сканировать {env}",
     "Scan {env}…": "Сканировать {env}…",
     "Update: {v}": "Обновление: {v}",
+    "Fix details": "Подробно об исправлениях",
     "ToDo: group by fix, CVE or host; t: order by the next column, T: the other way": "«Что делать»: группировка по исправлению, CVE или хосту; t: сортировка по следующему столбцу, T: в обратную сторону",
     "sort": "сортировка",
     "backported": "бэкпорты",

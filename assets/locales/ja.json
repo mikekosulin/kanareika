@@ -960,6 +960,7 @@
     "Scan {env}": "{env} をスキャン",
     "Scan {env}…": "{env} をスキャン…",
     "Update: {v}": "アップデート: {v}",
+    "Fix details": "修正の詳細",
     "ToDo: group by fix, CVE or host; t: order by the next column, T: the other way": "やること：修正・CVE・ホストでグループ化。t：次の列で並べ替え、T：逆順",
     "sort": "並び順",
     "backported": "バックポート済み",

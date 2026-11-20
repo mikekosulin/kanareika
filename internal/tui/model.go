@@ -103,14 +103,16 @@ type Model struct {
 	nodes   map[string]*nodeDetail // details by treeKey#node id
 	pending map[string]string      // requests on the way: "tree" -> its key, a node's key -> itself
 	fwRules map[string]string      // a host's firewall rules as read (GET /api/hostfile), by org/env/run/host
-	opened  map[string]bool        // expanded nodes
-	sel     map[string]bool        // selected nodes (a node selects everything under it)
-	onlySel bool                   // only the selected (v)
-	curID   string                 // the node under the cursor, kept when the tree is rebuilt
-	jumpTo  string                 // the node to put the cursor on when the next tree comes (:)
-	full    bool                   // the details full screen (enter)
-	detOff  int
-	cmdCur  int // the command of the details c copies ([ ])
+	// hostData: a host's fixes with their details and its runs (GET /api/host, /api/host/history), by org/env/run/host
+	hostData map[string]*hostMsg
+	opened   map[string]bool // expanded nodes
+	sel      map[string]bool // selected nodes (a node selects everything under it)
+	onlySel  bool            // only the selected (v)
+	curID    string          // the node under the cursor, kept when the tree is rebuilt
+	jumpTo   string          // the node to put the cursor on when the next tree comes (:)
+	full     bool            // the details full screen (enter)
+	detOff   int
+	cmdCur   int // the command of the details c copies ([ ])
 
 	menu         *menuDlg // filters (f), organizations (O), environments (E), jump (:)
 	setup        *wizard  // first-run setup (no organization yet, N) and the first scan of an env
@@ -372,6 +374,12 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		m.onTree(msg)
 	case lensMsg:
 		m.onLens(msg)
+	case hostMsg:
+		delete(m.pending, "host")
+		if m.hostData == nil {
+			m.hostData = map[string]*hostMsg{}
+		}
+		m.hostData[msg.key] = &msg
 	case fwMsg:
 		delete(m.pending, "fw")
 		if m.fwRules == nil {
@@ -610,6 +618,8 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "esc", "enter", "backspace":
 			m.host, m.hostOff = "", 0
 			return m, nil
+		case "y": // the task for this server
+			return m, m.copyTask()
 		}
 	}
 	if m.help {

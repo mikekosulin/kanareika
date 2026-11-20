@@ -364,7 +364,7 @@ func (m *Model) hints() string {
 			vExceptions: {},
 		}[m.view]
 		if m.host != "" && m.view == vServers {
-			l = []k{{"↑↓", "scroll"}, {"esc", "back"}}
+			l = []k{{"↑↓", "scroll"}, {"y", "copy task"}, {"esc", "back"}}
 			if m.scanOK {
 				l = append(l, k{"R", "rescan"})
 			}
