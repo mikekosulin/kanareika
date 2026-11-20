@@ -2,7 +2,7 @@
 
 Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor version may break things; each break is listed under **Breaking** with what to do instead.
 
-## Unreleased
+## 0.8.0 — 2026-11-20
 
 A layout that says where you are and what you look at: places on top, the organization, the environment and the filters on the left. Every server has a page of its own. With more than one organization or environment, an overview of all of them and a scan of everything.
 
