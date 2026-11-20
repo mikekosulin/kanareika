@@ -297,8 +297,10 @@ func TestReadOnlyOrgsDir(t *testing.T) {
 	if path, errs, err := Create(p, r, time.Now()); err == nil || errors.Is(err, ErrExists) || len(errs) > 0 || path != "" {
 		t.Fatal("a new org file in a read-only orgs/:", path, errs, err)
 	}
-	if _, errs, err := Add(p, "acme", Request{Hosts: "192.0.2.50"}); err == nil || len(errs) != 0 {
-		t.Fatal("added:", errs, err)
+	// the file could not be replaced: no host is said to be added, none skipped
+	if added, skipped, errs, err := AddWithSkipped(p, "acme", Request{Hosts: "192.0.2.50\nweb-01 192.0.2.11"}); err == nil ||
+		len(errs) != 0 || added != nil || skipped != nil {
+		t.Fatal("added:", added, skipped, errs, err)
 	}
 	if b, _ := os.ReadFile(orgFile); string(b) != string(before) {
 		t.Fatal("the org file changed")

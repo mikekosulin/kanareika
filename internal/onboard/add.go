@@ -255,7 +255,10 @@ func AddWithSkipped(p config.Paths, orgID string, r Request) ([]string, []string
 	if err := os.WriteFile(path+".bak", b, 0o600); err != nil {
 		return nil, nil, nil, err
 	}
-	return added, skipped, nil, replaceFile(path, out.Bytes())
+	if err := replaceFile(path, out.Bytes()); err != nil {
+		return nil, nil, nil, err // nothing added
+	}
+	return added, skipped, nil, nil
 }
 
 // replaceFile: path gets b in one rename, through a temporary file of its own in the same directory (two writers
