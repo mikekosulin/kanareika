@@ -293,9 +293,11 @@ func Reason(err error) string {
 	case errors.As(err, &closed):
 		return closed.Reason()
 	}
+	// without a request's `Get "https://…": ` (whoever reports the reason names the host); what wraps it stays, and
+	// so does a URL that does not parse (`parse "::": `, the bad URL is the point)
 	var ue *url.Error
-	if errors.As(err, &ue) {
-		return ue.Err.Error() // without `Get "https://…":`
+	if errors.As(err, &ue) && ue.Op != "parse" {
+		return strings.Replace(err.Error(), ue.Op+" "+strconv.Quote(ue.URL)+": ", "", 1)
 	}
 	return err.Error()
 }

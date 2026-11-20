@@ -155,7 +155,7 @@ func TestMirrorReasons(t *testing.T) {
 		{"nohost", "nohost: not host/name:tag"},
 		{h + "/basic/db:2", "registry asks for Basic auth"},
 		{h + "/norealm/db:2", "registry gave no token realm"},
-		{h + "/badrealm/db:2", "missing protocol scheme"},
+		{h + "/badrealm/db:2", `token realm: parse "::": missing protocol scheme`},
 		{h + "/tokendown/db:2", "server error (500)"},
 		{h + "/tokenjunk/db:2", "token: invalid character"},
 		{h + "/junk/db:2", "manifest: invalid character"},

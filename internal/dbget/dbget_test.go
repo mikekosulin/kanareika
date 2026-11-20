@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -302,6 +303,18 @@ func TestReasons(t *testing.T) {
 		errors.New("something else"):                                                    "something else",
 		&TimeoutError{What: "timed out", After: 90 * time.Second}:                       "timed out after 1 min 30 s",
 		Kept(&StatusError{Code: 401}, "kept"):                                           "unauthorized (401); kept",
+	} {
+		if got := Reason(err); got != want {
+			t.Errorf("%v: %q, want %q", err, got, want)
+		}
+	}
+	// URL errors: a request's `Get "https://…": ` goes (the host is said where the reason is), what wraps it and a
+	// URL that does not parse stay
+	_, badURL := url.Parse("::")
+	for err, want := range map[error]string{
+		&url.Error{Op: "Get", URL: "https://ghcr.io/v2/", Err: io.EOF}:                            "EOF",
+		fmt.Errorf("token: %w", &url.Error{Op: "Get", URL: "https://ghcr.io/token", Err: io.EOF}): "token: EOF",
+		fmt.Errorf("token realm: %w", badURL):                                                     `token realm: parse "::": missing protocol scheme`,
 	} {
 		if got := Reason(err); got != want {
 			t.Errorf("%v: %q, want %q", err, got, want)
