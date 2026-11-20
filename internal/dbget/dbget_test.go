@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -260,6 +261,14 @@ func TestReasons(t *testing.T) {
 			t.Errorf("%s: %q, want %q", path, got, want)
 		}
 	}
+	// the body the server cut: said as the connection's doing, still io.ErrUnexpectedEOF in its own words
+	if resp, err := Get(context.Background(), srv.URL+"/short", nil); err == nil {
+		_, err = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		if !errors.Is(err, io.ErrUnexpectedEOF) || err.Error() != "unexpected EOF" {
+			t.Errorf("cut: %v", err)
+		}
+	}
 	Timeout, Idle = 10*time.Second, 10*time.Second // the rest fail fast; a TLS handshake on a busy CI runner can take over 200 ms
 	if got := reasonOf(t, tlsSrv.URL); got != "TLS: certificate signed by unknown authority (a proxy?)" {
 		t.Error(got)
@@ -290,9 +299,22 @@ func TestReasons(t *testing.T) {
 		fmt.Errorf("x: %w", syscall.ECONNRESET):                                         "connection reset",
 		fmt.Errorf("x: %w", syscall.ENETUNREACH):                                        "network unreachable (offline?)",
 		context.DeadlineExceeded:                                                        "timed out",
+		fmt.Errorf("metadata.json: %w", io.ErrUnexpectedEOF):                            "metadata.json: unexpected EOF", // a file cut, not the network
 		errors.New("something else"):                                                    "something else",
 		&TimeoutError{What: "timed out", After: 90 * time.Second}:                       "timed out after 1 min 30 s",
 		Kept(&StatusError{Code: 401}, "kept"):                                           "unauthorized (401); kept",
+	} {
+		if got := Reason(err); got != want {
+			t.Errorf("%v: %q, want %q", err, got, want)
+		}
+	}
+	// URL errors: a request's `Get "https://…": ` goes (the host is said where the reason is), what wraps it and a
+	// URL that does not parse stay
+	_, badURL := url.Parse("::")
+	for err, want := range map[error]string{
+		&url.Error{Op: "Get", URL: "https://ghcr.io/v2/", Err: io.EOF}:                            "EOF",
+		fmt.Errorf("token: %w", &url.Error{Op: "Get", URL: "https://ghcr.io/token", Err: io.EOF}): "token: EOF",
+		fmt.Errorf("token realm: %w", badURL):                                                     `token realm: parse "::": missing protocol scheme`,
 	} {
 		if got := Reason(err); got != want {
 			t.Errorf("%v: %q, want %q", err, got, want)

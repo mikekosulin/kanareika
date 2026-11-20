@@ -116,6 +116,15 @@ func TestHostLine(t *testing.T) {
 	if hostLine(text, "db") != 2 || hostLine(text, "app") != 0 {
 		t.Fatal(hostLine(text, "db"), hostLine(text, "app"))
 	}
+	// quoted aliases (valid ssh_config) are found too: the setup's preview shows their line
+	text = "# hosts\nHost \"web-01\"\n  HostName 192.0.2.11\nHost \"db-01 db-02\"\n  HostName 192.0.2.12\n"
+	if hostLine(text, "web-01") != 2 || hostLine(text, "db-02") != 4 {
+		t.Fatal(hostLine(text, "web-01"), hostLine(text, "db-02"))
+	}
+	hosts, errs := ParseHosts(text)
+	if len(errs) > 0 || len(hosts) != 3 || hosts[0].Name != "web-01" || hosts[0].Line != 2 || hosts[2].Line != 4 {
+		t.Fatalf("%+v %v", hosts, errs)
+	}
 }
 
 // TestLocalSSHConfig: a pasted alias resolves through ~/.ssh/config of the home (a fake one here): HostName, and
@@ -288,8 +297,10 @@ func TestReadOnlyOrgsDir(t *testing.T) {
 	if path, errs, err := Create(p, r, time.Now()); err == nil || errors.Is(err, ErrExists) || len(errs) > 0 || path != "" {
 		t.Fatal("a new org file in a read-only orgs/:", path, errs, err)
 	}
-	if _, errs, err := Add(p, "acme", Request{Hosts: "192.0.2.50"}); err == nil || len(errs) != 0 {
-		t.Fatal("added:", errs, err)
+	// the file could not be replaced: no host is said to be added, none skipped
+	if added, skipped, errs, err := AddWithSkipped(p, "acme", Request{Hosts: "192.0.2.50\nweb-01 192.0.2.11"}); err == nil ||
+		len(errs) != 0 || added != nil || skipped != nil {
+		t.Fatal("added:", added, skipped, errs, err)
 	}
 	if b, _ := os.ReadFile(orgFile); string(b) != string(before) {
 		t.Fatal("the org file changed")
@@ -372,6 +383,24 @@ func TestAddPlacement(t *testing.T) {
 	by, _ = loadAcme(t, p)
 	if by["app-01"].Exposure != 1 || by["app-01"].Env != "production" || by["cache-01"].Exposure != 3 {
 		t.Errorf("internet: %+v %+v", by["app-01"], by["cache-01"])
+	}
+}
+
+// TestAddThroughAlias: a group whose env is a YAML alias of another group's is in that env (not in one named after
+// the anchor): a host added to it joins it.
+func TestAddThroughAlias(t *testing.T) {
+	r := req()
+	r.Hosts = "web-01,192.0.2.11,web,production\ndb-01,192.0.2.21,db,production"
+	p, b := newAcme(t, r)
+	s := strings.Replace(string(b), "env: production", "env: &env production", 1)
+	s = strings.Replace(s, "env: production", "env: *env", 1)
+	must(t, os.WriteFile(filepath.Join(p.Orgs, "acme.yml"), []byte(s), 0o600))
+	if _, errs, err := Add(p, "acme", Request{Hosts: "db-02,192.0.2.22,db"}); err != nil || len(errs) > 0 {
+		t.Fatal(errs, err)
+	}
+	by, _ := loadAcme(t, p)
+	if h := by["db-02"]; h.Group != "db" || h.Env != "production" {
+		t.Fatalf("db-02: %+v", h)
 	}
 }
 

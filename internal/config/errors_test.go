@@ -56,6 +56,13 @@ func TestOrgFileErrors(t *testing.T) {
 			d["due"] = map[string]any{"envs": map[string]any{"staging": map[string]any{"sla_days": map[string]any{"P1": -3}}}}
 		}, []string{"acme.yml: due/envs/staging/sla_days/P1"}},
 		{"schema: due unknown key", func(d map[string]any) { d["due"] = map[string]any{"grace": 3} }, []string{"acme.yml: due:"}},
+		// an env's block is refused on load as the top one is (else every scan of that env fails on it)
+		{"schema: due env unknown key", func(d map[string]any) {
+			d["due"] = map[string]any{"envs": map[string]any{"production": map[string]any{"soon": 1}}}
+		}, []string{"acme.yml: due/envs/production:", "'soon'"}},
+		{"schema: due envs in an env", func(d map[string]any) {
+			d["due"] = map[string]any{"envs": map[string]any{"staging": map[string]any{"envs": map[string]any{}}}}
+		}, []string{"acme.yml: due/envs/staging:", "'envs'"}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			p := home(t)

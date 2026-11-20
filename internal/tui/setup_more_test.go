@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -378,7 +380,8 @@ func TestSetupAccessCheck(t *testing.T) {
 	}
 }
 
-// TestSetupScanRefused: the first scan refused (one of the env is running already): the button is free again.
+// TestSetupScanRefused: the first scan refused (one of the env is running already): the button is free again and
+// the refusal shows on the access step (its status bar shows no errors); asked again, the old refusal goes.
 func TestSetupScanRefused(t *testing.T) {
 	demoSSH(t)
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
@@ -393,7 +396,16 @@ func TestSetupScanRefused(t *testing.T) {
 	if w.busy || w.step != 2 || !strings.Contains(m.err, "already running") {
 		t.Fatalf("busy %v step %d err %q", w.busy, w.step, m.err)
 	}
+	h.has("✗ ", "already running", "⏎ Start the first scan")
 	close(h.scan.release)
+	for i := 0; i < 200 && slices.ContainsFunc(m.jobs.Jobs, func(j jobInfo) bool { return j.State == "running" }); i++ {
+		time.Sleep(10 * time.Millisecond)
+		h.run(m.fetchJobs())
+	}
+	h.key("enter")
+	if w.step != 3 || m.err != "" {
+		t.Fatalf("step %d err %q", w.step, m.err)
+	}
 }
 
 // TestSetupFirstScanScreen: the first scan's output, its last lines only; enter waits for its end; a scan that
@@ -536,6 +548,43 @@ func TestSetupAddedElsewhere(t *testing.T) {
 	must(t, err)
 	if !strings.Contains(string(b), "192.0.2.55") {
 		t.Fatal("not added")
+	}
+}
+
+// TestSetupAddToOtherEnv: servers added on an env other than the org's first go to that env (the server is told
+// which), and are checked there; a paste that puts them all in another env checks nothing and says so instead of
+// loading for ever.
+func TestSetupAddToOtherEnv(t *testing.T) {
+	demoSSH(t)
+	p := fixture(t)
+	h := newHarnessAt(t, p, Options{Org: "acme", Env: "staging"}, true)
+	h.size(120, 40)
+	h.key("N", "left")
+	h.has("(•) Add to ACME Corp")
+	h.focus("hosts")
+	h.typeText("web-05 192.0.2.55")
+	h.focus("confirmed")
+	h.key("space", "ctrl+s")
+	h.has("Connecting", "192.0.2.55")
+	if w := h.m.setup; w.env != "staging" || len(w.hosts) != 1 || w.hosts[0].name != "web-05" {
+		t.Fatalf("%s %+v", w.env, w.hosts)
+	}
+	b, err := os.ReadFile(filepath.Join(p.Orgs, "acme.yml"))
+	must(t, err)
+	if !regexp.MustCompile(`env: staging\n(.*\n)*?\s+web-05:`).Match(b) {
+		t.Fatalf("not in staging:\n%s", b)
+	}
+	// the line names production: nothing of staging to check
+	h.key("esc")
+	h.focus("hosts")
+	h.m.setup.fields[h.m.setup.cur].val, h.m.setup.fields[h.m.setup.cur].pos = nil, 0
+	h.typeText("web-06,192.0.2.56,app,production")
+	h.focus("confirmed")
+	h.key("ctrl+s")
+	h.has("Connecting", "No servers", "r Check again")
+	h.hasNot("loading")
+	if w := h.m.setup; w.hosts == nil || len(w.hosts) != 0 {
+		t.Fatalf("%+v", w.hosts)
 	}
 }
 
