@@ -780,7 +780,7 @@ func (m *Model) checkKey(s string) tea.Cmd {
 				}
 			}
 		}
-		w.busy = true
+		w.busy, m.err = true, ""
 		return m.post("/api/scan", req, func(v any) tea.Msg {
 			id, _ := v.(map[string]any)["id"].(string)
 			return startedMsg{id}
@@ -1575,6 +1575,9 @@ func (m *Model) checkView(w int) []string {
 		if wz.fields != nil {
 			keys = append(keys, m.zoneKey("esc", sKey.Render("esc")+" "+sText.Render(m.t.T("Back"))))
 		}
+	}
+	if m.err != "" { // the scan refused (one of the env is running): by its button, the status bar shows none here
+		out = append(out, " "+sErr.Render("✗ "+m.err), "")
 	}
 	if len(keys) > 0 {
 		out = append(out, " "+strings.Join(keys, "   "))

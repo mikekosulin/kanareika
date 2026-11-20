@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -379,7 +380,8 @@ func TestSetupAccessCheck(t *testing.T) {
 	}
 }
 
-// TestSetupScanRefused: the first scan refused (one of the env is running already): the button is free again.
+// TestSetupScanRefused: the first scan refused (one of the env is running already): the button is free again and
+// the refusal shows on the access step (its status bar shows no errors); asked again, the old refusal goes.
 func TestSetupScanRefused(t *testing.T) {
 	demoSSH(t)
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
@@ -394,7 +396,16 @@ func TestSetupScanRefused(t *testing.T) {
 	if w.busy || w.step != 2 || !strings.Contains(m.err, "already running") {
 		t.Fatalf("busy %v step %d err %q", w.busy, w.step, m.err)
 	}
+	h.has("✗ ", "already running", "⏎ Start the first scan")
 	close(h.scan.release)
+	for i := 0; i < 200 && slices.ContainsFunc(m.jobs.Jobs, func(j jobInfo) bool { return j.State == "running" }); i++ {
+		time.Sleep(10 * time.Millisecond)
+		h.run(m.fetchJobs())
+	}
+	h.key("enter")
+	if w.step != 3 || m.err != "" {
+		t.Fatalf("step %d err %q", w.step, m.err)
+	}
 }
 
 // TestSetupFirstScanScreen: the first scan's output, its last lines only; enter waits for its end; a scan that
