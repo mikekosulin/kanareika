@@ -12,7 +12,7 @@ Auditoria de segurança de servidores Linux via SSH, sem agente e somente leitur
 
 ### Interface no terminal
 
-Execute `kanareika`. Ele abre na lista “A fazer”: o que corrigir primeiro, o mais urgente no topo.
+Execute `kanareika`. Ele abre na lista “Correções”: o que corrigir primeiro, o mais urgente no topo.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-pt.webp"><img alt="Dados de demonstração, fictícios." src="../screenshots/tui-pt-light.webp"></picture>
 

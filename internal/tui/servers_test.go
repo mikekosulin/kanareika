@@ -2,12 +2,12 @@ package tui
 
 import "testing"
 
-// TestServers: the view the TUI opens on: every server with its fixes per priority, its state and scan age; one the
+// TestServers: every server with its fixes per priority, its state and scan age; one the
 // scan did not reach says why (in the interface's language); Enter opens the host card; g goes on to fix and CVE.
 func TestServers(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	if New(Options{}).view != vServers {
-		t.Fatal("the TUI opens on Servers")
+	if New(Options{}).view != vActions {
+		t.Fatal("the TUI opens on Fixes: what to fix first")
 	}
 	h.size(160, 40)
 	h.key("1")

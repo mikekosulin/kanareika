@@ -52,7 +52,7 @@ export interface State {
 const by = (v: string | null, d: By): By => (v === "fix" || v === "cve" || v === "host" ? v : d);
 
 export const useApp = create<State>(() => ({
-  view: "servers",
+  view: "todo",
   org: local.get("org", ""),
   env: local.get("env", ""),
   run: "current",
@@ -212,7 +212,7 @@ const cardHost = (s: State) => (serverList(s) && s.cur?.startsWith("h:") && !s.c
 export function readURL() {
   const p = new URLSearchParams(location.search);
   const v = location.pathname.replace(/^\/+|\/+$/g, "").split("/")[0];
-  const view: View = v === "overview" || v === "servers" || v === "todo" || v === "history" ? v : v === "setup" ? "setup" : "servers";
+  const view: View = v === "overview" || v === "servers" || v === "todo" || v === "history" ? v : v === "setup" ? "setup" : "todo";
   const patch: Partial<State> = { view, lens: p.get("show") || "priorities", accepted: view === "todo" && p.get("f") === "accepted" };
   if (p.get("org")) patch.org = p.get("org")!;
   if (p.get("env")) patch.env = p.get("env")!;

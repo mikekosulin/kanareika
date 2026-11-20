@@ -155,7 +155,7 @@ func New(o Options) *Model {
 	if o.Zone == nil {
 		o.Zone = time.Local
 	}
-	m := &Model{c: o.Client, now: o.Now, every: o.Tick, clip: o.Clip, org: o.Org, env: o.Env, view: vServers, sel: map[string]bool{},
+	m := &Model{c: o.Client, now: o.Now, every: o.Tick, clip: o.Clip, org: o.Org, env: o.Env, view: vActions, sel: map[string]bool{},
 		t: &tr{lang: "en", ui: i18n.UI()}, set: loadSettings(o.Settings), setPath: o.Settings, sysZone: o.Zone,
 		lens: "priorities", by: [nViews]string{vServers: "host", vActions: "fix"}, flt: map[string]bool{}, nodes: map[string]*nodeDetail{}, pending: map[string]string{}, opened: map[string]bool{}}
 	m.applyZone()

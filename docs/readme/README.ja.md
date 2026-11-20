@@ -12,7 +12,7 @@
 
 ### ターミナル UI
 
-`kanareika` を実行すると「やること」画面が開きます。最初に直すべきものが、緊急度の高い順に並びます。
+`kanareika` を実行すると「修正」画面が開きます。最初に直すべきものが、緊急度の高い順に並びます。
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="../screenshots/tui-ja.webp"><img alt="デモデータ (架空のもの)。" src="../screenshots/tui-ja-light.webp"></picture>
 

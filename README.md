@@ -12,7 +12,7 @@ Agentless, read-only security audit of Linux servers over SSH. It ranks what to 
 
 ### Terminal interface
 
-Run `kanareika`. It opens on ToDo: what to fix first, most urgent at the top.
+Run `kanareika`. It opens on Fixes: what to fix first, most urgent at the top.
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/tui-en.webp"><img alt="Demo data, made up." src="docs/screenshots/tui-en-light.webp"></picture>
 
