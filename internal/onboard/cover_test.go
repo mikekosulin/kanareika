@@ -116,6 +116,15 @@ func TestHostLine(t *testing.T) {
 	if hostLine(text, "db") != 2 || hostLine(text, "app") != 0 {
 		t.Fatal(hostLine(text, "db"), hostLine(text, "app"))
 	}
+	// quoted aliases (valid ssh_config) are found too: the setup's preview shows their line
+	text = "# hosts\nHost \"web-01\"\n  HostName 192.0.2.11\nHost \"db-01 db-02\"\n  HostName 192.0.2.12\n"
+	if hostLine(text, "web-01") != 2 || hostLine(text, "db-02") != 4 {
+		t.Fatal(hostLine(text, "web-01"), hostLine(text, "db-02"))
+	}
+	hosts, errs := ParseHosts(text)
+	if len(errs) > 0 || len(hosts) != 3 || hosts[0].Name != "web-01" || hosts[0].Line != 2 || hosts[2].Line != 4 {
+		t.Fatalf("%+v %v", hosts, errs)
+	}
 }
 
 // TestLocalSSHConfig: a pasted alias resolves through ~/.ssh/config of the home (a fake one here): HostName, and

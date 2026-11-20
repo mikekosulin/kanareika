@@ -839,10 +839,13 @@ func resolveAliases(hosts []Host, cfg []SSHHost) {
 	}
 }
 
-// hostLine: the line of text where `Host alias` stands (0: not found).
+// hostLine: the line of text where `Host alias` stands (0: not found); the aliases may be quoted, as
+// ParseSSHConfig reads them.
 func hostLine(text, alias string) int {
 	for i, l := range strings.Split(text, "\n") {
-		if f := strings.Fields(l); len(f) > 1 && strings.EqualFold(f[0], "host") && slices.Contains(f[1:], alias) {
+		f := strings.Fields(l)
+		if len(f) > 1 && strings.EqualFold(f[0], "host") &&
+			slices.ContainsFunc(f[1:], func(a string) bool { return strings.Trim(a, `"`) == alias }) {
 			return i + 1
 		}
 	}
