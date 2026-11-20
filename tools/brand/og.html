@@ -17,7 +17,6 @@ html, body { width: 1280px; height: 640px; }
 .counts { display: flex; gap: 18px; padding: 6px 22px 18px; font-size: 20px; }
 .win .row { gap: 18px; padding: 12px 22px; border-left-width: 3px; }
 .win .row .p { font-size: 15px; padding: 2px 8px; border-radius: 5px; }
-.win .row .h { width: 104px; }
 .logo { left: 64px; top: 104px; width: 84px; height: 84px; filter: drop-shadow(0 8px 24px rgba(255,200,60,.35)); }
 .name { left: 60px; top: 200px; font-size: 76px; }
 .tag { left: 64px; top: 312px; width: 430px; font-size: 30px; line-height: 1.3; color: #c4c9d8; font-weight: 500; letter-spacing: -.01em; }
@@ -30,9 +29,9 @@ html, body { width: 1280px; height: 640px; }
 
 <div class="abs win mono">
  <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">~ kanareika</span></div>
- <div class="tabs">{{range $i, $t := .L.Tabs}}{{if lt $i 4}}<span{{if eq $i 1}} class="on"{{end}}>{{$t}}</span>{{end}}{{end}}</div>
+ <div class="tabs">{{range $i, $t := .L.Tabs}}{{if lt $i 4}}<span{{if eq $i 0}} class="on"{{end}}>{{$t}}</span>{{end}}{{end}}</div>
  <div class="counts">{{range .Counts}}<span class="c{{.N}}">■ {{.Count}} P{{.N}}</span>{{end}}</div>
- {{range $i, $r := .Rows}}{{if lt $i 5}}<div class="row{{if eq $i 0}} sel{{end}}"><span class="p p{{$r.P}}">P{{$r.P}}</span><span class="h">{{$r.Host}}</span><span class="x">{{$r.Text}}</span></div>
+ {{range $i, $r := .Rows}}{{if lt $i 5}}<div class="row{{if eq $i 0}} sel{{end}}"><span class="p p{{$r.P}}">P{{$r.P}}</span><span class="x">{{$r.Text}}</span></div>
  {{end}}{{end}}
 </div>
 

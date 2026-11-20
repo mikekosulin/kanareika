@@ -21,7 +21,8 @@ body { font-family: -apple-system, "SF Pro Display", "Inter", "PingFang SC", "No
 .tabs .on { color: #0b0d12; background: #ffd23f; padding: 1px 8px; border-radius: 4px; font-weight: 700; }
 .row { display: flex; gap: 14px; align-items: center; padding: 7px 16px; border-left: 2px solid transparent; }
 .row.sel { background: rgba(255,210,63,.09); border-left-color: #ffd23f; }
-.row .h { width: 104px; color: #8fd8ff; }
+.row .h { display: flex; align-items: center; justify-content: flex-end; gap: 6px; width: 56px; color: #8fd8ff; }
+.row .h .srv { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; opacity: .7; }
 .row .x { flex: 1; color: #dfe3ee; }
 .row .k { color: #6f778c; }
 .foot { position: absolute; bottom: 0; left: 0; right: 0; display: flex; padding: 10px 16px; color: #6f778c;

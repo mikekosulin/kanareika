@@ -7,7 +7,7 @@ html, body { width: 1280px; height: 360px; }
 .win { left: 640px; top: 48px; width: 600px; height: 360px; font-size: 13px;
   transform: perspective(1300px) rotateY(-10deg) rotateX(4deg); transform-origin: left top; }
 .row { padding: 6px 14px; gap: 12px; }
-.row .h { width: 70px; }
+.row .h { width: 52px; }
 .aurora { inset: 0; background:
   radial-gradient(520px 300px at 1000px 40px, rgba(130,100,255,.34), transparent 70%),
   radial-gradient(460px 260px at 1200px 360px, rgba(255,190,60,.2), transparent 70%),
@@ -53,8 +53,8 @@ html, body { width: 1280px; height: 360px; }
 
 <div class="abs win mono">
  <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">~ kanareika</span></div>
- <div class="tabs">{{range $i, $t := .L.Tabs}}<span{{if eq $i 1}} class="on"{{end}}>{{$t}}</span>{{end}}</div>
- {{range $i, $r := .Rows}}<div class="row{{if eq $i 0}} sel{{end}}"><span class="p p{{$r.P}}">P{{$r.P}}</span><span class="h">{{$r.Host}}</span><span class="x">{{$r.Text}}</span><span class="k">{{$r.Kind}}</span></div>
+ <div class="tabs">{{range $i, $t := .L.Tabs}}<span{{if eq $i 0}} class="on"{{end}}>{{$t}}</span>{{end}}</div>
+ {{range $i, $r := .Rows}}<div class="row{{if eq $i 0}} sel{{end}}"><span class="p p{{$r.P}}">P{{$r.P}}</span><span class="x">{{$r.Text}}</span><span class="h"><svg class="srv" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/></svg>{{$r.Hosts}}</span><span class="k">{{$r.Kind}}</span></div>
  {{end}}
 </div>
 <div class="abs fade"></div>

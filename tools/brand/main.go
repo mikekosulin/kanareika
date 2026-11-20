@@ -48,13 +48,15 @@ var (
 	shot       = chrome.Shot
 )
 
-// row: one line of the ToDo list in the picture.
+// row: one line of the Fixes list in the picture: a fix, on how many hosts, and what it is (its CVEs, or a setting).
 type row struct {
-	P                int
-	Host, Text, Kind string
+	P     int
+	Text  string
+	Hosts int
+	Kind  string
 }
 
-// lang: the words of one language; tabs as the TUI names them (assets/locales).
+// lang: the words of one language; tabs as the TUI names them (assets/locales), Fixes first and open.
 type lang struct {
 	Code, Tag, Accent, Sub, DB, Keys string
 	Tabs                             []string
@@ -64,87 +66,87 @@ type lang struct {
 var langs = []lang{
 	{Code: "en", Tag: "Security audit of your servers over SSH.", Accent: "What to patch first.",
 		Sub: "agentless · read-only · TUI + web · MCP", DB: "db ok", Keys: "↑↓ move · space select · f fix plan · / search",
-		Tabs: []string{"Servers", "ToDo", "History"},
+		Tabs: []string{"Fixes", "Servers", "History"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
-			{2, "web-01", "sshd: password login enabled", "access"},
-			{2, "web-02", ":6379 reachable from anywhere", "network"},
-			{3, "db-01", "kernel 5.14.0-427 · reboot pending", "reboot"},
-			{3, "web-02", "NTP drift 4.2 s", "health"},
-			{3, "stage-web-01", "firewall · default policy ACCEPT", "network"},
-			{4, "web-02", "libxml2 · no fix in repo yet", "vendor"},
-			{4, "db-01", "curl · low, EPSS 0.02%", "CVE-0000-90210"},
+			{1, "openssl 3.0.13 → 3.0.15", 12, "2 CVE"},
+			{1, "glibc 2.34-100 → 2.34-125", 8, "1 CVE"},
+			{2, "sshd: password login enabled", 3, "access"},
+			{2, ":6379 reachable from anywhere", 1, "network"},
+			{3, "kernel 5.14.0-427 · reboot pending", 5, "reboot"},
+			{3, "NTP drift 4.2 s", 1, "health"},
+			{3, "firewall · default policy ACCEPT", 4, "network"},
+			{4, "libxml2 · no fix in repo yet", 6, "vendor"},
+			{4, "curl · low, EPSS 0.02%", 9, "1 CVE"},
 		}},
 	{Code: "ru", Tag: "Аудит безопасности серверов по SSH.", Accent: "Начните с главного.",
 		Sub:  "без агента · только чтение · TUI + веб · MCP",
-		Tabs: []string{"Серверы", "Что делать", "История"},
+		Tabs: []string{"Исправления", "Серверы", "История"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
-			{2, "web-01", "sshd: вход по паролю включён", "доступ"},
-			{2, "web-02", ":6379 доступен отовсюду", "сеть"},
-			{3, "db-01", "ядро 5.14.0-427 · ждёт перезагрузки", "перезагрузка"},
+			{1, "openssl 3.0.13 → 3.0.15", 12, "2 CVE"},
+			{1, "glibc 2.34-100 → 2.34-125", 8, "1 CVE"},
+			{2, "sshd: вход по паролю включён", 3, "доступ"},
+			{2, ":6379 доступен отовсюду", 1, "сеть"},
+			{3, "ядро 5.14.0-427 · ждёт перезагрузки", 5, "перезагрузка"},
 		}},
 	{Code: "zh", Tag: "通过 SSH 审计服务器安全。", Accent: "从最重要的开始。",
 		Sub:  "无代理 · 只读 · TUI + Web · MCP",
-		Tabs: []string{"服务器", "待办", "历史"},
+		Tabs: []string{"修复", "服务器", "历史"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
-			{2, "web-01", "sshd：已启用密码登录", "访问"},
-			{2, "web-02", ":6379 对外开放", "网络"},
-			{3, "db-01", "内核 5.14.0-427 · 等待重启", "重启"},
+			{1, "openssl 3.0.13 → 3.0.15", 12, "2 CVE"},
+			{1, "glibc 2.34-100 → 2.34-125", 8, "1 CVE"},
+			{2, "sshd：已启用密码登录", 3, "访问"},
+			{2, ":6379 对外开放", 1, "网络"},
+			{3, "内核 5.14.0-427 · 等待重启", 5, "重启"},
 		}},
 	{Code: "es", Tag: "Auditoría de seguridad de servidores por SSH.", Accent: "Empiece por lo importante.",
 		Sub:  "sin agente · solo lectura · TUI + web · MCP",
-		Tabs: []string{"Servidores", "Por hacer", "Historial"},
+		Tabs: []string{"Correcciones", "Servidores", "Historial"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
-			{2, "web-01", "sshd: acceso con contraseña activado", "acceso"},
-			{2, "web-02", ":6379 abierto a todo el mundo", "red"},
-			{3, "db-01", "kernel 5.14.0-427 · pendiente de reinicio", "reinicio"},
+			{1, "openssl 3.0.13 → 3.0.15", 12, "2 CVE"},
+			{1, "glibc 2.34-100 → 2.34-125", 8, "1 CVE"},
+			{2, "sshd: acceso con contraseña activado", 3, "acceso"},
+			{2, ":6379 abierto a todo el mundo", 1, "red"},
+			{3, "kernel 5.14.0-427 · pendiente de reinicio", 5, "reinicio"},
 		}},
 	{Code: "fr", Tag: "Audit de sécurité des serveurs via SSH.", Accent: "Commencez par l'essentiel.",
 		Sub:  "sans agent · lecture seule · TUI + web · MCP",
-		Tabs: []string{"Serveurs", "À faire", "Historique"},
+		Tabs: []string{"Correctifs", "Serveurs", "Historique"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
-			{2, "web-01", "sshd : connexion par mot de passe activée", "accès"},
-			{2, "web-02", ":6379 accessible de partout", "réseau"},
-			{3, "db-01", "noyau 5.14.0-427 · redémarrage en attente", "redémarrage"}, //nolint:misspell // French
+			{1, "openssl 3.0.13 → 3.0.15", 12, "2 CVE"},
+			{1, "glibc 2.34-100 → 2.34-125", 8, "1 CVE"},
+			{2, "sshd : connexion par mot de passe activée", 3, "accès"},
+			{2, ":6379 accessible de partout", 1, "réseau"},
+			{3, "noyau 5.14.0-427 · redémarrage en attente", 5, "redémarrage"}, //nolint:misspell // French
 		}},
 	{Code: "pt", Tag: "Auditoria de segurança de servidores via SSH.", Accent: "Comece pelo que importa.",
 		Sub:  "sem agente · somente leitura · TUI + web · MCP",
-		Tabs: []string{"Servidores", "A fazer", "Histórico"},
+		Tabs: []string{"Correções", "Servidores", "Histórico"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
-			{2, "web-01", "sshd: login por senha ativado", "acesso"},
-			{2, "web-02", ":6379 aberto para todos", "rede"},
-			{3, "db-01", "kernel 5.14.0-427 · reinicialização pendente", "reiniciar"},
+			{1, "openssl 3.0.13 → 3.0.15", 12, "2 CVE"},
+			{1, "glibc 2.34-100 → 2.34-125", 8, "1 CVE"},
+			{2, "sshd: login por senha ativado", 3, "acesso"},
+			{2, ":6379 aberto para todos", 1, "rede"},
+			{3, "kernel 5.14.0-427 · reinicialização pendente", 5, "reiniciar"},
 		}},
 	{Code: "ja", Tag: "SSH によるサーバーのセキュリティ監査。", Accent: "まずは重要なものから。",
 		Sub:  "エージェント不要 · 読み取り専用 · TUI + Web · MCP",
-		Tabs: []string{"サーバー", "やること", "履歴"},
+		Tabs: []string{"修正", "サーバー", "履歴"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
-			{2, "web-01", "sshd: パスワードログイン有効", "アクセス"},
-			{2, "web-02", ":6379 がどこからでも到達可能", "ネットワーク"},
-			{3, "db-01", "カーネル 5.14.0-427 · 再起動待ち", "再起動"},
+			{1, "openssl 3.0.13 → 3.0.15", 12, "2 CVE"},
+			{1, "glibc 2.34-100 → 2.34-125", 8, "1 CVE"},
+			{2, "sshd: パスワードログイン有効", 3, "アクセス"},
+			{2, ":6379 がどこからでも到達可能", 1, "ネットワーク"},
+			{3, "カーネル 5.14.0-427 · 再起動待ち", 5, "再起動"},
 		}},
 	{Code: "ko", Tag: "SSH를 통한 서버 보안 감사.", Accent: "중요한 것부터 시작하세요.",
 		Sub:  "에이전트 불필요 · 읽기 전용 · TUI + 웹 · MCP",
-		Tabs: []string{"서버", "할 일", "기록"},
+		Tabs: []string{"패치", "서버", "기록"},
 		Rows: []row{
-			{1, "web-01", "openssl 3.0.13 → 3.0.15", "CVE-0000-90017"},
-			{1, "db-01", "glibc 2.34-100 → 2.34-125", "CVE-0000-90042"},
-			{2, "web-01", "sshd: 비밀번호 로그인 켜짐", "접근"},
-			{2, "web-02", ":6379 어디서나 접근 가능", "네트워크"},
-			{3, "db-01", "커널 5.14.0-427 · 재부팅 대기", "재부팅"},
+			{1, "openssl 3.0.13 → 3.0.15", 12, "2 CVE"},
+			{1, "glibc 2.34-100 → 2.34-125", 8, "1 CVE"},
+			{2, "sshd: 비밀번호 로그인 켜짐", 3, "접근"},
+			{2, ":6379 어디서나 접근 가능", 1, "네트워크"},
+			{3, "커널 5.14.0-427 · 재부팅 대기", 5, "재부팅"},
 		}},
 }
 
