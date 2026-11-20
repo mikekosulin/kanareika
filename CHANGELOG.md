@@ -4,9 +4,14 @@ Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor ve
 
 ## Unreleased
 
+A layout that says where you are and what you look at: places on top, the organization, the environment and the filters on the left. Every server has a page of its own. With more than one organization or environment, an overview of all of them and a scan of everything.
+
 ### Changed
 
-- **A server's page has everything about it in one place.** Its fixes as ToDo groups them (a package update, an image to rebuild with what inside it needs the update, a setting), each opening in place with its CVEs (severity, KEV, EPSS, advisory link), why its priority and the command for this server's OS; the priorities at the top count the same fixes. Its history: the runs that changed something on it (+ appeared, − went) or did not reach it. "Copy task for agent" for the server, or for one of its fixes, is about that server only. The TUI's host card lists the same fixes, each one's CVEs and command at its end, the history, and `y` copies the server's task.
+- **Places on top, scope and filters on the left.** The places are Fixes, Servers and History, plus Overview when there is more than one organization or environment; kanareika now opens on **Fixes**, what to fix first (it was called ToDo). On the left: Organization, Environment and "Data as of", then the page's filters, each with the number of fixes it would leave: priority (P1–P4, any of those chosen), risk (KEV, pre-auth RCE, EPSS ≥ 10%, public), state (fix ready, no fix yet, overdue), accepted risks and backported ones; "Clear" undoes them. Fixes is grouped by fix or by CVE; Servers lists the servers. The scan button names what it scans; language, theme and scan limits are behind ⚙; "Hide filters" folds the left column away.
+- **Overview and "Scan everything".** Every organization and environment on one page: servers, fixes by priority, the last scan and how many servers it did not reach; a row opens its fixes. "Scan everything" (also in the scan button's menu, with "every environment of" one organization) scans them one after another, not all at once.
+- **A server's page has everything about it in one place.** Its fixes as Fixes groups them (a package update, an image to rebuild with what inside it needs the update, a setting), each opening in place with its CVEs (severity, KEV, EPSS, advisory link), why its priority and the command for this server's OS; the priorities at the top count the same fixes. Its history: the runs that changed something on it (+ appeared, − went) or did not reach it. "Copy task for agent" for the server, or for one of its fixes, is about that server only.
+- **TUI:** ToDo is Fixes, and the TUI opens on it. `f` filters by priority too, with each filter's count beside it. `0` opens Overview when there is more than one organization or environment (`s`, then `s` again: scan everything). The host card lists the same fixes as the web page, each one's CVEs and command at its end, the server's history, and `y` copies the server's task.
 
 ### Fixed
 
