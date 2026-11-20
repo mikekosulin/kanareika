@@ -19,7 +19,11 @@ func TestRegistryProtocol(t *testing.T) {
 	if ref != r.Host()+"/a/trivy-db:2" {
 		t.Fatal(ref)
 	}
-	get := func(path, token string) (*http.Response, []byte) {
+	type answer struct { // what a request got: the body is read and closed here
+		code   int
+		header http.Header
+	}
+	get := func(path, token string) (answer, []byte) {
 		t.Helper()
 		q, _ := http.NewRequest(http.MethodGet, r.URL+path, nil)
 		if token != "" {
@@ -31,26 +35,26 @@ func TestRegistryProtocol(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		b, _ := io.ReadAll(resp.Body)
-		return resp, b
+		return answer{resp.StatusCode, resp.Header}, b
 	}
 	resp, _ := get("/v2/a/trivy-db/manifests/2", "")
-	if c := resp.Header.Get("WWW-Authenticate"); resp.StatusCode != 401 ||
+	if c := resp.header.Get("WWW-Authenticate"); resp.code != 401 ||
 		c != `Bearer realm="`+r.URL+`/token",service="test",scope="repository:a/trivy-db:pull"` {
-		t.Fatal(resp.StatusCode, c)
+		t.Fatal(resp.code, c)
 	}
 	if _, b := get("/token", ""); string(b) != `{"token":"t0k"}` {
 		t.Fatal(string(b))
 	}
 	resp, m := get("/v2/a/trivy-db/manifests/2", "t0k")
-	if resp.StatusCode != 200 || !strings.Contains(string(m), `"digest":"`+Digest(layer)+`"`) {
-		t.Fatal(resp.StatusCode, string(m))
+	if resp.code != 200 || !strings.Contains(string(m), `"digest":"`+Digest(layer)+`"`) {
+		t.Fatal(resp.code, string(m))
 	}
-	if resp, b := get("/v2/a/trivy-db/blobs/"+Digest(layer), "t0k"); resp.StatusCode != 200 || !bytes.Equal(b, layer) {
-		t.Fatal(resp.StatusCode)
+	if resp, b := get("/v2/a/trivy-db/blobs/"+Digest(layer), "t0k"); resp.code != 200 || !bytes.Equal(b, layer) {
+		t.Fatal(resp.code)
 	}
 	for _, p := range []string{"/v2/a/trivy-db/manifests/3", "/v2/a/trivy-db/blobs/" + Digest([]byte("other")), "/v2/a/trivy-db/tags/list", "/other"} {
-		if resp, _ := get(p, "t0k"); resp.StatusCode != 404 {
-			t.Errorf("%s: %d", p, resp.StatusCode)
+		if resp, _ := get(p, "t0k"); resp.code != 404 {
+			t.Errorf("%s: %d", p, resp.code)
 		}
 	}
 	if got := r.Paths(); len(got) != 8 || got[0] != "/v2/a/trivy-db/manifests/2" || got[7] != "/other" {

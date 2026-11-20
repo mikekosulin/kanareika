@@ -310,7 +310,7 @@ func TestReasons(t *testing.T) {
 	}
 	// URL errors: a request's `Get "https://…": ` goes (the host is said where the reason is), what wraps it and a
 	// URL that does not parse stay
-	_, badURL := url.Parse("::")
+	_, badURL := url.Parse(strings.Repeat(":", 2)) // "::", which does not parse (built at run time: vet knows the literal)
 	for err, want := range map[error]string{
 		&url.Error{Op: "Get", URL: "https://ghcr.io/v2/", Err: io.EOF}:                            "EOF",
 		fmt.Errorf("token: %w", &url.Error{Op: "Get", URL: "https://ghcr.io/token", Err: io.EOF}): "token: EOF",
