@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/mikekosulin/kanareika/internal/config"
+	"github.com/mikekosulin/kanareika/internal/finding"
 	"github.com/mikekosulin/kanareika/internal/priority"
 	"github.com/mikekosulin/kanareika/internal/pyfmt"
 	"github.com/mikekosulin/kanareika/internal/report"
@@ -189,14 +190,19 @@ func TestGenerateErrors(t *testing.T) {
 		{"loader", func() { newLoader = func(config.Paths) (*config.Loader, error) { return nil, boom } }, "boom"},
 		{"policy", func() { loadPolicy = func(config.Paths) (*priority.Policy, error) { return nil, boom } }, "boom"},
 		{"current", func() { updateCurrent = func(string, bool, bool) (string, error) { return "", boom } }, "boom"},
-		{"due rules", func() { // the org loads, its due block for production does not apply: priorities fail
+		{"due rules", func() { // a due block for production that would fail every run: the org file is refused
 			writeFile = func(p string, b []byte, m os.FileMode) error {
 				if strings.HasSuffix(p, "acme.yml") {
 					b = append(b, "due:\n  envs:\n    production:\n      soon: 1\n"...)
 				}
 				return os.WriteFile(p, b, m)
 			}
-		}, "due.envs.production.soon: unknown key"},
+		}, "demo org: [acme.yml: due/envs/production: additional properties 'soon' not allowed]"},
+		{"priorities", func() {
+			applyPriority = func([]finding.Finding, *config.Org, string, *priority.Policy, priority.Feeds, time.Time, priority.Prev) ([]finding.Finding, error) {
+				return nil, boom
+			}
+		}, "boom"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -216,8 +222,10 @@ func TestGenerateErrors(t *testing.T) {
 
 // restore puts the seams back after the test.
 func restore(t *testing.T) {
-	m, w, l, p, u, f := mkdirAll, writeFile, newLoader, loadPolicy, updateCurrent, fatal
-	t.Cleanup(func() { mkdirAll, writeFile, newLoader, loadPolicy, updateCurrent, fatal = m, w, l, p, u, f })
+	m, w, l, p, a, u, f := mkdirAll, writeFile, newLoader, loadPolicy, applyPriority, updateCurrent, fatal
+	t.Cleanup(func() {
+		mkdirAll, writeFile, newLoader, loadPolicy, applyPriority, updateCurrent, fatal = m, w, l, p, a, u, f
+	})
 }
 
 type fatalErr string

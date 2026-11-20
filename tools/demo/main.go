@@ -31,13 +31,14 @@ import (
 	"github.com/mikekosulin/kanareika/internal/report"
 )
 
-// seams for tests: main's fatal exit, and the file system and loaders failing midway
+// seams for tests: main's fatal exit, and the file system, loaders and priorities failing midway
 var (
 	fatal         = log.Fatal
 	mkdirAll      = os.MkdirAll
 	writeFile     = os.WriteFile
 	newLoader     = config.NewLoader
 	loadPolicy    = priority.LoadPolicy
+	applyPriority = priority.Apply
 	updateCurrent = report.UpdateCurrent
 )
 
@@ -470,7 +471,7 @@ func saveRun(r *rand.Rand, envDir string, org *config.Org, env string, day, days
 	if env == "production" {
 		fs = append(fs, containerFindings(names, failed)...)
 	}
-	fs, err := priority.Apply(fs, org, env, pol, feeds, started, prev)
+	fs, err := applyPriority(fs, org, env, pol, feeds, started, prev)
 	if err != nil {
 		return err
 	}
