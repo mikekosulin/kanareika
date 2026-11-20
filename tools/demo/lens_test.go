@@ -95,6 +95,10 @@ func TestLensRows(t *testing.T) {
 	if c := byLens["health"]["web-01"].Cells["disk"]; c.Level != lens.OK || c.V == nil {
 		t.Errorf("web-01 disk: %+v", c)
 	}
+	// the health lens has a failed unit to show, on a host the fleet has
+	if c := byLens["health"][failedUnitHost].Cells["failed_units"]; c.Level != lens.Warn || c.Note != "celery-worker.service" {
+		t.Errorf("%s failed units: %+v", failedUnitHost, c)
+	}
 	var ru lens.Result
 	get("/api/lens?org=acme&env=production&run=current&id=logins&lang=ru", &ru)
 	if ru.Lens.Title != "Входы" {

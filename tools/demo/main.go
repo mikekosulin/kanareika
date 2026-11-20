@@ -503,6 +503,9 @@ const (
 	newHost     = "mon-05"
 )
 
+// failedUnitHost: the host whose celery worker has failed (the health lens's failed units).
+const failedUnitHost = "worker-02"
+
 // containerFindings: what the docker and k8s modules would report for the images that run (failed hosts report
 // nothing).
 func containerFindings(scanned []string, failed pyfmt.Ordered[string]) []finding.Finding {
@@ -617,7 +620,7 @@ func writeHostFiles(r *rand.Rand, dir string, h host, day int) error {
 		"failed_units": []any{}, "readonly_mounts": []any{}, "journal": map[string]any{"errors_7d": r.IntN(40)},
 		"time":   map[string]any{"timezone": "Etc/UTC", "synced": "yes", "service": "chronyd", "service_active": true, "offset_s": float64(r.IntN(9)) / 1000, "skew_s": 0.1},
 		"denied": []any{}}
-	if h.name == "app-02" {
+	if h.name == failedUnitHost {
 		health["failed_units"] = []any{"celery-worker.service"}
 	}
 	facts := map[string]any{"os_release": map[string]any{"PRETTY_NAME": h.os}, "uname": "Linux " + h.kernel + " x86_64", "hostname": h.name}
