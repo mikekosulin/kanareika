@@ -116,8 +116,18 @@ func (b *idleBody) Read(p []byte) (int, error) {
 	default:
 		b.timer.Reset(b.idle)
 	}
+	if errors.Is(err, io.ErrUnexpectedEOF) {
+		return n, &closedError{err} // the server's connection, not a file read from what came
+	}
 	return n, err
 }
+
+// closedError: the connection closed before the body was all there.
+type closedError struct{ err error }
+
+func (e *closedError) Error() string  { return e.err.Error() }
+func (e *closedError) Unwrap() error  { return e.err }
+func (e *closedError) Reason() string { return "connection closed mid-download" }
 
 func (b *idleBody) Close() error {
 	b.timer.Stop()
@@ -242,6 +252,7 @@ func Reason(err error) string {
 		record   tls.RecordHeaderError
 		dns      *net.DNSError
 		ne       net.Error
+		closed   *closedError
 	)
 	switch {
 	case errors.Is(err, context.Canceled):
@@ -279,8 +290,8 @@ func Reason(err error) string {
 		return "timed out"
 	case errors.As(err, &ne) && ne.Timeout():
 		return "timed out"
-	case errors.Is(err, io.ErrUnexpectedEOF):
-		return "connection closed mid-download"
+	case errors.As(err, &closed):
+		return closed.Reason()
 	}
 	var ue *url.Error
 	if errors.As(err, &ue) {

@@ -291,6 +291,8 @@ func TestBadLayers(t *testing.T) {
 		{"application/x-other", dbLayer(t), "unexpected layer type"},
 		{dbKinds[0].mediaType, ocitest.Layer(map[string][]byte{"metadata.json": ocitest.Metadata(2, testNext, testUpd)}), "the layer has no trivy.db"},
 		{dbKinds[0].mediaType, ocitest.Layer(map[string][]byte{"trivy.db": []byte("x"), "metadata.json": ocitest.Metadata(3, testNext, testUpd)}), "DB schema 3, this trivy reads 2"},
+		// a cut metadata.json is the layer's fault, not the network's
+		{dbKinds[0].mediaType, ocitest.Layer(map[string][]byte{"trivy.db": []byte("x"), "metadata.json": []byte(`{"Version": 2`)}), "the layer's metadata.json: json decode error: unexpected EOF"},
 		{dbKinds[0].mediaType, ocitest.Layer(map[string][]byte{"../evil": []byte("x")}), "outside the DB directory"},
 		{dbKinds[0].mediaType, ocitest.Layer(nil), "empty archive"},
 		{dbKinds[0].mediaType, []byte("not gzip"), "unpacking"},
