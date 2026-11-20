@@ -67,3 +67,16 @@ func TestDownloadQuestionCtrlC(t *testing.T) {
 		t.Fatal(code, errs, ran, tty.out)
 	}
 }
+
+// TestDBUpdateCtrlC: Ctrl-C at the question of db update aborts (130) and downloads nothing.
+func TestDBUpdateCtrlC(t *testing.T) {
+	sandbox(t)
+	asked := stubScan(t)
+	onTTY(t, "")
+	tty := &ctrlCTTY{&bytes.Buffer{}, make(chan struct{})}
+	openTTY = func() (io.ReadWriteCloser, error) { return tty, nil }
+	code, _, errs := cli(t, "db", "update")
+	if code != 130 || errs != "interrupted\n" || *asked != nil || !strings.Contains(tty.out.String(), "[Y/n]") {
+		t.Fatal(code, errs, *asked, tty.out)
+	}
+}
