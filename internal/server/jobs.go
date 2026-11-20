@@ -151,8 +151,9 @@ func (js *jobs) startAfter(o *config.Org, req ScanRequest, prev *job) (*job, err
 			}
 			js.mu.Unlock()
 		}
-		code := 130 // cancelled while it waited
-		if ctx.Err() == nil {
+		code := 130 // a queued scan cancelled while it waited never runs; one started at once always does (it sees
+		// the cancellation itself and says so)
+		if prev == nil || ctx.Err() == nil {
 			code = js.run(ctx, o, req, j)
 		}
 		js.mu.Lock()
