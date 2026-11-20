@@ -7,7 +7,6 @@ Versions follow [Semantic Versioning](https://semver.org). Before 1.0 a minor ve
 ### Changed
 
 - **A server's page has everything about it in one place.** Its fixes as ToDo groups them (a package update, an image to rebuild with what inside it needs the update, a setting), each opening in place with its CVEs (severity, KEV, EPSS, advisory link), why its priority and the command for this server's OS; the priorities at the top count the same fixes. Its history: the runs that changed something on it (+ appeared, − went) or did not reach it. "Copy task for agent" for the server, or for one of its fixes, is about that server only. The TUI's host card lists the same fixes, each one's CVEs and command at its end, the history, and `y` copies the server's task.
-- API: `/api/host` (one server's fixes, `?detail=1` with their details), `/api/host/history`; `/api/prompt?host=` narrows a task to one server.
 
 ### Fixed
 
