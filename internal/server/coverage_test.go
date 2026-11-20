@@ -380,3 +380,50 @@ func TestServeLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// TestBrokenRuns: a run listed as done by its status.json alone (no run.json, no view.json) and one whose stored
+// view is fine but whose findings don't read are 500s, logged, for whatever needs the missing part: the view, the
+// tree, a node, a lens, the agent task by tree nodes (by action ids it needs no tree: 200). An unknown lens and the
+// history or lens of an unknown org are 404s.
+func TestBrokenRuns(t *testing.T) {
+	p := testHome(t)
+	env := filepath.Join(p.Reports, "acme", "production")
+	write := func(rel string, body []byte) {
+		t.Helper()
+		must(t, os.MkdirAll(filepath.Dir(filepath.Join(env, rel)), 0o755))
+		must(t, os.WriteFile(filepath.Join(env, rel), body, 0o644))
+	}
+	write("2026-11-01_000000/status.json", []byte(`{"state": "done"}`))
+	view, err := json.Marshal(map[string]any{"version": report.ViewVersion})
+	must(t, err)
+	write("2026-11-02_000000/run.json", []byte(`{"started": "2026-11-02T00:00:00Z"}`))
+	write("2026-11-02_000000/view.json", view)
+	write("2026-11-02_000000/findings.json", []byte("not json"))
+	var logged bytes.Buffer
+	s, err := New(Options{Paths: p, Log: log.New(&logged, "", 0),
+		Prompt: func(*config.Org, string, *report.View, []string, string) string { return "task" }})
+	must(t, err)
+	h := s.Handler()
+	q := "?org=acme&env=production&run="
+	for _, path := range []string{
+		"/api/run" + q + "2026-11-01_000000", "/api/tree" + q + "2026-11-01_000000",
+		"/api/node" + q + "2026-11-02_000000&id=x", "/api/lens" + q + "2026-11-02_000000&id=priorities",
+		"/api/prompt" + q + "2026-11-02_000000&nodes=x",
+	} {
+		if r := do(h, "GET", path, nil, nil); r.code != 500 || r.body != `{"error": "internal error"}` {
+			t.Error(path, r.code, r.body)
+		}
+	}
+	if l := logged.String(); !strings.Contains(l, "run.json") || !strings.Contains(l, "findings.json") {
+		t.Error("not logged:", l)
+	}
+	if r := do(h, "GET", "/api/prompt"+q+"2026-11-02_000000&ids=a1", nil, nil); r.code != 200 || r.body != `{"text":"task"}` {
+		t.Error(r.code, r.body)
+	}
+	for _, path := range []string{"/api/lens?id=nope&org=acme&env=production", "/api/history?org=nope&env=production",
+		"/api/lens?id=priorities&org=nope&env=production"} {
+		if r := do(h, "GET", path, nil, nil); r.code != 404 {
+			t.Error(path, r.code, r.body)
+		}
+	}
+}

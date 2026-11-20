@@ -170,3 +170,58 @@ func TestSetup(t *testing.T) {
 	}
 	_ = io.Discard
 }
+
+// TestSetupRefusals: a read-only dashboard neither adds hosts nor previews a paste; bodies that don't decode are
+// 400; an empty paste previews as empty lists (not null) with the reason.
+func TestSetupRefusals(t *testing.T) {
+	ro, hro := newTest(t, Options{})
+	for _, path := range []string{"/api/setup/add", "/api/setup/parse"} {
+		if r := do(hro, "POST", path, map[string]any{}, ro.postHdr()); r.code != 403 || !strings.Contains(r.body, "read-only") {
+			t.Fatal(path, r.code, r.body)
+		}
+	}
+	f := &fakeScan{}
+	s, h := newTest(t, Options{Scan: f.run})
+	for _, path := range []string{"/api/setup/add", "/api/setup/parse", "/api/setup/check"} {
+		if r := do(h, "POST", path, "not an object", s.postHdr()); r.code != 400 || !strings.Contains(r.body, "bad request") {
+			t.Fatal(path, r.code, r.body)
+		}
+	}
+	r := do(h, "POST", "/api/setup/parse", map[string]string{"text": ""}, s.postHdr())
+	var parsed map[string]json.RawMessage
+	if r.code != 200 || json.Unmarshal([]byte(r.body), &parsed) != nil || string(parsed["hosts"]) != "[]" ||
+		!strings.Contains(string(parsed["errors"]), "no hosts") {
+		t.Fatal(r.code, r.body)
+	}
+}
+
+// TestSetupWriteErrors: a new org that can't be written (reports/ is a file) and an add whose old file can't be
+// kept as .bak are 500s with the error; no org file is made or changed.
+func TestSetupWriteErrors(t *testing.T) {
+	p := testHome(t)
+	f := &fakeScan{}
+	s, h := newTest(t, Options{Paths: p, Scan: f.run})
+	must(t, os.WriteFile(p.Reports, nil, 0o600))
+	form := map[string]any{"id": "neworg", "name": "New Org", "user": "audit", "hosts": "web-01 192.0.2.11", "consent": "Ticket 7",
+		"confirmed": true}
+	if r := do(h, "POST", "/api/setup", form, s.postHdr()); r.code != 500 || !strings.Contains(r.body, "reports") {
+		t.Fatal(r.code, r.body)
+	}
+	if _, err := os.Stat(filepath.Join(p.Orgs, "neworg.yml")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("written:", err)
+	}
+	if r := do(h, "GET", "/api/orgs", nil, nil); strings.Contains(r.body, `"neworg"`) {
+		t.Fatal("listed:", r.body)
+	}
+	orgFile := filepath.Join(p.Orgs, "acme.yml")
+	before, err := os.ReadFile(orgFile)
+	must(t, err)
+	must(t, os.MkdirAll(filepath.Join(orgFile+".bak", "x"), 0o700))
+	if r := do(h, "POST", "/api/setup/add", map[string]any{"org": "acme", "hosts": "admin@192.0.2.200"}, s.postHdr()); r.code != 500 ||
+		!strings.Contains(r.body, "acme.yml.bak") {
+		t.Fatal(r.code, r.body)
+	}
+	if after, _ := os.ReadFile(orgFile); string(after) != string(before) {
+		t.Fatal("the org file changed")
+	}
+}

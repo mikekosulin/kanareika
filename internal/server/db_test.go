@@ -223,3 +223,61 @@ func TestScanWaitsForDBUpdate(t *testing.T) {
 	}
 	close(f.release)
 }
+
+// TestDBWait: waiting for the DB update returns false at once when none runs; while one runs it waits until the
+// update ends or the waiter gives up (ctx), true either way, the update going on.
+func TestDBWait(t *testing.T) {
+	release := make(chan struct{})
+	u := &dbUpdater{fn: func(context.Context, io.Writer) error { <-release; return nil }, now: time.Now}
+	if u.wait(context.Background()) {
+		t.Fatal("waited with no update")
+	}
+	if !u.start() {
+		t.Fatal("not started")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if !u.wait(ctx) {
+		t.Fatal("an update runs")
+	}
+	select {
+	case <-u.done:
+		t.Fatal("the waiter giving up ended the update")
+	default:
+	}
+	close(release)
+	<-u.done
+	if u.wait(context.Background()) {
+		t.Fatal("waited for a finished update")
+	}
+}
+
+// TestScanCancelledWhileWaitingForDB: a scan cancelled while it waits for the page's DB update ends cancelled
+// (130) without scanning; the update goes on.
+func TestScanCancelledWhileWaitingForDB(t *testing.T) {
+	t.Setenv("TRIVY_CACHE_DIR", t.TempDir())
+	release := make(chan struct{})
+	f := &fakeScan{release: make(chan struct{})}
+	s, h := newTest(t, Options{Scan: f.run, UpdateDB: func(context.Context, io.Writer) error {
+		<-release
+		return nil
+	}})
+	defer close(release)
+	if r := do(h, "POST", "/api/db/update", nil, s.postHdr()); r.code != 202 {
+		t.Fatal(r.code, r.body)
+	}
+	r := do(h, "POST", "/api/scan", ScanRequest{Org: "acme", Env: "production"}, s.postHdr())
+	var started struct{ ID string }
+	if r.code != 202 || json.Unmarshal([]byte(r.body), &started) != nil {
+		t.Fatal(r.code, r.body)
+	}
+	if r := do(h, "POST", "/api/jobs/"+started.ID+"/cancel", nil, s.postHdr()); r.code != 202 {
+		t.Fatal(r.code, r.body)
+	}
+	if j := waitState(t, h, started.ID, JobCancelled); j.Code != 130 || len(f.requests()) != 0 {
+		t.Fatalf("%+v, %d scans", j, len(f.requests()))
+	}
+	if !dbOf(t, s).Updating {
+		t.Fatal("the DB update stopped with the scan")
+	}
+}

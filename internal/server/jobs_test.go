@@ -302,11 +302,19 @@ func TestJobLimits(t *testing.T) {
 	}
 }
 
+// TestScansDisabled: a dashboard without scans starts none, cancels none and leaves the scan limits as they are.
 func TestScansDisabled(t *testing.T) {
 	s, h := newTest(t, Options{})
 	if r := do(h, "POST", "/api/scan", ScanRequest{Org: "acme", Env: "production"}, s.postHdr()); r.code != 403 ||
 		!strings.Contains(r.body, "disabled") {
 		t.Fatal(r.code, r.body)
+	}
+	if r := do(h, "POST", "/api/settings/scan", map[string]int{"parallel": 2}, s.postHdr()); r.code != 403 ||
+		!strings.Contains(r.body, "disabled") {
+		t.Fatal(r.code, r.body)
+	}
+	if _, err := os.Stat(filepath.Join(s.paths.Policy, "settings.yml")); !os.IsNotExist(err) {
+		t.Fatal("settings written:", err)
 	}
 	if r := do(h, "POST", "/api/jobs/x/cancel", nil, s.postHdr()); r.code != 404 {
 		t.Fatal(r.code)
