@@ -10,7 +10,7 @@ func TestServers(t *testing.T) {
 		t.Fatal("the TUI opens on Fixes: what to fix first")
 	}
 	h.size(160, 40)
-	h.key("1")
+	h.key("2")
 	h.has("Servers(acme/production)[5]", "· 1 ! · 1 ✗",
 		"app-01", "Ubuntu 18.04", "2 • 1 • 3 • 0",
 		"web-01              CentOS Stream 9  Public  3 • 4 • 2 • 4", "✗  dead-01             The last scan did not reach it", "not checked")

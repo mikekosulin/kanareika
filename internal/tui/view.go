@@ -750,19 +750,19 @@ func (m *Model) formView(h int) []string {
 }
 
 var helpRows = [][2]string{
-	{"1, 2, 3, tab", "Servers, Fixes, History"},
+	{"1, 2, 3, tab", "Fixes, Servers, History"},
 	{"w", "Servers: what to show (priorities, logins, network, health)"},
 	{"n, S", "History: what changed; the scans started here"},
 	{"O, E", "organization, environment (popup lists; type to narrow them)"},
 	{":, ctrl+k", "jump to a fix, a CVE, a host or a view"},
-	{"up/down, j/k, pgup/pgdn, g/G", "move (ToDo: home/end, G)"},
+	{"up/down, j/k, pgup/pgdn, g/G", "move (Fixes: home/end, G)"},
 	{"right/left, l/h", "Fixes: open and close a node; other views: the next and previous view"},
 	{"enter", "open (details of a node, a run, a host card, a scan's output)"},
 	{"/", "filter the list; esc clears"},
 	{"g, t", "Fixes: group by fix, CVE or host; t: order by the next column, T: the other way"},
 	{"f", "Fixes: filters (KEV, RCE, EPSS, internet-facing, fix ready, no fix, overdue); Network: only ports open to the outside"},
 	{"space, x, a", "select a node and everything under it, select all"},
-	{"v", "only the selected (ToDo)"},
+	{"v", "only the selected (Fixes)"},
 	{"y", "copy the fix task for the selected nodes (terminal clipboard, OSC 52): paste it into an AI agent"},
 	{"Y", "copy the context of the node under the cursor (what, where, why, due, commands, its id) for an AI agent's chat"},
 	{"c, [ ]", "copy the chosen command of the details; choose another"},

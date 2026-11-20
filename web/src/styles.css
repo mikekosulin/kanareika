@@ -2402,20 +2402,6 @@ dialog footer {
   .thead {
     display: none;
   }
-  .node {
-    grid-template-columns: 22px 22px 30px minmax(0, 1fr) 54px;
-    padding: 6px 12px 6px 6px;
-    row-gap: 2px;
-  }
-  .node .c-cve,
-  .node .c-ep {
-    display: none !important;
-  }
-  .main {
-    flex-direction: column;
-    gap: 0;
-    white-space: normal;
-  }
   .counts {
     overflow-x: auto;
     max-width: 100%;
@@ -4904,12 +4890,6 @@ code.to,
   width: 22px;
   height: 22px;
 }
-.menubtn {
-  display: none;
-}
-.app.mini .menubtn {
-  display: inline-flex;
-}
 .tstat {
   margin-left: auto;
   display: flex;
@@ -5026,14 +5006,8 @@ code.to,
   border-top: 1px solid var(--line);
   padding-top: 12px;
 }
-.scope3 label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 8px;
-}
-.scope3 label > span,
-.rsec h4 {
+.rsec h4,
+.pickmenu h4 {
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -5043,16 +5017,6 @@ code.to,
 }
 .rsec h4 {
   margin: 12px 0 4px;
-}
-.scope3 select {
-  width: 100%;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid var(--line-2);
-  background: var(--raised);
-  color: var(--ink);
-  border-radius: var(--r-ctl);
-  font: inherit;
 }
 .rhead {
   display: flex;
@@ -5114,12 +5078,6 @@ code.to,
 .fck.zero {
   color: var(--ink-3);
 }
-.railhide {
-  margin-top: auto;
-  align-self: flex-start;
-  font-size: 12px;
-  color: var(--ink-3);
-}
 .ovw {
   padding: 18px 24px;
   display: flex;
@@ -5170,13 +5128,763 @@ code.to,
   .app > main {
     grid-column: 1;
   }
-  .menubtn {
-    display: inline-flex;
-  }
   .tstat .tsi {
     display: none;
   }
   .rail {
     padding-top: 18px;
+  }
+}
+
+/* ===== B2: which organization and environment, in the top bar; places without filters have no rail ===== */
+.app.norail {
+  grid-template-columns: minmax(0, 1fr);
+}
+.app.norail > .side {
+  display: none;
+}
+.app.norail > main {
+  grid-column: 1;
+}
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.crumbs .sep,
+.scopebtn2 .sep {
+  color: var(--ink-3);
+}
+.pickbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--r-ctl);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pickbtn:hover,
+.pickbtn[aria-expanded="true"] {
+  background: var(--hover);
+  border-color: var(--line);
+}
+.pickbtn.still,
+.pickbtn.still:hover {
+  cursor: default;
+  background: none;
+  border-color: transparent;
+}
+.pickbtn .n {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.pickbtn .i,
+.scopebtn2 .i {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--ink-3);
+}
+.runb {
+  padding: 0 6px;
+  border: 1px solid currentColor;
+  border-radius: var(--r-pill);
+  color: var(--p2);
+  font: 11.5px/18px var(--mono);
+  white-space: nowrap;
+}
+.menu.left {
+  left: 0;
+  top: calc(100% + 6px);
+}
+.topbar .pickmenu {
+  display: block;
+  min-width: 260px;
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  padding: 6px;
+}
+.pickmenu h4 {
+  margin: 10px 10px 4px;
+}
+/* a list where one is chosen: a radio mark, the name, a note and a count */
+.choices {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  background: var(--raised);
+  overflow: hidden;
+}
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.choice:first-child {
+  border-top: 0;
+}
+.choice .rd {
+  flex: none;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--line-2);
+  border-radius: 50%;
+}
+.choice[aria-checked="true"] {
+  font-weight: 600;
+}
+.choice[aria-checked="true"] .rd {
+  border: 5px solid var(--accent-line);
+}
+.choice .l {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.choice .n,
+.choice .z {
+  color: var(--ink-3);
+  font: 13px var(--mono);
+}
+.choice .i {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--ink-3);
+}
+.choice.add,
+.choice.add .i {
+  color: var(--accent-line);
+}
+.pickmenu .choices {
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.pickmenu .choice {
+  min-height: 34px;
+  gap: 10px;
+  padding: 0 10px;
+  border-top: 0;
+  border-radius: 4px;
+  font-size: 13.5px;
+}
+.pickmenu .choice:hover {
+  background: var(--hover);
+}
+.pickmenu .choice .rd {
+  width: 14px;
+  height: 14px;
+}
+.pickmenu .choice[aria-checked="true"] .rd {
+  border-width: 4px;
+}
+.pickmenu .choices.runs .choice .l {
+  font: 13px var(--mono);
+}
+
+/* ===== narrow windows and phones (0.8) =====
+   ≤ 860px: the organization and environment are one button opening a sheet; the filters are a sheet opened by the
+   Filters button by the list. ≤ 640px (a phone): the sheets come up from the bottom, the places sit at the bottom,
+   the scan is in the top bar, a row is three lines: what and when, the versions, where. */
+.ver {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+.main .ver,
+.sv .nm .ver {
+  flex: 0 1 auto;
+}
+.hcell > .i,
+.scopebtn2,
+.fltbtn,
+.topbar .scanbtn.compact,
+.sheetfoot,
+.rclose {
+  display: none;
+}
+.app.mini:not(.norail) .fltbtn {
+  display: inline-flex;
+}
+.scopebtn2 {
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.scopebtn2 .so {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scopebtn2 .se {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fltbtn {
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+.fltbtn .cnum {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--accent-line);
+  color: var(--bg);
+  font: 600 11px/18px var(--mono);
+  text-align: center;
+}
+/* the scope sheet: a drawer from the left, from the bottom on a phone */
+.ssheet {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 35;
+  width: min(380px, 92vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--solid);
+  box-shadow: var(--shadow);
+}
+.ssheet .shead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 16px;
+}
+.ssheet .shead .btn {
+  margin-left: auto;
+}
+.ssheet .sbody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 16px 16px;
+}
+.ssheet h4 {
+  margin: 18px 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.ssheet .sheetfoot {
+  display: block;
+}
+.sheetfoot {
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--solid);
+  border-top: 1px solid var(--line);
+}
+.sheetfoot .btn {
+  width: 100%;
+  height: 46px;
+  justify-content: center;
+  font-size: 16px;
+}
+@media (max-width: 860px) {
+  .crumbs,
+  .palbtn {
+    display: none;
+  }
+  .scopebtn2 {
+    display: inline-flex;
+  }
+  .app:not(.norail) .fltbtn {
+    display: inline-flex;
+  }
+  .tstat {
+    gap: 8px;
+  }
+  /* the filters' sheet */
+  .app > .side.rail {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(380px, 92vw);
+    z-index: 35;
+    gap: 0;
+    padding: 0 16px;
+    background: var(--solid);
+    transform: translateX(-100%);
+    transition: transform 0.22s var(--ease);
+  }
+  .app > .side.rail.open {
+    transform: none;
+    box-shadow: var(--shadow);
+  }
+  .rail .rhead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    align-items: center;
+    gap: 12px;
+    margin: 0 -16px;
+    padding: 8px 8px 8px 16px;
+    background: var(--solid);
+    border-bottom: 1px solid var(--line);
+    font-size: 16px;
+  }
+  .rail .rhead .lnk {
+    font-size: 14px;
+  }
+  .rail .rhead .rclose {
+    display: inline-flex;
+    margin-left: auto;
+  }
+  .rail .sheetfoot {
+    display: block;
+    position: sticky;
+    bottom: 0;
+    width: auto;
+    margin: auto -16px 0;
+  }
+  .rail .rsec {
+    gap: 0;
+    padding: 0 0 16px;
+    font-size: 15px;
+  }
+  .rail .rsec h4 {
+    margin: 18px 0 8px;
+    font-size: 12px;
+  }
+  .rail .fck {
+    min-height: 44px;
+    gap: 12px;
+    padding: 0;
+  }
+  .rail .fck input {
+    width: 20px;
+    height: 20px;
+  }
+  .rail .fck .n {
+    font-size: 13px;
+  }
+  .rail .pills {
+    gap: 6px;
+  }
+  .rail .pills button {
+    padding: 8px 0;
+    font-size: 15px;
+  }
+  .tabbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabbar a {
+    white-space: nowrap;
+  }
+  .bar2,
+  .bar2.vbar {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  .bar2 .search,
+  .bar2.vbar .search {
+    order: -1;
+    flex: 1 1 100%;
+  }
+  .bar2 .fltbtn {
+    margin-left: auto;
+  }
+  /* a fix or CVE: what (and when, on the right), the versions under it, then where and how bad */
+  .node[role="treeitem"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 4px;
+    min-height: 56px;
+    padding: 10px 14px 10px 4px;
+    font-size: 15px;
+  }
+  .node[role="treeitem"]::after {
+    content: "";
+    order: 5;
+    flex: 1 0 100%;
+  }
+  .node[role="treeitem"] > :nth-child(1) {
+    order: 1;
+    flex: 0 0 22px;
+  }
+  .node[role="treeitem"] > :nth-child(2),
+  .node[role="treeitem"] > .c-cve,
+  .node[role="treeitem"] > .c-ep,
+  .node[role="treeitem"] > .c-st {
+    display: none !important;
+  }
+  .node[role="treeitem"] > :nth-child(3) {
+    order: 2;
+  }
+  .node[role="treeitem"] > .main {
+    order: 3;
+    flex: 1 1 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    row-gap: 3px;
+    column-gap: 8px;
+    white-space: nowrap;
+  }
+  .node[role="treeitem"] > .dd {
+    order: 4;
+    margin-left: auto;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .node[role="treeitem"] > .hcell.c-h {
+    display: flex !important;
+    order: 6;
+    flex: 1 1 0;
+    min-width: 0;
+    margin-left: 68px;
+    font-size: 13px;
+  }
+  .node[role="treeitem"] > .flags.c-fl {
+    display: flex !important;
+    order: 7;
+    gap: 4px;
+  }
+  .node[role="treeitem"] > .hcell {
+    align-items: center;
+  }
+  .node[role="treeitem"] > .hcell > .i {
+    display: block;
+    flex: none;
+    width: 14px;
+    height: 14px;
+    color: var(--ink-3);
+  }
+  .node[role="treeitem"] .main code {
+    font-size: 14px;
+  }
+  .node[role="treeitem"] .main .kd {
+    align-self: baseline;
+    width: auto;
+    padding: 1px 6px;
+  }
+  .node[role="treeitem"] .main .kd:empty {
+    display: none;
+  }
+  /* the name takes what the line has left beside its tag and wraps there, rather than dropping under it */
+  .node[role="treeitem"] .main .pkg,
+  .node[role="treeitem"] .main .cveid,
+  .node[role="treeitem"] .main .hostn {
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .node[role="treeitem"] .main .ver,
+  .node[role="treeitem"] .main > .ttl,
+  .node[role="treeitem"] .main > .path {
+    flex: 1 1 100%;
+  }
+  .node[role="treeitem"] .main > .ttl {
+    white-space: normal;
+    font-size: 14px;
+  }
+  .node[role="treeitem"].kid > .hcell.c-h {
+    margin-left: 88px;
+  }
+}
+@media (max-width: 640px) {
+  .app {
+    height: 100dvh;
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+    box-sizing: border-box;
+  }
+  .topbar {
+    height: 56px;
+    gap: 8px;
+    padding: 0 8px 0 12px;
+  }
+  .brand2 {
+    flex: none;
+    margin-right: 0;
+  }
+  .brand2 .bn {
+    display: none;
+  }
+  .brand2 img {
+    width: 26px;
+    height: 26px;
+  }
+  /* the org small over the environment; a past run's date beside the org */
+  .scopebtn2 {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: minmax(0, auto) auto auto;
+    justify-content: start;
+    align-content: center;
+    column-gap: 8px;
+    row-gap: 1px;
+    height: 44px;
+    padding: 0 12px 0 14px;
+    border-radius: 12px;
+    text-align: left;
+  }
+  .scopebtn2 .so {
+    grid-area: 1 / 1;
+    font-size: 12px;
+    line-height: 1.2;
+    color: var(--ink-3);
+  }
+  .scopebtn2 .sep {
+    display: none;
+  }
+  .scopebtn2 .se {
+    grid-area: 2 / 1 / 3 / 3;
+    font-size: 15px;
+    line-height: 1.2;
+  }
+  .scopebtn2 .runb {
+    grid-area: 1 / 2;
+    font-size: 10.5px;
+    line-height: 15px;
+  }
+  .scopebtn2 .i {
+    grid-area: 1 / 3 / 3 / 4;
+    align-self: center;
+  }
+  .tstat {
+    display: none;
+  }
+  .topbar .scanbtn.compact {
+    display: flex;
+  }
+  .topbar .scanbtn.compact .btn {
+    width: 42px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .topbar > .pop:last-of-type > .btn.icon {
+    width: 40px;
+    height: 40px;
+  }
+  .topbar .btn.icon .i,
+  .topbar .scanbtn.compact .i {
+    width: 20px;
+    height: 20px;
+  }
+  /* the places at the bottom, the way a phone app has them */
+  .app > .tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 25;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 0;
+    padding: 0 0 env(safe-area-inset-bottom);
+    overflow: visible;
+    background: var(--solid);
+    border-top: 1px solid var(--line);
+    border-bottom: 0;
+  }
+  .tabbar .scanbtn {
+    display: none;
+  }
+  .tabbar a {
+    position: relative;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    height: 60px;
+    padding: 0 2px;
+    font-size: 12px;
+    box-shadow: none;
+  }
+  .tabbar a .i {
+    width: 24px;
+    height: 24px;
+  }
+  .tabbar a[aria-current="page"] {
+    box-shadow: inset 0 2px 0 var(--accent-line);
+  }
+  .tabbar a .n {
+    position: absolute;
+    top: 6px;
+    left: calc(50% + 10px);
+    padding: 0 5px;
+    border-radius: var(--r-pill);
+    background: var(--raised);
+    font: 600 10.5px/16px var(--mono);
+  }
+  .toast {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+  /* the sheets come up from the bottom */
+  .app > .side.rail,
+  .ssheet {
+    inset: auto 0 0 0;
+    width: auto;
+    max-height: 88dvh;
+    border-radius: 16px 16px 0 0;
+  }
+  .app > .side.rail {
+    transform: translateY(100%);
+  }
+  .app > .side.rail.open {
+    transform: none;
+  }
+  .rail .rhead,
+  .ssheet .shead {
+    border-radius: 16px 16px 0 0;
+  }
+  /* the list's head: the title, its line, the counts on a line of their own */
+  .work-top .hdr {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px 16px 0;
+  }
+  .work-top .hdr h1 {
+    font-size: 22px;
+  }
+  .work-top .hdr .sub {
+    font-size: 13.5px;
+  }
+  .work-top .counts {
+    gap: 16px;
+  }
+  .bar2 {
+    gap: 8px;
+    padding: 12px 16px;
+  }
+  .bar2 .search input {
+    font-size: 16px;
+  }
+  /* Servers: the four views and the filters on one line, the filters as an icon */
+  .bar2.vbar .fltbtn {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+    position: relative;
+  }
+  .bar2.vbar .fltbtn .fl-l {
+    display: none;
+  }
+  .bar2.vbar .fltbtn .cnum {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+  }
+  /* Overview: a card per environment: where and how many servers, the four priorities, the last scan */
+  .ovw {
+    padding: 16px;
+  }
+  .ovw .hdr {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+  }
+  .ovw .hdr > .btn {
+    justify-content: center;
+    height: 44px;
+  }
+  .ovw .tblwrap {
+    border: 0;
+    overflow: visible;
+  }
+  .ovt thead {
+    display: none;
+  }
+  .ovt,
+  .ovt tbody {
+    display: block;
+  }
+  .ovt tr {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px 8px;
+    margin-bottom: 10px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-panel);
+    background: var(--surface);
+  }
+  .ovt td {
+    padding: 0;
+    border: 0;
+  }
+  .ovt td:nth-child(1) {
+    grid-column: 1 / 3;
+    font-size: 15px;
+  }
+  .ovt td:nth-child(2) {
+    grid-column: 3 / 5;
+    grid-row: 1;
+    text-align: right;
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .ovt td:nth-child(3) {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+  .ovt td[data-l]::before {
+    content: attr(data-l) " ";
+    color: var(--ink-3);
+    font: 12px var(--mono);
+  }
+  .ovt td:nth-child(n + 4):nth-child(-n + 7) {
+    text-align: left;
+    font-size: 15px;
+  }
+  .ovt td:nth-child(8) {
+    grid-column: 1 / -1;
+    color: var(--ink-2);
+    font-size: 13px;
+  }
+  /* the server's page: a fix's line wraps rather than cuts */
+  .li {
+    min-height: 44px;
+    padding: 6px 0;
+    font-size: 14px;
+  }
+  .li > span:nth-child(2) {
+    white-space: normal;
+    line-height: 1.45;
   }
 }

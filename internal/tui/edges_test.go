@@ -146,19 +146,19 @@ func TestMessages(t *testing.T) {
 
 func TestKeysMore(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.key("shift+tab")
-	if h.m.view != vServers {
-		t.Fatal("shift+tab: the previous view", h.m.view)
-	}
-	h.key("shift+tab") // more than one org/env: Overview is a place, before Servers
+	h.key("shift+tab") // more than one org/env: Overview is a place, before Fixes
 	if h.m.view != vOverview {
-		t.Fatal("shift+tab from Servers: Overview", h.m.view)
+		t.Fatal("shift+tab from Fixes: Overview", h.m.view)
 	}
-	h.key("shift+tab", "h") // from History (not a tree) h goes to the place before
-	if h.m.view != vActions {
+	h.key("shift+tab") // round to the last place
+	if h.m.view != vRuns {
+		t.Fatal("shift+tab from Overview: History", h.m.view)
+	}
+	h.key("h") // from History (not a tree) h goes to the place before
+	if h.m.view != vServers {
 		t.Fatal("h", h.m.view)
 	}
-	h.key("S", "2")
+	h.key("S", "1")
 	if h.m.view != vActions || h.m.rund == nil {
 		t.Fatal("1: ToDo")
 	}

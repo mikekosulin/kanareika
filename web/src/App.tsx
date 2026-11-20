@@ -15,7 +15,16 @@ import { History } from "./views/History";
 import { Setup } from "./views/Setup";
 
 export function App() {
-  const s = useS((s) => ({ view: s.view, org: s.org, env: s.env, run: s.run, sideOpen: s.sideOpen, sby: s.sby }));
+  const s = useS((s) => ({
+    view: s.view,
+    org: s.org,
+    env: s.env,
+    run: s.run,
+    sideOpen: s.sideOpen,
+    scopeOpen: s.scopeOpen,
+    sby: s.sby,
+    lens: s.lens,
+  }));
   const orgs = useOrgs();
   const env = useEnv();
   useBoot();
@@ -50,13 +59,15 @@ export function App() {
   }, [s.org, s.env]);
   const setup = s.view === "setup" || (orgs.data && !orgs.data.orgs.length);
   const mini = useApp((st) => st.sideMini);
+  // the rail holds the filters: only the places that have some
+  const rail = s.view === "todo" || (s.view === "servers" && (s.sby !== "host" || s.lens === "priorities"));
   if (!orgs.data) return <div className="app" />;
   return (
-    <div className={"app" + (setup ? " setupmode" : "") + (mini ? " mini" : "")}>
+    <div className={"app" + (setup ? " setupmode" : "") + (mini ? " mini" : "") + (rail ? "" : " norail")}>
       <TopBar />
       {!setup && <TabBar />}
       <Rail />
-      <div className={"scrim" + (s.sideOpen ? " on" : "")} onClick={() => set({ sideOpen: false })} />
+      <div className={"scrim" + (s.sideOpen || s.scopeOpen ? " on" : "")} onClick={() => set({ sideOpen: false, scopeOpen: false })} />
       <main>
         {setup ? (
           <Setup />
@@ -85,7 +96,8 @@ function useBoot() {
     };
     addEventListener("popstate", pop);
     const esc = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && useApp.getState().sideOpen) set({ sideOpen: false });
+      const st = useApp.getState();
+      if (e.key === "Escape" && (st.sideOpen || st.scopeOpen)) set({ sideOpen: false, scopeOpen: false });
     };
     addEventListener("keydown", esc);
     return () => {

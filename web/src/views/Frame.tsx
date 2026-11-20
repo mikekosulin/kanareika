@@ -1,10 +1,11 @@
-// The frame around the views: the top bar (where the data stands, ⌘K, settings), the tab bar (the places and the
-// scan), and the left rail: which organization, environment and data, then the filters of the place shown.
+// The frame around the views (B2): the top bar (which organization and environment, where the data stands, ⌘K,
+// settings), the tab bar (the places and the scan), and the left rail with the filters of the place shown. On a
+// narrow window the organization and environment are one button opening a sheet, and the rail is a sheet too.
 import { useEffect, useRef, useState } from "react";
 import { t } from "../lib/i18n";
 import { post } from "../lib/api";
 import { ago, runLabel } from "../lib/format";
-import { go, set, setScope, toast, toggle, toggleMini, useApp, useS, type View } from "../state";
+import { go, set, setScope, toast, toggle, useApp, useS, type View } from "../state";
 import { client, useDB, useEnv, useOrgs, useRunData, useSession, useTree, useVersion } from "../queries";
 import { Icon } from "../components/ui";
 import { Newer, Prefs, ScanLimits, startScan } from "./Shell";
@@ -39,12 +40,26 @@ function usePopover() {
   return [open, setOpen, ref] as const;
 }
 
-/** TopBar: the brand, how old the data and the vulnerability list are, a newer release, ⌘K and the settings. */
+const NARROW = "(max-width: 860px)";
+
+/** useNarrow: the rail is a sheet over the page, not a column beside it. */
+export function useNarrow() {
+  const [n, setN] = useState(() => matchMedia(NARROW).matches);
+  useEffect(() => {
+    const m = matchMedia(NARROW);
+    const f = () => setN(m.matches);
+    m.addEventListener("change", f);
+    return () => m.removeEventListener("change", f);
+  }, []);
+  return n;
+}
+
+/** TopBar: the brand, which org and environment (two pickers; one button and a sheet on a narrow window), how old
+ * the data and the vulnerability list are, a newer release, ⌘K, the scan on a phone, and the settings. */
 export function TopBar() {
-  const s = useS((s) => ({ org: s.org, env: s.env, sideOpen: s.sideOpen }));
-  const e = useOrgs()
-    .data?.orgs.find((o) => o.id === s.org)
-    ?.envs.find((x) => x.env === s.env);
+  const s = useS((s) => ({ org: s.org, env: s.env, run: s.run, scopeOpen: s.scopeOpen }));
+  const o = useOrgs().data?.orgs.find((o) => o.id === s.org);
+  const e = o?.envs.find((x) => x.env === s.env);
   const db = useDB().data;
   const newer = useVersion().data;
   const dbOld = db && (db.dbs || []).some((d: any) => d.outdated);
@@ -57,18 +72,25 @@ export function TopBar() {
   const [gearOpen, setGearOpen, gearRef] = usePopover();
   return (
     <header className="topbar">
-      <button
-        className="btn icon ghost menubtn"
-        aria-label={t("Filters")}
-        aria-controls="side"
-        aria-expanded={s.sideOpen}
-        onClick={() => (matchMedia("(max-width: 860px)").matches ? set({ sideOpen: !s.sideOpen }) : toggleMini())}
-      >
-        <Icon name="menu" />
-      </button>
       <span className="brand2">
-        <img src="/logo.webp" alt="" /> kanareika
+        <img src="/logo.webp" alt="" /> <span className="bn">kanareika</span>
       </span>
+      {o && (
+        <>
+          <span className="crumbs">
+            <OrgPicker />
+            <span className="sep">/</span>
+            <EnvPicker />
+          </span>
+          <button className="scopebtn2" aria-haspopup="dialog" aria-expanded={s.scopeOpen} onClick={() => set({ scopeOpen: true })}>
+            <span className="so">{o.name || o.id}</span>
+            <span className="sep">/</span>
+            <span className="se">{s.env}</span>
+            {s.run !== "current" && <span className="runb">{runLabel(s.run)}</span>}
+            <Icon name="chev" />
+          </button>
+        </>
+      )}
       <span className="tstat">
         {e && (
           <span className="tsi" title={e.last ? e.last.finished : ""}>
@@ -87,6 +109,7 @@ export function TopBar() {
       <button className="btn ghost palbtn" aria-label={t("Command palette")} onClick={() => set({ palOpen: true })}>
         <kbd>⌘K</kbd>
       </button>
+      <ScanMenu compact />
       <div className="pop" ref={gearRef}>
         <button className="btn icon ghost" aria-label={t("Settings")} aria-expanded={gearOpen} onClick={() => setGearOpen(!gearOpen)}>
           <Icon name="gear" />
@@ -100,7 +123,205 @@ export function TopBar() {
           </div>
         )}
       </div>
+      {s.scopeOpen && <ScopeSheet />}
     </header>
+  );
+}
+
+/** OrgPicker: the organization shown, and the others to switch to (or to add servers to a new one). */
+function OrgPicker() {
+  const org = useApp((s) => s.org);
+  const orgs = useOrgs().data?.orgs || [];
+  const scans = useSession().data?.scans;
+  const o = orgs.find((x) => x.id === org);
+  const [open, setOpen, ref] = usePopover();
+  const name = o ? o.name || o.id : org;
+  if (orgs.length < 2 && !scans) return <span className="pickbtn still">{name}</span>;
+  return (
+    <div className="pop" ref={ref}>
+      <button
+        className="pickbtn"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={t("Organization") + ": " + name}
+        onClick={() => setOpen(!open)}
+      >
+        {name}
+        <Icon name="chev" />
+      </button>
+      {open && (
+        <div className="menu left pickmenu" role="dialog" aria-label={t("Organization")}>
+          <OrgOpts done={() => setOpen(false)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** EnvPicker: the environment shown with its servers, the others, and the data as of a past run. */
+function EnvPicker() {
+  const s = useS((s) => ({ org: s.org, env: s.env, run: s.run }));
+  const o = useOrgs().data?.orgs.find((x) => x.id === s.org);
+  const e = o?.envs.find((x) => x.env === s.env);
+  const [open, setOpen, ref] = usePopover();
+  return (
+    <div className="pop" ref={ref}>
+      <button
+        className="pickbtn"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={t("Environment") + ": " + s.env}
+        onClick={() => setOpen(!open)}
+      >
+        {s.env}
+        {e && <span className="n">{e.hosts}</span>}
+        {s.run !== "current" && <span className="runb">{runLabel(s.run)}</span>}
+        <Icon name="chev" />
+      </button>
+      {open && (
+        <div className="menu left pickmenu" role="dialog" aria-label={t("Environment")}>
+          <EnvOpts done={() => setOpen(false)} />
+          <h4>{t("Data as of")}</h4>
+          <RunOpts done={() => setOpen(false)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** ScopeSheet: the organization, environment and data on a narrow window: lists to tap, then Done. */
+function ScopeSheet() {
+  const s = useS((s) => ({ org: s.org, env: s.env }));
+  const orgs = useOrgs().data?.orgs || [];
+  const scans = useSession().data?.scans;
+  const close = () => set({ scopeOpen: false });
+  return (
+    <div className="sheet ssheet open" role="dialog" aria-label={t("Organization") + " / " + t("Environment")}>
+      <div className="shead">
+        <b>{t("Organization")}</b>
+        <button className="btn icon ghost" aria-label={t("Close")} onClick={close}>
+          <Icon name="x" />
+        </button>
+      </div>
+      <div className="sbody">
+        {(orgs.length > 1 || scans) && <OrgOpts />}
+        {orgs.length < 2 && !scans && (
+          <div className="choices">
+            <Opt on label={orgs.find((x) => x.id === s.org)?.name || s.org} onPick={close} />
+          </div>
+        )}
+        <h4>{t("Environment")}</h4>
+        <EnvOpts />
+        <h4>{t("Data as of")}</h4>
+        <RunOpts fold />
+      </div>
+      <div className="sheetfoot">
+        <button className="btn primary" onClick={close}>
+          {t("Done")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Opt: one choice of a list where one is chosen: a line big enough for a finger on a phone. */
+function Opt(p: { on: boolean; label: string; n?: number | string; note?: string; onPick: () => void }) {
+  return (
+    <button className="choice" role="radio" aria-checked={p.on} onClick={p.onPick}>
+      <i className="rd" />
+      <span className="l">{p.label}</span>
+      {p.note && <span className="z">{p.note}</span>}
+      {p.n != null && <span className="n">{p.n}</span>}
+    </button>
+  );
+}
+
+/** OrgOpts: the organizations, each with its servers; adding servers starts the setup. */
+function OrgOpts({ done }: { done?: () => void }) {
+  const org = useApp((s) => s.org);
+  const orgs = useOrgs().data?.orgs || [];
+  const scans = useSession().data?.scans;
+  return (
+    <div className="choices" role="radiogroup" aria-label={t("Organization")}>
+      {orgs.map((x) => (
+        <Opt
+          key={x.id}
+          on={x.id === org}
+          label={x.name || x.id}
+          n={x.envs.reduce((a, e) => a + (e.hosts || 0), 0)}
+          onPick={() => {
+            if (x.id !== org) setScope({ org: x.id, env: x.envs[0]?.env || "", run: "current" });
+            done?.();
+          }}
+        />
+      ))}
+      {scans && (
+        <button className="choice add" onClick={() => set({ view: "setup", scopeOpen: false })}>
+          <Icon name="plus" />
+          <span className="l">{t("Add servers…")}</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** EnvOpts: the organization's environments, each with its servers. */
+function EnvOpts({ done }: { done?: () => void }) {
+  const s = useS((s) => ({ org: s.org, env: s.env }));
+  const o = useOrgs().data?.orgs.find((x) => x.id === s.org);
+  return (
+    <div className="choices" role="radiogroup" aria-label={t("Environment")}>
+      {(o?.envs || []).map((x) => (
+        <Opt
+          key={x.env}
+          on={x.env === s.env}
+          label={x.env}
+          note={x.last ? "" : t("no scans")}
+          n={x.hosts}
+          onPick={() => {
+            if (x.env !== s.env) setScope({ env: x.env, run: "current" });
+            done?.();
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** RunOpts: the current state or the data as of a past run; folded to the one chosen until asked for. */
+function RunOpts({ done, fold = false }: { done?: () => void; fold?: boolean }) {
+  const cur = useApp((s) => s.run);
+  const runs: any[] = useEnv().data?.runs || [];
+  const [open, setOpen] = useState(!fold || cur !== "current");
+  const pick = (run: string) => {
+    if (run !== cur) setScope({ run });
+    done?.();
+  };
+  if (!open)
+    return (
+      <div className="choices">
+        <button className="choice pick" aria-expanded={false} onClick={() => setOpen(true)}>
+          <span className="l">{t("Current state")}</span>
+          <Icon name="chev" />
+        </button>
+      </div>
+    );
+  return (
+    <div className="choices runs" role="radiogroup" aria-label={t("Data as of")}>
+      <Opt on={cur === "current"} label={t("Current state")} onPick={() => pick("current")} />
+      {runs
+        .slice(-20)
+        .reverse()
+        .map((r) => (
+          <Opt
+            key={r.run_id}
+            on={cur === r.run_id}
+            label={runLabel(r.run_id)}
+            note={r.partial ? t("partial") : ""}
+            onPick={() => pick(r.run_id)}
+          />
+        ))}
+    </div>
   );
 }
 
@@ -145,7 +366,7 @@ export function TabBar() {
 
 /** ScanMenu: scan the environment shown; its ▾ scans every environment of the org, or of every org, one after
  * another. */
-function ScanMenu() {
+function ScanMenu({ compact = false }: { compact?: boolean }) {
   const s = useS((s) => ({ org: s.org, env: s.env, view: s.view }));
   const scans = useSession().data?.scans;
   const orgs = useOrgs().data?.orgs || [];
@@ -166,12 +387,17 @@ function ScanMenu() {
   const several = o.envs.length > 1,
     many = orgs.length > 1;
   return (
-    <div className="pop scanbtn" ref={menuRef}>
-      <button className="btn primary" onClick={() => startScan(s.org, s.env)}>
+    <div className={"pop scanbtn" + (compact ? " compact" : "")} ref={menuRef}>
+      <button
+        className="btn primary"
+        aria-label={compact ? t("Scan {env}", { env: s.env }) : undefined}
+        title={compact ? t("Scan {env}", { env: s.env }) : undefined}
+        onClick={() => startScan(s.org, s.env)}
+      >
         <Icon name="scan" />
-        {t("Scan {env}", { env: s.env })}
+        {!compact && t("Scan {env}", { env: s.env })}
       </button>
-      {(several || many) && (
+      {(several || many) && !compact && (
         <button className="btn primary more" aria-label={t("More scans")} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
           <Icon name="chev" />
         </button>
@@ -194,69 +420,42 @@ function ScanMenu() {
   );
 }
 
-/** Rail: which organization, environment and data the places show, then the filters of the place shown. */
+/** Rail: the filters of the place shown; on a narrow window a sheet with Done. */
 export function Rail() {
-  const s = useS((s) => ({ view: s.view, org: s.org, env: s.env, run: s.run, sideOpen: s.sideOpen }));
-  const orgs = useOrgs().data?.orgs || [];
-  const scans = useSession().data?.scans;
-  const runs = useEnv().data?.runs || [];
-  const o = orgs.find((x) => x.id === s.org);
+  const s = useS((s) => ({ view: s.view, sideOpen: s.sideOpen }));
+  const narrow = useNarrow();
   return (
     <aside className={"side rail" + (s.sideOpen ? " open" : "")} id="side" aria-label={t("Filters")}>
-      {orgs.length > 0 && (
-        <div className="rsec scope3">
-          <label>
-            <span>{t("Organization")}</span>
-            <select
-              value={s.org}
-              onChange={(ev) => {
-                const v = ev.target.value;
-                if (v === "__new") return set({ view: "setup" });
-                setScope({ org: v, env: orgs.find((x) => x.id === v)?.envs[0]?.env || "", run: "current" });
-              }}
-            >
-              {orgs.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name || x.id}
-                </option>
-              ))}
-              {scans && <option value="__new">+ {t("Add servers…")}</option>}
-            </select>
-          </label>
-          <label>
-            <span>{t("Environment")}</span>
-            <select value={s.env} onChange={(ev) => setScope({ env: ev.target.value, run: "current" })}>
-              {(o?.envs || []).map((x) => (
-                <option key={x.env} value={x.env}>
-                  {x.env} · {x.hosts}
-                  {x.last ? "" : " · " + t("no scans")}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>{t("Data as of")}</span>
-            <select value={s.run} onChange={(ev) => setScope({ run: ev.target.value })}>
-              <option value="current">{t("Current state")}</option>
-              {runs
-                .slice(-20)
-                .reverse()
-                .map((r: any) => (
-                  <option key={r.run_id} value={r.run_id}>
-                    {runLabel(r.run_id)}
-                    {r.partial ? " · " + t("partial") : ""}
-                  </option>
-                ))}
-            </select>
-          </label>
-        </div>
-      )}
       {s.view === "todo" && <FixFilters />}
       {s.view === "servers" && <ServerFilters />}
-      <button className="lnk railhide" onClick={toggleMini}>
-        {t("Hide filters")}
-      </button>
+      {narrow && (
+        <div className="sheetfoot">
+          <button className="btn primary" onClick={() => set({ sideOpen: false })}>
+            {t("Done")}
+          </button>
+        </div>
+      )}
     </aside>
+  );
+}
+
+/** RHead: "Filters", how many are on (a click clears them), and on a narrow window the sheet's close. */
+function RHead({ n, clear }: { n: number; clear: () => void }) {
+  const narrow = useNarrow();
+  return (
+    <div className="rhead">
+      <span>{t("Filters")}</span>
+      {n > 0 && (
+        <button className="lnk" onClick={clear}>
+          {t("Clear {n}", { n })}
+        </button>
+      )}
+      {narrow && (
+        <button className="btn icon ghost rclose" aria-label={t("Close")} onClick={() => set({ sideOpen: false })}>
+          <Icon name="x" />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -293,14 +492,7 @@ function FixFilters() {
   const active = s.flt.size + (s.accepted ? 1 : 0) + (s.backport ? 1 : 0);
   return (
     <div className="rsec">
-      <div className="rhead">
-        <span>{t("Filters")}</span>
-        {active > 0 && (
-          <button className="lnk" onClick={() => set({ flt: new Set(), accepted: false, backport: false, cur: null })}>
-            {t("Clear {n}", { n: active })}
-          </button>
-        )}
-      </div>
+      <RHead n={active} clear={() => set({ flt: new Set(), accepted: false, backport: false, cur: null })} />
       {!s.accepted && (
         <>
           <h4>{t("Priority")}</h4>
@@ -350,14 +542,7 @@ function ServerFilters() {
   if (s.lens !== "priorities") return null;
   return (
     <div className="rsec">
-      <div className="rhead">
-        <span>{t("Filters")}</span>
-        {s.flt.size > 0 && (
-          <button className="lnk" onClick={() => set({ flt: new Set() })}>
-            {t("Clear {n}", { n: s.flt.size })}
-          </button>
-        )}
-      </div>
+      <RHead n={s.flt.size} clear={() => set({ flt: new Set() })} />
       <h4>{t("Risk")}</h4>
       <Check k="kev" label="KEV" />
       <Check k="front" label={t("Public")} />

@@ -83,9 +83,11 @@ export function Overview() {
                     </button>
                   </td>
                   <td>{env.env}</td>
-                  <td className="r">{env.hosts}</td>
+                  <td className="r" data-l={t("Servers")}>
+                    {env.hosts}
+                  </td>
                   {["P1", "P2", "P3", "P4"].map((p) => (
-                    <td key={p} className={"r" + (tot[p] && p !== "P4" ? " pc " + p.toLowerCase() : "")}>
+                    <td key={p} className={"r" + (tot[p] && p !== "P4" ? " pc " + p.toLowerCase() : "")} data-l={p}>
                       {last ? tot[p] || 0 : "—"}
                     </td>
                   ))}

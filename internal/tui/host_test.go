@@ -37,8 +37,8 @@ func TestHostCard(t *testing.T) {
 	h.key("esc")
 	h.has("Servers(acme/production)")
 	card(h)
-	h.key("2") // another view closes the card
-	h.key("1")
+	h.key("1") // another view closes the card
+	h.key("2")
 	h.has("Servers(acme/production)")
 	h.hasNot("Host(web-01)")
 }
@@ -94,7 +94,7 @@ func TestHostCardSections(t *testing.T) {
 // the letters typed.
 func TestOtherLayout(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.key("1") // Servers
+	h.key("2") // Servers
 	runes := func(s string) {
 		for _, r := range s {
 			_, cmd := h.m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
@@ -120,8 +120,8 @@ func TestOtherLayout(t *testing.T) {
 	runes("щ")
 	h.has("Panels(Servers)")
 	h.key("esc")
-	// Korean 2-set: ㅓ is j, ㅃ (shift+q) is Q; French AZERTY: é is 2 (ToDo), à is 0 (Scans)
-	h.key("1")
+	// Korean 2-set: ㅓ is j, ㅃ (shift+q) is Q; French AZERTY: é is 2 (Servers), à is 0 (Scans)
+	h.key("2")
 	before := h.m.cur[vServers]
 	runes("ㅓ")
 	if h.m.cur[vServers] != before+1 {
@@ -130,9 +130,9 @@ func TestOtherLayout(t *testing.T) {
 	if latin['ㅃ'] != 'Q' || latin['ㅖ'] != 'P' {
 		t.Fatal("shifted jamo")
 	}
-	h.key("2")
+	h.key("1")
 	runes("é")
-	if h.m.view != vActions {
+	if h.m.view != vServers {
 		t.Fatalf("é is not 2: view %d", h.m.view)
 	}
 	runes("\"") // 3 on AZERTY: History

@@ -71,7 +71,7 @@ func TestCells(t *testing.T) {
 func TestServerStates(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(160, 40)
-	h.key("1")
+	h.key("2")
 	h.m.tree = &treeResp{By: "host", Servers: map[string]int{"clean": 1, "partial": 1, "not_scanned": 1}, Nodes: []*tnode{
 		{ID: "host:web-01", Kind: "host", Label: "web-01", State: "todo", Priority: "P1", Fixes: 2, Counts: map[string]int{"P1": 1, "P3": 1},
 			States: map[string]int{"reboot": 1}, LastScan: "2026-11-07T10:00:00Z"},
@@ -190,7 +190,7 @@ func TestTreeEdges(t *testing.T) {
 		t.Fatal(h.m.treeKey)
 	}
 	// the server list sorts by its own columns
-	h.key("1", "t")
+	h.key("2", "t")
 	if h.m.sort[vServers] != "fixes" {
 		t.Fatal(h.m.sort[vServers])
 	}

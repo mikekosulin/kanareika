@@ -48,7 +48,9 @@ export function DataTable<T>(p: {
   const listRef = useRef<HTMLDivElement>(null);
   const v = useVirtualizer({
     count: xs.length,
-    getScrollElement: () => p.scrollRef.current,
+    // the scroller's ref is set after this table's first layout effect when both mount together (the data was in
+    // the cache): then the table finds its scroller itself, or no row would show until something else re-renders
+    getScrollElement: () => p.scrollRef.current ?? (listRef.current?.closest(".scroll") as HTMLDivElement | null) ?? null,
     estimateSize: () => 39,
     overscan: 16,
     scrollMargin: listRef.current?.offsetTop ?? 0,

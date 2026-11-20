@@ -90,6 +90,6 @@ func TestDetails(t *testing.T) {
 		t.Fatal("details of a section")
 	}
 	// a server's details: on Servers
-	h.key("esc", "1")
+	h.key("esc", "2")
 	h.has("Details", "to fix", "scanned")
 }

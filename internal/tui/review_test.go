@@ -63,7 +63,7 @@ func TestClicksBehindDialogs(t *testing.T) {
 func TestLensErrors(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, false)
 	m := h.m
-	h.key("1")
+	h.key("2")
 	k := m.lensKey()
 	m.onLens(lensMsg{key: k, err: &APIError{Status: 500, Msg: "boom"}})
 	if m.lensNone || m.err != "boom" || m.fetchLens() != nil {
@@ -106,7 +106,7 @@ func TestQuickWins(t *testing.T) {
 	}
 
 	h.size(100, 14)
-	h.key("2", "enter")
+	h.key("1", "enter")
 	if !h.m.full {
 		t.Skip("no node to open")
 	}
@@ -130,7 +130,7 @@ func TestQuickWins(t *testing.T) {
 		t.Fatal("right stayed on History")
 	}
 	h.key("3", "left")
-	if h.m.view != vActions {
+	if h.m.view != vServers {
 		t.Fatal("left from History", h.m.view)
 	}
 }

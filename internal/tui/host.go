@@ -113,7 +113,7 @@ func (m *Model) hostCard(name string, w int) []string {
 		}
 	}
 	if hd == nil && len(acts) > 0 {
-		section("ToDo")
+		section("Fixes")
 		for _, a := range acts {
 			out = append(out, " "+prio(a.Priority)+" "+sMuted.Render(fit(a.Due, 10, false))+" "+sText.Render(m.t.title(a)))
 		}

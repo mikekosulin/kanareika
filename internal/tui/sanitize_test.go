@@ -69,7 +69,7 @@ func TestNoInjectionInFrame(t *testing.T) {
 	// the tree through the API, every label with the sequences in it
 	inner := h.m.c
 	h.m.c = labelled{inner}
-	h.key("2")
+	h.key("1")
 	h.m.treeKey = ""
 	h.run(h.m.sync())
 	if !strings.Contains(h.screen(), "bad2J") {
@@ -91,7 +91,7 @@ func TestNoInjectionInFrame(t *testing.T) {
 		"lens":{"id":"disks","columns":[{"key":"mount","title":"mount"}]},
 		"rows":[{"host":"web-01","cells":{"mount":{"s":`+jsonStr(evil)+`}}}]}`), &d))
 	h.m.lensAPI = true
-	h.key("1")
+	h.key("2")
 	h.m.lens = "disks"
 	h.m.lensData, h.m.lensFor = &d, h.m.lensKey()
 	h.m.setLens("disks")
@@ -125,7 +125,7 @@ func TestAgentContextOneLineEach(t *testing.T) {
 // command's goroutine; the context is for where Y was pressed even if the screen moved on (run with -race).
 func TestCopyFromUpdate(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, false)
-	h.key("2")
+	h.key("1")
 	h.m.nodes = map[string]*nodeDetail{} // Y fetches the node: the command does the work
 	for _, k := range []string{"Y", "y", "c"} {
 		h.clip.Reset()

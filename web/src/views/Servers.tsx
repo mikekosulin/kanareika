@@ -7,7 +7,7 @@ import { ago, days, dueText, narrow, pct } from "../lib/format";
 import { closeDetail, set, setSort, syncURL, toggle, useApp, useS } from "../state";
 import { client, treeParams, useEnv, useKids, useLens, useNode, useRunData, useTree, type TreeParams } from "../queries";
 import type { Tree, TreeNode } from "../types";
-import { Empty, Icon, Search, Seg, Skeleton, SortHead } from "../components/ui";
+import { Empty, FilterBtn, Icon, Search, Seg, Skeleton, SortHead } from "../components/ui";
 import { DataTable, type Col } from "../components/DataTable";
 import { MainText } from "../components/cells";
 import { useQueryInput } from "./Todo";
@@ -79,6 +79,7 @@ export function Servers() {
               onPick={(id) => set({ lens: id, vsel: "" })}
             />
             <Search value={text} onChange={setText} placeholder={t("Filter")} />
+            {s.lens === "priorities" && <FilterBtn n={s.flt.size + (s.p4 ? 1 : 0)} />}
           </div>
           <div className="scroll" ref={scrollRef}>
             {s.lens === "priorities" ? (
@@ -202,7 +203,7 @@ function ServerRows({
   const listRef = useRef<HTMLDivElement>(null);
   const v = useVirtualizer({
     count: rows.length,
-    getScrollElement: () => scrollRef.current,
+    getScrollElement: () => scrollRef.current ?? (listRef.current?.closest(".scroll") as HTMLDivElement | null) ?? null, // as DataTable's
     estimateSize: (i) => (rows[i].depth ? 35 : 41),
     overscan: 16,
     scrollMargin: listRef.current?.offsetTop ?? 0,

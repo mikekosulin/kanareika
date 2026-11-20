@@ -67,7 +67,7 @@ func TestStubLenses(t *testing.T) {
 	h.m.c = sc
 	h.m.lensData, h.m.lensAPI, h.m.lensFor = nil, false, ""
 	delete(h.m.pending, "lens")
-	h.key("1")
+	h.key("2")
 	if !h.m.lensNone {
 		t.Fatal("404: no lenses")
 	}
@@ -209,7 +209,7 @@ func TestSmallScreens(t *testing.T) {
 	h.hasNot("due by")
 	h.key("esc")
 	h.size(80, 8) // the jump list is taller than that
-	h.key("2", ":")
+	h.key("1", ":")
 	h.has("Jump to")
 	h.key("esc")
 	s := newHarness(t, Options{Org: "acme", Env: "staging"}, true)

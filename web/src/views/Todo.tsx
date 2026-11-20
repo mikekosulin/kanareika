@@ -8,7 +8,7 @@ import { narrow } from "../lib/format";
 import { grouping, set, setBy, setSort, syncURL, toast, useApp, useS, type By } from "../state";
 import { client, fullTree, treeParams, useNode, useRunData, useTree } from "../queries";
 import type { TreeNode } from "../types";
-import { copy, Empty, Icon, Search, Seg, Skeleton, SortHead } from "../components/ui";
+import { copy, Empty, FilterBtn, Icon, Search, Seg, Skeleton, SortHead } from "../components/ui";
 import { DataTable, type Col } from "../components/DataTable";
 import { TreeRows, useRows, useTreeKeys, type Row } from "./TreeList";
 import { NodeDetail } from "./NodeDetail";
@@ -143,6 +143,7 @@ export function Todo() {
               <Seg label={t("group")} aria={t("Group by")} items={GROUPS.map(([k, l]) => [k, t(l)])} value={s.by} onPick={setBy} />
             )}
             <Search value={text} onChange={setText} placeholder={t("Package, CVE, host or group")} />
+            {s.view === "todo" && <FilterBtn n={s.flt.size + (s.accepted ? 1 : 0) + (s.backport ? 1 : 0)} />}
           </div>
           <div className="scroll" ref={scrollRef}>
             {s.accepted ? (

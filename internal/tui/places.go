@@ -14,11 +14,12 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// Three places: Servers (with lenses: what to show of each server), ToDo (what to fix; accepted risks as a
-// filter), History (runs, what changed, running scans). The views behind them are the place's sub-views.
+// Three places, in the web page's order: Fixes (what to fix; accepted risks as a filter), Servers (with lenses: what
+// to show of each server), History (runs, what changed, running scans). The views behind them are the place's
+// sub-views.
 
 // places: the tabs, their keys 1, 2, 3.
-var places = []view{vServers, vActions, vRuns}
+var places = []view{vActions, vServers, vRuns}
 
 // tabs: the places on screen: Overview first when there is more than one org/env.
 func (m *Model) tabList() []view {
