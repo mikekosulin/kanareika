@@ -384,6 +384,24 @@ func TestAddPlacement(t *testing.T) {
 	}
 }
 
+// TestAddThroughAlias: a group whose env is a YAML alias of another group's is in that env (not in one named after
+// the anchor): a host added to it joins it.
+func TestAddThroughAlias(t *testing.T) {
+	r := req()
+	r.Hosts = "web-01,192.0.2.11,web,production\ndb-01,192.0.2.21,db,production"
+	p, b := newAcme(t, r)
+	s := strings.Replace(string(b), "env: production", "env: &env production", 1)
+	s = strings.Replace(s, "env: production", "env: *env", 1)
+	must(t, os.WriteFile(filepath.Join(p.Orgs, "acme.yml"), []byte(s), 0o600))
+	if _, errs, err := Add(p, "acme", Request{Hosts: "db-02,192.0.2.22,db"}); err != nil || len(errs) > 0 {
+		t.Fatal(errs, err)
+	}
+	by, _ := loadAcme(t, p)
+	if h := by["db-02"]; h.Group != "db" || h.Env != "production" {
+		t.Fatalf("db-02: %+v", h)
+	}
+}
+
 // TestReplaceFileFailure: a replace that fails leaves no temporary file behind.
 func TestReplaceFileFailure(t *testing.T) {
 	dir := t.TempDir()

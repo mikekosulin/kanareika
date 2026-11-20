@@ -32,6 +32,14 @@ func get(m *yaml.Node, key string) *yaml.Node {
 
 func scalar(v string) *yaml.Node { return &yaml.Node{Kind: yaml.ScalarNode, Value: v} }
 
+// value: what a scalar node says, through YAML aliases (an alias node's own Value is the anchor's name).
+func value(n *yaml.Node) string {
+	for n.Kind == yaml.AliasNode && n.Alias != nil {
+		n = n.Alias
+	}
+	return n.Value
+}
+
 func set(m *yaml.Node, key string, v *yaml.Node) {
 	if old := get(m, key); old != nil {
 		*old = *v
@@ -182,7 +190,7 @@ func AddWithSkipped(p config.Paths, orgID string, r Request) ([]string, []string
 		}
 		g := get(groups, gname)
 		if g != nil {
-			if e := get(g, "env"); e != nil && e.Value != genv { // the same group in another environment
+			if e := get(g, "env"); e != nil && value(e) != genv { // the same group in another environment
 				gname += "-" + genv
 				g = get(groups, gname)
 			}
