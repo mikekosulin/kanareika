@@ -275,7 +275,7 @@ func (h *harness) waitJob(state string) {
 
 func TestBrowse(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
-	h.has("Fixes(acme/production)[26] P1 6 • P2 10 • P3 10 • P4 4", "openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10", "group by  server  fix  CVE  g",
+	h.has("Fixes(acme/production)[26] P1 6 • P2 10 • P3 10 • P4 4", "openssl (CentOS Stream 9, X) 3.0.1 → 3.0.10", "group by  fix  CVE  g",
 		"space select", "? all keys", " acme  production ", "4 hosts", "DB ok", "12:00 UTC")
 	h.hasNot("P4 os")
 	h.key("p") // P4 too
@@ -343,16 +343,11 @@ func TestTree(t *testing.T) {
 	if len(h.m.sel) != 0 {
 		t.Fatal(h.m.sel)
 	}
-	// group by CVE, then host, then fix again
+	// group by CVE, then by fix again (servers have their own place)
 	h.key("esc", "g")
-	h.has("Fixes(acme/production)[", "CVE-2026-0002", "group by  server  fix  CVE")
+	h.has("Fixes(acme/production)[", "CVE-2026-0002", "group by  fix  CVE")
 	if h.m.by[vActions] != "cve" || h.m.tree.By != "cve" {
 		t.Fatal(h.m.by)
-	}
-	h.key("g")
-	h.has("web-01", "CentOS Stream 9")
-	if h.m.tree.By != "host" {
-		t.Fatal(h.m.tree.By)
 	}
 	h.key("l", "down")
 	h.key("g")

@@ -11,7 +11,8 @@ func TestPlaces(t *testing.T) {
 	h := newHarness(t, Options{Org: "acme", Env: "production"}, true)
 	h.size(160, 40)
 	h.key("1")
-	h.has(" 1 Servers ", "2 Fixes", "3 History", "show  priorities  logins  network  health  w", "group by  server")
+	h.has(" 1 Servers ", "2 Fixes", "3 History", "show  priorities  logins  network  health  w")
+	h.hasNot("group by") // Servers lists servers; grouping is Fixes
 	h.key("w")
 	h.has("Servers(acme/production)", "show  priorities  logins  network  health  w") // the server's own lenses
 	if h.m.lens != "logins" {

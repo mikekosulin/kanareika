@@ -11,7 +11,7 @@ func TestServers(t *testing.T) {
 	}
 	h.size(160, 40)
 	h.key("1")
-	h.has("Servers(acme/production)[5]", "· 1 ! · 1 ✗", "group by  server  fix  CVE",
+	h.has("Servers(acme/production)[5]", "· 1 ! · 1 ✗",
 		"app-01", "Ubuntu 18.04", "2 • 1 • 3 • 0",
 		"web-01              CentOS Stream 9  Public  3 • 4 • 2 • 4", "✗  dead-01             The last scan did not reach it", "not checked")
 	// the details of the server under the cursor: its card
@@ -25,9 +25,10 @@ func TestServers(t *testing.T) {
 	n := h.m.curNode()
 	n.Problem, n.ProblemMsg = "", ""
 	h.has("✗ failed")
-	h.key("esc", "g")
-	if h.m.by[vServers] != "fix" || h.m.by[vActions] != "fix" {
-		t.Fatal(h.m.by)
+	h.key("esc", "g") // Servers lists servers: g does not regroup them
+	if h.m.grouping() != "host" {
+		t.Fatal(h.m.grouping())
 	}
 	h.has("Servers(acme/production)")
+	h.hasNot("group by")
 }

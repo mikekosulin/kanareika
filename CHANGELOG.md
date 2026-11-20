@@ -17,6 +17,16 @@ A layout that says where you are and what you look at: places on top, the organi
 
 - The server card listed the packages inside a container image as the host's own (an Ubuntu host showed `openssl → 3.0.15-1~deb12u1`); they are under the image to rebuild now.
 - The server card showed empty "Other" and "Exceptions" headings, and "in 0 d" where it meant today.
+- Adding servers while looking at an environment other than the organization's first put them in production, and in the terminal the connection check then stayed on "loading"; they go to the environment on screen now, and a check with nothing to connect to says "No servers".
+- In the terminal setup, starting the first scan while another scan of that environment was running did nothing; it says why it was refused now.
+- Creating an organization whose jump hosts share a name (the form's jump host and a pasted `ssh -J ops@bastion.example.org …`, or jumps through `bastion.example.org` and `bastion.example.net`) failed with a YAML error; they are named `bastion`, `bastion-2`, … now.
+- A mistake in an environment's due-date rules in the org file (an unknown key under `due: envs: production:`) made every scan of that environment fail; the file is refused when it loads and by `kanareika validate` now, saying where.
+- An ssh config entry pasted with a quoted name (`Host "web-01"`) lost its line in the setup preview.
+- Adding servers to a group whose environment is written as a YAML alias (`env: *env`) created a second group such as `db-production`.
+- A vulnerability database download that failed because of a broken file read "connection closed mid-download"; the error names the file now. Errors from a bad registry address say which address.
+- Findings whose first-seen, fix or publication date was malformed had no due date; the clock starts that day, and CISA's KEV deadline still applies.
+- A scan cancelled the moment it started could end without a word of output.
+- The demo data shows a failed service in the health view, as it was meant to.
 
 ## 0.7.0 — 2026-11-19
 

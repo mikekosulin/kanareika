@@ -341,22 +341,25 @@ func (m *Model) tabs() string {
 		}
 	}
 	if m.isTree() && m.host == "" && m.run != "" {
-		g := sMuted.Render(m.t.T("group by")) + " "
-		for _, by := range groupings {
-			name := m.t.T(groupNames[by])
-			s := sMuted.Render(" " + name + " ")
-			if by == m.grouping() {
-				s = sCrumb2.Render(name)
-			}
-			g += m.zone("by:"+by, s, func(int) tea.Cmd {
-				if m.grouping() != by {
-					m.by[m.view] = by
-					m.cur[m.view], m.off[m.view], m.curID = 0, 0, ""
+		g := ""
+		if gs := m.groupingsHere(); len(gs) > 0 { // Fixes: by fix or by CVE
+			g = sMuted.Render(m.t.T("group by")) + " "
+			for _, by := range gs {
+				name := m.t.T(groupNames[by])
+				s := sMuted.Render(" " + name + " ")
+				if by == m.grouping() {
+					s = sCrumb2.Render(name)
 				}
-				return nil
-			})
+				g += m.zone("by:"+by, s, func(int) tea.Cmd {
+					if m.grouping() != by {
+						m.by[m.view] = by
+						m.cur[m.view], m.off[m.view], m.curID = 0, 0, ""
+					}
+					return nil
+				})
+			}
+			g += " " + sKey.Render("g") + " "
 		}
-		g += " " + sKey.Render("g") + " "
 		if sl := m.sortLabel(); sl != "" {
 			g = sMuted.Render(m.t.T("sort")) + " " + sCrumb2.Render(sl) + " " + sKey.Render("t") + "  " + g
 		}

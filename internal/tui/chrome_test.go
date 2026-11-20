@@ -89,7 +89,7 @@ func TestDetails(t *testing.T) {
 	if h.m.full {
 		t.Fatal("details of a section")
 	}
-	// hosts grouping: a group's details
-	h.key("esc", "g", "g", "enter")
-	h.has("Details(", "to fix", "scanned")
+	// a server's details: on Servers
+	h.key("esc", "1")
+	h.has("Details", "to fix", "scanned")
 }
