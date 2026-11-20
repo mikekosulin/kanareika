@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestScanAll: "scan everything" queues a scan of each environment, one after another (the next starts when the
@@ -32,6 +33,9 @@ func TestScanAll(t *testing.T) {
 	}
 	waitState(t, h, a.IDs[0], JobRunning)
 	waitState(t, h, a.IDs[1], JobQueued)
+	for i := 0; i < 300 && len(f.requests()) == 0; i++ { // running: its scan starts a moment later
+		time.Sleep(10 * time.Millisecond)
+	}
 	if n := len(f.requests()); n != 1 {
 		t.Fatalf("%d scans run at once", n)
 	}
@@ -60,6 +64,7 @@ func TestScanAll(t *testing.T) {
 	}
 	close(f2.release)
 	waitState(t, h2, b.IDs[1], JobCancelled)
+	waitState(t, h2, b.IDs[0], JobDone)
 	if n := len(f2.requests()); n != 1 {
 		t.Fatalf("a cancelled queued scan ran: %d scans", n)
 	}
