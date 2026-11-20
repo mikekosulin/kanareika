@@ -2,6 +2,10 @@ package main
 
 import (
 	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -125,6 +129,103 @@ func TestShotsErrors(t *testing.T) {
 			return os.WriteFile(png, nil, 0o644)
 		}
 		try(failing+" shot", "80x20", "", "")
+	}
+}
+
+// fixtureHome: a copy of the fixture home of package remediate (an org with a current state to show).
+func fixtureHome(t *testing.T) string {
+	t.Helper()
+	home := t.TempDir()
+	if err := os.CopyFS(home, os.DirFS("../../internal/remediate/testdata/fixture/home")); err != nil {
+		t.Fatal(err)
+	}
+	return home
+}
+
+// TestShotsOpenFirstNode: with data to show, the web shots open the most urgent row's details beside the list.
+func TestShotsOpenFirstNode(t *testing.T) {
+	calls := fakeShots(t)
+	home := fixtureHome(t)
+	if err := shots(t.TempDir(), home, "", "acme", "production", "80x20", "", "2026-11-07T12:00:00Z"); err != nil {
+		t.Fatal(err)
+	}
+	web := (*calls)[2]
+	if !strings.Contains(web, "web-en.png") || !strings.Contains(web, "node=") || !strings.Contains(web, "wide=0") {
+		t.Fatal(web)
+	}
+	if light := (*calls)[3]; !strings.Contains(light, "web-en-light.png") || !strings.Contains(light, "node=") {
+		t.Fatal(light)
+	}
+}
+
+// TestShotsWebFails: the web page's first row that cannot be read, or its light picture that cannot be taken, stops
+// the shots with the reason.
+func TestShotsWebFails(t *testing.T) {
+	fakeShots(t)
+	home := fixtureHome(t)
+	if err := os.WriteFile(filepath.Join(home, "reports", "acme", "production", "current", "findings.json.gz"), []byte("not gzip"),
+		0o644); err != nil {
+		t.Fatal(err)
+	}
+	err := shots(t.TempDir(), home, "chrome", "acme", "production", "80x20", "", "2026-11-07T12:00:00Z")
+	if err == nil || !strings.Contains(err.Error(), "/api/tree") {
+		t.Errorf("a broken current state: %v", err)
+	}
+
+	old := shot
+	shot = func(bin, url, png string, w, h int, extra ...string) error {
+		if strings.HasSuffix(png, "web-en-light.png") {
+			return errors.New("crashed")
+		}
+		return old(bin, url, png, w, h, extra...)
+	}
+	if err := shots(t.TempDir(), t.TempDir(), "chrome", "acme", "production", "80x20", "", ""); err == nil || err.Error() != "crashed" {
+		t.Errorf("the light web picture: %v", err)
+	}
+}
+
+// TestFirstNode: the first row of ToDo by CVE, asked as one row of the current state's top level; none when there
+// is no such org or run, or no row; an error for any other answer.
+func TestFirstNode(t *testing.T) {
+	var asked url.Values
+	answer := func(code int, body string) string {
+		t.Helper()
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/api/tree" {
+				asked = r.URL.Query()
+			}
+			w.WriteHeader(code)
+			io.WriteString(w, body)
+		}))
+		t.Cleanup(srv.Close)
+		return srv.URL
+	}
+	id, err := firstNode(answer(200, `{"nodes":[{"id":"c:CVE-0000-0001"},{"id":"c:CVE-0000-0002"}]}`), "acme", "production")
+	if err != nil || id != "c:CVE-0000-0001" {
+		t.Fatalf("%q %v", id, err)
+	}
+	want := url.Values{"org": {"acme"}, "env": {"production"}, "run": {"current"}, "by": {"cve"}, "levels": {"0"}, "limit": {"1"}}
+	if asked.Encode() != want.Encode() {
+		t.Errorf("asked %v", asked)
+	}
+	for _, c := range []struct {
+		code      int
+		body, err string
+	}{
+		{404, `{"error":"no such run"}`, ""},
+		{200, `{"nodes":[]}`, ""},
+		{500, `{"error":"broken"}`, "/api/tree: 500 Internal Server Error"},
+		{200, `{"nodes":`, "/api/tree: unexpected EOF"},
+	} {
+		id, err := firstNode(answer(c.code, c.body), "acme", "production")
+		if id != "" || (err == nil) != (c.err == "") || err != nil && err.Error() != c.err {
+			t.Errorf("%d %s: %q %v", c.code, c.body, id, err)
+		}
+	}
+	gone := httptest.NewServer(http.NotFoundHandler())
+	gone.Close()
+	if _, err := firstNode(gone.URL, "acme", "production"); err == nil {
+		t.Error("a server that is gone")
 	}
 }
 

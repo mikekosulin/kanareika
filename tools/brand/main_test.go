@@ -165,6 +165,23 @@ func TestNoChrome(t *testing.T) {
 	}
 }
 
+// TestWebPFails: a banner that cannot be made WebP stops the run with the reason; the social preview, PNG, is not
+// converted and stays.
+func TestWebPFails(t *testing.T) {
+	calls := fakeChrome(t)
+	webp.Encode = func(png, out string) error { return errors.New("cwebp crashed") }
+	out := t.TempDir()
+	if err := run(out, logo(t), ".", "chrome"); err == nil || !strings.Contains(err.Error(), "cwebp crashed") {
+		t.Fatalf("got %v", err)
+	}
+	if len(*calls) != 2 {
+		t.Errorf("%d renders: none after the failed banner", len(*calls))
+	}
+	if _, err := os.Stat(filepath.Join(out, "og.png")); err != nil {
+		t.Error(err)
+	}
+}
+
 // TestErrors: each failure stops the run with its reason.
 func TestErrors(t *testing.T) {
 	fakeChrome(t)

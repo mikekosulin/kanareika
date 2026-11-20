@@ -211,3 +211,86 @@ func TestLocalized(t *testing.T) {
 		t.Errorf("%+v", res)
 	}
 }
+
+// TestLoginsEdgeCases: password login on with no account holding a password is a warning, not bad; root login
+// settings beyond yes/no read in words (an unknown one as it is, not judged); without root the key count is the
+// login user's own and an unread sshd config is "not checked", not "none".
+func TestLoginsEdgeCases(t *testing.T) {
+	got := rows(t, "logins", nil, map[string]string{
+		"a": `{"password_auth":true,"users_with_password":[],"sshd":{"permitrootlogin":"forced-commands-only"},"keys":[{"user":"alice"}],"denied":[]}`,
+		"b": `{"password_auth":false,"sshd":{"permitrootlogin":"ask"},"keys":[],"denied":["denied.keys"]}`,
+		"c": `{"password_auth":false,"sshd":{},"keys":[],"denied":["denied.sshd"]}`,
+	}, nil, nil)
+	if c := got["a"]["password"]; c.Level != Warn || c.Note != i18n.T("ssh.password.none", "en", nil) {
+		t.Errorf("a password: %+v", c)
+	}
+	if c := got["a"]["root"]; c.Level != OK || c.S != i18n.T("lens.commands", "en", nil) {
+		t.Errorf("a root: %+v", c)
+	}
+	if c := got["b"]["root"]; c.Level != None || c.S != "ask" || c.V != "ask" {
+		t.Errorf("b root: %+v", c)
+	}
+	if c := got["b"]["keys"]; c.V != 0 || c.Note != i18n.T("lens.note.own_keys_only", "en", nil) {
+		t.Errorf("b keys: %+v", c)
+	}
+	if c := got["c"]["root"]; c.S != ResultUnknown || c.Note != i18n.T("lens.not_checked", "en", nil) {
+		t.Errorf("c root: %+v", c)
+	}
+}
+
+// TestLoginsTypedValues: data made in code ([]string, int) reads as decoded JSON does; a day of failed logins that
+// is no date does not count as the last 24 hours.
+func TestLoginsTypedValues(t *testing.T) {
+	v := &report.View{Access: map[string]any{
+		"a": map[string]any{"password_auth": true, "users_with_password": []string{"alice", "bob"},
+			"logins": map[string]any{"failed_daily": map[string]any{"2026-11-08": 3}, "failed_total": 3, "failed_ips": 1}},
+		"b": map[string]any{"logins": map[string]any{"failed_daily": map[string]any{"yesterday": 50}}},
+	}, Facts: map[string]report.Fact{}}
+	inv := []tree.HostInfo{{Name: "a", Group: "g", LastScan: "2026-11-08T09:00:00Z"}, {Name: "b", Group: "g", LastScan: "2026-11-08T09:00:00Z"}}
+	tr := tree.Build(nil, tree.Hosts(v.Facts), tree.Opts{By: tree.ByHost, All: true, Inventory: inv})
+	got := map[string]map[string]Cell{}
+	for _, r := range Build(Get("logins"), Input{Servers: tr, View: v}).Rows {
+		got[r.Host] = r.Cells
+	}
+	if c := got["a"]["password"]; c.Level != Bad || c.Note != i18n.T("ssh.password.users", "en", map[string]any{"users": "alice, bob"}) {
+		t.Errorf("a password: %+v", c)
+	}
+	if c := got["a"]["pw_users"]; c.V != 2 || c.Level != Warn || c.Note != "alice, bob" {
+		t.Errorf("a users: %+v", c)
+	}
+	if c := got["a"]["failed_24h"]; c.V != 3 || c.Level != Warn || c.Note == "" {
+		t.Errorf("a failed: %+v", c)
+	}
+	if c := got["b"]["failed_24h"]; c.V != 0 || c.Level != OK {
+		t.Errorf("b failed (no date): %+v", c)
+	}
+}
+
+// TestNetworkFirewallNames: the firewall cell names what filters (firewalld first), "filtering" when it filters
+// without a named tool.
+func TestNetworkFirewallNames(t *testing.T) {
+	got := rows(t, "network", nil, nil, map[string]string{
+		"a": `{"public":[],"listen":[],"firewall":{"readable":true,"has_input_filtering":true,"firewalld":"running","docker_rules":true}}`,
+		"b": `{"public":[],"listen":[],"firewall":{"readable":true,"has_input_filtering":true}}`,
+	}, nil)
+	if c := got["a"]["firewall"]; c.Level != OK || c.S != "firewalld" || c.Note != "firewalld · docker" {
+		t.Errorf("a: %+v", c)
+	}
+	if c := got["b"]["firewall"]; c.Level != OK || c.S != i18n.T("lens.filtering", "en", nil) || c.Note != "" {
+		t.Errorf("b: %+v", c)
+	}
+}
+
+// TestClockWarnings: a clock a few seconds off the scanner's, or one that no time service keeps, is a warning.
+func TestClockWarnings(t *testing.T) {
+	got := rows(t, "health", map[string]string{
+		"a": `{"time":{"offset_s":0.002,"synced":"yes","service_active":true,"skew_s":10}}`,
+		"b": `{"time":{"offset_s":0.002,"synced":"yes","service_active":false,"skew_s":0.1}}`,
+	}, nil, nil, nil)
+	if c := got["a"]["clock"]; c.Level != Warn || c.Note != i18n.T("health.skew", "en", map[string]any{"skew": "10"}) || c.S != "2 ms" {
+		t.Errorf("a: %+v", c)
+	}
+	if c := got["b"]["clock"]; c.Level != Warn || c.Note != i18n.T("lens.note.no_ntp_service", "en", nil) {
+		t.Errorf("b: %+v", c)
+	}
+}

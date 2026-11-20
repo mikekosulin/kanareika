@@ -92,6 +92,18 @@ func TestT(t *testing.T) {
 	}
 }
 
+// TestTKeyLists: a list of message keys renders each and joins them, whether stored as []string (made in code) or
+// []any (read back from JSON, where anything not a string is skipped).
+func TestTKeyLists(t *testing.T) {
+	fakeLocales(t, fstest.MapFS{"en.json": {Data: []byte(`{"messages":{
+		"cannot":"Cannot read: {what}", "list.sep":", ", "denied.shadow":"passwords", "denied.keys":"SSH keys"}}`)}})
+	for _, keys := range []any{[]string{"denied.shadow", "denied.keys"}, []any{"denied.shadow", 7, "denied.keys"}} {
+		if got := T("cannot", "en", map[string]any{"what_keys": keys}); got != "Cannot read: passwords, SSH keys" {
+			t.Errorf("%#v: %q", keys, got)
+		}
+	}
+}
+
 func TestTDoesNotMutateArgs(t *testing.T) {
 	fakeLocales(t, fake)
 	args := map[string]any{"what_key": "dmesg.oom"}

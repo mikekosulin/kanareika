@@ -13,6 +13,7 @@ import (
 
 	"github.com/mikekosulin/kanareika/internal/config"
 	"github.com/mikekosulin/kanareika/internal/priority"
+	"github.com/mikekosulin/kanareika/internal/pyfmt"
 	"github.com/mikekosulin/kanareika/internal/report"
 	"github.com/mikekosulin/kanareika/internal/trivy"
 )
@@ -188,6 +189,14 @@ func TestGenerateErrors(t *testing.T) {
 		{"loader", func() { newLoader = func(config.Paths) (*config.Loader, error) { return nil, boom } }, "boom"},
 		{"policy", func() { loadPolicy = func(config.Paths) (*priority.Policy, error) { return nil, boom } }, "boom"},
 		{"current", func() { updateCurrent = func(string, bool, bool) (string, error) { return "", boom } }, "boom"},
+		{"due rules", func() { // the org loads, its due block for production does not apply: priorities fail
+			writeFile = func(p string, b []byte, m os.FileMode) error {
+				if strings.HasSuffix(p, "acme.yml") {
+					b = append(b, "due:\n  envs:\n    production:\n      soon: 1\n"...)
+				}
+				return os.WriteFile(p, b, m)
+			}
+		}, "due.envs.production.soon: unknown key"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -275,5 +284,25 @@ func TestTrivyCache(t *testing.T) {
 		if !d.Updated.Equal(last.Add(6*time.Hour)) || d.Outdated(last.Add(12*time.Hour)) || !d.Outdated(last.Add(19*time.Hour)) {
 			t.Errorf("%s: updated %v, next %v", d.Name, d.Updated, d.Next)
 		}
+	}
+}
+
+// TestContainerFindingsSkipsUnscanned: a docker host that was not scanned, or did not answer, reports nothing of
+// its images; the k8s workloads (org-level) are reported all the same. Unknown names give empty values.
+func TestContainerFindingsSkipsUnscanned(t *testing.T) {
+	failed := pyfmt.Ordered[string]{}
+	failed.Set("api-02", "unreachable: dial tcp 192.0.2.40:22: i/o timeout")
+	seen := map[string]int{}
+	for _, f := range containerFindings([]string{"api-02", "api-03"}, failed) {
+		seen[f.Host]++
+	}
+	if seen["api-01"] != 0 || seen["api-02"] != 0 || seen["api-03"] == 0 || seen["k8s:prod-eu"] == 0 || len(seen) != 2 {
+		t.Fatalf("findings by host %v", seen)
+	}
+	if g := groupOf("nope"); g.name != "" || g.role != "" {
+		t.Errorf("group %+v", g)
+	}
+	if h := hostNamed("nope"); h.name != "" || h.group != "" {
+		t.Errorf("host %+v", h)
 	}
 }
